@@ -1,0 +1,510 @@
+{% extends "base_ui.html" %}
+{% block title %}Détail de l'intervention #{{ intervention.id }}{% endblock %}
+
+{% block contenu %}
+<style>
+  /* En-tête */
+  .ih{background:linear-gradient(135deg,#6f42c1,#563d7c);color:white;border-radius:12px;padding:20px 26px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 18px rgba(111,66,193,.3);flex-wrap:wrap;gap:14px;}
+  .ih h4{margin:0;font-size:22px;font-weight:800;}
+  .card-detail{background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.04);padding:25px;margin-bottom:20px; border: 1px solid #eef0f3;}
+  
+  /* Badges Statuts */
+  .badge{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:800; text-transform:uppercase; letter-spacing: 0.5px;}
+  .b-planifiee{background:#d1ecf1;color:#0c5460;}
+  .b-en_cours{background:#fff3cd;color:#856404;}
+  .b-resolue{background:#d4edda;color:#155724;}
+  .b-escaladee{background:#f8d7da;color:#721c24;}
+  .b-en_attente_validation{background:#cce5ff;color:#004085;}
+  .b-en_attente_pieces{background:#e2e3e5;color:#383d41;}
+  .b-en_attente_devis{background:#fef3c7;color:#92400e; border:1px solid #f59e0b;}
+  
+  /* Infos */
+  .info-group{margin-bottom:15px;}
+  .info-label{font-size:11px;color:#888;text-transform:uppercase;font-weight:800;letter-spacing:0.5px;margin-bottom:6px;display:block;}
+  .info-value{font-size:14px;color:#333;font-weight:600;}
+  
+  /* Boutons */
+  .btn-action{padding:12px 20px;border-radius:8px;font-weight:800;font-size:14px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:0.2s;width:100%;justify-content:center;margin-bottom:12px;}
+  .btn-action:hover{transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.15);}
+  .btn-primary{background:#6f42c1;color:white;}
+  .btn-success{background:#28a745;color:white;}
+  .btn-info{background:#17a2b8;color:white;}
+  .form-control{width:100%;padding:12px;border:1px solid #cbd5e0;border-radius:8px;font-size:14px;margin-bottom:15px; background: #f8fafc; outline: none; transition: 0.2s; box-sizing: border-box;}
+  .form-control:focus {border-color: #6f42c1; background: white;}
+  .grid-container {display: grid; grid-template-columns: 2fr 1fr; gap: 25px;}
+  @media (max-width: 1024px) { .grid-container { grid-template-columns: 1fr; } }
+
+  /* 🛒 Panier de pièces */
+  .commande-list { border: 1px solid #eef0f3; border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
+  .commande-item { display: flex; align-items: center; padding: 10px 15px; background: white; border-bottom: 1px solid #f8fafc; gap: 15px; }
+  .commande-item .btn-remove { color: #dc3545; background: #fff5f5; border: 1px solid #ffdbdb; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .commande-item .item-name { flex-grow: 1; font-weight: 700; font-size: 13px; color: #333; }
+  .commande-item .item-qty { width: 70px; text-align: center; font-weight: bold; border: 1px solid #cbd5e0; border-radius: 6px; padding: 6px; outline: none;}
+
+  /* ⏱️ TIMELINE MTTR */
+  .timeline-mttr { display: flex; justify-content: space-between; margin-bottom: 10px; position: relative; padding: 0 10px; }
+  .timeline-mttr::before { content: ""; position: absolute; top: 18px; left: 0; right: 0; height: 4px; background: #eef0f3; z-index: 1; }
+  .tl-step { position: relative; z-index: 2; text-align: center; width: 25%; }
+  .tl-icon { width: 40px; height: 40px; background: white; border: 4px solid #eef0f3; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #cbd5e0; font-size: 16px; font-weight: bold; transition:0.3s; }
+  .tl-step.active .tl-icon { border-color: #6f42c1; color: #6f42c1; box-shadow: 0 0 0 6px rgba(111,66,193,0.1); }
+  .tl-step.completed .tl-icon { background: #6f42c1; border-color: #6f42c1; color: white; }
+  .tl-label { font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; }
+  .tl-date { font-size: 11px; color: #64748b; margin-top: 6px; font-weight: 700; background: #f8fafc; display: inline-block; padding: 4px 8px; border-radius: 6px; border: 1px solid #eef0f3; }
+  .tl-step.completed .tl-date { color: #6f42c1; border-color: #d8b4fe; background: #f3e8ff; }
+
+  /* 🚨 Alertes et Cartes Spéciales */
+  .contrat-alert { background: #fff5f5; border: 2px dashed #fc8181; color: #c53030; padding: 18px 25px; border-radius: 12px; margin-bottom: 25px; display: flex; align-items: center; gap: 20px; animation: pulseBorder 2s infinite; }
+  @keyframes pulseBorder { 0% { border-color: #fc8181; } 50% { border-color: #e53e3e; } 100% { border-color: #fc8181; } }
+  .cost-card { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+  .devis-box { background: #fffbeb; border: 1px solid #fef3c7; padding: 20px; border-radius: 12px; border-left: 5px solid #f59e0b; margin-top: 15px; }
+
+  /* ── MODAL ── */
+  .mo { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+  .mo.open { display: flex; }
+  .mb { background: white; border-radius: 16px; max-width: 550px; width: 95%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3); overflow: hidden; }
+  .mh { padding: 20px 25px; display: flex; align-items: center; justify-content: space-between; }
+  .mh h5 { margin: 0; font-size: 18px; font-weight: 800; color: white;}
+  .mbody { padding: 25px; }
+  .mfoot { padding: 16px 25px; background: #f8fafc; border-top: 1px solid #eef0f3; display: flex; justify-content: flex-end; gap: 10px; }
+</style>
+
+<div class="ih no-print">
+  <div style="display:flex;align-items:center;gap:15px;">
+    <a href="#" onclick="window.history.back(); return false;" style="color:white;text-decoration:none;background:rgba(255,255,255,0.2);padding:10px 15px;border-radius:8px; transition: 0.2s;">
+        <i class="fas fa-arrow-left"></i>
+    </a>
+    <div>
+      <h4>Intervention #{{ intervention.id|stringformat:"04d" }}</h4>
+      <small style="font-size: 14px; opacity: 0.9;">{{ intervention.immobilisation.nom_affichage }}</small>
+    </div>
+  </div>
+  <span class="badge b-{{ intervention.statut|lower }}" style="font-size: 14px; padding: 8px 16px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);">{{ intervention.get_statut_display }}</span>
+</div>
+
+{% if intervention.immobilisation.contrat_maintenance and intervention.immobilisation.contrat_maintenance.statut == 'ACTIF' %}
+<div class="contrat-alert">
+    <i class="fas fa-shield-alt fa-3x"></i>
+    <div>
+        <strong style="font-size: 18px; text-transform: uppercase;">Équipement sous contrat de maintenance</strong><br>
+        <span style="font-size: 14px; display: inline-block; margin-top: 5px;">Prestataire : <b>{{ intervention.immobilisation.contrat_maintenance.prestataire.raison_sociale }}</b> (Réf: {{ intervention.immobilisation.contrat_maintenance.reference }})</span>
+    </div>
+</div>
+{% endif %}
+
+<div class="card-detail no-print">
+    <h5 style="color:#6f42c1;margin-top:0;margin-bottom:25px;font-weight:800;border-bottom:2px solid #f1f5f9;padding-bottom:12px;">
+        <i class="fas fa-stopwatch"></i> Suivi des temps (SLA & MTTR)
+    </h5>
+    <div class="timeline-mttr">
+        <div class="tl-step completed">
+            <div class="tl-icon"><i class="fas fa-exclamation"></i></div>
+            <div class="tl-label">Signalement</div>
+            <div class="tl-date">{{ intervention.date_signalement|date:"d/m/y H:i" }}</div>
+        </div>
+        <div class="tl-step {% if intervention.date_debut_intervention %}completed{% elif intervention.statut == 'NOUVELLE' %}pending{% else %}active{% endif %}">
+            <div class="tl-icon"><i class="fas fa-tools"></i></div>
+            <div class="tl-label">Prise en charge</div>
+            <div class="tl-date">
+                {% if intervention.date_debut_intervention %}{{ intervention.date_debut_intervention|date:"d/m/y H:i" }}{% else %}-{% endif %}
+            </div>
+        </div>
+        <div class="tl-step {% if intervention.date_fin_intervention %}completed{% elif intervention.date_debut_intervention %}active{% else %}pending{% endif %}">
+            <div class="tl-icon"><i class="fas fa-check-double"></i></div>
+            <div class="tl-label">Fin de réparation</div>
+            <div class="tl-date">
+                {% if intervention.date_fin_intervention %}{{ intervention.date_fin_intervention|date:"d/m/y H:i" }}{% else %}-{% endif %}
+            </div>
+        </div>
+        <div class="tl-step {% if intervention.date_validation %}completed active{% else %}pending{% endif %}">
+            <div class="tl-icon"><i class="fas fa-stamp"></i></div>
+            <div class="tl-label">Clôture (Validation)</div>
+            <div class="tl-date">
+                {% if intervention.date_validation %}{{ intervention.date_validation|date:"d/m/y H:i" }}{% else %}-{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid-container">
+  
+  <div>
+    <div class="card-detail">
+      <h5 style="color:#1e293b;margin-top:0;margin-bottom:20px;font-weight:800;border-bottom:2px solid #f1f5f9;padding-bottom:12px;">
+        <i class="fas fa-info-circle" style="color:#3b82f6;"></i> Informations sur la demande
+      </h5>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+        <div class="info-group">
+            <span class="info-label">Signalé par</span>
+            <span class="info-value">{{ intervention.cree_par.get_full_name|default:intervention.cree_par.username }}</span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Service Demandeur</span>
+            <span class="info-value">{% if intervention.immobilisation.service_affectation %}{{ intervention.immobilisation.service_affectation.nom }}{% else %}Non défini{% endif %}</span>
+        </div>
+        <div class="info-group">
+            <span class="info-label">Équipement concerné</span>
+            <span class="info-value" style="font-family: monospace; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">{{ intervention.immobilisation.code_patrimoine }}</span>
+        </div>
+        <div class="info-group">
+          <span class="info-label">Intervenant assigné</span>
+          <span class="info-value">
+            {% if intervention.intervenant %}
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #eef0f3;">
+                    <div style="width: 36px; height: 36px; background: #6f42c1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">
+                        {{ intervention.intervenant.first_name|first|default:"T" }}
+                    </div>
+                    <div style="font-weight: 700; color: #1e293b; font-size: 14px;">{{ intervention.intervenant.get_full_name|default:intervention.intervenant.username }}</div>
+                </div>
+            {% else %}
+                <span style="color:#ef4444; font-weight: 700;"><i class="fas fa-exclamation-triangle"></i> Non assigné</span>
+            {% endif %}
+          </span>
+        </div>
+      </div>
+      <div class="info-group" style="margin-top:20px; background:#f8fafc; padding:20px; border-radius:12px; border-left:4px solid #3b82f6;">
+        <span class="info-label">Description du problème</span>
+        <span class="info-value" style="font-size:14px;line-height:1.6;">{{ intervention.description_probleme|default:"Aucune description fournie."|linebreaksbr }}</span>
+      </div>
+    </div>
+
+    <div class="cost-card">
+        <h5 style="color:#065f46;margin-top:0;margin-bottom:15px;font-weight:800;border-bottom:2px solid #bbf7d0;padding-bottom:10px;">
+            <i class="fas fa-money-check-alt"></i> Aspect Financier
+        </h5>
+        
+        {% if intervention.immobilisation.contrat_maintenance and intervention.immobilisation.contrat_maintenance.statut == 'ACTIF' %}
+            <div style="font-size: 14px; font-weight: 800; color: #059669; margin-bottom: 10px;">
+                <i class="fas fa-check-circle"></i> Frais de base couverts par le forfait contrat (0 FCFA)
+            </div>
+            
+            {% if intervention.frais_hors_contrat > 0 %}
+                <div class="devis-box">
+                    <div style="font-size: 12px; font-weight: 800; color: #b45309; text-transform: uppercase;">Avenant / Devis Hors Contrat</div>
+                    <div style="font-size: 22px; font-weight: 800; color: #d97706; margin: 8px 0;">{{ intervention.frais_hors_contrat|floatformat:0 }} FCFA</div>
+                    <p style="font-size: 14px; color: #92400e; margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px;"><b>Motif :</b> {{ intervention.motif_frais_hors_contrat }}</p>
+                    
+                    {% if intervention.devis_accepte == True %}
+                        <span class="badge" style="background:#d1fae5; color:#065f46; font-size: 13px;"><i class="fas fa-check"></i> Devis Accepté</span>
+                    {% elif intervention.devis_accepte == False %}
+                        <span class="badge" style="background:#fee2e2; color:#991b1b; font-size: 13px;"><i class="fas fa-times"></i> Devis Refusé</span>
+                    {% else %}
+                        <span class="badge" style="background:#fef3c7; color:#92400e; font-size: 13px;"><i class="fas fa-hourglass-half"></i> En attente de validation</span>
+                        
+                        {% if perms.accounts.menu_patrimoine_admin or request.user.is_superuser %}
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+                            <form method="POST" style="flex: 1;" onsubmit="return confirmerAction(event, 'Valider ce devis ?', 'Les frais seront ajoutés au coût de la maintenance.', 'question', 'Oui, accepter', '#10b981')">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="valider_devis">
+                                <button type="submit" class="btn-action" style="background: #10b981; color: white; margin: 0;"><i class="fas fa-check"></i> Accepter</button>
+                            </form>
+                            <form method="POST" style="flex: 1;" onsubmit="return confirmerAction(event, 'Refuser ce devis ?', 'Le prestataire devra s\'en tenir au contrat.', 'warning', 'Oui, refuser', '#ef4444')">
+                                {% csrf_token %}
+                                <input type="hidden" name="action" value="refuser_devis">
+                                <button type="submit" class="btn-action" style="background: #ef4444; color: white; margin: 0;"><i class="fas fa-times"></i> Refuser</button>
+                            </form>
+                        </div>
+                        {% endif %}
+                    {% endif %}
+                </div>
+            {% elif intervention.statut == 'EN_COURS' and not intervention.devis_accepte %}
+                
+                <form method="POST" style="margin-top: 15px; background: white; padding: 20px; border-radius: 12px; border: 1px dashed #cbd5e0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="soumettre_devis">
+                    <h6 style="margin:0 0 15px 0; color: #334155; font-size: 14px; font-weight: 800;">Soumettre des frais supplémentaires</h6>
+                    <input type="number" name="montant_devis" class="form-control" placeholder="Montant du devis (FCFA)" required>
+                    <textarea name="motif_devis" class="form-control" rows="2" placeholder="Justification détaillée (Ex: Remplacement carte mère hors garantie...)" required></textarea>
+                    
+                    <label style="font-size: 11px; font-weight: 800; color: #475569; display: block; margin-bottom: 5px;">Transmettre pour validation à :</label>
+                    <input type="text" name="valideur" class="form-control" placeholder="Nom du responsable (Ex: M. Le Directeur)" required>
+
+                    <button type="submit" class="btn-action" style="background: #f59e0b; color: white; margin: 0;"><i class="fas fa-paper-plane"></i> Soumettre pour accord</button>
+                </form>
+            {% endif %}
+
+        {% else %}
+            <div style="font-size: 24px; font-weight: 800; color: #1e293b;">{{ intervention.cout_total|floatformat:0 }} FCFA</div>
+            <small style="color:#64748b; font-weight: 600;">(Main d'œuvre + Pièces + Déplacement)</small>
+        {% endif %}
+    </div>
+
+    {% if intervention.actions_effectuees or intervention.diagnostic %}
+    <div class="card-detail" style="border-left:5px solid #10b981;">
+        <h5 style="color:#10b981;margin-top:0;margin-bottom:15px;font-weight:800;"><i class="fas fa-clipboard-check"></i> Rapport Technique</h5>
+        
+        {% if intervention.diagnostic %}
+        <div style="margin-bottom: 15px;">
+            <span class="info-label" style="color:#b45309;"><i class="fas fa-stethoscope"></i> Diagnostic (Cause identifiée)</span>
+            <div style="font-size:14px; color:#1e293b; font-weight:600; background:#fffbeb; padding:10px; border-radius:6px; border:1px solid #fef3c7;">{{ intervention.diagnostic }}</div>
+        </div>
+        {% endif %}
+
+        {% if intervention.actions_effectuees %}
+        <span class="info-label" style="color:#10b981;"><i class="fas fa-tools"></i> Actions menées</span>
+        <p style="font-size:14px;color:#334155;line-height:1.6;margin:0; background: #f8fafc; padding: 15px; border-radius: 8px;">{{ intervention.actions_effectuees|linebreaksbr }}</p>
+        {% endif %}
+
+        {% if intervention.rapport_prestataire_scan or intervention.bon_sortie_signe_scan %}
+        <div style="margin-top: 15px; border-top: 1px dashed #cbd5e0; padding-top: 15px; display: flex; gap: 15px;">
+            {% if intervention.rapport_prestataire_scan %}
+            <a href="{{ intervention.rapport_prestataire_scan.url }}" target="_blank" style="background: #f1f5f9; padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: #475569; text-decoration: none; border: 1px solid #cbd5e0;"><i class="fas fa-file-pdf" style="color: #ef4444; margin-right: 5px;"></i> Voir Rapport Scanné</a>
+            {% endif %}
+            {% if intervention.bon_sortie_signe_scan %}
+            <a href="{{ intervention.bon_sortie_signe_scan.url }}" target="_blank" style="background: #f1f5f9; padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: #475569; text-decoration: none; border: 1px solid #cbd5e0;"><i class="fas fa-file-signature" style="color: #3b82f6; margin-right: 5px;"></i> Voir Bon Signé</a>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
+  <div>
+    <div class="card-detail" style="background:#f8fafc; border:2px solid #e2e8f0;">
+      <h5 style="color:#1e293b;margin-top:0;margin-bottom:20px;font-weight:800;text-align:center;"><i class="fas fa-cogs"></i> Espace d'Action Technique</h5>
+
+      {% if intervention.statut == 'PLANIFIEE' or intervention.statut == 'NOUVELLE' %}
+        <div style="display: flex; flex-direction: column; gap: 12px;">
+            <form method="POST" onsubmit="return confirmerAction(event, 'Démarrer l\'intervention ?', 'L\'heure de prise en charge sera enregistrée.', 'info', 'Oui, démarrer', '#6f42c1')">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="prendre_en_charge">
+                <button type="submit" class="btn-action btn-primary" style="margin: 0;"><i class="fas fa-play"></i> Gérer en Interne</button>
+            </form>
+            
+            {% if intervention.immobilisation.contrat_maintenance and intervention.immobilisation.contrat_maintenance.statut == 'ACTIF' %}
+            <button class="btn-action" style="background: #f59e0b; color: white; margin: 0;" onclick="document.getElementById('modal-delegation').classList.add('open')">
+                <i class="fas fa-truck"></i> Déléguer au Prestataire
+            </button>
+            {% else %}
+            <div style="background: #f8fafc; padding: 10px; border-radius: 8px; font-size: 11px; color: #94a3b8; text-align: center; border: 1px dashed #cbd5e0;">
+                <i class="fas fa-info-circle"></i> Matériel hors contrat. Délégation externe impossible.
+            </div>
+            {% endif %}
+        </div>
+      {% endif %}
+
+      {% if intervention.immobilisation.contrat_maintenance and intervention.immobilisation.contrat_maintenance.statut == 'ACTIF' %}
+      <div class="mo" id="modal-delegation" onclick="if(event.target===this)this.classList.remove('open')">
+        <div class="mb">
+          <div class="mh" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+            <h5><i class="fas fa-truck me-2"></i> Déléguer l'intervention</h5>
+            <button style="background: transparent; border: none; color: white; cursor: pointer; font-size: 18px;" onclick="document.getElementById('modal-delegation').classList.remove('open')"><i class="fas fa-times"></i></button>
+          </div>
+          
+          <form method="POST">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="deleguer_prestataire">
+              <input type="hidden" name="prestataire" value="{{ intervention.immobilisation.contrat_maintenance.prestataire.id }}">
+              
+              <div class="mbody">
+                  <div class="form-group">
+                      <label>Entreprise Prestataire (Liée au contrat)</label>
+                      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e0; font-weight: 800; color: #1e293b; font-size: 14px;">
+                          <i class="fas fa-lock" style="color: #94a3b8; margin-right: 8px;"></i>
+                          {{ intervention.immobilisation.contrat_maintenance.prestataire.raison_sociale }}
+                      </div>
+                  </div>
+                  
+                  <div class="form-group">
+                      <label>Technicien contacté (Optionnel)</label>
+                      <select name="technicien_appele" class="form-control">
+                          <option value="">-- Choisir parmi les techniciens de ce prestataire --</option>
+                          {% for tech in techniciens_externes %}
+                              {% if tech.fournisseur.id == intervention.immobilisation.contrat_maintenance.prestataire.id %}
+                              <option value="{{ tech.id }}">{{ tech.nom }} {{ tech.prenom }} - {{ tech.specialite }}</option>
+                              {% endif %}
+                          {% endfor %}
+                      </select>
+                  </div>
+
+                  <div style="background: #fff5f5; padding: 20px; border: 2px dashed #fc8181; border-radius: 12px; margin-top: 25px;">
+                      <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 15px; color: #c53030; font-weight: 800; margin: 0;">
+                          <input type="checkbox" name="necessite_sortie" style="width: 24px; height: 24px; accent-color: #c53030; cursor: pointer;">
+                          La machine doit sortir du CHU
+                      </label>
+                      <p style="font-size: 13px; color: #9b2c2c; margin: 8px 0 0 36px; line-height: 1.4;">Un <b>Bon de Sortie officiel</b> sera généré pour la sécurité.</p>
+                  </div>
+              </div>
+              <div class="mfoot">
+                  <button type="button" onclick="document.getElementById('modal-delegation').classList.remove('open')" style="background: white; border: 1px solid #cbd5e0; padding: 10px 20px; border-radius: 8px; cursor: pointer; color: #475569; font-weight: 800;">Annuler</button>
+                  <button type="submit" style="background: #d97706; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; color: white; font-weight: 800;"><i class="fas fa-paper-plane"></i> Valider la délégation</button>
+              </div>
+          </form>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if intervention.prestataire_concerne and intervention.statut == 'EN_COURS' %}
+        <div style="background: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fbd38d; margin-bottom: 20px;">
+            <h6 style="color: #b45309; margin-top: 0; font-size: 14px; font-weight: 800; text-transform: uppercase;"><i class="fas fa-hard-hat"></i> Gestion Externe</h6>
+            <div style="font-size: 14px; color: #92400e; margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px;">
+                <strong>Entreprise :</strong> {{ intervention.prestataire_concerne.raison_sociale }}<br>
+                <strong>Contacté :</strong> {{ intervention.technicien_appele.nom|default:"Non spécifié" }}
+            </div>
+
+            {% if intervention.necessite_sortie_reparation %}
+            <div style="background: #fee2e2; padding: 15px; border-radius: 8px; border: 1px solid #fca5a5; margin-bottom: 15px; text-align: center;">
+                <strong style="color: #b91c1c; font-size: 13px;"><i class="fas fa-exclamation-triangle"></i> La machine a quitté l'hôpital.</strong>
+                <a href="{% url 'patrimoine_imprimer_bon_sortie' intervention.id %}" target="_blank" style="display: block; background: #dc2626; color: white; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 800; font-size: 13px; margin-top: 10px; transition: 0.2s;"><i class="fas fa-print"></i> Imprimer Bon de Sortie (Sécurité)</a>
+            </div>
+            {% endif %}
+
+            <hr style="border: 0; border-top: 2px dashed #fbd38d; margin: 20px 0;">
+            
+            <h6 style="color: #b45309; margin: 0 0 15px 0; font-weight: 800; font-size: 14px;">Clôture & Retour Prestataire</h6>
+            <form method="POST" enctype="multipart/form-data" onsubmit="return confirmerAction(event, 'Clôturer ce dossier ?', 'Le retour du prestataire sera enregistré.', 'warning', 'Oui, clôturer', '#b45309')">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="retour_prestataire">
+                
+                <label style="font-size: 12px; font-weight: 800; color: #92400e;">Rapport d'intervention (Résumé)</label>
+                <textarea name="rapport" class="form-control" rows="3" placeholder="Saisissez un résumé..." required></textarea>
+                
+                <label style="font-size: 12px; font-weight: 800; color: #92400e;"><i class="fas fa-upload"></i> Scan du rapport (PDF/Image)</label>
+                <input type="file" name="rapport_scan" class="form-control" style="padding: 8px; background: white;">
+                
+                {% if intervention.necessite_sortie_reparation %}
+                <label style="font-size: 12px; font-weight: 800; color: #92400e; margin-top: 10px;"><i class="fas fa-upload"></i> Bon de Sortie Signé *</label>
+                <input type="file" name="bon_signe" class="form-control" style="padding: 8px; background: white;" required>
+                {% endif %}
+
+                <button type="submit" class="btn-action" style="background: #b45309; color: white; margin-top: 10px;"><i class="fas fa-check-circle"></i> Enregistrer le Retour</button>
+            </form>
+        </div>
+      
+      {% elif intervention.statut == 'EN_COURS' or intervention.statut == 'EN_ATTENTE_PIECES' %}
+        
+        <div style="background:white; padding:20px; border-radius:12px; border:1px solid #17a2b8; margin-bottom:20px; box-shadow: 0 4px 15px rgba(23,162,184,0.1);">
+          <h6 style="color:#17a2b8; margin-top:0; font-weight:800; font-size: 14px;"><i class="fas fa-shopping-cart"></i> Demander des pièces</h6>
+          <div class="info-group">
+            <select id="select-article-picker" class="form-control" style="margin-bottom: 10px;" onchange="ajouterAuPanier(this)">
+                <option value="">-- Sélectionner un article --</option>
+                {% for article in articles_catalogue %}
+                <option value="{{ article.id }}" data-nom="{{ article.designation }}">{{ article.designation }}</option>
+                {% endfor %}
+            </select>
+          </div>
+          <form method="POST" id="form-panier-pieces" onsubmit="return confirmerAction(event, 'Envoyer la commande ?', 'Le magasinier recevra une notification.', 'question', 'Oui, commander', '#17a2b8')">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="demander_pieces">
+            <div id="panier-liste-simple" class="commande-list">
+                <div id="panier-vide-msg" style="padding:20px; text-align:center; color:#94a3b8; font-style:italic; font-size:13px;">Le panier est vide.</div>
+            </div>
+            <button type="submit" class="btn-action btn-info" id="btn-envoyer-panier" style="display:none; margin-bottom:0;">
+              <i class="fas fa-paper-plane"></i> Transmettre au Magasin
+            </button>
+          </form>
+        </div>
+
+        <hr style="border:0; border-top:2px dashed #cbd5e0; margin:20px 0;">
+
+        <form method="POST" onsubmit="return confirmerAction(event, 'Achever la réparation ?', 'L\'heure de fin sera enregistrée.', 'warning', 'Oui, j\'ai terminé', '#28a745')">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="resoudre"> 
+          
+          <label style="font-size: 12px; font-weight: 800; color: #b45309; display: block; margin-bottom: 8px;"><i class="fas fa-stethoscope"></i> Diagnostic (Cause identifiée) *</label>
+          <textarea name="diagnostic" class="form-control" rows="2" placeholder="Quelle était la vraie cause de la panne ?" required>{{ intervention.diagnostic|default:"" }}</textarea>
+
+          <label style="font-size: 12px; font-weight: 800; color: #475569; display: block; margin-bottom: 8px; margin-top:10px;"><i class="fas fa-tools"></i> Rapport d'intervention (Travail effectué) *</label>
+          <textarea name="rapport" class="form-control" rows="4" placeholder="Détaillez le travail effectué..." required>{{ intervention.actions_effectuees|default:"" }}</textarea>
+          
+          <button type="submit" class="btn-action btn-success" style="margin-bottom: 0;"><i class="fas fa-check-double"></i> Terminer l'intervention</button>
+        </form>
+      {% endif %}
+
+      {% if intervention.statut == 'EN_ATTENTE_DEVIS' %}
+        <div style="background: #fffbeb; color: #b45309; padding: 20px; border-radius: 12px; border: 1px solid #fbd38d; text-align: center; font-size: 14px;">
+            <i class="fas fa-hand-paper fa-3x" style="margin-bottom: 15px; display: block;"></i>
+            <b>Intervention en pause</b><br>Veuillez patienter pendant que l'administration traite le devis.
+        </div>
+      {% endif %}
+
+      {% if intervention.statut == 'EN_ATTENTE_VALIDATION' %}
+        <div style="text-align:center; padding: 20px; background: #e0f2fe; border-radius: 12px; border: 1px solid #bae6fd; margin-bottom: 20px;">
+            <i class="fas fa-hourglass-half" style="font-size:35px;color:#0284c7;margin-bottom:15px;"></i>
+            <p style="font-size:14px;color:#0f172a; font-weight: 700; margin: 0;">En attente de la validation finale du Chef.</p>
+        </div>
+        
+        {% if perms.accounts.menu_patrimoine_admin or request.user.is_superuser %}
+        <form method="POST" onsubmit="return confirmerAction(event, 'Clôturer définitivement ?', 'La machine redeviendra ACTIVE dans le parc.', 'warning', 'Oui, valider', '#0369a1')">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="valider">
+          <button type="submit" class="btn-action" style="background:#0369a1;color:white; margin: 0;"><i class="fas fa-stamp"></i> Valider et Clôturer le dossier</button>
+        </form>
+        {% endif %}
+      {% endif %}
+
+      {% if intervention.statut == 'RESOLUE' or intervention.statut == 'TERMINEE' or intervention.statut == 'CLOTUREE' %}
+        <div style="text-align:center;padding:30px; background: #f0fdf4; border-radius: 12px; border: 1px solid #bbf7d0;">
+            <i class="fas fa-shield-check" style="font-size:50px;color:#10b981;margin-bottom:15px;"></i>
+            <h5 style="color:#065f46;font-weight:800;margin:0;">Dossier Totalement Clôturé</h5>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+// Fonction universelle de confirmation
+function confirmerAction(event, titre, texte, icone, texteBouton, couleurBouton) {
+    event.preventDefault();
+    const form = event.target.closest('form');
+    Swal.fire({
+        title: titre, text: texte, icon: icone, showCancelButton: true,
+        confirmButtonColor: couleurBouton || '#3085d6', cancelButtonColor: '#94a3b8',
+        confirmButtonText: texteBouton, cancelButtonText: 'Annuler',
+        customClass: { confirmButton: 'swal2-confirm', cancelButton: 'swal2-cancel' }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Sauvegarde en cours...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            form.submit();
+        }
+    });
+    return false;
+}
+
+// 🛒 Gestion du panier de pièces (Intacte et fonctionnelle)
+let articlesDansPanier = new Set();
+function ajouterAuPanier(select) {
+    const articleId = select.value;
+    if (!articleId) return;
+    const option = select.options[select.selectedIndex];
+    const nom = option.getAttribute('data-nom');
+
+    if (articlesDansPanier.has(articleId)) {
+        Swal.fire('Oops!', 'Cet article est déjà dans votre panier.', 'info');
+        select.value = ''; return;
+    }
+
+    document.getElementById('panier-vide-msg').style.display = 'none';
+    document.getElementById('btn-envoyer-panier').style.display = 'inline-flex';
+
+    const container = document.getElementById('panier-liste-simple');
+    const item = document.createElement('div');
+    item.className = 'commande-item';
+    item.id = 'item-panier-' + articleId;
+    
+    item.innerHTML = `
+        <button type="button" class="btn-remove" onclick="retirerDuPanier('${articleId}')" title="Retirer"><i class="fas fa-trash"></i></button>
+        <div class="item-name">${nom}</div>
+        <input type="hidden" name="articles[]" value="${articleId}">
+        <input type="number" name="quantites[]" class="item-qty" value="1" min="1" required>
+    `;
+
+    container.appendChild(item);
+    articlesDansPanier.add(articleId);
+    select.value = '';
+}
+
+function retirerDuPanier(id) {
+    const item = document.getElementById('item-panier-' + id);
+    if (item) {
+        item.remove();
+        articlesDansPanier.delete(id);
+        if (articlesDansPanier.size === 0) {
+            document.getElementById('panier-vide-msg').style.display = 'block';
+            document.getElementById('btn-envoyer-panier').style.display = 'none';
+        }
+    }
+}
+</script>
+{% endblock %}

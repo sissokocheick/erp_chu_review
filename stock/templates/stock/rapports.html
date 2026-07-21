@@ -1,0 +1,239 @@
+{% extends "base_ui.html" %}
+{% block contenu %}
+
+<div style="background: var(--card-bg); padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px var(--shadow);">
+
+    <div style="border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 30px;">
+        <h2 style="color: var(--text-primary); margin: 0;"><i class="fas fa-chart-pie" style="color: #28a745;"></i> Rapports & Exports Logistiques</h2>
+        <p style="color: var(--text-muted); margin-top: 5px; font-size: 14px;">Générez vos tableaux de bord, extrayez les données et analysez les tendances de votre chaîne logistique.</p>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px;">
+
+        <!-- CARTE 1 : Bilan Consommations PDF -->
+        <div style="border: 1px solid #1c5b96; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px var(--shadow);">
+            <div style="background: #1c5b96; color: white; padding: 15px 20px; font-weight: bold; font-size: 16px;">
+                <i class="fas fa-file-pdf"></i> Bilan des Consommations
+            </div>
+            <div style="padding: 20px; background: var(--bg-stripe);">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 0; margin-bottom: 20px;">
+                    Générez un document PDF officiel détaillant les quantités de matériel consommées par un service spécifique ou par l'ensemble de l'hôpital sur une période donnée.
+                </p>
+
+                <form id="form-consommation" action="{% url 'rapport_consommation_pdf' %}" method="GET" style="display: flex; flex-direction: column; gap: 15px;" onsubmit="return ouvrirPdfConsommation(event)">
+        {% csrf_token %}
+
+                    <div>
+                        <label style="font-size: 12px; font-weight: bold; color: #1c5b96; display: block; margin-bottom: 5px;"><i class="far fa-calendar-alt"></i> Période :</label>
+                        <input type="text" name="date_range" id="date_range_picker" required class="form-control" placeholder="JJ/MM/AAAA - JJ/MM/AAAA" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; outline: none; box-sizing: border-box;">
+                    </div>
+
+                    <div>
+                        <label style="font-size: 12px; font-weight: bold; color: #1c5b96; display: block; margin-bottom: 5px;"><i class="fas fa-hospital-user"></i> Filtrer par Service (Optionnel) :</label>
+                        <select name="service" class="form-control select2" style="width: 100%;">
+                            <option value="">-- Tous les services (Global) --</option>
+                            {% for s in services %}
+                                <option value="{{ s.id }}">{{ s.nom }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" style="margin-top: 10px; background: #dc3545; color: white; border: none; padding: 12px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; font-size: 15px;">
+                        <i class="fas fa-print"></i> Générer le Rapport PDF
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- CARTE 2 : Exports Bruts Excel/CSV -->
+        <div style="border: 1px solid #28a745; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px var(--shadow);">
+            <div style="background: #28a745; color: white; padding: 15px 20px; font-weight: bold; font-size: 16px;">
+                <i class="fas fa-file-excel"></i> Exports Bruts (Excel / CSV)
+            </div>
+            <div style="padding: 20px; background: var(--bg-stripe);">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 0; margin-bottom: 20px;">
+                    Téléchargez les bases de données complètes pour effectuer vos propres tris, filtres ou tableaux croisés dynamiques sur Excel.
+                </p>
+
+                <div style="display: flex; flex-direction: column; gap: 10px;">
+                    <a href="{% url 'export_stock_excel' %}" style="background: var(--card-bg); border: 2px solid #28a745; color: #28a745; padding: 12px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: space-between; transition: 0.2s;" onmouseover="this.style.background='#28a745'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#28a745';">
+                        <span><i class="fas fa-boxes"></i> État du Stock Actuel</span>
+                        <i class="fas fa-download"></i>
+                    </a>
+
+                    <a href="{% url 'export_commandes_excel' %}" style="background: var(--card-bg); border: 2px solid #17a2b8; color: #17a2b8; padding: 12px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: space-between; transition: 0.2s;" onmouseover="this.style.background='#17a2b8'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#17a2b8';">
+                        <span><i class="fas fa-shopping-cart"></i> Historique des Commandes</span>
+                        <i class="fas fa-download"></i>
+                    </a>
+
+                    <a href="{% url 'export_mouvements_excel' %}" style="background: var(--card-bg); border: 2px solid #6c757d; color: #6c757d; padding: 12px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: space-between; transition: 0.2s;" onmouseover="this.style.background='#6c757d'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#6c757d';">
+                        <span><i class="fas fa-exchange-alt"></i> Historique des Mouvements</span>
+                        <i class="fas fa-download"></i>
+                    </a>
+
+                    <a href="{% url 'export_articles_excel' %}" style="background: var(--card-bg); border: 2px solid #fd7e14; color: #fd7e14; padding: 12px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: space-between; transition: 0.2s;" onmouseover="this.style.background='#fd7e14'; this.style.color='white';" onmouseout="this.style.background='white'; this.style.color='#fd7e14';">
+                        <span><i class="fas fa-book"></i> Catalogue Articles Complet</span>
+                        <i class="fas fa-download"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- CARTE 3 : Stats Demandes -->
+        <div style="border: 1px solid #17a2b8; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px var(--shadow);">
+            <div style="background: #17a2b8; color: white; padding: 15px 20px; font-weight: bold; font-size: 16px;">
+                <i class="fas fa-chart-bar"></i> Statistiques des Demandes
+            </div>
+            <div style="padding: 20px; background: var(--bg-stripe);">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 0; margin-bottom: 20px;">
+                    Analysez les tendances des demandes de matériel : top services, articles les plus demandés, taux de traitement et évolution temporelle.
+                </p>
+                <a href="{% url 'stats_demandes' %}" style="background: #17a2b8; color: white; border: none; padding: 12px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; font-size: 15px;">
+                    <i class="fas fa-eye"></i> Voir le Tableau de Bord
+                </a>
+            </div>
+        </div>
+
+        <!-- CARTE 4 : Stats Sondages -->
+        <div style="border: 1px solid #ffc107; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px var(--shadow);">
+            <div style="background: #ffc107; color: #212529; padding: 15px 20px; font-weight: bold; font-size: 16px;">
+                <i class="fas fa-smile"></i> Statistiques de Satisfaction
+            </div>
+            <div style="padding: 20px; background: var(--bg-stripe);">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 0; margin-bottom: 20px;">
+                    Consultez les résultats des accusés de réception : taux de satisfaction, délais moyens de réception et commentaires par service.
+                </p>
+                <a href="{% url 'stats_sondages' %}" style="background: #ffc107; color: #212529; border: none; padding: 12px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; font-size: 15px;">
+                    <i class="fas fa-eye"></i> Voir le Tableau de Bord
+                </a>
+            </div>
+        </div>
+
+        <!-- CARTE 5 : Satisfaction par Service -->
+        <div style="border: 1px solid #6f42c1; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px var(--shadow);">
+            <div style="background: #6f42c1; color: white; padding: 15px 20px; font-weight: bold; font-size: 16px;">
+                <i class="fas fa-star-half-alt"></i> Satisfaction par Service
+            </div>
+            <div style="padding: 20px; background: var(--bg-stripe);">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 0; margin-bottom: 20px;">
+                    Analysez le taux de satisfaction des demandes de matériel service par service : accusés signés, notes moyennes et taux de réponse.
+                </p>
+                <a href="{% url 'stats_satisfaction_services' %}" style="background: #6f42c1; color: white; border: none; padding: 12px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; font-size: 15px;">
+                    <i class="fas fa-eye"></i> Voir le Tableau de Bord
+                </a>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+<script>
+$(function() {
+    // Initialisation de Select2 pour la liste des services
+    $('.select2').select2({
+        placeholder: "Rechercher un service...",
+        allowClear: true
+    });
+
+    // Initialisation du calendrier DateRangePicker en français
+    $('#date_range_picker').daterangepicker({
+        locale: {
+            format: 'DD/MM/YYYY',
+            separator: ' - ',
+            applyLabel: 'Valider',
+            cancelLabel: 'Annuler',
+            fromLabel: 'De',
+            toLabel: 'À',
+            customRangeLabel: 'Personnalisé',
+            daysOfWeek: ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'],
+            monthNames: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+            firstDay: 1
+        },
+        autoUpdateInput: false // Pour laisser le champ vide par défaut
+    });
+
+    // Action quand on valide une date
+    $('#date_range_picker').on('apply.daterangepicker', function(ev, picker) {
+        $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+    });
+
+    // Action quand on annule (vide le champ)
+    $('#date_range_picker').on('cancel.daterangepicker', function(ev, picker) {
+        $(this).val('');
+    });
+});
+</script>
+
+
+<!-- ═════ MODAL PDF (comme liste_sorties) ═════ -->
+<div class="mo-pdf" id="modal-pdf" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99999; align-items: flex-start; justify-content: center; backdrop-filter: blur(3px); padding-top: 4vh; overflow-y: auto;">
+  <div class="mb-pdf" style="background: var(--bg-card); border-radius: 12px; width: 90%; max-width: 900px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); margin-bottom: 4vh;">
+    <div class="mh-pdf" style="background: linear-gradient(135deg, #17a2b8, #117a8b); color: white; padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; justify-content: space-between;">
+      <h5 id="pdf-titre" style="margin:0; font-size:16px; font-weight:600;"><i class="fas fa-print me-2"></i> Impression</h5>
+      <button class="mc-pdf" onclick="document.getElementById('modal-pdf').style.display='none'" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; transition: .2s; display: inline-flex; align-items: center; justify-content: center;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div style="padding:10px; min-height:300px; background:#525659;">
+      <div id="pdf-loader" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px; gap:14px;">
+        <div style="width:40px; height:40px; border:4px solid #e0e0e0; border-top-color:#17a2b8; border-radius:50%; animation:spin .8s linear infinite;"></div>
+        <span style="color:white; font-size:13px;">Generation du document en cours...</span>
+      </div>
+      <iframe id="pdf-iframe" style="display:none; width:100%; height:72vh; border:none; border-radius:0 0 8px 8px;"></iframe>
+    </div>
+    <div class="mfoot-pdf" style="padding: 14px 24px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 10px; background: var(--bg-stripe); border-radius: 0 0 12px 12px;">
+      <button onclick="document.getElementById('modal-pdf').style.display='none'" style="background: var(--bg-hover); color: var(--text-medium); border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: .2s;">Fermer</button>
+      <button onclick="document.getElementById('pdf-iframe').contentWindow.print()" style="background: linear-gradient(135deg, #17a2b8, #117a8b); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; transition: .2s;">
+        <i class="fas fa-print me-1"></i> Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+function imprimerModal(url, titre) {
+    var modal = document.getElementById('modal-pdf');
+    document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-print me-2"></i> ' + (titre || 'Document');
+    var loader = document.getElementById('pdf-loader');
+    var iframe = document.getElementById('pdf-iframe');
+    loader.style.display = 'flex';
+    iframe.style.display = 'none';
+    iframe.src = '';
+    modal.style.display = 'flex';
+    iframe.onload = function(){
+        loader.style.display = 'none';
+        iframe.style.display = 'block';
+    };
+    iframe.src = url;
+}
+
+function ouvrirPdfConsommation(e) {
+    e.preventDefault();
+    var form = document.getElementById('form-consommation');
+    var dateRange = document.getElementById('date_range_picker').value;
+    var service = form.querySelector('select[name="service"]').value;
+    var url = form.action + '?date_range=' + encodeURIComponent(dateRange);
+    if (service) {
+        url += '&service=' + encodeURIComponent(service);
+    }
+    imprimerModal(url, 'Bilan des Consommations');
+    return false;
+}
+
+document.getElementById('modal-pdf').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') document.getElementById('modal-pdf').style.display = 'none';
+});
+</script>
+
+{% endblock %}

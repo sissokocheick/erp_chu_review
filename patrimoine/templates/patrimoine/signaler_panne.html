@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Signaler une panne</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f3f7; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+        .card { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .icon-box { width: 70px; height: 70px; background: #e8f0fe; color: #1c5b96; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 15px; }
+        h2 { margin: 0 0 5px; color: #333; font-size: 20px; }
+        p { color: #666; font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
+        .machine-badge { background: #f8f0ff; color: #6f42c1; padding: 10px; border-radius: 8px; font-weight: bold; border: 1px dashed #6f42c1; margin-bottom: 20px; font-size: 13px; }
+        textarea { width: 100%; padding: 15px; border: 2px solid #eef0f3; border-radius: 10px; font-family: inherit; font-size: 14px; box-sizing: border-box; resize: none; margin-bottom: 15px; outline: none; }
+        textarea:focus { border-color: #6f42c1; }
+        /* Style magique pour le bouton photo */
+        .file-upload { background: #f8f9fa; border: 2px dashed #ccc; padding: 15px; border-radius: 10px; cursor: pointer; color: #555; font-size: 13px; font-weight: bold; display: block; margin-bottom: 25px; transition: 0.2s; }
+        .file-upload:hover { border-color: #6f42c1; color: #6f42c1; background: #faf8ff; }
+        .btn-submit { background: #6f42c1; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(111,66,193,0.3); }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="icon-box"><i class="fas fa-exclamation-triangle"></i></div>
+    <h2>Signaler un problème</h2>
+    <p>Le service technique va être notifié instantanément.</p>
+
+    <div class="machine-badge">
+        <i class="fas fa-laptop-medical"></i> {{ equipement.nom }}<br>
+        <span style="font-size:11px; font-weight:normal;">Localisation : {{ equipement.service_affectation.nom|default:"Non précisée" }}</span>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        <textarea name="description" rows="4" placeholder="Décrivez le problème (ex: L'écran ne s'allume plus...)" required></textarea>
+        
+        <label class="file-upload">
+            <i class="fas fa-camera" style="font-size: 20px; margin-bottom: 8px; display: block;"></i>
+            Prendre une photo (Optionnel)
+            <input type="file" name="photo" accept="image/*" capture="environment" style="display: none;">
+        </label>
+
+        <button type="submit" class="btn-submit">
+            <i class="fas fa-paper-plane"></i> Envoyer l'alerte
+        </button>
+    </form>
+</div>
+
+</body>
+</html>

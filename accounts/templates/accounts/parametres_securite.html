@@ -1,0 +1,267 @@
+{% extends "base_ui.html" %}
+{% block title %}Sécurité & Mots de passe{% endblock %}
+
+{% block contenu %}
+
+<style>
+    .admin-container {
+        background: var(--bg-card);
+        padding: 24px;
+        border-radius: 10px;
+        box-shadow: 0 2px 12px var(--shadow);
+        border: 1px solid var(--border-light);
+    }
+    .split-layout { display: flex; gap: 30px; align-items: flex-start; flex-wrap: wrap; }
+    
+    .left-panel { flex: 5; min-width: 300px; }
+    .right-panel {
+        flex: 5; min-width: 300px;
+        border: 1px solid var(--border-light);
+        padding: 24px;
+        background-color: var(--bg-stripe);
+        border-radius: 10px;
+        position: sticky; top: 20px;
+    }
+    
+    .form-group { margin-bottom: 22px; }
+    .form-group label {
+        display: block; font-weight: 700; margin-bottom: 8px;
+        font-size: 12px; color: var(--text-medium);
+        text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .form-control {
+        width: 100%; padding: 12px 14px;
+        border: 2px solid var(--border-color);
+        border-radius: 8px; box-sizing: border-box;
+        background: var(--bg-input); color: var(--text-dark);
+        font-size: 15px; transition: all 0.3s;
+    }
+    .form-control:focus {
+        border-color: var(--primary-blue);
+        box-shadow: 0 0 0 3px rgba(28,91,150,0.1);
+        outline: none; background: var(--bg-card);
+    }
+    .form-control::placeholder { color: var(--text-light); }
+    
+    .btn-enregistrer {
+        background-color: var(--primary-blue); color: white; border: none;
+        padding: 11px 24px; border-radius: 8px; cursor: pointer;
+        font-weight: 700; font-size: 14px; transition: all 0.2s;
+        box-shadow: 0 2px 8px rgba(28,91,150,0.3);
+        display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-enregistrer:hover { background-color: #0d3b6e; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(28,91,150,0.4); }
+    
+    .btn-retour {
+        background-color: #6c757d; color: white; border: none;
+        padding: 11px 18px; border-radius: 8px; cursor: pointer;
+        font-weight: 700; text-decoration: none; display: inline-flex;
+        align-items: center; gap: 8px; font-size: 13px; transition: all 0.2s;
+    }
+    .btn-retour:hover { background-color: #5a6268; color: white; text-decoration: none; transform: translateY(-1px); }
+
+    .card-option {
+        border: 2px solid var(--border-color);
+        border-radius: 10px;
+        padding: 20px 22px;
+        margin-bottom: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        background: var(--bg-card);
+    }
+    .card-option:hover { border-color: var(--primary-blue); box-shadow: 0 2px 8px rgba(28,91,150,0.08); }
+    .card-option.selected { border-color: var(--primary-blue); background: #f0f6ff; }
+    body.dark-mode .card-option.selected { background: #1e2d4a; }
+    .card-option.selected-warning { border-color: #ffc107; background: #fffdf0; }
+    body.dark-mode .card-option.selected-warning { background: #2a2510; }
+
+    .card-option label { cursor: pointer; margin: 0; display: flex; align-items: flex-start; gap: 14px; }
+    .card-option input[type="radio"] { margin-top: 3px; width: 18px; height: 18px; cursor: pointer; accent-color: var(--primary-blue); flex-shrink: 0; }
+    .card-option .opt-title { font-weight: 700; font-size: 15px; color: var(--primary-blue); display: block; margin-bottom: 4px; }
+    .card-option .opt-desc { font-size: 12px; color: var(--text-medium); line-height: 1.5; }
+
+    .info-box {
+        background: var(--bg-stripe); border-left: 4px solid #17a2b8;
+        padding: 15px 18px; margin-bottom: 14px; border-radius: 6px;
+        color: var(--text-dark);
+    }
+    .info-box.success { border-left-color: #28a745; }
+    .info-box.warning { border-left-color: #ffc107; }
+    .info-box strong { color: var(--text-dark); }
+    .info-box small { color: var(--text-medium); }
+
+    .config-table { width: 100%; border-collapse: collapse; font-size: 13px; border-radius: 8px; overflow: hidden; }
+    .config-table th {
+        background-color: var(--primary-blue);
+        color: var(--text-white);
+        padding: 12px 16px; text-align: left;
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+    }
+    .config-table td {
+        padding: 11px 16px; border-bottom: 1px solid var(--border-light);
+        color: var(--text-dark);
+    }
+    .config-table tr:hover { background-color: var(--bg-hover); }
+
+    .badge-mode {
+        display: inline-block; padding: 7px 16px; border-radius: 20px;
+        font-size: 13px; font-weight: 700;
+    }
+    .badge-aleatoire { background: #e3f2fd; color: #0d47a1; }
+    .badge-fixe { background: #fff3cd; color: #856404; }
+
+    .champ-mdp { display: none; }
+    .champ-mdp.visible { display: block; }
+</style>
+
+<div>
+    <h2 style="margin-top: 0; color: var(--text-dark); font-size: 20px; margin-bottom: 6px; display: flex; align-items: center; gap: 10px;">
+        <span style="background: var(--primary-blue); color: white; width: 36px; height: 36px; border-radius: 8px; display: inline-flex; align-items: center; justify-content: center;">
+            <i class="fas fa-shield-alt" style="font-size: 16px;"></i>
+        </span>
+        Sécurité & Mots de passe
+    </h2>
+    <p style="color: var(--text-medium); font-size: 13px; margin-bottom: 22px; margin-left: 46px;">
+        Configurez la politique de mot de passe pour les nouveaux utilisateurs de <strong>{{ request.entreprise.nom }}</strong>.
+    </p>
+
+    <div class="admin-container">
+        <div class="split-layout">
+            
+            <div class="left-panel">
+                <form method="POST" id="formSecurite">
+                    {% csrf_token %}
+
+                    <div class="form-group">
+                        <label style="font-size: 13px; margin-bottom: 14px; color: var(--text-dark);">
+                            <i class="fas fa-cog"></i> Mode d'attribution des mots de passe
+                        </label>
+
+                        <div class="card-option {% if config.type_mot_de_passe == 'ALEATOIRE' %}selected{% endif %}" 
+                             onclick="selectOption('ALEATOIRE')">
+                            <label>
+                                <input type="radio" name="type_mot_de_passe" value="ALEATOIRE" 
+                                       {% if config.type_mot_de_passe == 'ALEATOIRE' %}checked{% endif %}>
+                                <div>
+                                    <span class="opt-title">🔀 Aléatoire (recommandé)</span>
+                                    <span class="opt-desc">
+                                        Le système génère un mot de passe unique et fort de <strong>14 caractères</strong> 
+                                        pour chaque nouvel utilisateur.
+                                    </span>
+                                </div>
+                            </label>
+                        </div>
+
+                        <div class="card-option {% if config.type_mot_de_passe == 'FIXE' %}selected-warning{% endif %}" 
+                             onclick="selectOption('FIXE')">
+                            <label>
+                                <input type="radio" name="type_mot_de_passe" value="FIXE"
+                                       {% if config.type_mot_de_passe == 'FIXE' %}checked{% endif %}>
+                                <div>
+                                    <span class="opt-title" style="color:#856404;">🔒 Mot de passe fixe</span>
+                                    <span class="opt-desc">
+                                        Tous les nouveaux comptes reçoivent le <strong>même mot de passe</strong>.
+                                        <span style="color:#dc3545;">Moins sécurisé.</span>
+                                    </span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group champ-mdp {% if config.type_mot_de_passe == 'FIXE' %}visible{% endif %}" id="champMdp">
+                        <label>
+                            <i class="fas fa-lock"></i> Mot de passe par défaut <span style="color:#dc3545;">*</span>
+                        </label>
+                        <input type="text" 
+                               name="mot_de_passe_defaut" 
+                               id="inputMdp"
+                               class="form-control" 
+                               placeholder="Ex: Changeme2024"
+                               value="{{ config.mot_de_passe_defaut|default:'' }}"
+                               minlength="6"
+                               style="font-size: 16px; letter-spacing: 2px; font-weight: bold;">
+                        <small style="color: var(--text-light); display: block; margin-top: 6px;">
+                            ⚠️ Minimum 6 caractères.
+                        </small>
+                    </div>
+
+                    <div style="display: flex; gap: 12px; margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--border-light);">
+                        <a href="{% url 'accounts:page_utilisateurs' %}" class="btn-retour">
+                            <i class="fas fa-arrow-left"></i> Retour aux utilisateurs
+                        </a>
+                        <button type="submit" class="btn-enregistrer">
+                            <i class="fas fa-save"></i> Enregistrer les paramètres
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="right-panel">
+                <h4 style="margin-top: 0; color: var(--primary-blue); font-size: 15px; border-bottom: 2px solid var(--primary-blue); padding-bottom: 12px; margin-bottom: 16px;">
+                    <i class="fas fa-check-circle"></i> Configuration actuelle
+                </h4>
+
+                <table class="config-table">
+                    <tr>
+                        <th style="width: 40%;">Mode</th>
+                        <td>
+                            {% if config.type_mot_de_passe == 'ALEATOIRE' %}
+                                <span class="badge-mode badge-aleatoire">🔀 Aléatoire</span>
+                            {% else %}
+                                <span class="badge-mode badge-fixe">🔒 Mot de passe fixe</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% if config.type_mot_de_passe == 'FIXE' and config.mot_de_passe_defaut %}
+                    <tr>
+                        <th>Mot de passe</th>
+                        <td><code style="font-size: 15px; font-weight: bold;">{{ config.mot_de_passe_defaut }}</code></td>
+                    </tr>
+                    {% endif %}
+                </table>
+
+                <div style="margin-top: 28px;">
+                    <h5 style="color: #17a2b8; font-size: 14px; margin-bottom: 14px;">
+                        <i class="fas fa-info-circle"></i> Comment ça marche ?
+                    </h5>
+                    
+                    <div class="info-box">
+                        <strong>🔀 Mode Aléatoire</strong><br>
+                        <small>Mot de passe unique de 14 caractères généré à chaque création.</small>
+                    </div>
+                    
+                    <div class="info-box warning">
+                        <strong>🔒 Mode Mot de passe fixe</strong><br>
+                        <small>Tous les nouveaux comptes reçoivent le même mot de passe.</small>
+                    </div>
+                    
+                    <div class="info-box success">
+                        <strong>✅ Bonne pratique</strong><br>
+                        <small>Dans tous les cas, l'utilisateur doit changer son mot de passe à la première connexion.</small>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+function selectOption(valeur) {
+    document.querySelector('input[name="type_mot_de_passe"][value="' + valeur + '"]').checked = true;
+    document.querySelectorAll('.card-option').forEach(function(card) {
+        card.classList.remove('selected', 'selected-warning');
+    });
+    if (valeur === 'FIXE') {
+        document.querySelector('.card-option:has(input[value="FIXE"])').classList.add('selected-warning');
+        document.getElementById('champMdp').classList.add('visible');
+    } else {
+        document.querySelector('.card-option:has(input[value="ALEATOIRE"])').classList.add('selected');
+        document.getElementById('champMdp').classList.remove('visible');
+    }
+}
+document.querySelectorAll('input[name="type_mot_de_passe"]').forEach(function(radio) {
+    radio.addEventListener('change', function() { selectOption(this.value); });
+});
+</script>
+{% endblock %}

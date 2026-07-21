@@ -1,0 +1,35 @@
+{% extends "base_ui.html" %}
+{% block contenu %}
+
+<div style="max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);">
+    
+    <div style="text-align: center; margin-bottom: 25px;">
+        <i class="fas fa-file-csv" style="font-size: 50px; color: #1c5b96; margin-bottom: 15px;"></i>
+        <h2 style="color: #333; margin: 0;">Importer l'Inventaire (CSV)</h2>
+        <p style="color: #6c757d; font-size: 14px; margin-top: 5px;">Mettez en ligne votre fichier INV2026_INFO_Total.csv</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data" style="border: 2px dashed #ced4da; padding: 30px; text-align: center; border-radius: 8px; background: #f8f9fa;">
+        {% csrf_token %}
+        
+        <i class="fas fa-cloud-upload-alt" style="font-size: 40px; color: #adb5bd; margin-bottom: 15px;"></i><br>
+        
+        <label for="fichier_csv" style="background: #0d6efd; color: white; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: bold; display: inline-block; margin-bottom: 15px;">
+            <i class="fas fa-search me-2"></i> Choisir un fichier CSV
+        </label>
+        <input type="file" name="fichier_csv" id="fichier_csv" accept=".csv" required style="display: none;" onchange="document.getElementById('filename').innerText = this.files[0].name">
+        
+        <div id="filename" style="font-size: 13px; color: #1c5b96; font-weight: bold; margin-bottom: 20px;">Aucun fichier sélectionné</div>
+
+        <button type="submit" style="background: #198754; color: white; border: none; padding: 12px 25px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; font-size: 16px;">
+            <i class="fas fa-rocket me-2"></i> Lancer l'importation
+        </button>
+    </form>
+    
+    <div style="margin-top: 20px; background: #fff3cd; color: #856404; padding: 15px; border-radius: 6px; font-size: 13px; border-left: 4px solid #ffeeba;">
+        <i class="fas fa-info-circle me-1"></i> <b>Attention :</b> Le fichier doit être enregistré au format <strong>CSV (séparateur point-virgule ou virgule)</strong>. Assurez-vous que les en-têtes (N°, Service :, Bureau :, etc.) sont présents.
+    </div>
+
+</div>
+
+{% endblock %}

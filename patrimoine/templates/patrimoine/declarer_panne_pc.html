@@ -1,0 +1,136 @@
+{% extends "base_ui.html" %}
+{% block title %}Signaler une Panne{% endblock %}
+{% block contenu %}
+<style>
+  .page-header { text-align: center; margin-bottom: 30px; }
+  .page-header h3 { margin: 0; color: #117a8b; font-weight: 800; font-size: 24px; }
+  .page-header p { color: #6c757d; font-size: 14px; margin-top: 5px; }
+
+  .card-form { background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,.05); padding: 35px; max-width: 750px; margin: 0 auto; border-top: 5px solid #17a2b8; }
+  
+  .form-group { margin-bottom: 25px; }
+  .form-label { display: block; font-size: 12px; font-weight: 700; color: #495057; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  
+  .form-control { width: 100%; padding: 14px; border: 2px solid #eef0f3; border-radius: 8px; font-size: 14px; box-sizing: border-box; transition: 0.2s; background: #f8f9fa; }
+  .form-control:focus { outline: none; border-color: #17a2b8; background: white; box-shadow: 0 0 0 4px rgba(23,162,184,.1); }
+  
+  /* Cartes d'Urgence */
+  .urgency-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+  .urg-card { border: 2px solid #eef0f3; border-radius: 8px; padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.2s; background: white; }
+  .urg-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
+  .urg-card input[type="radio"] { display: none; }
+  .urg-icon { font-size: 24px; margin-bottom: 8px; display: block; }
+  .urg-title { font-size: 13px; font-weight: 700; color: #495057; }
+  
+  /* Couleurs actives des urgences */
+  .urg-card.active-faible { border-color: #28a745; background: #f0fdf4; }
+  .urg-card.active-faible .urg-icon { color: #28a745; }
+  
+  .urg-card.active-moyenne { border-color: #ffc107; background: #fffbf0; }
+  .urg-card.active-moyenne .urg-icon { color: #ffc107; }
+  
+  .urg-card.active-haute { border-color: #fd7e14; background: #fff5f0; }
+  .urg-card.active-haute .urg-icon { color: #fd7e14; }
+  
+  .urg-card.active-critique { border-color: #dc3545; background: #fff0f0; }
+  .urg-card.active-critique .urg-icon { color: #dc3545; }
+
+  .btn-submit { background: linear-gradient(135deg, #17a2b8, #117a8b); color: white; border: none; padding: 14px 30px; border-radius: 8px; font-size: 15px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: 0.2s; width: 100%; justify-content: center; box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3); }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4); }
+  
+  @media (max-width: 600px) { .urgency-grid { grid-template-columns: 1fr 1fr; } }
+</style>
+
+<div style="max-width: 750px; margin: 0 auto 20px;">
+    <a href="{% url 'patrimoine_mes_tickets' %}" style="color:#6c757d; text-decoration:none; font-size:14px; font-weight:600; display:inline-flex; align-items:center; gap:5px;">
+        <i class="fas fa-arrow-left"></i> Retour à mes demandes
+    </a>
+</div>
+
+<div class="card-form">
+    <div class="page-header">
+        <div style="width: 70px; height: 70px; background: #e8f7f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px;">
+            <i class="fas fa-tools" style="font-size: 30px; color: #17a2b8;"></i>
+        </div>
+        <h3>Ouvrir un ticket technique</h3>
+        <p>L'équipe de maintenance sera notifiée immédiatement.</p>
+    </div>
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        
+        <div class="form-group">
+            <label class="form-label"><i class="fas fa-desktop" style="color:#17a2b8; margin-right:5px;"></i> 1. Équipement en panne *</label>
+            <select name="equipement" class="form-control select2-init" required>
+                <option value="">-- Recherchez ou sélectionnez la machine concernée --</option>
+                {% for e in equipements %}
+                    <option value="{{ e.id }}">
+                        {{ e.nom_affichage }} ({{ e.code_patrimoine }}) 
+                        {% if e.bureau %} — {{ e.bureau.nom }}{% endif %}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label"><i class="fas fa-exclamation-triangle" style="color:#17a2b8; margin-right:5px;"></i> 2. Niveau d'urgence *</label>
+            <div class="urgency-grid">
+                <label class="urg-card" onclick="updateUrgency(this, 'active-faible')">
+                    <input type="radio" name="degre_urgence" value="FAIBLE">
+                    <i class="fas fa-temperature-low urg-icon" style="color:#28a745;"></i>
+                    <span class="urg-title">Faible</span>
+                </label>
+                <label class="urg-card active-moyenne" onclick="updateUrgency(this, 'active-moyenne')">
+                    <input type="radio" name="degre_urgence" value="MOYENNE" checked>
+                    <i class="fas fa-thermometer-half urg-icon" style="color:#ffc107;"></i>
+                    <span class="urg-title">Moyenne</span>
+                </label>
+                <label class="urg-card" onclick="updateUrgency(this, 'active-haute')">
+                    <input type="radio" name="degre_urgence" value="HAUTE">
+                    <i class="fas fa-fire urg-icon" style="color:#fd7e14;"></i>
+                    <span class="urg-title">Haute</span>
+                </label>
+                <label class="urg-card" onclick="updateUrgency(this, 'active-critique')">
+                    <input type="radio" name="degre_urgence" value="CRITIQUE">
+                    <i class="fas fa-radiation urg-icon" style="color:#dc3545;"></i>
+                    <span class="urg-title">Critique</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label"><i class="fas fa-comment-alt" style="color:#17a2b8; margin-right:5px;"></i> 3. Description du problème *</label>
+            <textarea name="description" class="form-control" rows="4" placeholder="Que se passe-t-il exactement ? (Ex: L'imprimante bourre le papier au milieu de l'impression...)" required></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label"><i class="fas fa-camera" style="color:#17a2b8; margin-right:5px;"></i> 4. Joindre une photo (Optionnel)</label>
+            <input type="file" name="photo" class="form-control" style="background: white;" accept="image/*">
+            <small style="color:#888; font-size:11px; display:block; margin-top:5px;">Une photo de l'écran d'erreur ou du problème physique aide le technicien à anticiper.</small>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <button type="submit" class="btn-submit">
+                <i class="fas fa-paper-plane"></i> Transmettre ma demande
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+    // Initialisation de la recherche rapide pour la liste déroulante
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof $ !== 'undefined') {
+            $('.select2-init').select2({ width: '100%' });
+        }
+    });
+
+    // Animation des cartes d'urgence
+    function updateUrgency(element, activeClass) {
+        document.querySelectorAll('.urg-card').forEach(card => {
+            card.className = 'urg-card'; // Reset all classes
+        });
+        element.classList.add(activeClass);
+    }
+</script>
+{% endblock %}

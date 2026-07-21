@@ -1,0 +1,127 @@
+<style>
+  .es-article { font-weight: 700; color: #1c5b96; font-size: 14px; }
+  .es-ref { font-size: 11px; color: var(--text-light); }
+  .es-famille { color: var(--text-medium); font-weight: 500; }
+  .es-seuil { font-size: 11px; color: var(--text-light); margin-top: 2px; }
+
+  .qte-box {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 70px;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 20px;
+    line-height: 1;
+    text-align: center;
+    letter-spacing: -0.5px;
+  }
+  .qte-rupture  { background: rgba(220,53,69,0.15); color: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,0.25); }
+  .qte-critique { background: rgba(220,53,69,0.15); color: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,0.25); }
+  .qte-alerte   { background: rgba(253,126,20,0.15); color: #fd7e14; box-shadow: 0 0 0 2px rgba(253,126,20,0.25); }
+  .qte-correct  { background: rgba(40,167,69,0.15); color: #28a745; box-shadow: 0 0 0 2px rgba(40,167,69,0.25); }
+  .qte-surstoc  { background: rgba(0,123,255,0.15); color: #007bff; box-shadow: 0 0 0 2px rgba(0,123,255,0.25); }
+
+  .badge-stat {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 4px 8px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+  }
+  .bg-rupture  { background: rgba(220,53,69,0.12); color: #721c24; }
+  .bg-critique { background: rgba(220,53,69,0.12); color: #721c24; }
+  .bg-alerte   { background: rgba(255,193,7,0.15); color: #856404; }
+  .bg-surstoc  { background: rgba(0,123,255,0.12); color: #004085; }
+  .bg-correct  { background: rgba(40,167,69,0.12); color: #155724; }
+
+  .btn-action {
+    width: 32px; height: 32px;
+    border: none; border-radius: 6px;
+    display: inline-flex; align-items: center; justify-content: center;
+    text-decoration: none; font-size: 13px;
+    transition: .2s; cursor: pointer;
+  }
+  .btn-ajust { background: rgba(255,193,7,0.15); color: #856404; }
+  .btn-ajust:hover { background: #ffc107; color: #333; }
+  .btn-hist  { background: rgba(23,162,184,0.12); color: #0c5460; }
+  .btn-hist:hover  { background: #17a2b8; color: white; }
+
+  /* DARK MODE */
+  body.dark-mode .es-article { color: #5bc0de; }
+  body.dark-mode .qte-rupture  { background: rgba(239,154,154,0.2); color: #ff8a80; box-shadow: 0 0 0 2px rgba(239,154,154,0.35); }
+  body.dark-mode .qte-critique { background: rgba(239,154,154,0.2); color: #ff8a80; box-shadow: 0 0 0 2px rgba(239,154,154,0.35); }
+  body.dark-mode .qte-alerte   { background: rgba(255,213,79,0.2);  color: #ffd54f; box-shadow: 0 0 0 2px rgba(255,213,79,0.35); }
+  body.dark-mode .qte-correct  { background: rgba(129,199,132,0.2); color: #81c784; box-shadow: 0 0 0 2px rgba(129,199,132,0.35); }
+  body.dark-mode .qte-surstoc  { background: rgba(100,181,246,0.2); color: #64b5f6; box-shadow: 0 0 0 2px rgba(100,181,246,0.35); }
+
+  body.dark-mode .bg-rupture  { background: rgba(239,154,154,0.15); color: #f5a9b1; }
+  body.dark-mode .bg-critique { background: rgba(239,154,154,0.15); color: #f5a9b1; }
+  body.dark-mode .bg-alerte   { background: rgba(255,213,79,0.15); color: #ffe082; }
+  body.dark-mode .bg-surstoc  { background: rgba(100,181,246,0.15); color: #90caf9; }
+  body.dark-mode .bg-correct  { background: rgba(129,199,132,0.15); color: #a5d6a7; }
+  body.dark-mode .btn-ajust { color: #ffe082; background: rgba(255,213,79,0.1); }
+  body.dark-mode .btn-ajust:hover { background: #ffc107; color: #333; }
+  body.dark-mode .btn-hist  { color: #80deea; background: rgba(128,222,234,0.1); }
+  body.dark-mode .btn-hist:hover  { background: #17a2b8; color: white; }
+</style>
+
+{% for stock in stocks %}
+<tr>
+  <td style="text-align:center; vertical-align:middle;">
+    <input type="checkbox" name="ids_stock" value="{{ stock.id }}">
+  </td>
+  <td>
+    <div class="es-article">{{ stock.article.designation }}</div>
+    <div class="es-ref">Réf: {{ stock.article.reference|default:"—" }}</div>
+  </td>
+  <td>
+    <span class="es-famille"><i class="fas fa-tags" style="margin-right:4px;color:var(--text-light);"></i>{{ stock.article.famille.intitule|default:"Sans famille" }}</span>
+  </td>
+  <td style="text-align:center;">
+    {% if stock.quantite_physique <= 0 %}
+      <div class="qte-box qte-rupture">{{ stock.quantite_physique }}</div>
+    {% elif stock.article.seuil_critique is not None and stock.quantite_physique <= stock.article.seuil_critique %}
+      <div class="qte-box qte-critique">{{ stock.quantite_physique }}</div>
+    {% elif stock.quantite_physique <= stock.article.seuil_minimum %}
+      <div class="qte-box qte-alerte">{{ stock.quantite_physique }}</div>
+    {% elif stock.article.seuil_maximum and stock.quantite_physique > stock.article.seuil_maximum %}
+      <div class="qte-box qte-surstoc">{{ stock.quantite_physique }}</div>
+    {% else %}
+      <div class="qte-box qte-correct">{{ stock.quantite_physique }}</div>
+    {% endif %}
+    <div class="es-seuil">
+      Min: {{ stock.article.seuil_minimum|default:"—" }}
+      {% if stock.article.seuil_critique is not None %}/ Crit: {{ stock.article.seuil_critique }}{% endif %}
+    </div>
+  </td>
+  <td>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+      <div>
+        {% if stock.quantite_physique <= 0 %}
+          <span class="badge-stat bg-rupture"><i class="fas fa-exclamation-triangle"></i> RUPTURE</span>
+        {% elif stock.article.seuil_critique is not None and stock.quantite_physique <= stock.article.seuil_critique %}
+          <span class="badge-stat bg-critique"><i class="fas fa-fire"></i> CRITIQUE</span>
+        {% elif stock.quantite_physique <= stock.article.seuil_minimum %}
+          <span class="badge-stat bg-alerte"><i class="fas fa-exclamation-circle"></i> ALERTE</span>
+        {% elif stock.article.seuil_maximum and stock.quantite_physique > stock.article.seuil_maximum %}
+          <span class="badge-stat bg-surstoc"><i class="fas fa-arrow-up"></i> SURSTOCK</span>
+        {% else %}
+          <span class="badge-stat bg-correct"><i class="fas fa-check"></i> CORRECT</span>
+        {% endif %}
+      </div>
+      <div style="display:flex;gap:5px;">
+        <a href="{% url 'liste_ajustements' %}" title="Ajuster" class="btn-action btn-ajust" aria-label="Ajuster le stock"><i class="fas fa-balance-scale"></i></a>
+        <a href="{% url 'historique_article' stock.article.id %}" title="Historique" class="btn-action btn-hist" aria-label="Voir l'historique"><i class="fas fa-history"></i></a>
+      </div>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="5" style="text-align:center;padding:50px;color:var(--text-light);">
+    <i class="fas fa-box-open" style="font-size:30px;display:block;margin-bottom:10px;opacity:.5;"></i>
+    Aucun article en stock ne correspond à votre recherche.
+  </td>
+</tr>
+{% endfor %}

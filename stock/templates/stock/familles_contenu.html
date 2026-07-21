@@ -1,0 +1,64 @@
+<div style="overflow-x:auto;">
+<table>
+    <thead>
+        <tr>
+            <th>Code</th><th>Intitulé & Type</th>
+            <th style="text-align: center;">Règles Métier</th><th style="text-align: center;">Actions</th>
+        </tr>
+    </thead>
+    <tbody id="tbody-familles">
+        {% include 'stock/familles_lignes.html' %}
+    </tbody>
+</table>
+
+<div class="pagination-bar">
+    <div class="pagination-info">
+        {% if familles.paginator.count == 0 %}
+            <strong>0</strong> famille
+        {% elif per_page == 'all' %}
+            <strong>{{ familles.paginator.count }}</strong> famille{{ familles.paginator.count|pluralize }} affichée{{ familles.paginator.count|pluralize:"s" }}
+        {% else %}
+            <strong>{{ familles.start_index }} – {{ familles.end_index }}</strong> sur <strong>{{ familles.paginator.count }}</strong> famille{{ familles.paginator.count|pluralize }}
+        {% endif %}
+    </div>
+
+    {% if familles.paginator.num_pages > 1 and per_page != 'all' %}
+    <div class="pagination-controls">
+        {% if familles.has_previous %}
+        <a href="?page={{ familles.previous_page_number }}&per_page={{ per_page|default:15 }}{% if query %}&q={{ query|urlencode }}{% endif %}" class="page-btn" title="Précédent"><i class="fas fa-chevron-left"></i></a>
+        {% else %}
+        <span class="page-btn disabled"><i class="fas fa-chevron-left"></i></span>
+        {% endif %}
+
+        {% for num in familles.paginator.page_range %}
+            {% if num == 1 or num == familles.paginator.num_pages or num >= familles.number|add:'-2' and num <= familles.number|add:'2' %}
+                {% if num == familles.number %}
+                <span class="page-btn active">{{ num }}</span>
+                {% else %}
+                <a href="?page={{ num }}&per_page={{ per_page|default:15 }}{% if query %}&q={{ query|urlencode }}{% endif %}" class="page-btn">{{ num }}</a>
+                {% endif %}
+            {% elif num == familles.number|add:'-3' or num == familles.number|add:'3' %}
+                <span class="page-btn disabled" style="border:none;background:none;cursor:default;">…</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if familles.has_next %}
+        <a href="?page={{ familles.next_page_number }}&per_page={{ per_page|default:15 }}{% if query %}&q={{ query|urlencode }}{% endif %}" class="page-btn" title="Suivant"><i class="fas fa-chevron-right"></i></a>
+        {% else %}
+        <span class="page-btn disabled"><i class="fas fa-chevron-right"></i></span>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div>
+        <select class="per-page-select" id="select-per-page" onchange="changerParPage(this.value)">
+            <option value="10" {% if per_page == 10 %}selected{% endif %}>10 / page</option>
+            <option value="15" {% if per_page == 15 or per_page == 'all' %}selected{% endif %}>15 / page</option>
+            <option value="25" {% if per_page == 25 %}selected{% endif %}>25 / page</option>
+            <option value="50" {% if per_page == 50 %}selected{% endif %}>50 / page</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100 / page</option>
+            <option value="all" {% if per_page == 'all' %}selected{% endif %}>Tout afficher</option>
+        </select>
+    </div>
+</div>
+</div>

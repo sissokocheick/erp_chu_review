@@ -1,0 +1,176 @@
+{% extends "base_ui.html" %}
+{% block title %}Contrats de maintenance{% endblock %}
+{% block contenu %}
+<style>
+  .ch{background:linear-gradient(135deg,#2c3e50,#34495e);color:white;border-radius:10px;padding:20px 26px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 18px rgba(44,62,80,.3);flex-wrap:wrap;gap:14px;}
+  .ch h4{margin:0;font-size:20px;font-weight:700;}
+  .ch small{opacity:.85;font-size:12px;}
+  .s-chip{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;}
+  .s-ok{background:rgba(46,204,113,.3);color:#d5f5e3;}
+  .s-warn{background:rgba(241,196,15,.3);color:#fef9e7;}
+  .s-err{background:rgba(231,76,60,.3);color:#fadbd8;}
+  .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
+  .ct-card{background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;border-left:4px solid #dde3ea;transition:.2s;}
+  .ct-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.12);transform:translateY(-2px);}
+  .ct-card.actif{border-left-color:#28a745;}
+  .ct-card.expire{border-left-color:#dc3545;}
+  .ct-card.bientot{border-left-color:#ffc107;}
+  .ct-head{padding:16px 18px 12px;border-bottom:1px solid #f0f3f7;}
+  .ct-ref{font-family:monospace;font-size:11px;color:#888;margin-bottom:4px;}
+  .ct-nom{font-weight:700;font-size:15px;color:#2d3748;}
+  .ct-body{padding:14px 18px;}
+  .ct-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f9f9f9;}
+  .ct-lbl{color:#888;}
+  .ct-val{font-weight:600;color:#333;text-align:right;}
+  .ct-foot{padding:10px 18px;background:#f8f9fa;display:flex;align-items:center;justify-content:space-between;}
+  .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+  .badge-actif{background:#d4edda;color:#155724;}
+  .badge-expire{background:#f8d7da;color:#721c24;}
+  .badge-bientot{background:#fff3cd;color:#856404;}
+  .jours-bar{height:4px;background:#f0f3f7;border-radius:2px;margin-top:6px;overflow:hidden;}
+  .jours-fill{height:100%;border-radius:2px;}
+  .empty-state{text-align:center;padding:60px;color:#bbb;}
+  .btn-new{background:white;color:#2c3e50;border:none;padding:9px 16px;border-radius:7px;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.2s;box-shadow:0 2px 8px rgba(0,0,0,.15);text-decoration:none;}
+  .btn-new:hover{background:#f0f3f7;}
+
+  /* ── MODAL CRÉATION ── */
+  .mo { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .mo.open { display: flex; }
+  .mb { background: white; border-radius: 12px; max-width: 500px; width: 95%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; }
+  .mh { background: linear-gradient(135deg, #2c3e50, #34495e); color: white; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .mh h5 { margin: 0; font-size: 16px; font-weight: 800; }
+  .mbody { padding: 24px; max-height: 70vh; overflow-y: auto; }
+  .mfoot { padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; }
+  .form-group { margin-bottom: 15px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 800; color: #475569; margin-bottom: 6px; }
+  .form-control { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; outline: none; background: #f8fafc; transition: 0.2s; box-sizing: border-box; }
+</style>
+
+<div class="ch">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <i class="fas fa-file-contract" style="font-size:28px;opacity:.9;"></i>
+    <div><h4>Contrats de maintenance</h4><small>Suivi des engagements prestataires</small></div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <span class="s-chip s-ok"><i class="fas fa-check-circle"></i> {{ contrats.count }} contrat{% if contrats.count > 1 %}s{% endif %}</span>
+    {% if nb_expirant %}<span class="s-chip s-warn"><i class="fas fa-exclamation-triangle"></i> {{ nb_expirant }} expirant bientôt</span>{% endif %}
+    {% if nb_expires %}<span class="s-chip s-err"><i class="fas fa-times-circle"></i> {{ nb_expires }} expirés</span>{% endif %}
+    
+    <button class="btn-new" onclick="document.getElementById('modal-new-contrat').classList.add('open')">
+        <i class="fas fa-plus"></i> Nouveau Contrat
+    </button>
+  </div>
+</div>
+
+{% if not contrats %}
+<div class="empty-state" style="background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+  <i class="fas fa-file-contract" style="font-size:40px;display:block;margin-bottom:12px;color:#ddd;"></i>
+  <div style="font-size:15px;color:#888;margin-bottom:8px;">Aucun contrat enregistré</div>
+  <div style="font-size:13px;color:#bbb;">Cliquez sur "Nouveau Contrat" en haut à droite pour commencer.</div>
+</div>
+{% else %}
+<div class="cards-grid">
+  {% for c in contrats %}
+  {% with jours=c.jours_restants %}
+  <div class="ct-card {% if c.est_expire %}expire{% elif jours <= 30 %}bientot{% else %}actif{% endif %}">
+    <div class="ct-head">
+      <div class="ct-ref">{{ c.reference }}</div>
+      <div class="ct-nom">{{ c.prestataire.raison_sociale }}</div>
+      <div style="margin-top:6px;">
+        <span class="badge {% if c.est_expire %}badge-expire{% elif jours <= 30 %}badge-bientot{% else %}badge-actif{% endif %}">
+          {% if c.est_expire %}Expiré{% elif jours <= 30 %}Expire dans {{ jours }}j{% else %}Actif{% endif %}
+        </span>
+        <span style="font-size:11px;color:#888;margin-left:8px;">{{ c.get_type_contrat_display }}</span>
+      </div>
+      {% if not c.est_expire %}
+      <div class="jours-bar">
+        <div class="jours-fill" style="width:{% widthratio jours 365 100 %}%;background:{% if jours <= 30 %}#ffc107{% else %}#28a745{% endif %};"></div>
+      </div>
+      {% endif %}
+    </div>
+    <div class="ct-body">
+      <div class="ct-row"><span class="ct-lbl">Période</span><span class="ct-val">{{ c.date_debut|date:"d/m/Y" }} → {{ c.date_fin|date:"d/m/Y" }}</span></div>
+      <div class="ct-row"><span class="ct-lbl">Coût annuel</span><span class="ct-val">{{ c.cout_annuel|floatformat:0 }} FCFA</span></div>
+      <div class="ct-row"><span class="ct-lbl">Équipements couverts</span><span class="ct-val">{{ c.nb_equipements }}</span></div>
+      <div class="ct-row"><span class="ct-lbl">Interventions</span><span class="ct-val">{{ c.interventions.count }}</span></div>
+    </div>
+    <div class="ct-foot">
+      <span style="font-size:11px;color:#888;">{{ c.get_statut_display }}</span>
+      <a href="{% url 'patrimoine_contrat_detail' c.id %}" style="background:#2c3e50;color:white;padding:5px 12px;border-radius:5px;font-size:12px;text-decoration:none;font-weight:700;">
+        <i class="fas fa-eye" style="margin-right:4px;"></i> Détail
+      </a>
+    </div>
+  </div>
+  {% endwith %}
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="mo" id="modal-new-contrat" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="mb">
+    <div class="mh">
+      <h5><i class="fas fa-plus-circle me-2"></i> Créer un nouveau contrat</h5>
+      <button style="background: transparent; border: none; color: white; cursor: pointer; font-size: 16px;" onclick="document.getElementById('modal-new-contrat').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="creer_contrat" value="1">
+        
+        <div class="mbody">
+            <div class="form-group">
+                <label>Référence du Contrat (ex: CTR-2026-001) *</label>
+                <input type="text" name="reference" class="form-control" required>
+            </div>
+            
+            <div class="form-group">
+                <label>Prestataire / Fournisseur *</label>
+                <select name="prestataire" class="form-control" required>
+                    <option value="">-- Sélectionner un prestataire --</option>
+                    {% for f in fournisseurs %}
+                    <option value="{{ f.id }}">{{ f.raison_sociale }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Type de Contrat *</label>
+                <select name="type_contrat" class="form-control" required>
+                    <option value="">-- Sélectionner un type --</option>
+                    {% for tc in types_contrat %}
+                    <option value="{{ tc.id }}">{{ tc.nom }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Date de début *</label>
+                    <input type="date" name="date_debut" class="form-control" required>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label>Date de fin *</label>
+                    <input type="date" name="date_fin" class="form-control" required>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Coût Annuel (FCFA)</label>
+                <input type="number" name="cout_annuel" class="form-control" value="0" min="0">
+            </div>
+            
+            <div class="form-group">
+                <label>Notes / Description</label>
+                <textarea name="description" class="form-control" rows="3"></textarea>
+            </div>
+        </div>
+        
+        <div class="mfoot">
+            <button type="button" onclick="document.getElementById('modal-new-contrat').classList.remove('open')" style="background: white; border: 1px solid #ccc; padding: 8px 15px; border-radius: 6px; cursor: pointer; color: #555; font-weight: bold;">Annuler</button>
+            <button type="submit" style="background: #28a745; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; color: white; font-weight: bold;"><i class="fas fa-check"></i> Enregistrer le contrat</button>
+        </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}

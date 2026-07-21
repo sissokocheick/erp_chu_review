@@ -1,0 +1,297 @@
+{% load static %}
+
+<div class="per-page-control">
+    <div style="font-size: 13px; color: var(--text-muted);">
+      <i class="fas fa-chart-line"></i> {{ demandes.paginator.count }} demande(s)
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <span style="font-size: 13px; color: var(--text-muted);">Afficher</span>
+      <form id="form-per-page" method="GET" style="margin:0;">
+        {% if q %}<input type="hidden" name="q" value="{{ q_demande }}">{% endif %}
+        {% if date_range %}<input type="hidden" name="date_range" value="{{ date_range }}">{% endif %}
+        <input type="hidden" name="statut_filtre" value="{{ statut_filtre|default:'actives' }}">
+        <select name="per_page" class="per-page-select">
+          <option value="10" {% if per_page == '10' %}selected{% endif %}>10</option>
+          <option value="25" {% if per_page == '25' %}selected{% endif %}>25</option>
+          <option value="50" {% if per_page == '50' %}selected{% endif %}>50</option>
+          <option value="all" {% if per_page == 'all' %}selected{% endif %}>Tout</option>
+        </select>
+        <span style="font-size: 13px; color: var(--text-muted);">lignes</span>
+      </form>
+    </div>
+  </div>
+
+  <div class="demandes-table-container">
+    <table class="demandes-table">
+      <thead>
+        <tr>
+          <th style="width: 40px;"></th>
+          <th>N° Demande</th>
+          <th>Date</th>
+          <th>Demandeur</th>
+          <th>Statut</th>
+          <th style="width: 140px; text-align: center;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in demandes %}
+        {% with nb_livraisons=d.livraisons.count nb_lignes=d.lignes_demande.count %}
+        <tr class="master-row" data-id="{{ d.id }}">
+          <td style="text-align: center;">
+            <button class="btn-action btn-toggle" onclick="toggleAccordion({{ d.id }})" title="Voir le detail">
+              <i class="fas fa-chevron-down accordion-chevron" id="chevron-{{ d.id }}"></i>
+            </button>
+          </td>
+          <td>
+            <strong style="color: var(--primary);">{{ d.numero_demande }}</strong>
+            {% if nb_livraisons > 0 %}
+              <br><small style="color: var(--text-muted);"><i class="fas fa-truck"></i> {{ nb_livraisons }} livraison{{ nb_livraisons|pluralize }}</small>
+            {% endif %}
+            {% if d.commentaire %}
+              <br><small style="color: var(--text-muted);"><i class="fas fa-comment"></i> {{ d.commentaire|truncatechars:35 }}</small>
+            {% endif %}
+          </td>
+          <td style="white-space: nowrap;">
+            {{ d.date_demande|date:"d/m/Y" }}<br>
+            <small style="color: var(--text-muted);">{{ d.date_demande|date:"H:i" }}</small>
+          </td>
+          <td>{{ d.demandeur.get_full_name|default:d.demandeur.username }}</td>
+          <td>
+            {% if d.statut == 'EN_ATTENTE_VALIDATION' %}
+              <span class="badge-status badge-attente-hier"><i class="fas fa-user-clock"></i> Attente hierarchie</span>
+            {% elif d.statut == 'EN_ATTENTE' or d.statut == 'BROUILLON' %}
+              <span class="badge-status badge-attente-magasin"><i class="fas fa-clock"></i> Attente magasin</span>
+            {% elif d.statut == 'EN_COURS' %}
+              <span class="badge-status badge-cours"><i class="fas fa-cogs"></i> En cours</span>
+            {% elif d.statut == 'LIVRAISON_PARTIELLE' %}
+              <span class="badge-status badge-partielle"><i class="fas fa-box-open"></i> Livraison partielle</span>
+            {% elif d.statut == 'LIVREE' %}
+              <span class="badge-status badge-livree"><i class="fas fa-truck"></i> Livree</span>
+            {% elif d.statut == 'RECEPTIONNE' %}
+              <span class="badge-status badge-receptionnee"><i class="fas fa-check-double"></i> Signee</span>
+            {% elif d.statut == 'CLOTUREE' %}
+              <span class="badge-status badge-cloturee"><i class="fas fa-lock"></i> Cloturee</span>
+            {% elif d.statut == 'REFUSEE' %}
+              <span class="badge-status badge-refusee"><i class="fas fa-ban"></i> Refusee</span>
+            {% elif d.statut == 'ANNULEE' %}
+              <span class="badge-status badge-annulee"><i class="fas fa-times-circle"></i> Annulee</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="action-buttons">
+
+              <!-- Bon de Demande -->
+              <button class="btn-action" onclick="openPdfModal('{% url 'imprimer_bon_demande' d.id %}', 'Bon de Demande {{ d.numero_demande }}')" title="Voir le bon de demande" style="color: #17a2b8;">
+                <i class="fas fa-print"></i>
+              </button>
+
+              {% if d.bon_sortie_lie %}
+                {% if d.bon_sortie_lie.statut_validation == 'ATTENTE' %}
+                  <span class="badge-status badge-attente-magasin" style="font-size:11px;" title="Bon en attente de validation hierarchique">
+                    <i class="fas fa-lock"></i> Attente validation
+                  </span>
+                {% else %}
+                  <button class="btn-action btn-bs" onclick="openPdfModal('{% url 'imprimer_bon_multi_lignes' d.bon_sortie_lie.id %}', '{{ d.bon_sortie_lie.numero_bon }}')" title="Voir le bon de sortie">
+                    <i class="fas fa-file-pdf"></i>
+                  </button>
+                {% endif %}
+              {% endif %}
+
+              {% if d.statut == 'EN_ATTENTE_VALIDATION' or d.statut == 'EN_ATTENTE' or d.statut == 'BROUILLON' %}
+                <button class="btn-action btn-delete" onclick="confirmerAnnulation('{{ d.id }}', '{{ d.numero_demande }}', {{ nb_livraisons }})" title="Annuler">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+                <form id="form-annuler-{{ d.id }}" action="{% url 'annuler_demande' d.id %}" method="POST" style="display: none;">
+                  {% csrf_token %}
+                </form>
+              {% endif %}
+
+              {% if d.est_cloturable %}
+                <button class="btn-action btn-cloture" onclick="confirmerCloture({{ d.id }}, '{{ d.numero_demande }}', {{ d.reste }})" title="Cloturer le reliquat">
+                  <i class="fas fa-lock"></i>
+                </button>
+                <form id="form-cloture-{{ d.id }}" method="POST" style="display: none;">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="cloturer_demande">
+                  <input type="hidden" name="demande_id" value="{{ d.id }}">
+                </form>
+              {% endif %}
+
+              {% for liv in d.livraisons.all %}
+                {% if liv.accuse and not liv.accuse.est_signe %}
+                  {% if liv.bon_sortie and liv.bon_sortie.statut_validation == 'ATTENTE' %}
+                    <span class="btn-action" style="color:#ffc107;cursor:help;" title="Signature bloquee — le bon est en attente de validation hierarchique">
+                      <i class="fas fa-lock"></i>
+                    </span>
+                  {% else %}
+                    <a href="{% url 'signer_accuse_reception' liv.accuse.id %}" class="btn-action btn-sign" title="Signer l'accuse">
+                      <i class="fas fa-file-signature"></i>
+                    </a>
+                  {% endif %}
+                {% endif %}
+              {% endfor %}
+
+            </div>
+          </td>
+        </tr>
+
+        <tr class="detail-accordion-row" id="detail-row-{{ d.id }}">
+          <td colspan="6" style="padding: 0; border-bottom: none;">
+            <div class="accordion-content-wrapper">
+
+              <div class="accordion-section">
+                <h6><i class="fas fa-boxes"></i> Articles demandes</h6>
+                <div style="overflow-x:auto;">
+                  <table class="accordion-table">
+                    <thead>
+                      <tr>
+                        <th>Article</th>
+                        <th style="text-align:center;">Qte demandee</th>
+                        <th style="text-align:center;">Qte livree</th>
+                        <th style="text-align:center;">Reste</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for ligne in d.lignes_demande.all %}
+                      <tr>
+                        <td>{{ ligne.article.designation }}</td>
+                        <td class="num">{{ ligne.quantite_demandee }}</td>
+                        <td class="num" style="color:#28a745;">{{ ligne.quantite_livree|default:"0" }}</td>
+                        <td class="num" style="{% if ligne.reste > 0 %}color:#dc3545;{% else %}color:#28a745;{% endif %}">
+                          {% if ligne.reste == 0 %}<i class="fas fa-check"></i>{% else %}{{ ligne.reste }}{% endif %}
+                        </td>
+                      </tr>
+                      {% empty %}
+                      <tr>
+                        <td colspan="4" class="text-muted-xs" style="text-align:center; padding: 20px;">
+                          Aucun article
+                        </td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Bon de Demande -->
+              <div class="accordion-section">
+                <h6><i class="fas fa-print"></i> Bon de demande</h6>
+                <div class="bons-grid">
+                  <div class="bon-card">
+                    <div class="bon-card-header">
+                      <i class="fas fa-print" style="color: #17a2b8;"></i>
+                      <span class="bon-card-title"
+                            onclick="openPdfModal('{% url 'imprimer_bon_demande' d.id %}', 'Bon de Demande {{ d.numero_demande }}')"
+                            title="Cliquer pour voir le PDF">
+                        BD-{{ d.numero_demande }}
+                      </span>
+                    </div>
+                    <div class="bon-card-meta">
+                      <i class="fas fa-calendar-alt"></i> {{ d.date_demande|date:"d/m/Y" }}
+                    </div>
+                    <div class="bon-card-actions">
+                      <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;background:#d1ecf1;color:#0c5460;">
+                        <i class="fas fa-box"></i> {{ nb_lignes }} article{{ nb_lignes|pluralize }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {% if nb_livraisons > 0 %}
+              <div class="accordion-section">
+                <h6><i class="fas fa-file-pdf"></i> Bons de sortie</h6>
+                <div class="bons-grid">
+                  {% for liv in d.livraisons.all %}
+                  <div class="bon-card">
+                    <div class="bon-card-header">
+                      <i class="fas fa-file-pdf"></i>
+                      {% if liv.bon_sortie %}
+                        {% if liv.bon_sortie.statut_validation == 'ATTENTE' %}
+                          <span style="color: var(--text-muted); font-size: 12px; font-weight: 600;" title="Bon en attente de validation hierarchique">
+                            <i class="fas fa-lock"></i> {{ liv.bon_sortie.numero_bon }}
+                          </span>
+                        {% else %}
+                          <span class="bon-card-title"
+                                onclick="openPdfModal('{% url 'imprimer_bon_multi_lignes' liv.bon_sortie.id %}', '{{ liv.bon_sortie.numero_bon }}')"
+                                title="Cliquer pour voir le PDF">
+                            {{ liv.bon_sortie.numero_bon }}
+                          </span>
+                        {% endif %}
+                      {% else %}
+                        <span style="color: var(--text-muted);">Livraison #{{ liv.numero_livraison }}</span>
+                      {% endif %}
+                    </div>
+                    <div class="bon-card-meta">
+                      <i class="fas fa-calendar-alt"></i> {{ liv.date_livraison|date:"d/m/Y" }}
+                    </div>
+                    <div class="bon-card-actions">
+                      {% if liv.accuse %}
+                        {% if liv.accuse.est_signe %}
+                          <span class="badge-sign-inline"><i class="fas fa-check"></i> Signe</span>
+                        {% else %}
+                          {% if liv.bon_sortie and liv.bon_sortie.statut_validation == 'ATTENTE' %}
+                            <span style="display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:6px;font-size:11px;font-weight:600;background:#fff3cd;color:#856404;cursor:help;" title="Signature bloquee — le bon est en attente de validation hierarchique">
+                              <i class="fas fa-lock"></i> Attente validation
+                            </span>
+                          {% else %}
+                            <a href="{% url 'signer_accuse_reception' liv.accuse.id %}" class="btn-card-sign">
+                              <i class="fas fa-signature"></i> Signer
+                            </a>
+                          {% endif %}
+                        {% endif %}
+                      {% endif %}
+                    </div>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endif %}
+
+            </div>
+          </td>
+        </tr>
+        {% endwith %}
+        {% empty %}
+        <tr>
+          <td colspan="6" class="empty-state">
+            <div class="empty-state-icon"><i class="fas fa-inbox"></i></div>
+            <div class="empty-state-title">Aucune demande trouvee</div>
+            <div class="empty-state-text">
+              {% if statut_filtre == 'historique' %}
+                Vos demandes signees, cloturees, refusees ou annulees apparaissent ici.
+              {% else %}
+                {% if a_un_service %}
+                  Cliquez sur "Nouvelle demande" pour commencer.
+                {% else %}
+                  Vous devez etre rattache a un service pour faire une demande.
+                {% endif %}
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if demandes.has_other_pages %}
+  <div class="pagination-modern">
+    <div style="font-size: 13px; color: var(--text-muted);">
+      Page {{ demandes.number }} / {{ demandes.paginator.num_pages }}
+    </div>
+    <div class="pagination-links">
+      {% if demandes.has_previous %}
+        <a class="pagination-link" href="?page={{ demandes.previous_page_number }}&statut_filtre={{ statut_filtre }}&q={{ q|urlencode }}&date_range={{ date_range|urlencode }}&per_page={{ per_page }}">
+          <i class="fas fa-chevron-left"></i> Precedent
+        </a>
+      {% endif %}
+      <span class="pagination-current">{{ demandes.number }}</span>
+      {% if demandes.has_next %}
+        <a class="pagination-link" href="?page={{ demandes.next_page_number }}&statut_filtre={{ statut_filtre }}&q={{ q|urlencode }}&date_range={{ date_range|urlencode }}&per_page={{ per_page }}">
+          Suivant <i class="fas fa-chevron-right"></i>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}

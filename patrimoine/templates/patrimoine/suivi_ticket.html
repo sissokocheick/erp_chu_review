@@ -1,0 +1,162 @@
+{% extends "base_ui.html" %}
+{% block title %}Suivi de ma demande{% endblock %}
+
+{% block contenu %}
+<style>
+  .client-header { background: linear-gradient(135deg, #17a2b8, #117a8b); color: white; border-radius: 10px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3); }
+  .card-detail { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 25px; margin-bottom: 20px; }
+  
+  /* Stepper avec Dates */
+  .stepper { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; padding: 0 10px; }
+  .stepper::before { content: ""; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: #eef0f3; z-index: 1; }
+  .step { position: relative; z-index: 2; text-align: center; width: 25%; }
+  .step-icon { width: 32px; height: 32px; background: white; border: 2px solid #eef0f3; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; color: #ccc; font-size: 12px; transition: 0.3s; font-weight: bold; }
+  .step.active .step-icon { border-color: #17a2b8; color: #17a2b8; box-shadow: 0 0 0 4px rgba(23, 162, 184, 0.1); }
+  .step.completed .step-icon { background: #17a2b8; border-color: #17a2b8; color: white; }
+  .step-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; }
+  .step-date { font-size: 10px; color: #aaa; margin-top: 5px; font-weight: normal; }
+  .step.completed .step-date { color: #117a8b; font-weight: 700; }
+
+  .badge-statut { padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold; display: inline-flex; align-items: center; gap: 8px; }
+  .b-nouvelle { background: #e8f0fe; color: #1c5b96; }
+  .b-en_cours { background: #fff3cd; color: #856404; }
+  .b-resolue { background: #d4edda; color: #155724; }
+  
+  .info-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 5px; display: block; }
+  .info-value { font-size: 14px; color: #333; font-weight: 600; display: block; }
+  .takeover-box { background: #e8f7f9; border: 1px solid #b6e4eb; color: #0c5460; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 12px; margin-top: 15px; }
+  .machine-box { border: 1px solid #eef0f3; background: #fafbfc; padding: 15px; border-radius: 8px; margin-top: 10px; }
+</style>
+
+<div class="client-header">
+  <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px;">
+      <div>
+          <a href="#" onclick="window.history.back(); return false;" style="color:white; text-decoration:none; font-size:14px; opacity:0.9; margin-bottom:10px; display:inline-block;">
+              <i class="fas fa-arrow-left"></i> Retour à mes demandes
+          </a>
+          <h2 style="margin:0; font-weight:800; font-size:24px;">Demande #{{ intervention.id|stringformat:"04d" }}</h2>
+          <div style="opacity:0.9; font-size:14px; margin-top:5px;">{{ intervention.immobilisation.nom_affichage }}</div>
+      </div>
+      <span class="badge-statut b-{{ intervention.statut|lower }}">{{ intervention.get_statut_display }}</span>
+  </div>
+</div>
+
+<div class="card-detail">
+    <div class="stepper">
+        <div class="step completed">
+            <div class="step-icon"><i class="fas fa-check"></i></div>
+            <div class="step-label">Signalé</div>
+            <div class="step-date">{{ intervention.date_signalement|date:"d/m/y à H:i" }}</div>
+        </div>
+        <div class="step {% if intervention.date_debut_intervention %}completed{% elif intervention.statut == 'NOUVELLE' %}pending{% else %}active{% endif %}">
+            <div class="step-icon">{% if intervention.date_debut_intervention %}<i class="fas fa-check"></i>{% else %}2{% endif %}</div>
+            <div class="step-label">Pris en charge</div>
+            <div class="step-date">{% if intervention.date_debut_intervention %}{{ intervention.date_debut_intervention|date:"d/m/y à H:i" }}{% else %}-{% endif %}</div>
+        </div>
+        <div class="step {% if intervention.date_fin_intervention %}completed{% elif intervention.date_debut_intervention %}active{% else %}pending{% endif %}">
+            <div class="step-icon">{% if intervention.date_fin_intervention %}<i class="fas fa-check"></i>{% else %}3{% endif %}</div>
+            <div class="step-label">Réparé</div>
+            <div class="step-date">{% if intervention.date_fin_intervention %}{{ intervention.date_fin_intervention|date:"d/m/y à H:i" }}{% else %}-{% endif %}</div>
+        </div>
+        <div class="step {% if intervention.date_validation %}completed active{% else %}pending{% endif %}">
+            <div class="step-icon">{% if intervention.date_validation %}<i class="fas fa-flag-checkered"></i>{% else %}4{% endif %}</div>
+            <div class="step-label">Clôturé</div>
+            <div class="step-date">{% if intervention.date_validation %}{{ intervention.date_validation|date:"d/m/y à H:i" }}{% else %}-{% endif %}</div>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:30px;">
+        <div>
+            <h6 style="color:#117a8b; font-weight:800; text-transform:uppercase; font-size:12px; margin-bottom:20px;"><i class="fas fa-id-card"></i> Détails</h6>
+            <div class="machine-box">
+                <span class="info-label">Signalé par</span>
+                <span class="info-value">{{ intervention.cree_par.get_full_name|default:intervention.cree_par.username }}</span>
+                
+                <span class="info-label" style="margin-top:10px;">Machine</span>
+                <strong style="color:#333;">{{ intervention.immobilisation.nom_affichage }}</strong>
+                <div style="font-size:12px; color:#666;">Code: {{ intervention.immobilisation.code_patrimoine }}</div>
+
+                <span class="info-label" style="margin-top:10px;">Niveau d'Urgence</span>
+                <div style="font-weight: 600; font-size: 13px;">
+                    {% if intervention.degre_urgence == 'FAIBLE' %}<span style="color:#28a745;"><i class="fas fa-temperature-low"></i> Faible</span>
+                    {% elif intervention.degre_urgence == 'MOYENNE' %}<span style="color:#ffc107;"><i class="fas fa-thermometer-half"></i> Moyenne</span>
+                    {% elif intervention.degre_urgence == 'HAUTE' %}<span style="color:#fd7e14;"><i class="fas fa-fire"></i> Haute</span>
+                    {% elif intervention.degre_urgence == 'CRITIQUE' %}<span style="color:#dc3545;"><i class="fas fa-radiation"></i> Critique</span>
+                    {% else %}{{ intervention.get_degre_urgence_display }}{% endif %}
+                </div>
+            </div>
+        </div>
+        <div>
+            <h6 style="color:#117a8b; font-weight:800; text-transform:uppercase; font-size:12px; margin-bottom:20px;"><i class="fas fa-tools"></i> Suivi Technique</h6>
+            {% if intervention.intervenant %}
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <div style="width:40px; height:40px; background:#117a8b; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold;">{{ intervention.intervenant.first_name|first|default:"T" }}</div>
+                    <div>
+                        <div class="info-value">{{ intervention.intervenant.get_full_name|default:intervention.intervenant.username }}</div>
+                        <div style="font-size:11px; color:#888;">Technicien Maintenance</div>
+                    </div>
+                </div>
+            {% else %}
+                <div style="padding:20px; border:1px dashed #ccc; border-radius:8px; text-align:center; color:#888;">En attente de technicien...</div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if intervention.actions_effectuees %}
+    <div style="margin-top: 30px; border-top: 1px dashed #eef0f3; padding-top: 25px;">
+        <h6 style="color:#28a745; font-weight:800; text-transform:uppercase; font-size:12px; margin-bottom:15px;">
+            <i class="fas fa-clipboard-check"></i> Rapport d'intervention
+        </h6>
+        <div style="background: #f8fdf9; border: 1px solid #c3e6cb; border-left: 4px solid #28a745; padding: 18px; border-radius: 8px; font-size: 14px; color: #155724; line-height: 1.6;">
+            {{ intervention.actions_effectuees|linebreaksbr }}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<script>
+window.addEventListener("load", function() {
+    // On attend 150ms pour laisser le script global de base_ui.html finir de s'exécuter
+    setTimeout(function() {
+        
+        // 1. On cherche tous les liens de la page
+        let tousLesLiens = document.querySelectorAll('a');
+        
+        // 2. On éteint de force tout ce qui concerne le "Stock" ou "Mes demandes"
+        tousLesLiens.forEach(function(lien) {
+            let texte = lien.innerText ? lien.innerText.toUpperCase() : '';
+            let href = lien.getAttribute('href') || '';
+            
+            // Si le lien appartient au stock ou s'appelle MES DEMANDES
+            if (texte.includes('MES DEMANDES') || texte.includes('GESTION DES STOCKS') || href.includes('/stock/')) {
+                lien.classList.remove('active');
+                let parentLi = lien.closest('li');
+                if (parentLi) parentLi.classList.remove('active');
+            }
+        });
+
+        // 3. On allume de force le menu "Interventions" du Patrimoine
+        let menuPatrimoine = document.querySelector('a[href*="/patrimoine/interventions/"]');
+        
+        if (menuPatrimoine) {
+            menuPatrimoine.classList.add('active');
+            let liActif = menuPatrimoine.closest('li');
+            if (liActif) liActif.classList.add('active');
+            
+            // On s'assure que le dossier parent (PATRIMOINE & SAV) est bien ouvert
+            let parentUl = menuPatrimoine.closest('ul');
+            if (parentUl) {
+                parentUl.style.display = 'block';
+                // On allume aussi le titre du dossier parent
+                if (parentUl.previousElementSibling) {
+                    parentUl.previousElementSibling.classList.add('active');
+                    let grandParentLi = parentUl.closest('li');
+                    if (grandParentLi) grandParentLi.classList.add('active');
+                }
+            }
+        }
+    }, 150); // Le secret est ici : 150ms de délai !
+});
+</script>
+{% endblock %}

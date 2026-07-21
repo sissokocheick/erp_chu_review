@@ -1,0 +1,397 @@
+{% extends "base_ui.html" %}
+{% block title %}Campagnes d'Inventaire{% endblock %}
+
+{% block contenu %}
+<style>
+  /* ── Recherche Magique ── */
+  .search-magic { position: relative; width: 250px; transition: all 0.3s ease; }
+  .search-magic:focus-within { width: 320px; }
+  .search-magic i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #adb5bd; font-size: 13px; transition: 0.3s; }
+  .search-magic:focus-within i { color: #0f766e; }
+  .search-magic input { width: 100%; padding: 9px 12px 9px 32px; border: 1px solid #dde3ea; border-radius: 20px; font-size: 13px; outline: none; background: #f8f9fa; transition: all 0.3s ease; }
+  .search-magic input:focus { background: #ffffff; border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.15); }
+
+  /* ── Styles de la Modale ── */
+  .mo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+  .mo.open { display: flex; }
+  .mb { background: white; border-radius: 12px; width: 92%; max-width: 650px; box-shadow: 0 20px 60px rgba(0,0,0,.3); animation: slideIn .2s ease; overflow: hidden; }
+  @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .mh { padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; color: white; }
+  .mh h5 { margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; }
+  .mc { background: rgba(255,255,255,.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; transition: .2s; display: flex; align-items: center; justify-content: center; }
+  .mc:hover { background: rgba(255,255,255,.4); }
+  .mbody { padding: 24px; max-height: 70vh; overflow-y: auto; }
+  .form-control { width: 100%; padding: 10px 14px; border: 1px solid #dde3ea; border-radius: 8px; font-size: 13px; outline: none; box-sizing: border-box; transition: .2s; }
+  .form-control:focus { border-color: #0f766e; box-shadow: 0 0 0 3px rgba(15,118,110,.15); }
+  
+  /* ── Pagination ── */
+  .pagination-container { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-top: 1px solid #f0f3f7; background: #fff; border-radius: 0 0 12px 12px; }
+  .pagination-info { font-size: 12px; color: #6c757d; font-weight: 500; }
+  .pagination-buttons { display: flex; gap: 5px; }
+  .page-btn { padding: 6px 12px; border: 1px solid #dde3ea; background: #fff; color: #495057; border-radius: 5px; cursor: pointer; font-size: 12px; transition: 0.2s; display: flex; align-items: center; justify-content: center; min-width: 28px; font-weight: 600; }
+  .page-btn:hover:not(:disabled) { background: #f0f3f7; }
+  .page-btn.active { background: #0f766e; color: #fff; border-color: #0f766e; }
+  .page-btn:disabled { color: #adb5bd; cursor: not-allowed; background: #f8f9fa; }
+  .search-hidden { display: none !important; }
+
+  /* ── Boutons d'actions ── */
+  .btn-edit { background: #f0f3f7; color: #495057; border: 1px solid #dde3ea; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; font-weight: bold;}
+  .btn-edit:hover { background: #e2e6ea; }
+  .btn-del { background: #fff0f0; color: #dc3545; border: 1px solid #f5c6cb; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: 0.2s; }
+  .btn-del:hover { background: #f8d7da; }
+</style>
+
+<div class="page-header" style="background: linear-gradient(135deg, #0f766e, #064e3b); color: white; border-radius: 10px; padding: 22px 26px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 15px; box-shadow: 0 4px 18px rgba(15, 118, 110, 0.3);">
+    <div style="display:flex;align-items:center;gap:18px;">
+        <div style="background: rgba(255,255,255,0.2); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-barcode" style="font-size:28px;"></i>
+        </div>
+        <div>
+            <h4 style="margin: 0; font-size: 22px; font-weight: 700;">Campagnes d'Inventaire</h4>
+            <small style="opacity: 0.85; font-size: 13px;">Gérez les audits physiques de votre parc matériel</small>
+        </div>
+    </div>
+    <div style="display: flex; gap: 15px; align-items: center;">
+        <button onclick="ouvrirModalCampagne()" style="background: white; color: #0f766e; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+            <i class="fas fa-plus"></i> Nouvelle Campagne
+        </button>
+    </div>
+</div>
+
+<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eef0f3;">
+    
+    <div style="padding: 15px 20px; border-bottom: 1px solid #eef0f3; display: flex; justify-content: flex-end;">
+        <div class="search-magic">
+            <i class="fas fa-search"></i>
+            <input type="text" class="live-search" data-target="tbody-campagnes" placeholder="Rechercher une campagne...">
+        </div>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 13px;">
+            <thead>
+                <tr style="background: #f8fafc; border-bottom: 2px solid #eef0f3;">
+                    <th style="padding: 15px 20px; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 11px;">Réf & Titre</th>
+                    <th style="padding: 15px 20px; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 11px;">Périmètre Ciblé</th>
+                    <th style="padding: 15px 20px; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 11px;">Période</th>
+                    <th style="padding: 15px 20px; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 11px;">Statut</th>
+                    <th style="padding: 15px 20px; text-align: right; color: #475569; font-weight: 700; text-transform: uppercase; font-size: 11px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="tbody-campagnes">
+                {% for camp in campagnes %}
+                <tr style="border-bottom: 1px solid #f1f5f9; transition: background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                    <td style="padding: 15px 20px;">
+                        <div style="font-weight: 800; color: #0f766e; font-size: 14px; margin-bottom: 4px;">{{ camp.titre }}</div>
+                        <code style="background: #e2e8f0; color: #475569; padding: 2px 6px; border-radius: 4px; font-size: 11px;">{{ camp.reference }}</code>
+                    </td>
+                    <td style="padding: 15px 20px; color: #475569;">
+                        {% if not camp.categorie_cible and not camp.batiment_cible %}
+                            <span style="background: #f1f5f9; padding: 4px 8px; border-radius: 6px; font-weight: 600;"><i class="fas fa-globe"></i> Inventaire Global</span>
+                        {% else %}
+                            {% if camp.categorie_cible %}
+                            <span style="display: block; margin-bottom: 4px;"><i class="fas fa-layer-group" style="color: #94a3b8;"></i> {{ camp.categorie_cible.nom }}</span>
+                            {% endif %}
+                            {% if camp.batiment_cible %}
+                            <span><i class="fas fa-building" style="color: #94a3b8;"></i> {{ camp.batiment_cible.nom }}</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px 20px; color: #64748b;">
+                        <div><strong>Début :</strong> {{ camp.date_debut|date:"d/m/Y" }}</div>
+                        {% if camp.date_fin_prevue %}<div><strong>Fin :</strong> {{ camp.date_fin_prevue|date:"d/m/Y" }}</div>{% endif %}
+                    </td>
+                    <td style="padding: 15px 20px;">
+                        {% if camp.statut == 'BROUILLON' %}
+                            <span style="background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;"><i class="fas fa-pencil-ruler"></i> Préparation</span>
+                        {% elif camp.statut == 'EN_COURS' %}
+                            <span style="background: #dbeafe; color: #0369a1; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;"><i class="fas fa-spinner fa-spin"></i> En cours</span>
+                        {% elif camp.statut == 'TERMINEE' %}
+                            <span style="background: #d1fae5; color: #047857; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;"><i class="fas fa-check-double"></i> Terminée</span>
+                        {% endif %}
+                    </td>
+                    <td style="padding: 15px 20px; text-align: right; white-space: nowrap;">
+                        <a href="{% url 'patrimoine_detail_campagne' camp.id %}" class="btn-edit" style="background:#f1f8ff; color:#0369a1; border-color:#bae6fd; text-decoration:none;" title="Ouvrir le tableau de bord">
+    <i class="fas fa-folder-open"></i> Ouvrir
+</a>
+                        
+                        {% if camp.statut == 'BROUILLON' %}
+                        <button class="btn-edit" onclick="editerCampagne({{ camp.id }}, '{{ camp.titre|escapejs }}', '{{ camp.reference|escapejs }}', '{{ camp.date_debut|date:'Y-m-d' }}', '{{ camp.date_fin_prevue|date:'Y-m-d' }}', '{{ camp.categorie_cible_id|default:'' }}', '{{ camp.batiment_cible_id|default:'' }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-del" onclick="confirmerSuppression('delete_campagne', '{{ camp.id }}', '{{ camp.titre|escapejs }}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr class="empty-pm">
+                    <td colspan="5" style="text-align: center; padding: 50px 20px; color: #94a3b8;">
+                        <i class="fas fa-box-open fa-3x" style="margin-bottom: 15px; opacity: 0.5;"></i><br>
+                        Aucune campagne d'inventaire n'a encore été créée.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <div id="pag-tbody-campagnes"></div>
+</div>
+
+<div class="mo" id="mo-campagne" onclick="if(event.target===this)fermer('mo-campagne')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh" style="background: linear-gradient(135deg, #0f766e, #064e3b);">
+      <h5 id="mo-campagne-titre"><i class="fas fa-barcode me-2"></i> Campagne d'Inventaire</h5>
+      <button class="mc" onclick="fermer('mo-campagne')"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST" id="form-campagne">{% csrf_token %}
+      <input type="hidden" name="action" value="save_campagne">
+      <input type="hidden" name="item_id" id="camp-id">
+      
+      <div class="mbody">
+        <div style="display:grid; grid-template-columns: 1fr 2fr; gap:15px; margin-bottom:15px;">
+            <div>
+                <label style="font-size: 11px; font-weight: 700; color: #475569; display:block; margin-bottom:5px;">RÉFÉRENCE *</label>
+                <input type="text" name="reference" id="camp-ref" class="form-control" placeholder="Ex: INV-2026-01" required style="text-transform: uppercase;">
+            </div>
+            <div>
+                <label style="font-size: 11px; font-weight: 700; color: #475569; display:block; margin-bottom:5px;">TITRE *</label>
+                <input type="text" name="titre" id="camp-titre" class="form-control" placeholder="Ex: Inventaire Informatique Annuel" required>
+            </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+            <strong style="font-size: 12px; color: #0f766e; display: block; margin-bottom: 10px;"><i class="fas fa-filter"></i> PÉRIMÈTRE DE L'INVENTAIRE (Optionnel)</strong>
+            <p style="font-size: 11px; color: #64748b; margin-bottom: 15px;">Si vous laissez vide, la campagne ciblera l'intégralité du parc matériel de l'établissement.</p>
+            
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #475569; display:block; margin-bottom:5px;">CATÉGORIE CIBLE</label>
+                    <select name="categorie_cible" id="camp-cat" class="form-control select2-init">
+                        <option value="">-- Toutes les catégories --</option>
+                        {% for cat in categories %}
+                        <option value="{{ cat.id }}">{{ cat.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 11px; font-weight: 700; color: #475569; display:block; margin-bottom:5px;">BÂTIMENT CIBLE</label>
+                    <select name="batiment_cible" id="camp-bat" class="form-control select2-init">
+                        <option value="">-- Tous les bâtiments --</option>
+                        {% for bat in batiments %}
+                        <option value="{{ bat.id }}">{{ bat.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:15px;">
+            <div>
+                <label style="font-size: 11px; font-weight: 700; color: #475569; display:block; margin-bottom:5px;">DATE DE DÉBUT *</label>
+                <input type="date" name="date_debut" id="camp-debut" class="form-control" required>
+            </div>
+            <div>
+                <label style="font-size: 11px; font-weight: 700; color: #475569; display:block; margin-bottom:5px;">DATE DE FIN PRÉVUE</label>
+                <input type="date" name="date_fin_prevue" id="camp-fin" class="form-control">
+            </div>
+        </div>
+
+      </div>
+      <div class="mfoot" style="background: #f8fafc; border-top: 1px solid #e2e8f0; padding: 15px 20px; display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" onclick="fermer('mo-campagne')" style="background: white; color: #64748b; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">Annuler</button>
+        <button type="button" onclick="confirmerSauvegarde()" style="background: #0f766e; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;"><i class="fas fa-save"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form method="POST" id="form-suppr" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" id="suppr-action">
+  <input type="hidden" name="item_id" id="suppr-id">
+</form>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+function confirmerSauvegarde() {
+    let form = document.getElementById('form-campagne');
+    
+    // Vérifier si les champs obligatoires sont remplis
+    if (!form.checkValidity()) {
+        form.reportValidity(); 
+        return;
+    }
+
+    // Afficher l'alerte de confirmation
+    Swal.fire({
+        title: 'Confirmer la campagne ?',
+        text: "Êtes-vous sûr de vouloir enregistrer cette campagne d'inventaire ?",
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0f766e',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="fas fa-save"></i> Oui, enregistrer',
+        cancelButtonText: 'Annuler'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            form.submit(); // Si "Oui", on envoie le formulaire
+        }
+    });
+}
+
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // --- MOTEUR DE PAGINATION ET RECHERCHE MAGIQUE ---
+    const ELEMENTS_PAR_PAGE = 8;
+
+    function majPagination(targetId) {
+        let container = document.getElementById(targetId);
+        if (!container) return;
+        
+        let items = Array.from(container.querySelectorAll('tr:not(.empty-pm)'));
+        let itemsVisibles = items.filter(item => !item.classList.contains('search-hidden'));
+        
+        let totalPages = Math.ceil(itemsVisibles.length / ELEMENTS_PAR_PAGE);
+        let currentPage = parseInt(container.getAttribute('data-current-page') || 1);
+        if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+        container.setAttribute('data-current-page', currentPage);
+        
+        itemsVisibles.forEach((item, index) => {
+            let start = (currentPage - 1) * ELEMENTS_PAR_PAGE;
+            let end = start + ELEMENTS_PAR_PAGE;
+            item.style.display = (index >= start && index < end) ? '' : 'none';
+        });
+        
+        let pagWrapper = document.getElementById('pag-' + targetId);
+        
+        if (totalPages <= 1) {
+            pagWrapper.style.display = 'none';
+        } else {
+            pagWrapper.style.display = 'flex';
+            let debut = (currentPage - 1) * ELEMENTS_PAR_PAGE + 1;
+            let fin = Math.min(itemsVisibles.length, currentPage * ELEMENTS_PAR_PAGE);
+            let html = `<div class="pagination-info">Affichage ${debut} à ${fin} sur ${itemsVisibles.length} campagnes</div>`;
+            html += `<div class="pagination-buttons">
+                <button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changerPage('${targetId}', ${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changerPage('${targetId}', ${i})">${i}</button>`;
+                } else if (i === currentPage - 2 || i === currentPage + 2) {
+                    if (!html.endsWith('...</span>')) {
+                        html += `<span style="padding: 5px 2px; color: #adb5bd; font-size:10px;">...</span>`;
+                    }
+                }
+            }
+            html += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="changerPage('${targetId}', ${currentPage + 1})"><i class="fas fa-chevron-right"></i></button></div>`;
+            pagWrapper.innerHTML = html;
+            
+            // Appliquer les styles si le parent n'a pas la classe container (Garde le style harmonisé)
+            pagWrapper.classList.add('pagination-container');
+        }
+    }
+
+    window.changerPage = function(targetId, page) {
+        let container = document.getElementById(targetId);
+        if(container) {
+            container.setAttribute('data-current-page', page);
+            majPagination(targetId);
+        }
+    };
+
+    document.querySelectorAll('.live-search').forEach(input => {
+        input.addEventListener('keyup', function() {
+            let filtre = this.value.toLowerCase().trim();
+            let targetId = this.getAttribute('data-target');
+            let targetContainer = document.getElementById(targetId);
+            if (!targetContainer) return;
+
+            let items = targetContainer.querySelectorAll('tr:not(.empty-pm)');
+                
+            items.forEach(item => {
+                let texteItem = item.textContent.toLowerCase();
+                if (texteItem.includes(filtre)) {
+                    item.classList.remove('search-hidden'); 
+                } else {
+                    item.classList.add('search-hidden'); 
+                }
+            });
+            
+            targetContainer.setAttribute('data-current-page', 1);
+            majPagination(targetId);
+        });
+    });
+
+    // Initialisation
+    majPagination('tbody-campagnes');
+
+    // Init Select2 s'il est dispo
+    if (typeof $ !== 'undefined') {
+        $('.select2-init').select2({ width: '100%', dropdownParent: $('#mo-campagne') });
+    }
+});
+
+
+// --- FONCTIONS MODALES ---
+function ouvrirModalCampagne() {
+    document.getElementById('camp-id').value = '';
+    document.getElementById('camp-ref').value = '';
+    document.getElementById('camp-titre').value = '';
+    if (typeof $ !== 'undefined') {
+        $('#camp-cat').val(null).trigger('change');
+        $('#camp-bat').val(null).trigger('change');
+    }
+    document.getElementById('camp-debut').value = new Date().toISOString().split('T')[0];
+    document.getElementById('camp-fin').value = '';
+    document.getElementById('mo-campagne-titre').innerHTML = '<i class="fas fa-plus me-2"></i> Nouvelle Campagne';
+    document.getElementById('mo-campagne').classList.add('open');
+}
+
+function editerCampagne(id, titre, ref, debut, fin, catId, batId) {
+    document.getElementById('camp-id').value = id;
+    document.getElementById('camp-titre').value = titre;
+    document.getElementById('camp-ref').value = ref;
+    document.getElementById('camp-debut').value = debut;
+    document.getElementById('camp-fin').value = fin;
+    if (typeof $ !== 'undefined') {
+        $('#camp-cat').val(catId).trigger('change');
+        $('#camp-bat').val(batId).trigger('change');
+    }
+    document.getElementById('mo-campagne-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier la Campagne';
+    document.getElementById('mo-campagne').classList.add('open');
+}
+
+function fermer(id) {
+    document.getElementById(id).classList.remove('open');
+}
+
+document.addEventListener('keydown', function(e) {
+    if(e.key === 'Escape') {
+        document.querySelectorAll('.mo.open').forEach(m => m.classList.remove('open'));
+    }
+});
+
+function confirmerSuppression(action, id, nom) {
+  Swal.fire({
+    title: 'Supprimer "' + nom + '" ?',
+    text: 'Cette action est irréversible.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-trash"></i> Supprimer',
+    cancelButtonText: 'Annuler'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      document.getElementById('suppr-action').value = action;
+      document.getElementById('suppr-id').value = id;
+      document.getElementById('form-suppr').submit();
+    }
+  });
+}
+</script>
+{% endblock %}

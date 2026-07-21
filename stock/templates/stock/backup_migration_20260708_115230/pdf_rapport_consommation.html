@@ -1,0 +1,193 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bilan de Consommation</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 1.5cm;
+            @bottom-center {
+                content: "Page " counter(page) " / " counter(pages);
+                font-size: 9pt;
+                color: #666;
+            }
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-size: 10pt;
+            color: #333;
+            line-height: 1.4;
+        }
+        .header {
+            border-bottom: 3px solid #1c5b96;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        .header-left h1 {
+            margin: 0;
+            font-size: 18pt;
+            color: #1c5b96;
+        }
+        .header-left p {
+            margin: 4px 0 0;
+            font-size: 10pt;
+            color: #555;
+        }
+        .header-right {
+            text-align: right;
+            font-size: 9pt;
+            color: #666;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 9pt;
+            font-weight: bold;
+            background: #e9f2fb;
+            color: #1c5b96;
+            border: 1px solid #1c5b96;
+        }
+        .summary {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 12px 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 30px;
+        }
+        .summary-item strong {
+            display: block;
+            font-size: 9pt;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+        .summary-item span {
+            font-size: 12pt;
+            font-weight: bold;
+            color: #1c5b96;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        thead th {
+            background: #1c5b96;
+            color: white;
+            font-size: 9pt;
+            font-weight: 600;
+            padding: 8px 10px;
+            text-align: left;
+            border: 1px solid #1c5b96;
+        }
+        tbody td {
+            padding: 6px 10px;
+            border: 1px solid #dee2e6;
+            font-size: 9pt;
+            vertical-align: middle;
+        }
+        tbody tr:nth-child(even) {
+            background: #f8f9fa;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .famille-row {
+            background: #e9f2fb !important;
+            font-weight: bold;
+            color: #1c5b96;
+        }
+        .footer-info {
+            margin-top: 20px;
+            font-size: 8pt;
+            color: #888;
+            border-top: 1px solid #dee2e6;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-left">
+            <h1>Bilan des Consommations</h1>
+            <p>
+                Periode : <strong>{{ date_debut|date:"d/m/Y" }}</strong> au <strong>{{ date_fin|date:"d/m/Y" }}</strong>
+                {% if service %}
+                    <br>Service : <span class="badge">{{ service.nom }}</span>
+                {% else %}
+                    <br>Portee : <span class="badge">Global (Tous les services)</span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="header-right">
+            <div>Edite par : {{ edite_par.get_full_name|default:edite_par.username }}</div>
+            <div>Imprime le : {{ date_impression|date:"d/m/Y a H:i" }}</div>
+            <div>Entreprise : {{ edite_par.profil.entreprise.nom|default:"—" }}</div>
+        </div>
+    </div>
+
+    <div class="summary">
+        <div class="summary-item">
+            <strong>Articles consommes</strong>
+            <span>{{ consommations|length }}</span>
+        </div>
+        <div class="summary-item">
+            <strong>Periode couverte</strong>
+            <span>{{ date_debut|date:"d/m/Y" }} – {{ date_fin|date:"d/m/Y" }}</span>
+        </div>
+        <div class="summary-item">
+            <strong>Service</strong>
+            <span>{{ service.nom|default:"Tous" }}</span>
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width:5%">N</th>
+                <th style="width:15%">Reference</th>
+                <th style="width:35%">Designation</th>
+                <th style="width:15%">Famille</th>
+                <th style="width:15%">Unite</th>
+                <th style="width:15%" class="text-right">Qte Totale Sortie</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in consommations %}
+                {% ifchanged c.article__famille__intitule %}
+                    <tr class="famille-row">
+                        <td colspan="6">{{ c.article__famille__intitule|default:"Sans famille" }}</td>
+                    </tr>
+                {% endifchanged %}
+                <tr>
+                    <td class="text-center">{{ forloop.counter }}</td>
+                    <td>{{ c.article__reference|default:"—" }}</td>
+                    <td>{{ c.article__designation }}</td>
+                    <td>{{ c.article__famille__intitule|default:"—" }}</td>
+                    <td class="text-center">{{ c.article__unite_distribution|default:"—" }}</td>
+                    <td class="text-right">{{ c.total_sorti|floatformat:0|default:"0" }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="6" class="text-center" style="padding:20px; color:#888;">
+                        Aucune consommation enregistree sur cette periode.
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer-info">
+        Document genere automatiquement par le module Stock & Logistique. 
+        Les quantites refletent les sorties validees en stock (Bons de Sortie).
+    </div>
+</body>
+</html>

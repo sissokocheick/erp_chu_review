@@ -1,0 +1,498 @@
+{% extends "base_ui.html" %}
+{% block title %}Statistiques des Sondages - NexusERP{% endblock %}
+{% block contenu %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  .page-header-bar { display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid var(--border-color); padding-bottom:15px; margin-bottom:20px; flex-wrap:wrap; gap:10px; }
+  .page-header-bar h2 { color:var(--text-dark); margin:0; font-size:20px; }
+  .search-bar { display:flex; gap:15px; margin-bottom:15px; background:var(--bg-stripe); padding:15px; border-radius:10px; border:1px solid var(--border-light); flex-wrap:wrap; align-items:end; }
+  .search-bar label { font-size:11px; color:var(--text-light); font-weight:600; text-transform:uppercase; display:block; margin-bottom:6px; }
+  .search-bar select, .search-bar input { padding:10px; border:2px solid var(--border-color); border-radius:8px; font-size:13px; outline:none; background:var(--bg-input); color:var(--text-dark); transition:.2s; min-width:200px; }
+  .kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-bottom:22px; }
+  .kpi-card { background:var(--bg-card); border-radius:12px; padding:18px 20px; box-shadow:0 2px 10px var(--shadow); display:flex; align-items:center; gap:14px; border-left:4px solid transparent; transition:.2s; }
+  .kpi-icon { width:48px; height:48px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:20px; flex-shrink:0; }
+  .kpi-val { font-size:26px; font-weight:800; line-height:1; }
+  .kpi-lbl { font-size:11px; color:var(--text-light); font-weight:600; text-transform:uppercase; letter-spacing:.4px; margin-top:3px; }
+  .kpi-blue { border-color:#1c5b96; } .kpi-blue .kpi-icon { background:rgba(28,91,150,0.12); color:#1c5b96; }
+  .kpi-green { border-color:#27ae60; } .kpi-green .kpi-icon { background:rgba(39,174,96,0.12); color:#27ae60; }
+  .kpi-orange { border-color:#fd7e14; } .kpi-orange .kpi-icon { background:rgba(253,126,20,0.12); color:#fd7e14; }
+  .kpi-red { border-color:#dc3545; } .kpi-red .kpi-icon { background:rgba(220,53,69,0.12); color:#dc3545; }
+  .kpi-purple { border-color:#8e44ad; } .kpi-purple .kpi-icon { background:rgba(142,68,173,0.12); color:#8e44ad; }
+  .card { background:var(--bg-card); border-radius:12px; box-shadow:0 2px 8px var(--shadow); overflow:hidden; }
+  .card-head { padding:14px 18px; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--border-light); }
+  .card-head h6 { margin:0; font-size:13px; font-weight:700; color:var(--text-dark); display:flex; align-items:center; gap:8px; }
+  .card-body { padding:14px 18px; }
+  .mtbl { width:100%; border-collapse:collapse; font-size:12px; table-layout:fixed; }
+  .mtbl th, .mtbl td { box-sizing:border-box; }
+  .mtbl thead th { background:var(--bg-hover); padding:10px; font-size:10px; text-transform:uppercase; font-weight:700; color:var(--text-light); border:none; text-align:left; }
+  .mtbl thead th.center { text-align:center; }
+  .mtbl tbody tr { border-bottom:1px solid var(--border-light); transition:.15s; }
+  .mtbl tbody tr:hover { background:var(--bg-hover); }
+  .mtbl tbody td { padding:10px; vertical-align:middle; color:var(--text-dark); overflow-wrap:break-word; }
+  .mtbl tbody td.center { text-align:center; }
+  .empty-sm { text-align:center; padding:30px 10px; color:var(--text-light); font-size:12px; }
+  .badge-custom { padding:3px 10px; border-radius:12px; font-size:10px; font-weight:700; display:inline-flex; align-items:center; gap:5px; }
+  .bg-sat { background:#d4edda; color:#155724; }
+  .bg-neu { background:#e2e3e5; color:#383d41; }
+  .bg-ins { background:#f8d7da; color:#721c24; }
+  .row2 { display:grid; grid-template-columns:2fr 1fr; gap:16px; margin-bottom:16px; }
+  .row2-equal { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:16px; }
+  @media(max-width:768px){ .row2, .row2-equal { grid-template-columns:1fr; } }
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:2147483647; align-items:flex-start; justify-content:center; backdrop-filter:blur(3px); padding-top:5vh; overflow-y:auto; }
+  .modal-box { background:var(--bg-card); width:95%; max-width:1000px; border-radius:12px; box-shadow:0 20px 50px var(--shadow); display:flex; flex-direction:column; margin-bottom:5vh; }
+  .modal-header { background:linear-gradient(135deg,#1c5b96,#007bff); color:white; padding:18px 25px; border-radius:12px 12px 0 0; display:flex; justify-content:space-between; align-items:center; font-weight:700; }
+  .modal-header button { background:rgba(255,255,255,0.2); border:none; color:white; width:32px; height:32px; border-radius:50%; cursor:pointer; font-size:18px; }
+  .modal-body { padding:20px; background:var(--bg-stripe); max-height:65vh; overflow-y:auto; }
+  .modal-footer { padding:15px 25px; background:var(--bg-stripe); border-top:1px solid var(--border-light); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; border-radius:0 0 12px 12px; }
+  .modal-pagination { display:flex; gap:10px; align-items:center; }
+  .modal-pagination button { background:var(--bg-card); color:var(--text-medium); border:1px solid var(--border-color); padding:6px 15px; border-radius:20px; cursor:pointer; font-weight:600; }
+  .btn-modal-close { background:var(--bg-card); color:var(--text-medium); border:1px solid var(--border-color); padding:8px 20px; border-radius:8px; cursor:pointer; font-weight:700; }
+  .quick-filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:15px; }
+  .quick-filters a { padding:6px 14px; border-radius:20px; font-size:12px; font-weight:600; text-decoration:none; border:1px solid var(--border-color); color:var(--text-medium); background:var(--bg-card); transition:.2s; }
+  .quick-filters a:hover, .quick-filters a.active { background:#1c5b96; color:white; border-color:#1c5b96; }
+  .note-stars { color:#ffc107; letter-spacing:1px; }
+  .comment-bubble { background:var(--bg-hover); padding:10px 14px; border-radius:8px; font-size:12px; border-left:3px solid #1c5b96; margin-bottom:8px; }
+  .comment-bubble small { color:var(--text-light); font-size:10px; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @keyframes slideDown { from{transform:translateY(-15px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal-overlay { animation:fadeIn .2s ease; }
+  .modal-box { animation:slideDown .25s ease; }
+  body.dark-mode canvas { filter:brightness(1.1); }
+</style>
+
+<div class="page-header-bar">
+  <h2><i class="fas fa-poll" style="color:#1c5b96;"></i> Statistiques des Sondages de Satisfaction</h2>
+  <a href="{% url 'export_sondages_csv' %}?{% if date_range %}date_range={{ date_range|urlencode }}&{% endif %}{% if service_id %}service={{ service_id }}{% endif %}" 
+   class="btn-modal-close" 
+   style="text-decoration:none; display:inline-flex; align-items:center; gap:8px;" rel="noopener noreferrer">
+  <i class="fas fa-file-csv"></i> Export CSV
+</a>
+</div>
+
+<!-- ═══ FILTRES RAPIDES ═══ -->
+<div class="quick-filters">
+  <a href="?periode=7j" class="{% if request.GET.periode == '7j' %}active{% endif %}">7 derniers jours</a>
+  <a href="?periode=30j" class="{% if request.GET.periode == '30j' %}active{% endif %}">30 derniers jours</a>
+  <a href="?periode=90j" class="{% if request.GET.periode == '90j' %}active{% endif %}">3 derniers mois</a>
+  <a href="?periode=1an" class="{% if request.GET.periode == '1an' or not request.GET.periode %}active{% endif %}">1 an</a>
+</div>
+
+<form method="get" class="search-bar" id="form-filtres" autocomplete="off">
+  {% csrf_token %}
+  <div>
+    <label>Période personnalisée</label>
+    <input type="text" name="date_range" autocomplete="off" value="{{ date_range|default:'' }}" placeholder="JJ/MM/AAAA - JJ/MM/AAAA">
+  </div>
+  <div>
+    <label>Service</label>
+    <select name="service" onchange="this.form.submit()">
+      <option value="">Tous les services</option>
+      {% for s in services %}
+      <option value="{{ s.id }}" {% if service_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nom }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<!-- ═══ KPIs ═══ -->
+<div class="kpi-grid">
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-icon"><i class="fas fa-reply-all"></i></div>
+    <div>
+      <div class="kpi-val">{{ total_reponses|default_if_none:0 }}</div>
+      <div class="kpi-lbl">Réponses reçues</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-icon"><i class="fas fa-percentage"></i></div>
+    <div>
+      <div class="kpi-val">{{ taux_reponse|default_if_none:0 }} %</div>
+      <div class="kpi-lbl">Taux de réponse</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-green">
+    <div class="kpi-icon"><i class="fas fa-smile"></i></div>
+    <div>
+      <div class="kpi-val">{{ taux_satisfaction|default_if_none:0 }} %</div>
+      <div class="kpi-lbl">Taux satisfaction</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-orange">
+    <div class="kpi-icon"><i class="fas fa-star"></i></div>
+    <div>
+      <div class="kpi-val">{{ note_moyenne|default_if_none:0 }} <small style="font-size:14px;">/ 5</small></div>
+      <div class="kpi-lbl">Note moyenne</div>
+    </div>
+  </div>
+  <div class="kpi-card kpi-red">
+    <div class="kpi-icon"><i class="fas fa-clock"></i></div>
+    <div>
+      <div class="kpi-val">{{ delai_moyen_heures|default_if_none:0 }} h</div>
+      <div class="kpi-lbl">Délai moyen signature</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ GRAPHIQUES + TOP/FLOP ═══ -->
+<div class="row2">
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-chart-line" style="color:#5dade2;"></i> Évolution des notes par mois</h6></div>
+    <div class="card-body">
+      <canvas id="evolutionChart" aria-label="Graphique évolution des notes"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-chart-pie" style="color:#fd7e14;"></i> Répartition des avis</h6></div>
+    <div class="card-body" style="display:flex; justify-content:center; align-items:center; min-height:280px;">
+      <canvas id="repartitionChart" style="max-height:260px;" aria-label="Graphique répartition des avis"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SATISFACTION PAR SERVICE ═══ -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-head">
+    <h6><i class="fas fa-hospital" style="color:#8e44ad;"></i> Satisfaction par service</h6>
+    <button class="btn-modal-close" onclick="ouvrirModalListe('','Toutes les réponses')" aria-label="Voir toutes les réponses"><i class="fas fa-list"></i> Voir tout</button>
+  </div>
+  <div class="card-body" style="padding:0;">
+    <table class="mtbl">
+      <thead>
+        <tr>
+          <th style="width:30%;">Service</th>
+          <th class="center" style="width:12%;">Réponses</th>
+          <th class="center" style="width:15%;">Satisfaits</th>
+          <th class="center" style="width:15%;">Insatisfaits</th>
+          <th class="center" style="width:13%;">Note moy.</th>
+          <th class="center" style="width:15%;">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in satisfaction_par_service %}
+        <tr>
+          <td><strong>{{ s.nom_service|default:"—" }}</strong></td>
+          <td class="center">{{ s.nb_reponses }}</td>
+          <td class="center"><span style="color:#27ae60; font-weight:700;">{{ s.satisfaits }}</span></td>
+          <td class="center"><span style="color:#dc3545; font-weight:700;">{{ s.insatisfaits }}</span></td>
+          <td class="center">
+            <span class="note-stars">
+              {% if s.moyenne >= 4 %}<i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i>{% elif s.moyenne >= 3 %}<i class="fas fa-star"></i><i class="fas fa-star"></i><i class="fas fa-star"></i><i class="far fa-star"></i>{% elif s.moyenne >= 2 %}<i class="fas fa-star"></i><i class="fas fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>{% else %}<i class="fas fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>{% endif %}
+            </span>
+            <div style="font-size:10px; color:var(--text-light); margin-top:2px;">{{ s.moyenne|floatformat:1 }}</div>
+          </td>
+          <td class="center">
+            <button onclick="ouvrirModalListe('{{ s.nom_service|escapejs }}','Réponses — {{ s.nom_service|escapejs }}')" style="background:var(--bg-hover); border:1px solid var(--border-color); color:var(--text-medium); padding:4px 12px; border-radius:6px; cursor:pointer; font-size:11px; font-weight:600;" aria-label="Détails {{ s.nom_service|escapejs }}">
+              <i class="fas fa-eye"></i> Détails
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6"><div class="empty-sm">Aucune donnée</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═══ TOP / FLOP ═══ -->
+{% if top_service and flop_service %}
+<div class="row2-equal" style="margin-bottom:16px;">
+  <div class="card" style="border-left:4px solid #27ae60;">
+    <div class="card-head"><h6><i class="fas fa-trophy" style="color:#27ae60;"></i> Meilleur service</h6></div>
+    <div class="card-body" style="text-align:center; padding:24px;">
+      <div style="font-size:28px; font-weight:800; color:#27ae60;">{{ top_service.nom_service|default:"—" }}</div>
+      <div style="font-size:14px; color:var(--text-light); margin-top:6px;">Note moyenne : <strong>{{ top_service.moyenne|floatformat:1 }}</strong> / 5</div>
+      <div style="font-size:12px; color:var(--text-light); margin-top:4px;">{{ top_service.nb_reponses }} réponse(s)</div>
+    </div>
+  </div>
+  <div class="card" style="border-left:4px solid #dc3545;">
+    <div class="card-head"><h6><i class="fas fa-exclamation-triangle" style="color:#dc3545;"></i> Service à améliorer</h6></div>
+    <div class="card-body" style="text-align:center; padding:24px;">
+      <div style="font-size:28px; font-weight:800; color:#dc3545;">{{ flop_service.nom_service|default:"—" }}</div>
+      <div style="font-size:14px; color:var(--text-light); margin-top:6px;">Note moyenne : <strong>{{ flop_service.moyenne|floatformat:1 }}</strong> / 5</div>
+      <div style="font-size:12px; color:var(--text-light); margin-top:4px;">{{ flop_service.nb_reponses }} réponse(s)</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ═══ DERNIERS COMMENTAIRES ═══ -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-head"><h6><i class="fas fa-comments" style="color:#17a2b8;"></i> Derniers commentaires</h6></div>
+  <div class="card-body">
+    {% for c in derniers_commentaires %}
+    <div class="comment-bubble">
+      <div style="display:flex; justify-content:space-between; align-items:start; margin-bottom:4px;">
+        <strong style="font-size:12px; color:var(--text-dark);">
+          <i class="fas fa-hospital" style="color:#1c5b96; margin-right:4px;"></i>
+          {{ c.livraison.demande.service_demandeur.nom|default:"—" }}
+        </strong>
+        <small>{{ c.date_reception|date:"d/m/Y H:i" }}</small>
+      </div>
+      <div style="color:var(--text-dark);">{{ c.observations }}</div>
+      <div style="margin-top:4px;">
+        {% if c.satisfait is True %}<span class="badge-custom bg-sat"><i class="fas fa-smile"></i> Satisfait</span>{% elif c.satisfait is False %}<span class="badge-custom bg-ins"><i class="fas fa-frown"></i> Insatisfait</span>{% else %}<span class="badge-custom bg-neu"><i class="fas fa-meh"></i> Neutre</span>{% endif %}
+      </div>
+    </div>
+    {% empty %}
+    <div class="empty-sm">Aucun commentaire</div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- ═══ RÉPONSES RÉCENTES ═══ -->
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-head">
+    <h6><i class="fas fa-list" style="color:#6c757d;"></i> Réponses récentes</h6>
+    <button class="btn-modal-close" onclick="ouvrirModalListe('','Toutes les réponses')" aria-label="Voir toutes les réponses"><i class="fas fa-expand"></i> Voir tout</button>
+  </div>
+  <div class="card-body" style="padding:0;">
+    <table class="mtbl">
+      <thead>
+        <tr>
+          <th style="width:14%;">Date</th>
+          <th style="width:18%;">Service</th>
+          <th style="width:16%;">Demandeur</th>
+          <th style="width:14%;">Livré par</th>
+          <th class="center" style="width:12%;">Avis</th>
+          <th class="center" style="width:10%;">Note</th>
+          <th style="width:16%;">Commentaire</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in reponses_recentes %}
+        <tr>
+          <td>{{ r.date_reception|date:"d/m/Y H:i" }}</td>
+          <td>{{ r.livraison.demande.service_demandeur.nom|default:"—" }}</td>
+          <td>{{ r.receptionne_par.get_full_name|default:r.receptionne_par.username|default:"—" }}</td>
+          <td>{{ r.livraison.livre_par.get_full_name|default:r.livraison.livre_par.username|default:"—" }}</td>
+          <td class="center">
+            {% if r.satisfait is True %}<span class="badge-custom bg-sat"><i class="fas fa-smile"></i></span>{% elif r.satisfait is False %}<span class="badge-custom bg-ins"><i class="fas fa-frown"></i></span>{% else %}<span class="badge-custom bg-neu"><i class="fas fa-meh"></i></span>{% endif %}
+          </td>
+          <td class="center">
+            {% if r.satisfait is True %}<span class="note-stars"><i class="fas fa-star"></i> 4.5</span>{% elif r.satisfait is False %}<span style="color:#dc3545;"><i class="fas fa-star"></i> 1.5</span>{% else %}<span style="color:#6c757d;"><i class="fas fa-star"></i> 3.0</span>{% endif %}
+          </td>
+          <td style="font-size:11px; color:var(--text-light);">{{ r.observations|truncatechars:40|default:"—" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7"><div class="empty-sm">Aucune réponse</div></td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ═════ MODALE LISTE DÉTAILLÉE ═════ -->
+<div id="modalSondages" class="modal-overlay" onclick="if(event.target===this) fermerModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h5 id="modalTitle"><i class="fas fa-list"></i> Détail</h5>
+      <button onclick="fermerModal()" aria-label="Fermer">&times;</button>
+    </div>
+    <div class="modal-body" id="modalBody">
+      <div class="empty-sm">Chargement...</div>
+    </div>
+    <div class="modal-footer">
+      <div class="modal-pagination">
+        <button id="prevPageBtn" disabled aria-label="Page précédente">◀ Précédent</button>
+        <span id="pageInfo">Page 1 / 1</span>
+        <button id="nextPageBtn" aria-label="Page suivante">Suivant ▶</button>
+      </div>
+      <button class="btn-modal-close" onclick="fermerModal()">Fermer</button>
+    </div>
+  </div>
+</div>
+
+{{ chart_notes_labels|json_script:"chart-notes-labels" }}
+{{ chart_notes_data|json_script:"chart-notes-data" }}
+{{ chart_repartition_labels|json_script:"chart-repartition-labels" }}
+{{ chart_repartition_data|json_script:"chart-repartition-data" }}
+
+<script>
+(function() {
+  'use strict';
+
+  let currentPage = 1, totalPages = 1, currentService = '';
+  const currentFilters = {
+    date_range: '{{ date_range|default:""|escapejs }}',
+    service: '{{ service_id|default:""|escapejs }}'
+  };
+
+  function e(str) {
+    if (str === null || str === undefined) return '—';
+    return String(str)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#x27;');
+  }
+
+  function ouvrirModalListe(service, titre) {
+    currentService = service; currentPage = 1;
+    document.getElementById('modalTitle').innerHTML = '<i class="fas fa-list"></i> ' + e(titre);
+    document.getElementById('modalSondages').style.display = 'flex';
+    chargerListe();
+  }
+
+  function chargerListe() {
+    const body = document.getElementById('modalBody');
+    body.innerHTML = '<div class="empty-sm">Chargement des données...</div>';
+
+    const params = new URLSearchParams({
+      page: currentPage,
+      date_range: currentFilters.date_range,
+      service: currentFilters.service
+    });
+    if (currentService) params.append('service_nom', currentService);
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+
+    fetch('/api-details-sondages/?' + params.toString(), {
+      headers: {
+        'X-CSRFToken': csrfToken,
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    })
+      .then(async res => {
+        const text = await res.text();
+        if (!res.ok || text.trim().startsWith('<')) throw new Error('HTTP ' + res.status);
+        return JSON.parse(text);
+      })
+      .then(data => {
+        if (data.error) {
+          body.innerHTML = '<div class="empty-sm" style="color:#e74c3c;"><i class="fas fa-exclamation-circle"></i> ' + e(data.error) + '</div>';
+          majPagination(1, 1, true);
+          return;
+        }
+        totalPages = data.total_pages || 1;
+        majPagination(data.page || 1, totalPages, false);
+
+        if (!data.data || data.data.length === 0) {
+          body.innerHTML = '<div class="empty-sm">Aucune donnée trouvée</div>';
+          return;
+        }
+
+        let html = '<table class="mtbl"><colgroup>';
+        html += '<col style="width:14%;"><col style="width:16%;"><col style="width:14%;"><col style="width:14%;">';
+        html += '<col style="width:12%;"><col style="width:10%;"><col style="width:20%;">';
+        html += '</colgroup><thead><tr>';
+        html += '<th>Date</th><th>Service</th><th>Demandeur</th><th>Livré par</th>';
+        html += '<th class="center">Avis</th><th class="center">Note</th><th>Commentaire</th>';
+        html += '</tr></thead><tbody>';
+
+        data.data.forEach(row => {
+          let badge = '';
+          if (row.satisfait === 'Satisfait') badge = '<span class="badge-custom bg-sat"><i class="fas fa-smile"></i> Satisfait</span>';
+          else if (row.satisfait === 'Insatisfait') badge = '<span class="badge-custom bg-ins"><i class="fas fa-frown"></i> Insatisfait</span>';
+          else badge = '<span class="badge-custom bg-neu"><i class="fas fa-meh"></i> Neutre</span>';
+
+          let note = '';
+          if (row.note >= 4) note = '<span class="note-stars"><i class="fas fa-star"></i> ' + e(row.note) + '</span>';
+          else if (row.note <= 2) note = '<span style="color:#dc3545;"><i class="fas fa-star"></i> ' + e(row.note) + '</span>';
+          else note = '<span style="color:#6c757d;"><i class="fas fa-star"></i> ' + e(row.note) + '</span>';
+
+          html += '<tr>';
+          html += '<td>' + e(row.date_reception) + '</td>';
+          html += '<td>' + e(row.service) + '</td>';
+          html += '<td>' + e(row.receptionne_par) + '</td>';
+          html += '<td>' + e(row.livre_par) + '</td>';
+          html += '<td class="center">' + badge + '</td>';
+          html += '<td class="center">' + note + '</td>';
+          html += '<td style="font-size:11px;">' + e(row.observations) + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table>';
+        body.innerHTML = html;
+      })
+      .catch(err => {
+        body.innerHTML = '<div class="empty-sm" style="color:#e74c3c;"><i class="fas fa-exclamation-circle"></i> ' + e(err.message) + '</div>';
+        majPagination(1, 1, true);
+      });
+  }
+
+  function majPagination(page, tot, disabled) {
+    const pi = document.getElementById('pageInfo');
+    const pr = document.getElementById('prevPageBtn');
+    const nx = document.getElementById('nextPageBtn');
+    if (pi) pi.innerText = 'Page ' + page + ' / ' + tot;
+    if (pr) pr.disabled = disabled || page <= 1;
+    if (nx) nx.disabled = disabled || page >= tot;
+  }
+
+  function fermerModal() { document.getElementById('modalSondages').style.display = 'none'; }
+  document.getElementById('prevPageBtn').onclick = () => { if (currentPage > 1) { currentPage--; chargerListe(); } };
+  document.getElementById('nextPageBtn').onclick = () => { if (currentPage < totalPages) { currentPage++; chargerListe(); } };
+
+  // ─── Graphique Évolution ───
+  const chartNotesLabels = JSON.parse(document.getElementById('chart-notes-labels').textContent);
+  const chartNotesData = JSON.parse(document.getElementById('chart-notes-data').textContent);
+
+  const ctxEvo = document.getElementById('evolutionChart');
+  if (ctxEvo) {
+    new Chart(ctxEvo, {
+      type: 'line',
+      data: {
+        labels: chartNotesLabels,
+        datasets: [{
+          label: 'Note moyenne',
+          data: chartNotesData,
+          borderColor: '#5dade2',
+          backgroundColor: 'rgba(93,173,226,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 4,
+          pointBackgroundColor: '#5dade2'
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: { min: 0, max: 5, ticks: { stepSize: 1 } }
+        }
+      }
+    });
+  }
+
+  // ─── Graphique Répartition ───
+  const repLabels = JSON.parse(document.getElementById('chart-repartition-labels').textContent);
+  const repData = JSON.parse(document.getElementById('chart-repartition-data').textContent);
+
+  const ctxRep = document.getElementById('repartitionChart');
+  if (ctxRep) {
+    new Chart(ctxRep, {
+      type: 'doughnut',
+      data: {
+        labels: repLabels,
+        datasets: [{
+          data: repData,
+          backgroundColor: ['#27ae60', '#6c757d', '#dc3545'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+        }
+      }
+    });
+  }
+
+  // Daterangepicker
+  if (typeof $ !== 'undefined' && $.fn.daterangepicker) {
+    $('input[name="date_range"]').daterangepicker({ autoUpdateInput: false, autoApply: true, locale: { format: 'DD/MM/YYYY', firstDay: 1 } });
+    $('input[name="date_range"]').on('apply.daterangepicker', function (ev, picker) {
+      $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+      this.form.submit();
+    });
+    $('input[name="date_range"]').on('cancel.daterangepicker', function () { $(this).val(''); this.form.submit(); });
+  }
+})();
+</script>
+{% endblock %}

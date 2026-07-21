@@ -1,0 +1,664 @@
+{% extends "base_ui.html" %}
+{% load custom_filters %}
+{% block title %}Rôles & Accès{% endblock %}
+{% block contenu %}
+<style>
+  .swal2-container { z-index: 9999999 !important; }
+
+  .pr-header {
+    background: linear-gradient(135deg, var(--primary-blue), #0d47a1);
+    color: white; border-radius: 10px; padding: 18px 25px; margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    box-shadow: 0 4px 15px rgba(28,91,150,.3); flex-wrap: wrap;
+  }
+  .pr-header-left { display: flex; align-items: center; gap: 14px; }
+  .pr-header i.ico { font-size: 28px; opacity: .9; }
+  .pr-header h4   { margin: 0; font-size: 20px; font-weight: 700; }
+  .pr-header small { opacity: .85; font-size: 12px; }
+  .stat-chip { background: rgba(255,255,255,.18); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-new-role { background: white; color: var(--primary-blue); border: none; padding: 10px 18px; border-radius: 7px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: .2s; box-shadow: 0 2px 8px rgba(0,0,0,.15); }
+  .btn-new-role:hover { background: #f0f3f7; transform: translateY(-1px); }
+
+  .card-table { background: var(--bg-card); border-radius: 10px; box-shadow: 0 2px 8px var(--shadow); overflow: hidden; border: 1px solid var(--border-light); }
+  .tb-bar { padding: 14px 18px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; background: var(--bg-stripe); }
+  .search-wrap { position: relative; }
+  .search-wrap i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 13px; pointer-events: none; }
+  .search-input { padding: 9px 12px 9px 32px; border: 1px solid var(--border-color); border-radius: 7px; font-size: 13px; outline: none; width: 280px; background: var(--bg-card); color: var(--text-dark); }
+  .search-input:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(28,91,150,.12); }
+  .tb-info { font-size: 12px; color: var(--text-medium); }
+
+  .roles-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .roles-table thead tr { background: var(--bg-stripe); }
+  .roles-table thead th { padding: 11px 14px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; color: var(--text-dark); border-bottom: 2px solid var(--border-color); white-space: nowrap; }
+  .roles-table thead th.c { text-align: center; }
+  .roles-table tbody tr { border-bottom: 1px solid var(--border-light); transition: background .12s; }
+  .roles-table tbody tr:hover { background: var(--bg-hover); }
+  .roles-table tbody td { padding: 12px 14px; vertical-align: middle; color: var(--text-dark); }
+  .roles-table tbody td.c { text-align: center; }
+
+  .role-name { font-weight: 700; color: var(--primary-blue); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+  .role-id   { background: var(--bg-hover); color: var(--text-light); font-size: 10px; padding: 2px 7px; border-radius: 10px; font-weight: 600; }
+
+  .badge-perm { display: inline-flex; align-items: center; gap: 5px; background: #e3f2fd; color: #0d47a1; padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .badge-users { display: inline-flex; align-items: center; gap: 5px; background: #d4edda; color: #155724; padding: 4px 11px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .badge-users.zero { background: var(--bg-hover); color: var(--text-light); }
+
+  .avatar-stack { display: flex; align-items: center; }
+  .avatar-stack .av { width: 28px; height: 28px; border-radius: 50%; border: 2px solid var(--bg-card); overflow: hidden; margin-left: -8px; box-shadow: 0 1px 3px rgba(0,0,0,.15); background: var(--bg-hover); display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--text-medium); }
+  .avatar-stack .av:first-child { margin-left: 0; }
+  .avatar-stack .av img { width: 100%; height: 100%; object-fit: cover; }
+  .avatar-stack .av-more { background: var(--primary-blue); color: white; font-size: 10px; font-weight: 700; }
+
+  .btn-ic { background: none; border: none; cursor: pointer; font-size: 15px; padding: 6px 7px; border-radius: 6px; transition: .2s; }
+  .btn-ic.edit  { color: #28a745; } .btn-ic.edit:hover  { background: #d4edda; transform: scale(1.1); }
+  .btn-ic.del   { color: #dc3545; } .btn-ic.del:hover   { background: #f8d7da; transform: scale(1.1); }
+  .btn-ic.del:disabled { color: var(--text-light) !important; cursor: not-allowed; background: none !important; transform: none !important; }
+
+  .empty-row td { text-align: center; padding: 50px; color: var(--text-light); font-size: 14px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+  .modal-overlay.open { display: flex; }
+  .modal-content { background: var(--bg-card); border-radius: 12px; width: 92%; max-width: 720px; max-height: 94vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,.3); animation: slideIn .2s ease; overflow: hidden; }
+  @keyframes slideIn { from{transform:translateY(-18px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+  .modal-header { background: linear-gradient(135deg,var(--primary-blue),#0d47a1); color: white; padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; gap: 14px; }
+  .modal-header h5 { margin: 0; font-size: 16px; font-weight: 700; flex: 1; }
+  .modal-close { background: rgba(255,255,255,.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 15px; transition: .2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .modal-close:hover { background: rgba(255,255,255,.35); }
+
+  .prog-bar-wrap { padding: 12px 24px; background: var(--bg-stripe); border-bottom: 1px solid var(--border-light); flex-shrink: 0; }
+  .prog-bar-label { display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 12px; color: var(--text-medium); font-weight: 600; }
+  .prog-bar-label span { color: var(--primary-blue); font-weight: 700; }
+  .prog-bar-outer { height: 8px; background: var(--border-color); border-radius: 4px; overflow: hidden; }
+  .prog-bar-inner { height: 100%; background: linear-gradient(90deg,var(--primary-blue),#17a2b8); border-radius: 4px; transition: width .3s; }
+
+  .modal-body { padding: 0; overflow-y: auto; flex: 1; min-height: 0; }
+  .modal-footer { padding: 14px 24px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 10px; background: var(--bg-stripe); border-radius: 0 0 12px 12px; flex-shrink: 0; }
+
+  .fg { margin-bottom: 18px; padding: 18px 24px 0; }
+  .fg label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-medium); margin-bottom: 5px; }
+  .fg input[type="text"] { width: 100%; padding: 10px 13px; border: 1px solid var(--border-color); border-radius: 7px; font-size: 15px; font-weight: 700; color: var(--primary-blue); outline: none; box-sizing: border-box; transition: .2s; letter-spacing: .5px; background: var(--bg-input); }
+  .fg input[type="text"]:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(28,91,150,.12); }
+
+  .perm-global-bar { padding: 12px 24px; background: #fff3cd; border-bottom: 1px solid #ffc107; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; }
+  body.dark-mode .perm-global-bar { background: #2a2510; }
+  .perm-global-bar label { font-weight: 700; color: #856404; cursor: pointer; font-size: 13px; flex: 1; }
+  .perm-global-bar .global-count { font-size: 12px; color: #856404; font-weight: 700; }
+  .cb-grand { width: 17px; height: 17px; cursor: pointer; accent-color: var(--primary-blue); flex-shrink: 0; }
+
+  .mod-block { border-bottom: 1px solid var(--border-light); }
+  .mod-block:last-child { border-bottom: none; }
+  .mod-head {
+    background: var(--primary-blue); color: white;
+    padding: 12px 18px; display: flex; align-items: center;
+    justify-content: space-between; cursor: pointer; user-select: none; gap: 10px;
+  }
+  .mod-head-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .mod-head-left i { font-size: 16px; width: 22px; text-align: center; }
+  .mod-head-left span { font-weight: 700; font-size: 13px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mod-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .mod-badge { background: rgba(255,255,255,.25); padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 700; min-width: 36px; text-align: center; transition: background .2s; }
+  .mod-badge.has-checked { background: #28a745; }
+  .mod-chevron { transition: transform .25s; font-size: 13px; opacity: .8; }
+  .mod-head.open .mod-chevron { transform: rotate(180deg); }
+  .mod-body { display: none; }
+  .mod-body.open { display: block; }
+
+  .perm-row {
+    padding: 10px 18px 10px 52px;
+    display: flex; align-items: center; gap: 12px;
+    border-top: 1px solid var(--border-light);
+    transition: background .1s;
+  }
+  .perm-row:hover { background: var(--bg-hover); }
+  .perm-row input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary-blue); flex-shrink: 0; }
+  .perm-row label { cursor: pointer; font-size: 13.5px; color: var(--text-dark); margin: 0; flex: 1; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+  .perm-row label i { font-size: 14px; width: 20px; text-align: center; }
+  .perm-row input:checked + label { color: var(--primary-blue); font-weight: 700; }
+
+  /* ── Sous-permissions CRUD ── */
+  .sous-perm {
+    padding-left: 72px !important;
+    background: var(--bg-stripe) !important;
+    border-top: 1px dashed var(--border-light) !important;
+  }
+  .sous-perm:hover { background: #e8f0fe !important; }
+  body.dark-mode .sous-perm:hover { background: #1a2535 !important; }
+  .sous-perm label { font-size: 12.5px !important; color: var(--text-medium) !important; font-weight: 500 !important; }
+  .sous-perm input { width: 15px !important; height: 15px !important; }
+  .sous-perm label i { font-size: 12px !important; width: 18px !important; }
+
+  /* ── Perm-Block (page pliable) ── */
+  .perm-block { border-bottom: 1px solid var(--border-light); }
+  .perm-block:last-child { border-bottom: none; }
+  .perm-block.no-sous .perm-head { cursor: default; }
+  .perm-block.no-sous .perm-head .perm-chevron { display: none; }
+  .perm-block.no-sous .perm-head-right { display: none; }
+
+  .perm-head {
+    padding: 10px 18px 10px 52px;
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; user-select: none; gap: 10px;
+    background: var(--bg-card);
+    transition: background .1s;
+  }
+  .perm-head:hover { background: var(--bg-hover); }
+  .perm-head-left { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+  .perm-head-left input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary-blue); flex-shrink: 0; }
+  .perm-head-left label { cursor: pointer; font-size: 13.5px; color: var(--text-dark); margin: 0; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+  .perm-head-left label i { font-size: 14px; width: 20px; text-align: center; }
+  .perm-head-left input:checked + label { color: var(--primary-blue); font-weight: 700; }
+  .perm-head-right { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+  .perm-badge { background: var(--bg-hover); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; color: var(--text-light); min-width: 30px; text-align: center; }
+  .perm-badge.has-checked { background: #28a745; color: white; }
+  .perm-chevron { transition: transform .25s; font-size: 12px; color: var(--text-light); }
+  .perm-head.open .perm-chevron { transform: rotate(180deg); }
+
+  .perm-sous-body { display: none; }
+  .perm-sous-body.open { display: block; }
+  .perm-sous-body .perm-row.sous-perm { padding-left: 52px !important; }
+
+  .btn-save   { background: var(--primary-blue); color: white; border: none; padding: 10px 26px; border-radius: 7px; font-weight: 700; font-size: 14px; cursor: pointer; transition: .2s; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 8px rgba(28,91,150,.3); }
+  .btn-save:hover { background: #0d47a1; transform: translateY(-1px); }
+  .btn-save.upd { background: #28a745; }
+  .btn-save.upd:hover { background: #1e7e34; }
+  .btn-cancel { background: var(--bg-stripe); color: var(--text-medium); border: 1px solid var(--border-color); padding: 10px 18px; border-radius: 7px; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-cancel:hover { background: var(--bg-hover); }
+
+  [data-tip] { position: relative; }
+  [data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 110%; left: 50%; transform: translateX(-50%); background: #333; color: white; font-size: 11px; padding: 5px 10px; border-radius: 5px; white-space: nowrap; z-index: 999; pointer-events: none; }
+</style>
+
+<div class="pr-header">
+  <div class="pr-header-left">
+    <i class="fas fa-user-shield ico"></i>
+    <div>
+      <h4>Rôles &amp; Accès</h4>
+      <small>Définissez les accès par rôle — {{ entreprise.nom }}</small>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <span class="stat-chip"><i class="fas fa-shield-alt"></i> {{ groupes|length }} rôle{% if groupes|length > 1 %}s{% endif %}</span>
+    <button class="btn-new-role" onclick="ouvrirModalRole()">
+      <i class="fas fa-plus"></i> Créer un rôle
+    </button>
+  </div>
+</div>
+
+<div class="card-table">
+  <div class="tb-bar">
+    <div class="search-wrap">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchRole" class="search-input" placeholder="Rechercher un rôle…" oninput="filtrerRoles()">
+    </div>
+    <span class="tb-info" id="roles-count">{{ groupes|length }} rôle{% if groupes|length > 1 %}s{% endif %}</span>
+  </div>
+
+  <table class="roles-table" id="tableRoles">
+    <thead>
+      <tr>
+        <th style="width:4%;">#</th>
+        <th style="width:28%;">Libellé du Rôle</th>
+        <th class="c" style="width:14%;">Accès</th>
+        <th style="width:30%;">Utilisateurs</th>
+        <th style="width:14%;">Traçabilité</th>
+        <th class="c" style="width:10%;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for groupe in groupes %}
+      <tr>
+        <td style="color:var(--text-light);font-weight:700;font-size:11px;">{{ forloop.counter }}</td>
+        <td>
+          <div class="role-name">
+            <span class="role-id">#{{ groupe.id }}</span>
+            {% if groupe.roleentreprise %}{{ groupe.roleentreprise.nom_affiche }}{% else %}{{ groupe.name|cut:"@" }}{% endif %}
+          </div>
+          <div class="mini-prog" style="margin-top:4px;">
+            <div style="display:flex;align-items:center;gap:6px;">
+              <div class="mini-prog-bar"><div class="mini-prog-fill" style="width:100%;"></div></div>
+              <span style="font-size:10px;color:var(--text-light);">{{ groupe.permissions.count }} accès</span>
+            </div>
+          </div>
+        </td>
+        <td class="c"><span class="badge-perm"><i class="fas fa-key"></i> {{ groupe.permissions.count }}</span></td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div class="avatar-stack">
+              {% for u in groupe.users_list %}
+                <div class="av" title="{{ u.get_full_name|default:u.username }}">
+                  {% if u.profil.photo %}<img src="{{ u.profil.photo.url }}" alt="">{% else %}<i class="fas fa-user" style="font-size:10px;"></i>{% endif %}
+                </div>
+              {% endfor %}
+              {% if groupe.users_more > 0 %}<div class="av av-more">+{{ groupe.users_more }}</div>{% endif %}
+            </div>
+            <span class="badge-users {% if groupe.users_count == 0 %}zero{% endif %}"><i class="fas fa-users"></i> {{ groupe.users_count }}</span>
+          </div>
+        </td>
+        <td>
+          <div style="font-size:11px;color:var(--text-light);line-height:1.7;">
+            <div><i class="fas fa-user-shield" style="color:#17a2b8;width:14px;"></i> Système</div>
+          </div>
+        </td>
+        <td class="c" style="white-space:nowrap;">
+          {% with nom_affiche=groupe.roleentreprise.nom_affiche|default:groupe.name|cut:"@" %}
+          <button type="button" class="btn-ic edit" title="Modifier"
+            onclick="modifierRole('{{ groupe.id }}','{{ nom_affiche|escapejs }}',[{% for p in groupe.permissions.all %}{{ p.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
+            <i class="fas fa-edit"></i>
+          </button>
+          {% if groupe.users_count > 0 %}
+            <button type="button" class="btn-ic del" disabled data-tip="{{ groupe.users_count }} utilisateur(s) attaché(s)"><i class="fas fa-trash-alt"></i></button>
+          {% else %}
+            <form method="POST" id="del-role-{{ groupe.id }}" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="supprimer">
+              <input type="hidden" name="groupe_id" value="{{ groupe.id }}">
+              <button type="button" class="btn-ic del" title="Supprimer"
+                onclick="confirmerSuppression(event, 'Supprimer le rôle « {{ nom_affiche|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+            </form>
+          {% endif %}
+          {% endwith %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr class="empty-row"><td colspan="6">
+        <i class="fas fa-shield-alt" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.3;"></i>
+        Aucun rôle créé pour {{ entreprise.nom }}.<br><small>Cliquez sur « Créer un rôle » pour commencer.</small>
+      </td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODAL
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="modal-role" class="modal-overlay" onclick="if(event.target===this)fermerModalRole()">
+  <div class="modal-content" onclick="event.stopPropagation()">
+
+    <div class="modal-header">
+      <h5 id="titre-modal"><i class="fas fa-plus-circle me-2"></i> Créer un rôle</h5>
+      <button type="button" class="modal-close" onclick="fermerModalRole()"><i class="fas fa-times"></i></button>
+    </div>
+
+    <div class="prog-bar-wrap">
+      <div class="prog-bar-label">Accès sélectionnés : <span id="prog-label">0 / 0</span></div>
+      <div class="prog-bar-outer"><div class="prog-bar-inner" id="prog-fill" style="width:0%"></div></div>
+    </div>
+
+    <form method="POST" id="formRole" style="display:flex; flex-direction:column; flex:1; min-height:0; overflow:hidden;">
+      {% csrf_token %}
+      <input type="hidden" name="enregistrer_role" value="1">
+      <input type="hidden" name="role_id" id="input_role_id" value="">
+
+      <div class="modal-body">
+
+        <div class="fg">
+          <label>Libellé du rôle <span style="color:red">*</span></label>
+          <input type="text" name="libelle" id="input_libelle" required
+                 oninput="this.value=this.value.toUpperCase()"
+                 placeholder="EX : RESPONSABLE LOGISTIQUE">
+        </div>
+
+        <div class="perm-global-bar">
+          <input type="checkbox" class="cb-grand" id="selectAll" onchange="toggleAll(this)">
+          <label for="selectAll">TOUT COCHER / DÉCOCHER</label>
+          <span class="global-count" id="global-count">0 / 0</span>
+        </div>
+
+        <div style="border: 1px solid var(--border-color); border-radius: 0 0 8px 8px; overflow: hidden; margin: 0 24px 20px;">
+
+          {% for grand_titre, codenames in modules_permissions.items %}
+          <div class="mod-block" id="modblock-{{ forloop.counter }}">
+            <div class="mod-head" onclick="toggleMod('modbody-{{ forloop.counter }}',this)">
+              <div class="mod-head-left">
+                <input type="checkbox" class="cb-grand grand-cb"
+                       style="width:17px;height:17px;cursor:pointer;accent-color:#fff;flex-shrink:0;"
+                       onclick="event.stopPropagation();"
+                       onchange="cocherModule(this,'modbody-{{ forloop.counter }}')">
+                <i class="fas {{ module_icons|get_item:grand_titre|default:'fa-folder' }}"></i>
+                <span>{{ grand_titre }}</span>
+              </div>
+              <div class="mod-head-right">
+                <span class="mod-badge" id="badge-{{ forloop.counter }}">0</span>
+                <i class="fas fa-chevron-down mod-chevron"></i>
+              </div>
+            </div>
+            <div class="mod-body" id="modbody-{{ forloop.counter }}">
+              {% if codenames.items %}
+                {# ── Module avec sous-groupes (ex: Paramètres) ── #}
+                {% for sous_titre, sous_codenames in codenames.items %}
+                  <div style="padding: 10px 18px 10px 52px; background: var(--bg-stripe); border-top: 1px solid var(--border-light); font-weight: 700; font-size: 12px; color: var(--primary-blue); text-transform: uppercase; letter-spacing: .5px;">
+                    {{ sous_titre }}
+                  </div>
+                  {% for perm in perms_disponibles %}
+                    {% if perm.codename in sous_codenames %}
+                      {% with meta=menu_items_meta|get_item:perm.codename %}
+                      {% with sous_list=sous_permissions_map|get_item:perm.codename %}
+                      <div class="perm-block {% if not sous_list %}no-sous{% endif %}" id="perm-block-{{ perm.id }}">
+                        <div class="perm-head" onclick="togglePermBlock('perm-block-{{ perm.id }}')">
+                          <div class="perm-head-left" onclick="event.stopPropagation()">
+                            <input type="checkbox" name="fonctionnalites" value="{{ perm.id }}"
+                                   id="perm_{{ perm.id }}"
+                                   class="perm-cb perm-master-cb"
+                                   onchange="cocherPage(this,'perm-block-{{ perm.id }}')"
+                                   data-perm-id="{{ perm.id }}">
+                            <label for="perm_{{ perm.id }}" onclick="event.stopPropagation()">
+                              <i class="fas {{ meta|default:''|get_item:'icon'|default:'fa-circle' }}" style="color:{{ meta|default:''|get_item:'color'|default:'#999' }};"></i>
+                              {{ meta|default:''|get_item:'label'|default:perm.name }}
+                            </label>
+                          </div>
+                          {% if sous_list %}
+                          <div class="perm-head-right">
+                            <span class="perm-badge" id="perm-badge-{{ perm.id }}">0/0</span>
+                            <i class="fas fa-chevron-down perm-chevron"></i>
+                          </div>
+                          {% endif %}
+                        </div>
+                        {% if sous_list %}
+                        <div class="perm-sous-body" id="perm-sous-{{ perm.id }}">
+                          {% for sous_codename in sous_list %}
+                            {% with sous_perm=perms_by_codename|get_item:sous_codename %}
+                              {% if sous_perm %}
+                                {% with sous_meta=sous_perm_labels|get_item:sous_codename %}
+                                <div class="perm-row sous-perm">
+                                  <input type="checkbox" name="fonctionnalites" value="{{ sous_perm.id }}"
+                                         id="perm_{{ sous_perm.id }}"
+                                         class="perm-cb sous-cb"
+                                         onchange="onSousPermChange(this,'perm-block-{{ perm.id }}')"
+                                         data-perm-id="{{ sous_perm.id }}"
+                                         data-codename="{{ sous_codename }}">
+                                  <label for="perm_{{ sous_perm.id }}">
+                                    <i class="fas {{ sous_meta|default:''|get_item:'icon'|default:'fa-fingerprint' }}" style="color:{{ sous_meta|default:''|get_item:'color'|default:'#6c757d' }};"></i>
+                                    {{ sous_meta|default:''|get_item:'label'|default:sous_perm.name }}
+                                  </label>
+                                </div>
+                                {% endwith %}
+                              {% endif %}
+                            {% endwith %}
+                          {% endfor %}
+                        </div>
+                        {% endif %}
+                      </div>
+                      {% endwith %}
+                      {% endwith %}
+                    {% endif %}
+                  {% endfor %}
+                {% endfor %}
+              {% else %}
+                {# ── Module plat (tous les autres modules) ── #}
+                {% for perm in perms_disponibles %}
+                  {% if perm.codename in codenames %}
+                    {% with meta=menu_items_meta|get_item:perm.codename %}
+                    {% with sous_list=sous_permissions_map|get_item:perm.codename %}
+                    <div class="perm-block {% if not sous_list %}no-sous{% endif %}" id="perm-block-{{ perm.id }}">
+                      <div class="perm-head" onclick="togglePermBlock('perm-block-{{ perm.id }}')">
+                        <div class="perm-head-left" onclick="event.stopPropagation()">
+                          <input type="checkbox" name="fonctionnalites" value="{{ perm.id }}"
+                                 id="perm_{{ perm.id }}"
+                                 class="perm-cb perm-master-cb"
+                                 onchange="cocherPage(this,'perm-block-{{ perm.id }}')"
+                                 data-perm-id="{{ perm.id }}">
+                          <label for="perm_{{ perm.id }}" onclick="event.stopPropagation()">
+                            <i class="fas {{ meta|default:''|get_item:'icon'|default:'fa-circle' }}" style="color:{{ meta|default:''|get_item:'color'|default:'#999' }};"></i>
+                            {{ meta|default:''|get_item:'label'|default:perm.name }}
+                          </label>
+                        </div>
+                        {% if sous_list %}
+                        <div class="perm-head-right">
+                          <span class="perm-badge" id="perm-badge-{{ perm.id }}">0/0</span>
+                          <i class="fas fa-chevron-down perm-chevron"></i>
+                        </div>
+                        {% endif %}
+                      </div>
+                      {% if sous_list %}
+                      <div class="perm-sous-body" id="perm-sous-{{ perm.id }}">
+                        {% for sous_codename in sous_list %}
+                          {% with sous_perm=perms_by_codename|get_item:sous_codename %}
+                            {% if sous_perm %}
+                              {% with sous_meta=sous_perm_labels|get_item:sous_codename %}
+                              <div class="perm-row sous-perm">
+                                <input type="checkbox" name="fonctionnalites" value="{{ sous_perm.id }}"
+                                       id="perm_{{ sous_perm.id }}"
+                                       class="perm-cb sous-cb"
+                                       onchange="onSousPermChange(this,'perm-block-{{ perm.id }}')"
+                                       data-perm-id="{{ sous_perm.id }}"
+                                       data-codename="{{ sous_codename }}">
+                                <label for="perm_{{ sous_perm.id }}">
+                                  <i class="fas {{ sous_meta|default:''|get_item:'icon'|default:'fa-fingerprint' }}" style="color:{{ sous_meta|default:''|get_item:'color'|default:'#6c757d' }};"></i>
+                                  {{ sous_meta|default:''|get_item:'label'|default:sous_perm.name }}
+                                </label>
+                              </div>
+                              {% endwith %}
+                            {% endif %}
+                          {% endwith %}
+                        {% endfor %}
+                      </div>
+                      {% endif %}
+                    </div>
+                    {% endwith %}
+                    {% endwith %}
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+
+        </div>
+
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="fermerModalRole()"><i class="fas fa-times"></i> Annuler</button>
+        <button type="submit" id="btn-submit" class="btn-save"><i class="fas fa-save"></i> Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function filtrerRoles() {
+    var txt = document.getElementById('searchRole').value.toLowerCase();
+    var rows = document.querySelectorAll('#tableRoles tbody tr');
+    var v = 0;
+    rows.forEach(function(r) {
+        if (r.cells.length < 2) return;
+        var ok = r.textContent.toLowerCase().includes(txt);
+        r.style.display = ok ? '' : 'none';
+        if (ok) v++;
+    });
+    document.getElementById('roles-count').textContent = v + ' rôle' + (v > 1 ? 's' : '');
+}
+
+function ouvrirModalRole() {
+    document.getElementById('titre-modal').innerHTML = '<i class="fas fa-plus-circle me-2"></i> Créer un rôle';
+    document.getElementById('btn-submit').className = 'btn-save';
+    document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+    document.getElementById('input_role_id').value = '';
+    document.getElementById('input_libelle').value = '';
+    reinitPerms();
+    fermerTousBlocs();
+    document.getElementById('modal-role').classList.add('open');
+    setTimeout(function(){ document.getElementById('input_libelle').focus(); }, 200);
+}
+function fermerModalRole() { document.getElementById('modal-role').classList.remove('open'); }
+
+function modifierRole(id, nom, permsArr) {
+    document.getElementById('titre-modal').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier le rôle';
+    document.getElementById('btn-submit').className = 'btn-save upd';
+    document.getElementById('btn-submit').innerHTML = '<i class="fas fa-save"></i> Mettre à jour';
+    document.getElementById('input_role_id').value = id;
+    document.getElementById('input_libelle').value = nom;
+    reinitPerms();
+    fermerTousBlocs();
+    permsArr.forEach(function(pid) {
+        document.querySelectorAll('.perm-cb[data-perm-id="' + pid + '"]').forEach(function(cb) { cb.checked = true; });
+    });
+    document.querySelectorAll('.perm-block').forEach(function(block) {
+        mettreAJourPermBlock(block);
+    });
+    document.querySelectorAll('.mod-block').forEach(function(bloc) {
+        mettreAJourModule(bloc);
+    });
+    mettreAJourGlobal();
+    document.getElementById('modal-role').classList.add('open');
+}
+
+function toggleMod(bodyId, headEl) {
+    var body = document.getElementById(bodyId);
+    if (!body) return;
+    body.classList.toggle('open');
+    headEl.classList.toggle('open');
+}
+function fermerTousBlocs() {
+    document.querySelectorAll('.mod-body').forEach(function(b){ b.classList.remove('open'); });
+    document.querySelectorAll('.mod-head').forEach(function(h){ h.classList.remove('open'); });
+    document.querySelectorAll('.perm-sous-body').forEach(function(b){ b.classList.remove('open'); });
+    document.querySelectorAll('.perm-head').forEach(function(h){ h.classList.remove('open'); });
+}
+
+function reinitPerms() {
+    document.querySelectorAll('.perm-cb, .grand-cb').forEach(function(cb) { cb.checked = false; cb.indeterminate = false; });
+    document.getElementById('selectAll').checked = false;
+    document.getElementById('selectAll').indeterminate = false;
+    document.querySelectorAll('.mod-badge').forEach(function(b){ b.textContent = '0'; b.classList.remove('has-checked'); });
+    document.querySelectorAll('.perm-sous-body').forEach(function(b){ b.classList.remove('open'); });
+    document.querySelectorAll('.perm-head').forEach(function(h){ h.classList.remove('open'); });
+    document.querySelectorAll('.perm-badge').forEach(function(b){ b.textContent = '0'; b.classList.remove('has-checked'); });
+    mettreAJourGlobal();
+}
+
+function toggleAll(src) {
+    document.querySelectorAll('.perm-cb').forEach(function(cb) { cb.checked = src.checked; });
+    document.querySelectorAll('.perm-block').forEach(function(block) { mettreAJourPermBlock(block); });
+    document.querySelectorAll('.mod-block').forEach(function(bloc) { mettreAJourModule(bloc); });
+    mettreAJourGlobal();
+}
+
+function cocherModule(src, bodyId) {
+    var body = document.getElementById(bodyId);
+    if (!body) return;
+    body.querySelectorAll('.perm-cb').forEach(function(cb) { cb.checked = src.checked; });
+    src.indeterminate = false;
+    body.querySelectorAll('.perm-block').forEach(function(block) { mettreAJourPermBlock(block); });
+    mettreAJourModule(src.closest('.mod-block'));
+    mettreAJourGlobal();
+}
+
+function togglePermBlock(blockId) {
+    var block = document.getElementById(blockId);
+    if (!block) return;
+    var body = block.querySelector('.perm-sous-body');
+    var head = block.querySelector('.perm-head');
+    if (!body) return;
+    body.classList.toggle('open');
+    head.classList.toggle('open');
+}
+
+function cocherPage(masterCb, blockId) {
+    var block = document.getElementById(blockId);
+    if (!block) return;
+    var sousCbs = block.querySelectorAll('.sous-cb');
+    sousCbs.forEach(function(cb) { cb.checked = masterCb.checked; });
+    masterCb.indeterminate = false;
+    mettreAJourPermBlock(block);
+    mettreAJourModule(block.closest('.mod-block'));
+    mettreAJourGlobal();
+}
+
+function onSousPermChange(sousCb, blockId) {
+    var block = document.getElementById(blockId);
+    if (!block) return;
+    mettreAJourPermBlock(block);
+    mettreAJourModule(block.closest('.mod-block'));
+    mettreAJourGlobal();
+}
+
+function onPermChange() {
+    document.querySelectorAll('.mod-block').forEach(function(bloc) { mettreAJourModule(bloc); });
+    mettreAJourGlobal();
+}
+
+function mettreAJourPermBlock(block) {
+    if (!block) return;
+    var masterCb = block.querySelector('.perm-master-cb');
+    var sousCbs = block.querySelectorAll('.sous-cb');
+    var checked = Array.from(sousCbs).filter(function(c){ return c.checked; }).length;
+    var total = sousCbs.length;
+    var badge = block.querySelector('.perm-badge');
+    if (badge) {
+        badge.textContent = checked + '/' + total;
+        badge.classList.toggle('has-checked', checked > 0);
+    }
+    if (masterCb && total > 0) {
+        masterCb.checked = (checked === total);
+        masterCb.indeterminate = (checked > 0 && checked < total);
+    }
+}
+
+function mettreAJourModule(bloc) {
+    if (!bloc) return;
+    var allPerms = bloc.querySelectorAll('.perm-cb');
+    var checked = Array.from(allPerms).filter(function(c){ return c.checked; }).length;
+    var total = allPerms.length;
+    var match = bloc.id.match(/\d+/);
+    if (match) {
+        var badge = document.getElementById('badge-' + match[0]);
+        if (badge) { badge.textContent = checked + '/' + total; badge.classList.toggle('has-checked', checked > 0); }
+    }
+    var grandCb = bloc.querySelector('.grand-cb');
+    if (grandCb) {
+        grandCb.checked = (checked === total && total > 0);
+        grandCb.indeterminate = (checked > 0 && checked < total);
+    }
+}
+
+function mettreAJourGlobal() {
+    var allPerms = document.querySelectorAll('.perm-cb');
+    var total = allPerms.length;
+    var checked = Array.from(allPerms).filter(function(c){ return c.checked; }).length;
+    var pct = total > 0 ? Math.round((checked / total) * 100) : 0;
+    if (checked === total && total > 0) pct = 100;
+    document.getElementById('prog-fill').style.width = pct + '%';
+    document.getElementById('prog-label').textContent = checked + ' / ' + total;
+    document.getElementById('global-count').textContent = checked + ' / ' + total;
+    var gAll = document.getElementById('selectAll');
+    gAll.checked = (checked === total && total > 0);
+    gAll.indeterminate = (checked > 0 && checked < total);
+}
+
+function confirmerSuppression(event, message) {
+    event.preventDefault();
+    const form = event.target.closest('form');
+    Swal.fire({
+        title: 'Confirmer la suppression', text: message, icon: 'warning',
+        showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-trash-alt"></i> Supprimer', cancelButtonText: 'Annuler'
+    }).then(function(r) { if (r.isConfirmed) form.submit(); });
+}
+
+document.getElementById('formRole').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var isModif = document.getElementById('input_role_id').value !== '';
+    var f = this;
+    Swal.fire({
+        title: isModif ? 'Modifier ce rôle ?' : 'Créer ce rôle ?',
+        text: 'Voulez-vous valider ces accès ?', icon: 'question', showCancelButton: true,
+        confirmButtonColor: isModif ? '#28a745' : '#1c5b96', cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-save"></i> ' + (isModif ? 'Mettre à jour' : 'Enregistrer'),
+        cancelButtonText: 'Annuler'
+    }).then(function(r) {
+        if (r.isConfirmed) { Swal.fire({ title: 'Enregistrement…', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } }); f.submit(); }
+    });
+});
+
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') fermerModalRole(); });
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.perm-block').forEach(function(block) { mettreAJourPermBlock(block); });
+    document.querySelectorAll('.mod-block').forEach(function(bloc) { mettreAJourModule(bloc); });
+    mettreAJourGlobal();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Fiche de Comptage - {{ campagne.reference }}</title>
+    <style>
+        /* Configuration de la page A4 pour le PDF */
+        @page {
+            size: A4;
+            margin: 15mm;
+        }
+        
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            font-size: 10pt; 
+            color: #333; 
+            margin: 0;
+            padding: 0;
+            background: #fff;
+        }
+
+        /* En-tête du document */
+        .header-pdf {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        .title-block h2 { margin: 0; color: #0f766e; font-size: 16pt; text-transform: uppercase; }
+        .info-block { text-align: right; font-size: 9pt; color: #666; }
+
+        /* Style du tableau d'inventaire */
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-top: 10px;
+            page-break-inside: auto;
+        }
+        thead { display: table-header-group; } /* Répète l'en-tête sur chaque page PDF */
+        tr { page-break-inside: avoid; page-break-after: auto; }
+        
+        th, td { 
+            border: 1px solid #cbd5e1; 
+            padding: 8px; 
+            text-align: left; 
+        }
+        
+        th { 
+            background-color: #f8fafc !important; 
+            color: #475569;
+            font-weight: bold;
+            font-size: 8pt;
+            text-transform: uppercase;
+            -webkit-print-color-adjust: exact;
+        }
+
+        .code-text { font-family: monospace; font-weight: bold; color: #0f766e; }
+        
+        /* Cases à cocher manuelles */
+        .check-group { display: flex; flex-direction: column; gap: 4px; }
+        .check-item { display: flex; align-items: center; gap: 5px; font-size: 8pt; }
+        .box { width: 10px; height: 10px; border: 1px solid #475569; display: inline-block; }
+
+        /* Signatures en bas de page */
+        .footer-sig {
+            margin-top: 40px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            page-break-inside: avoid;
+        }
+        .sig-box { border-top: 1px solid #ccc; padding-top: 10px; min-height: 80px; }
+    </style>
+</head>
+<body>
+    
+    <div class="header-pdf">
+        <div class="title-block">
+            <h2>Fiche de Comptage</h2>
+            <strong>Campagne :</strong> {{ campagne.titre }}
+        </div>
+        <div class="info-block">
+            <strong>Référence :</strong> {{ campagne.reference }}<br>
+            <strong>Date :</strong> {{ campagne.date_debut|date:"d/m/Y" }}
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 20%;">Localisation</th>
+                <th style="width: 15%;">Code Asset</th>
+                <th style="width: 30%;">Équipement</th>
+                <th style="width: 15%;">Pointage</th>
+                <th style="width: 20%;">Observations</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+            <tr>
+                <td>
+                    <strong>{{ ligne.immobilisation.bureau.nom|default:"-" }}</strong><br>
+                    <small>{{ ligne.immobilisation.bureau.etage.batiment.nom }}</small>
+                </td>
+                <td class="code-text">{{ ligne.immobilisation.code_patrimoine }}</td>
+                <td>{{ ligne.immobilisation.nom_affichage }}</td>
+                <td>
+                    <div class="check-group">
+                        <div class="check-item"><span class="box"></span> Présent</div>
+                        <div class="check-item"><span class="box"></span> Déplacé</div>
+                        <div class="check-item"><span class="box"></span> Manquant</div>
+                    </div>
+                </td>
+                <td></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer-sig">
+        <div class="sig-box"><strong>Visa Technicien :</strong></div>
+        <div class="sig-box"><strong>Visa Superviseur :</strong></div>
+    </div>
+
+</body>
+</html>

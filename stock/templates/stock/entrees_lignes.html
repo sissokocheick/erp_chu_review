@@ -1,0 +1,175 @@
+{% for bon in entrees_bons %}
+    
+    <tr id="bon-row-{{ bon.id }}" 
+        {% if bon.est_annule %} 
+            style="background-color: #fdf3f4; border-bottom: 1px solid #f5c6cb;" 
+        {% else %} 
+            style="border-bottom: 1px solid #eee; transition: background-color 0.2s;" 
+        {% endif %}>
+        
+        <td style="padding: 12px; text-align: center;">
+            <button onclick="toggleLignes('{{ bon.id }}')" style="background: none; border: none; cursor: pointer; color: #6c757d;">
+                <i class="fas fa-chevron-right" id="icon-{{ bon.id }}"></i>
+            </button>
+        </td>
+
+       <td style="padding: 12px; font-weight: bold; {% if bon.est_annule %}text-decoration: line-through; color: #888;{% endif %}">
+            <div style="font-size: 14px;">{{ bon.numero_bon }}</div>
+            
+            {% if bon.commande_liee %}
+    <div style="margin-top: 5px;">
+        {% if bon.commande_liee.statut == 'LIVRE_TOTAL' or bon.commande_liee.statut == 'SOLDE' or bon.commande_liee.statut == 'ANNULE' %}
+            <a href="{% url 'liste_commandes' %}?onglet=historique&q={{ bon.commande_liee.numero_commande }}" style="background: #eaf5ea; color: #28a745; padding: 3px 6px; border-radius: 4px; font-size: 11px; text-decoration: none; border: 1px solid #28a745; display: inline-block;">
+                <i class="fas fa-shopping-cart"></i> {{ bon.commande_liee.numero_commande }}
+            </a>
+        {% else %}
+            <a href="{% url 'liste_commandes' %}?onglet=en_cours&q={{ bon.commande_liee.numero_commande }}" style="background: #eaf5ea; color: #28a745; padding: 3px 6px; border-radius: 4px; font-size: 11px; text-decoration: none; border: 1px solid #28a745; display: inline-block;">
+                <i class="fas fa-shopping-cart"></i> {{ bon.commande_liee.numero_commande }}
+            </a>
+        {% endif %}
+        
+        <div style="font-size: 10px; color: #6c757d; margin-top: 2px; font-style: italic;">
+            <i class="fas fa-info-circle"></i> {{ bon.chronologie_commande }}
+        </div>
+    </div>
+{% endif %}
+        </td>
+        <td style="padding: 12px; {% if bon.est_annule %}text-decoration: line-through; color: #888;{% endif %}">
+            {{ bon.date_bon|date:"d/m/Y" }}
+        </td>
+        <td style="padding: 12px; {% if bon.est_annule %}text-decoration: line-through; color: #888;{% endif %}">
+            {{ bon.magasin.nom }}
+        </td>
+        <td style="padding: 12px; {% if bon.est_annule %}text-decoration: line-through; color: #888;{% endif %}">
+            {{ bon.fournisseur.raison_sociale|default:"-" }}
+        </td>
+        <td style="padding: 12px; font-weight: bold; color: {% if bon.est_annule %}#888; text-decoration: line-through;{% else %}#1c5b96;{% endif %}">
+            {{ bon.lignes_bon.count }} article(s)
+        </td>
+        
+        <td style="padding: 12px; font-size: 12px; line-height: 1.4;">
+            <div style="color: #666; margin-bottom: 4px;">
+                <i class="fas fa-user-check" style="color: {% if bon.est_annule %}#888{% else %}#28a745{% endif %}; width: 15px;"></i> Saisi par <b>{{ bon.cree_par.username|default:"Système" }}</b>
+            </div>
+            {% if bon.est_annule %}
+            <div style="color: #dc3545; border-top: 1px dashed #f5c6cb; padding-top: 6px; margin-top: 6px;">
+                <i class="fas fa-ban" style="width: 15px;"></i> Annulé par <b>{{ bon.annule_par.username }}</b><br>
+                <span style="color: #842029; margin-left: 19px; font-weight: bold;">Motif : {{ bon.motif_annulation|default:"-" }}</span>
+            </div>
+            {% endif %}
+        </td>
+
+        <td style="padding: 12px; text-align: center;">
+            <div style="display: flex; gap: 8px; justify-content: center; align-items: center;">
+                
+                <!-- ✅ SCAN : bouton orange si fichier, badge gris sinon -->
+                                <!-- ✅ SCAN : bouton orange si fichier, bouton gris cliquable sinon -->
+                {% if bon.document_scan %}
+                    <button type="button" 
+                            onclick="event.stopPropagation(); afficherScan('{{ bon.document_scan.url }}', '{{ bon.document_scan.name|default:'Document'|escapejs }}', {{ bon.id }});"
+                            style="background: #f59e0b; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                            title="Voir le fichier scanné">
+                        <i class="fas fa-file-pdf"></i> PDF
+                    </button>
+                {% else %}
+                    <button type="button"
+                            onclick="event.stopPropagation(); afficherScanVide({{ bon.id }});"
+                            style="background: #e9ecef; color: #adb5bd; border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
+                            title="Joindre un fichier scanné">
+                        <i class="fas fa-paperclip"></i> —
+                    </button>
+                {% endif %}
+                
+                <!-- APERÇU -->
+                <button type="button" onclick="event.stopPropagation(); imprimerModal('{% url 'bon_entree_pdf' bon.id %}', 'Bon d\'Entrée {{ bon.numero_bon }}');" style="background: #343a40; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Aperçu / Imprimer">
+    <i class="fas fa-print"></i>
+</button>
+                
+                {% if not bon.est_annule %}
+                    {% if peut_annuler or perms.stock.delete_bonmouvement %}
+                        <button onclick="confirmerAnnulationEntree({{ bon.id }}, '{{ bon.numero_bon|escapejs }}')" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                        <form id="form-annuler-entree-{{ bon.id }}" action="{% url 'annuler_entree' bon.id %}" method="POST" style="display: none;">
+                            {% csrf_token %}
+                        </form>
+                    {% endif %}
+                {% else %}
+                    <span style="background: #dc3545; color: white; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; box-shadow: 0 2px 4px rgba(220,53,69,0.3);">
+                        ANNULÉ
+                    </span>
+                {% endif %}
+            </div>
+        </td>
+    </tr>
+
+    <tr id="lignes-{{ bon.id }}" style="display: none; background: #fdfdfd;">
+    
+    <td colspan="8" style="padding: 15px 30px 25px 50px;">
+        <div style="background: white; padding: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #ddd;">
+            <h4 style="margin-top: 0; margin-bottom: 15px; color: #28a745; font-size: 13px; text-transform: uppercase;"><i class="fas fa-box-open"></i> Contenu de la livraison</h4>
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead style="background: #f1f1f1;">
+                    <tr>
+                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ccc;">Référence</th>
+                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ccc;">Désignation de l'article</th>
+                        
+                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ccc;">N° Lot</th>
+                        <th style="padding: 8px; text-align: left; border-bottom: 1px solid #ccc;">Péremption</th>
+                        
+                        <th style="padding: 8px; text-align: right; border-bottom: 1px solid #ccc;">Qté Reçue</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in bon.lignes_bon.all %}
+                    <tr>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee;">{{ ligne.article.reference|default:"-" }}</td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>{{ ligne.article.designation }}</strong></td>
+                        
+                        <td style="padding: 8px; border-bottom: 1px solid #eee; color: #666;">
+                            {{ ligne.numero_lot|default:"-" }}
+                        </td>
+                        <td style="padding: 8px; border-bottom: 1px solid #eee; color: #666;">
+                            {% if ligne.date_peremption %}
+                                {{ ligne.date_peremption|date:"d/m/Y" }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+
+                        <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right; font-weight: bold; color: #28a745; font-size: 14px;">+ {{ ligne.quantite }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="8" style="padding: 40px; text-align: center; color: #999;">
+        <i class="fas fa-search" style="font-size: 30px; color: #ddd; display: block; margin-bottom: 10px;"></i>
+        Aucun bon d'entrée ne correspond à votre recherche.
+    </td>
+</tr>
+{% endfor %}
+
+{% if entrees_bons.has_other_pages %}
+<tr style="background: white;">
+    <td colspan="8" style="padding: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 13px; color: #6c757d;">
+                Page {{ entrees_bons.number }} sur {{ entrees_bons.paginator.num_pages }}
+            </span>
+            <div style="display: flex; gap: 5px;">
+                {% if entrees_bons.has_previous %}
+                    <button type="button" class="btn btn-sm" style="padding: 5px 10px; border: 1px solid #ced4da; background: white; border-radius: 4px; cursor: pointer; color:#1c5b96; font-weight:bold;" onclick="changerPageAjax({{ entrees_bons.previous_page_number }})">Précédent</button>
+                {% endif %}
+                {% if entrees_bons.has_next %}
+                    <button type="button" class="btn btn-sm" style="padding: 5px 10px; border: 1px solid #ced4da; background: white; border-radius: 4px; cursor: pointer; color:#1c5b96; font-weight:bold;" onclick="changerPageAjax({{ entrees_bons.next_page_number }})">Suivant</button>
+                {% endif %}
+            </div>
+        </div>
+    </td>
+</tr>
+{% endif %}

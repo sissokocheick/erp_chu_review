@@ -1,0 +1,75 @@
+{% extends "base_ui.html" %}
+{% block title %}Accueil — NexusERP{% endblock %}
+
+{% block contenu %}
+<style>
+  .welcome-banner {
+    background: linear-gradient(135deg, var(--primary-blue), #0d47a1);
+    color: white; border-radius: 12px; padding: 28px 32px; margin-bottom: 24px;
+    box-shadow: 0 4px 15px rgba(28,91,150,.25);
+  }
+  .welcome-banner h2 { margin: 0 0 6px; font-size: 22px; font-weight: 700; }
+  .welcome-banner p { margin: 0; opacity: .85; font-size: 14px; }
+  
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+  }
+  .mod-card {
+    background: var(--bg-card); border-radius: 10px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 8px var(--shadow);
+    padding: 24px 20px; text-align: center;
+    transition: all .2s ease; cursor: pointer;
+    text-decoration: none; color: var(--text-dark);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .mod-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,.12);
+    border-color: var(--primary-blue);
+  }
+  .mod-icon {
+    width: 56px; height: 56px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; color: white; margin-bottom: 14px;
+  }
+  .mod-label { font-weight: 700; font-size: 14px; }
+  .mod-hint { font-size: 12px; color: var(--text-light); margin-top: 4px; }
+
+  .empty-accueil {
+    text-align: center; padding: 60px 20px; color: var(--text-light);
+  }
+  .empty-accueil i { font-size: 48px; margin-bottom: 16px; opacity: .4; }
+</style>
+
+<div class="welcome-banner">
+  <h2><i class="fas fa-th-large" style="margin-right:10px;"></i> Bienvenue, {{ request.user.first_name|default:request.user.username }}</h2>
+  <p>Vous êtes connecté à <strong>{{ request.entreprise.nom }}</strong>. Sélectionnez un module pour commencer.</p>
+</div>
+
+{% if modules %}
+  <div style="margin-bottom:14px; font-size:13px; color:var(--text-medium);">
+    <i class="fas fa-key" style="margin-right:6px;"></i> {{ total_modules }} module{{ total_modules|pluralize }} accessible{{ total_modules|pluralize }}
+  </div>
+  
+  <div class="modules-grid">
+    {% for m in modules %}
+    <a href="{{ m.url }}" class="mod-card">
+      <div class="mod-icon" style="background: {{ m.color }};">
+        <i class="fas {{ m.icon }}"></i>
+      </div>
+      <div class="mod-label">{{ m.label }}</div>
+      <div class="mod-hint">Cliquez pour ouvrir</div>
+    </a>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="empty-accueil">
+    <i class="fas fa-lock"></i>
+    <h4 style="margin:0 0 8px;">Aucun module accessible</h4>
+    <p style="margin:0;">Contactez votre administrateur pour obtenir des permissions.</p>
+  </div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,320 @@
+{% extends "base_ui.html" %}
+{% block title %}Détail des Livraisons — {{ demande.numero_demande }}{% endblock %}
+
+{% block contenu %}
+<style>
+  /* ── EN-TÊTE ── */
+  .page-header {
+    background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+    color: white; border-radius: 10px; padding: 20px 25px; margin-bottom: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: 0 4px 15px rgba(23,162,184,0.25);
+  }
+  .page-header h4 { margin: 0; font-size: 20px; font-weight: 700; }
+  .page-header small { opacity:.85; font-size: 12px; }
+
+  /* ── CARTES ET SECTIONS ── */
+  .section-card { background: white; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow-x:auto; }
+  .section-title { margin: 0 0 15px; color: #117a8b; font-size: 15px; text-transform: uppercase; font-weight: 700; border-bottom: 2px solid #f0f3f7; padding-bottom: 10px; }
+
+  /* ── TABLEAUX ── */
+  .table-custom { width:100%; border-collapse:collapse; font-size:13px; }
+  .table-custom thead th { background:#117a8b; color:white; padding:12px; font-size:11px; text-transform:uppercase; font-weight:700; text-align:left; }
+  .table-custom tbody td { padding:12px; border-bottom:1px solid #f0f3f7; vertical-align:middle; color:#2d3748; }
+  .table-custom tbody tr:last-child td { border-bottom:none; }
+
+  /* ── BADGES STATUTS ── */
+  .badge { padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700; white-space:nowrap; display:inline-flex; align-items:center; gap:5px; }
+  .b-attente  { background:#e0f7fa; color:#0c5460; }
+  .b-partiel  { background:#fff3cd; color:#856404; }
+  .b-livree   { background:#d4edda; color:#155724; }
+  .b-recept   { background:#cce5ff; color:#004085; }
+  .b-cloturee { background:#e2e3e5; color:#383d41; }
+  .b-refusee  { background:#f8d7da; color:#721c24; }
+
+  /* ── BOUTONS ACTIONS ── */
+  .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; border: none; }
+  .btn-retour { background: #f0f3f7; color: #495057; }
+  .btn-retour:hover { background: #e2e6ea; }
+  .btn-print { background: #17a2b8; color: white; }
+  .btn-print:hover { background: #138496; }
+
+  /* ── TIMELINE LIVRAISONS ── */
+  .timeline-item { display: flex; justify-content: space-between; align-items: flex-start; padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; margin-bottom: 10px; font-size: 13px; background: #fcfdfd; }
+  .timeline-item.signed { background: #f0fff4; border-color: #28a745; }
+  .timeline-item-header { display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 10px; }
+  .timeline-item-body { width: 100%; }
+
+  /* ── MODALE PDF MODERNE ── */
+  .pdf-modal { display: none; position: fixed; inset: 0; z-index: 99999; align-items: center; justify-content: center; padding: 20px; }
+  .pdf-modal.open { display: flex; }
+  .pdf-modal-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.55); backdrop-filter: blur(5px); animation: pdfFadeIn .2s ease; }
+  .pdf-modal-container { position: relative; background: var(--bg-card, #fff); border-radius: 14px; width: 92%; max-width: 1000px; max-height: 92vh; display: flex; flex-direction: column; box-shadow: 0 25px 80px rgba(0,0,0,0.35); animation: pdfSlideUp .3s ease; overflow: hidden; border: 1px solid var(--border-color, rgba(0,0,0,.08)); }
+  @keyframes pdfFadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes pdfSlideUp { from { transform: translateY(25px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .pdf-modal-header { background: linear-gradient(135deg, #17a2b8, #117a8b); color: white; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .pdf-modal-header h5 { margin: 0; font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+  .pdf-modal-close { background: rgba(255,255,255,0.2); border: none; color: white; width: 34px; height: 34px; border-radius: 50%; cursor: pointer; transition: .25s; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .pdf-modal-close:hover { background: rgba(255,255,255,0.35); transform: rotate(90deg); }
+  .pdf-modal-body { flex: 1; min-height: 320px; background: #525659; position: relative; overflow: hidden; }
+  #pdf-modal-iframe { width: 100%; height: 100%; min-height: 62vh; border: none; display: none; }
+  .pdf-loader { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: white; font-size: 14px; }
+  .pdf-spinner { width: 46px; height: 46px; border: 4px solid rgba(255,255,255,0.25); border-top-color: #fff; border-radius: 50%; animation: pdfSpin .9s linear infinite; }
+  @keyframes pdfSpin { to { transform: rotate(360deg); } }
+  .pdf-modal-footer { padding: 14px 24px; background: var(--bg-hover, #f8f9fa); border-top: 1px solid var(--border-light, #e9ecef); display: flex; justify-content: flex-end; gap: 10px; flex-shrink: 0; }
+  .pdf-btn { padding: 9px 20px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; transition: .2s; display: inline-flex; align-items: center; gap: 8px; }
+  .pdf-btn-secondary { background: var(--bg-hover, #e9ecef); color: var(--text-medium, #495057); }
+  .pdf-btn-secondary:hover { background: var(--border-color, #ced4da); }
+  .pdf-btn-primary { background: linear-gradient(135deg, #17a2b8, #117a8b); color: white; box-shadow: 0 4px 14px rgba(23,162,184,0.35); }
+  .pdf-btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(23,162,184,0.45); }
+  body.dark-mode .pdf-modal-container { background: var(--bg-card, #1e1e2d); border-color: var(--border-color, #2d2d44); }
+  body.dark-mode .pdf-modal-footer { background: var(--bg-hover, #27273a); border-color: var(--border-light, #2d2d44); }
+  body.dark-mode .pdf-btn-secondary { background: var(--bg-hover, #27273a); color: var(--text-medium, #a0a0b0); }
+</style>
+
+{# ── EN-TÊTE ── #}
+<div class="page-header">
+  <div>
+    <h4><i class="fas fa-list me-2"></i>Détail de la demande {{ demande.numero_demande }}</h4>
+    <small>Suivi détaillé des articles et des bons de sortie</small>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <a href="{% if est_magasinier %}{% url 'gestion_demandes' %}{% else %}{% url 'mes_demandes' %}{% endif %}" class="btn btn-retour">
+        <i class="fas fa-arrow-left"></i> Retour aux demandes
+    </a>
+  </div>
+</div>
+
+{# ── RÉSUMÉ DE LA DEMANDE ── #}
+<div class="section-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+    <div>
+        <h5 style="margin: 0 0 5px; color: #495057; font-size: 13px;">Service Demandeur</h5>
+        <strong style="font-size: 15px; color: #333;">{{ demande.service_demandeur.nom|upper }}</strong>
+    </div>
+    <div>
+        <h5 style="margin: 0 0 5px; color: #495057; font-size: 13px;">Date de demande</h5>
+        <strong style="font-size: 15px; color: #333;">{{ demande.date_demande|date:"d/m/Y à H:i" }}</strong>
+    </div>
+    <div>
+        <h5 style="margin: 0 0 5px; color: #495057; font-size: 13px;">Demandeur</h5>
+        <strong style="font-size: 15px; color: #333;">{{ demande.demandeur.get_full_name|default:demande.demandeur.username|title }}</strong>
+    </div>
+    <div>
+        <h5 style="margin: 0 0 5px; color: #495057; font-size: 13px;">Statut actuel</h5>
+        {% if demande.statut == 'EN_ATTENTE' or demande.statut == 'EN_COURS' %}<span class="badge b-attente"><i class="fas fa-clock"></i> À Traiter</span>
+        {% elif demande.statut == 'LIVRAISON_PARTIELLE' %}<span class="badge b-partiel"><i class="fas fa-box-open"></i> Partielle</span>
+        {% elif demande.statut == 'LIVREE' %}<span class="badge b-livree"><i class="fas fa-truck"></i> Livrée</span>
+        {% elif demande.statut == 'RECEPTIONNE' %}<span class="badge b-recept"><i class="fas fa-handshake"></i> Réceptionnée</span>
+        {% elif demande.statut == 'CLOTUREE' %}<span class="badge b-cloturee"><i class="fas fa-lock"></i> Clôturée</span>
+        {% elif demande.statut == 'REFUSEE' %}<span class="badge b-refusee"><i class="fas fa-ban"></i> Refusée</span>
+        {% endif %}
+    </div>
+</div>
+
+{# ── ÉTAT DES ARTICLES (TABLEAU) ── #}
+<div class="section-card" style="padding: 0; overflow: hidden;">
+    <h4 class="section-title" style="margin: 20px 20px 10px;"><i class="fas fa-clipboard-list"></i> Bilan des articles</h4>
+    <table class="table-custom">
+        <thead>
+            <tr>
+                <th>Article demandé</th>
+                <th style="text-align: center;">Quantité Initiale</th>
+                <th style="text-align: center;">Total Livré</th>
+                <th style="text-align: center;">Reliquat (Reste)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in recap_articles %}
+            <tr>
+                <td><strong>{{ ligne.article.designation }}</strong></td>
+                <td style="text-align: center; color: #117a8b; font-weight: bold; font-size: 14px;">{{ ligne.qte_demandee }}</td>
+                <td style="text-align: center; color: #28a745; font-weight: bold; font-size: 14px;">{{ ligne.qte_livree }}</td>
+                <td style="text-align: center; font-weight: bold; font-size: 14px;">
+                    {% if ligne.reste == 0 %}
+                        <span style="color: #28a745;">✓ Soldé</span>
+                    {% else %}
+                        <span style="color: #dc3545;">{{ ligne.reste }}</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{# ── HISTORIQUE DES LIVRAISONS (BONS DE SORTIE) ── #}
+<div class="section-card">
+    <h4 class="section-title"><i class="fas fa-dolly"></i> Liste des livraisons (Bons de Sortie)</h4>
+
+    {% if livraisons %}
+        {% for liv in livraisons %}
+        {% with accuse=liv.accuse %}
+        <div class="timeline-item {% if accuse and accuse.est_signe %}signed{% endif %}">
+            <div class="timeline-item-header">
+                <div>
+                    <strong style="color: #117a8b; font-size: 15px; margin-right: 10px;">{{ liv.numero_livraison }}</strong>
+                    <span style="color: #6c757d; margin-right: 15px;"><i class="fas fa-calendar-day"></i> {{ liv.date_livraison|date:"d/m/Y H:i" }}</span>
+                    <span style="font-weight: bold; color: #333;">Quantité totale livrée : {{ liv.quantite_livree }} u.</span>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    {% if liv.bon_sortie %}
+                    <button onclick="imprimerModal('{% url 'imprimer_bon_multi_lignes' liv.bon_sortie.id %}', 'Bon de Sortie — {{ liv.bon_sortie.numero_bon }}')" class="btn btn-print">
+                        <i class="fas fa-print"></i> Imprimer le bon
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            {# ── DÉTAIL DES LIGNES DE LIVRAISON ── #}
+            <div class="timeline-item-body">
+                <table class="table-custom" style="margin-top: 10px; font-size: 12px;">
+                    <thead>
+                        <tr>
+                            <th>Article</th>
+                            <th style="text-align: center;">Qte demandée</th>
+                            <th style="text-align: center;">Reste avant</th>
+                            <th style="text-align: center;">Qte livrée</th>
+                            <th style="text-align: center;">Reste après</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ligne_liv in liv.lignes.all %}
+                        <tr>
+                            <td><strong>{{ ligne_liv.article.designation }}</strong></td>
+                            <td style="text-align: center; color: #117a8b; font-weight: bold;">{{ ligne_liv.quantite_demandee }}</td>
+                            <td style="text-align: center; color: #fd7e14; font-weight: bold;">{{ ligne_liv.reste_avant_livraison }}</td>
+                            <td style="text-align: center; color: #28a745; font-weight: bold;">{{ ligne_liv.quantite_livree }}</td>
+                            <td style="text-align: center; font-weight: bold;">
+                                {% if ligne_liv.reste == 0 %}
+                                    <span style="color: #28a745;">✓ Soldé</span>
+                                {% else %}
+                                    <span style="color: #dc3545;">{{ ligne_liv.reste }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: #adb5bd; padding: 15px;">
+                                Aucune ligne de livraison enregistrée.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <div style="margin-top: 8px;">
+                    {% if accuse and accuse.est_signe %}
+                        <span class="badge b-livree"><i class="fas fa-check-circle"></i> Signé par {{ accuse.receptionne_par.first_name }} le {{ accuse.date_reception|date:"d/m/Y" }}</span>
+                    {% else %}
+                        <span class="badge b-partiel"><i class="fas fa-clock"></i> En attente de signature</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endwith %}
+        {% endfor %}
+    {% else %}
+        <div style="text-align: center; padding: 40px; color: #adb5bd;">
+            <i class="fas fa-box-open" style="font-size: 40px; margin-bottom: 15px; display: block;"></i>
+            Aucune livraison n'a encore été effectuée pour cette demande.
+        </div>
+    {% endif %}
+</div>
+
+{# ════ MODALE PDF ════ #}
+<div class="pdf-modal" id="pdf-modal">
+  <div class="pdf-modal-backdrop" onclick="closePdfModal()"></div>
+  <div class="pdf-modal-container">
+    <div class="pdf-modal-header">
+      <h5><i class="fas fa-file-pdf"></i> <span id="pdf-modal-title">Document</span></h5>
+      <button class="pdf-modal-close" onclick="closePdfModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="pdf-modal-body">
+      <div id="pdf-modal-loader" class="pdf-loader">
+        <div class="pdf-spinner"></div>
+        <span>Génération du document en cours…</span>
+      </div>
+      <iframe id="pdf-modal-iframe"></iframe>
+    </div>
+    <div class="pdf-modal-footer">
+      <button class="pdf-btn pdf-btn-secondary" onclick="closePdfModal()">
+        <i class="fas fa-times"></i> Fermer
+      </button>
+      <button class="pdf-btn pdf-btn-primary" onclick="printPdfModal()">
+        <i class="fas fa-print"></i> Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── MODALE PDF ── */
+function imprimerModal(url, titre) {
+    document.getElementById('pdf-modal-title').textContent = titre || 'Document';
+    var loader = document.getElementById('pdf-modal-loader');
+    var iframe = document.getElementById('pdf-modal-iframe');
+    loader.style.display = 'flex';
+    iframe.style.display = 'none';
+    iframe.src = '';
+    document.getElementById('pdf-modal').classList.add('open');
+    iframe.onload = function() {
+        loader.style.display = 'none';
+        iframe.style.display = 'block';
+    };
+    iframe.src = url;
+}
+
+function closePdfModal() {
+    document.getElementById('pdf-modal').classList.remove('open');
+    document.getElementById('pdf-modal-iframe').src = '';
+}
+
+function printPdfModal() {
+    var iframe = document.getElementById('pdf-modal-iframe');
+    if (iframe && iframe.contentWindow) {
+        try {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        } catch(e) {
+            window.open(iframe.src, '_blank');
+        }
+    }
+}
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closePdfModal();
+});
+
+/* ── FORCER LE MENU "LIVRAISONS" ACTIF ── */
+(function forceMenuLivraisons() {
+    var path = window.location.pathname;
+    if (!path.includes('/livraisons/')) return;
+
+    var selectors = [
+        '.sidebar li.active', '.sidebar a.active', '.sidebar .nav-item.active',
+        '.sidebar .current', '.sidebar .selected', '.menu-item.active',
+        '.sidebar-menu .active'
+    ];
+    selectors.forEach(function(sel) {
+        document.querySelectorAll(sel).forEach(function(el) {
+            el.classList.remove('active', 'current', 'selected');
+        });
+    });
+
+    var menuLinks = document.querySelectorAll('.sidebar a[href*="/livraisons/"]');
+    menuLinks.forEach(function(link) {
+        if (link.href === window.location.href) return;
+        link.classList.add('active');
+        var li = link.closest('li');
+        if (!li) return;
+        li.classList.add('active');
+        var parentUl = li.closest('ul.submenu, ul.collapse, .sub-menu, .menu-sub');
+        if (parentUl) {
+            parentUl.classList.add('show', 'in', 'open');
+            var parentLi = parentUl.closest('li');
+            if (parentLi) parentLi.classList.add('active');
+        }
+    });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,859 @@
+{% extends "base_ui.html" %}
+
+{% block contenu %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+<style>
+    .mo-pdf {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+        z-index: 1000000; align-items: flex-start; justify-content: center;
+        backdrop-filter: blur(4px); padding-top: 5vh; overflow-y: auto;
+    }
+    .mo-pdf.open { display: flex; }
+    .mb-pdf {
+        background: #1a1a1a; border-radius: 12px; width: 92%; max-width: 950px;
+        box-shadow: 0 25px 70px rgba(0,0,0,0.5); animation: si .25s ease;
+        margin-bottom: 5vh; overflow: hidden;
+    }
+    @keyframes si { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .mh-pdf {
+        background: linear-gradient(135deg, #17a2b8, #117a8b); color: white;
+        padding: 16px 22px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .mh-pdf h5 { margin: 0; font-size: 16px; font-weight: 600; }
+    .mc-pdf {
+        background: rgba(255,255,255,0.15); border: none; color: white;
+        width: 34px; height: 34px; border-radius: 50%; font-size: 18px;
+        cursor: pointer; transition: .2s; display: inline-flex;
+        align-items: center; justify-content: center;
+    }
+    .mc-pdf:hover { background: rgba(255,255,255,0.3); }
+    .mbody-pdf { background: #2d2d2d; padding: 8px; }
+    .mfoot-pdf {
+        padding: 14px 22px; border-top: 1px solid #333;
+        display: flex; justify-content: flex-end; gap: 12px;
+        background: #1a1a1a;
+    }
+    .btn-ok-pdf {
+        background: linear-gradient(135deg, #17a2b8, #117a8b); color: white;
+        border: none; padding: 10px 24px; border-radius: 8px;
+        font-weight: 700; font-size: 14px; cursor: pointer; transition: .2s;
+    }
+    .btn-ok-pdf:hover { opacity: 0.9; }
+    .btn-nok-pdf {
+        background: #333; color: #ccc; border: none;
+        padding: 10px 20px; border-radius: 8px; font-size: 14px;
+        cursor: pointer; transition: .2s;
+    }
+    .btn-nok-pdf:hover { background: #444; color: #fff; }
+
+    .page-header-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+    }
+    .page-header-bar h2 { color: var(--text-dark); margin: 0; font-size: 20px; }
+
+    .btn-new {
+        background: #28a745; color: white; border: none;
+        padding: 10px 15px; border-radius: 8px; font-weight: 700; font-size: 14px;
+        transition: 0.2s; box-shadow: 0 2px 8px rgba(40,167,69,0.3);
+        cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-new:hover { background: #1e7e34; transform: translateY(-1px); }
+
+    .search-bar {
+        display: flex; gap: 15px; margin-bottom: 15px;
+        background: var(--bg-stripe); padding: 15px;
+        border-radius: 10px; border: 1px solid var(--border-light); flex-wrap: wrap;
+    }
+    .search-bar input {
+        padding: 10px; border: 2px solid var(--border-color);
+        border-radius: 8px; font-size: 13px; outline: none;
+        background: var(--bg-input); color: var(--text-dark); transition: 0.2s;
+    }
+    .search-bar input:focus { border-color: #28a745; box-shadow: 0 0 0 3px rgba(40,167,69,0.1); }
+    .search-bar .search-input-q { flex: 3; min-width: 300px; }
+    .search-bar .search-input-date { flex: 1; min-width: 160px; max-width: 220px; }
+    .btn-reset {
+        color: #dc3545; background: #ffebeb; padding: 10px 20px; border-radius: 8px;
+        text-decoration: none; font-weight: 700; font-size: 13px; display: inline-flex;
+        align-items: center; gap: 8px; border: 1px solid #f5c6cb; transition: 0.2s;
+    }
+    .btn-reset:hover { background: #f8d7da; }
+
+    .per-page-bar { display: flex; justify-content: flex-end; margin-bottom: 15px; }
+    .per-page-bar select {
+        padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border-color);
+        cursor: pointer; background: var(--bg-card); color: var(--text-dark);
+    }
+
+    .table-card {
+        background: var(--bg-card); border-radius: 10px;
+        box-shadow: 0 2px 10px var(--shadow); overflow: hidden;
+        border: 1px solid var(--border-light);
+    }
+    .table-card table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table-card thead tr { background: #28a745; }
+    .table-card thead th {
+        padding: 13px 15px; color: white; font-weight: 600;
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border: none;
+    }
+    .table-card tbody tr { border-bottom: 1px solid var(--border-light); transition: background 0.2s; }
+    .table-card tbody tr:hover { background: var(--bg-hover); }
+    .table-card tbody td { padding: 13px 15px; vertical-align: middle; color: var(--text-dark); }
+
+    .modal-overlay {
+        display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.55); z-index: 2147483647; align-items: flex-start;
+        justify-content: center; backdrop-filter: blur(3px); padding-top: 5vh; overflow-y: auto;
+    }
+    .modal-box {
+        background: var(--bg-card); width: 95%; max-width: 1100px;
+        border-radius: 12px; box-shadow: 0 20px 50px var(--shadow);
+        display: flex; flex-direction: column; margin-bottom: 5vh;
+    }
+    .modal-header {
+        background: linear-gradient(135deg, #198754, #28a745); color: white;
+        padding: 18px 25px; border-radius: 12px 12px 0 0; display: flex;
+        justify-content: space-between; align-items: center; font-weight: 700;
+    }
+    .modal-body { padding: 25px; background: var(--bg-stripe); }
+    .vd-section {
+        background: var(--bg-card); padding: 20px; border-radius: 10px;
+        box-shadow: 0 2px 8px var(--shadow); margin-bottom: 20px;
+        border: 1px solid var(--border-light);
+    }
+    .vd-label { font-size: 12px; font-weight: 700; color: var(--text-medium); text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .vd-input {
+        width: 100%; padding: 10px 12px; border: 2px solid var(--border-color);
+        border-radius: 8px; font-size: 14px; box-sizing: border-box; transition: 0.2s;
+        background: var(--bg-input); color: var(--text-dark);
+    }
+    .vd-input:focus { border-color: #28a745; outline: none; box-shadow: 0 0 0 3px rgba(40,167,69,0.1); }
+    .vd-table-header { background: var(--thead-bg); color: white; font-size: 13px; text-transform: uppercase; }
+    .vd-table th { padding: 12px; font-weight: 600; }
+    .vd-table td { padding: 12px; border-bottom: 1px solid var(--border-light); font-size: 14px; vertical-align: middle; color: var(--text-dark); }
+    .modal-footer {
+        padding: 20px 25px; background: var(--bg-stripe); border-top: 1px solid var(--border-light);
+        display: flex; justify-content: flex-end; gap: 15px; border-radius: 0 0 12px 12px;
+    }
+    .btn-cancel { background: var(--bg-card); color: var(--text-medium); border: 1px solid var(--border-color); padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    .btn-submit { background: #28a745; color: white; border: none; padding: 10px 30px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 15px; box-shadow: 0 4px 10px rgba(40,167,69,0.3); }
+
+    .dropdown-item:hover { background: var(--bg-hover) !important; }
+    .badge-stock { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background: var(--bg-hover); color: var(--text-dark); }
+    .input-ligne-qte { border: 2px solid var(--border-color); border-radius: 6px; padding: 6px; text-align: center; font-weight: bold; width: 80px; font-size: 15px; background: var(--bg-input); color: var(--text-dark); }
+    .input-ligne-qte:focus { border-color: #28a745; outline: none; }
+
+    .swal2-container { z-index: 2147483647 !important; }
+    .select2-container .select2-selection--single { height: 42px; border: 1px solid var(--border-color); border-radius: 8px; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 42px; padding-left: 12px; }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 40px; }
+</style>
+
+<div>
+    <div class="page-header-bar">
+        <h2><i class="fas fa-truck-loading" style="color: #28a745;"></i> Bons d'Entrée en Stock</h2>
+        {% if peut_creer %}
+        <button type="button" onclick="ouvrirModalEntree()" class="btn-new">
+            <i class="fas fa-plus-circle"></i> Nouveau Bon d'Entrée
+        </button>
+        {% endif %}
+    </div>
+
+    <form id="form-recherche" method="GET" class="search-bar">
+        <input type="hidden" name="per_page" value="{{ per_page|default:'15' }}">
+        <input type="hidden" name="page" id="input-page" value="1">
+        <input type="text" id="input-q" name="q" class="search-input-q" value="{{ q|default:'' }}" placeholder="N° Bon, Fournisseur, Référence BL...">
+        <input type="text" id="date_range" name="date_range" class="search-input-date" value="{{ date_range|default:'' }}" placeholder="JJ/MM/AAAA - JJ/MM/AAAA">
+        <a href="{% url 'liste_entrees' %}" class="btn-reset"><i class="fas fa-sync-alt"></i> Réinitialiser</a>
+    </form>
+
+    <div class="per-page-bar">
+        <form id="form-per-page" method="GET">
+            {% if q %}<input type="hidden" name="q" value="{{ q_bon }}">{% endif %}
+            {% if date_range %}<input type="hidden" name="date_range" value="{{ date_range }}">{% endif %}
+            <label style="font-size: 13px; color: var(--text-light); font-weight: bold;">
+                Afficher
+                <select name="per_page" onchange="document.getElementById('form-per-page').submit();">
+                    <option value="15" {% if per_page == '15' %}selected{% endif %}>15</option>
+                    <option value="50" {% if per_page == '50' %}selected{% endif %}>50</option>
+                    <option value="100" {% if per_page == '100' %}selected{% endif %}>100</option>
+                    <option value="all" {% if per_page == 'all' %}selected{% endif %}>Toutes</option>
+                </select>
+                lignes
+            </label>
+        </form>
+    </div>
+
+    <div class="table-card">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40px;"></th>
+                    <th>N° Bon</th>
+                    <th>Date</th>
+                    <th>Magasin de Dest.</th>
+                    <th>Fournisseur</th>
+                    <th>Articles</th>
+                    <th>Traçabilité</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="resultats-tableau">
+                {% include 'stock/entrees_lignes.html' %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═════ MODAL APERCU PDF NATIF ═════ -->
+<div class="mo-pdf" id="modal-pdf">
+  <div class="mb-pdf">
+    <div class="mh-pdf">
+      <h5 id="pdf-titre"><i class="fas fa-print me-2"></i> Aperçu</h5>
+      <button class="mc-pdf" onclick="document.getElementById('modal-pdf').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="mbody-pdf">
+      <div id="pdf-loader" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px; gap:16px;">
+        <div style="width:45px; height:45px; border:4px solid #444; border-top-color:#17a2b8; border-radius:50%; animation:spin .8s linear infinite;"></div>
+        <span style="color:#aaa; font-size:13px;">Chargement du document PDF…</span>
+      </div>
+      <iframe id="pdf-iframe" style="display:none; width:100%; height:75vh; border:none; background:#525659;"></iframe>
+    </div>
+    <div class="mfoot-pdf">
+      <button class="btn-nok-pdf" onclick="document.getElementById('modal-pdf').classList.remove('open')">Fermer</button>
+      <button class="btn-ok-pdf" onclick="const f=document.getElementById('pdf-iframe'); if(f&&f.contentWindow){f.contentWindow.focus(); f.contentWindow.print();}">
+        <i class="fas fa-print me-1"></i> Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODALE SAISIE ENTRÉE ========== -->
+<div id="modal-entree" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 style="margin: 0; font-size: 18px;"><i class="fas fa-boxes"></i> Saisie de Réception (Entrée)</h3>
+            <button type="button" onclick="fermerModalEntree()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 18px;">&times;</button>
+        </div>
+        <form id="form-saisie-entree" method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="vd-section" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                    <div>
+                        <label class="vd-label">Magasin Destination *</label>
+                        {% if magasins|length == 1 %}
+                            {% for m in magasins %}
+                                <input type="hidden" name="magasin" id="vd-magasin" value="{{ m.id }}">
+                                <div style="padding: 10px; background: var(--bg-input); border: 2px solid var(--border-color); border-radius: 8px; font-weight: bold; color: var(--primary-blue); height: 42px; display: flex; align-items: center;">
+                                    <i class="fas fa-lock" style="color: var(--text-light); margin-right: 8px;"></i> {{ m.nom }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <select name="magasin" id="vd-magasin" required class="vd-input select2" style="width: 100%; background: var(--bg-input); color: var(--text-dark);">
+                                <option value="">-- Choisir le magasin --</option>
+                                {% for m in magasins %}<option value="{{ m.id }}">{{ m.nom }}</option>{% endfor %}
+                            </select>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="vd-label">Fournisseur *</label>
+                        <select name="fournisseur" required class="vd-input select2">
+                            <option value="">-- Chercher un fournisseur --</option>
+                            {% for f in fournisseurs %}<option value="{{ f.id }}">{{ f.raison_sociale }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="vd-label">N° Facture / BL *</label>
+                        <input type="text" name="reference_externe" required placeholder="Ex: BL-2026-001" class="vd-input">
+                    </div>
+                    <div>
+                        <label class="vd-label">Date de réception</label>
+                        <input type="text" value="{% now 'd/m/Y' %}" readonly class="vd-input" style="background: var(--bg-stripe); color: var(--text-medium); font-weight: bold;">
+                    </div>
+                </div>
+
+                <div class="vd-section" style="background: rgba(245,158,11,0.08); border-left: 5px solid #f59e0b;">
+                    <label class="vd-label" style="color: #f59e0b;"><i class="fas fa-paperclip"></i> Fichier scanné (PDF, JPG, PNG)</label>
+                    <input type="file" name="document_scan" accept=".pdf,.jpg,.jpeg,.png" required
+                           class="vd-input" style="padding: 8px; font-size: 13px; border-color: #f59e0b;"
+                           onchange="if(this.files[0] && this.files[0].size > 1048576){ alert('Fichier trop lourd > 1 Mo'); this.value=''; }">
+                    <small style="color: var(--text-light); font-size: 11px;">Taille maximale : 1 Mo</small>
+                </div>
+
+                <div class="vd-section" style="position: relative; z-index: 50; background: rgba(40,167,69,0.08); border-left: 5px solid #28a745;">
+                    <label class="vd-label" style="color: #28a745;"><i class="fas fa-search"></i> Scanner ou chercher un produit reçu</label>
+                    <input type="text" id="vd-search-input" class="vd-input" disabled placeholder="⚠️ Veuillez d'abord choisir un Magasin de Destination..." oninput="filtrerProduits()" style="border: 2px solid #8fd19e; height: 50px; font-size: 15px; background: var(--bg-input);">
+                    <div id="vd-dropdown" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: var(--bg-card); border: 1px solid #28a745; border-radius: 8px; box-shadow: 0 10px 25px var(--shadow); max-height: 300px; overflow-y: auto; margin-top: 5px;">
+                        <table style="width: 100%; border-collapse: collapse; margin: 0;">
+                            <thead style="background: rgba(40,167,69,0.15); position: sticky; top: 0; box-shadow: 0 2px 5px var(--shadow);">
+                                <tr>
+                                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #28a745;">Réf</th>
+                                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #28a745;">Désignation</th>
+                                    <th style="padding: 10px; text-align: right; font-size: 12px; color: #28a745;">Stock Actuel</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vd-dropdown-body">
+                                {% for a in articles %}
+                                <tr class="dropdown-item"
+                                    data-id="{{ a.id }}"
+                                    data-ref="{{ a.reference|default:'-'|escapejs }}"
+                                    data-nom="{{ a.designation|escapejs }}"
+                                    data-gere-lots="{{ a.famille.gere_lots_peremption|yesno:'true,false' }}"
+                                    data-gere-lots-article="{{ a.gere_lots_peremption|yesno:'true,false' }}"
+                                    data-stocks='{ {% for s in a.stocks.all %}"{{ s.magasin.id }}": {{ s.quantite_physique }}{% if not forloop.last %}, {% endif %}{% endfor %} }'
+                                    onclick="ajouterArticleDirect(this)"
+                                    style="cursor: pointer; border-bottom: 1px solid var(--border-light);">
+                                    <td style="padding: 12px; font-weight: bold; width: 20%; color: var(--text-medium);">{{ a.reference|default:'-' }}</td>
+                                    <td style="padding: 12px; width: 60%; font-size: 14px;"><strong style="color: var(--text-dark);">{{ a.designation }}</strong></td>
+                                    <td style="padding: 12px; width: 20%; text-align: right;"><span class="badge-stock">Calcul...</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="vd-section" style="padding: 0; overflow: hidden;">
+                    <table class="vd-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead class="vd-table-header">
+                            <tr>
+                                <th style="width: 5%; text-align: center;">#</th>
+                                <th style="width: 12%;">Réf.</th>
+                                <th style="width: 28%;">Désignation de l'article</th>
+                                <th style="width: 15%; text-align: center;">N° Lot</th>
+                                <th style="width: 13%; text-align: center;">Péremption</th>
+                                <th style="width: 10%; text-align: center;">Qté</th>
+                                <th style="width: 12%; text-align: center;">P.U. (FCFA)</th>
+                                <th style="width: 5%; text-align: center;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="vd-lignes-tbody">
+                            <tr id="vd-ligne-vide">
+                                <td colspan="8" style="text-align: center; padding: 50px; color: var(--text-light);">
+                                    <i class="fas fa-box" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.4;"></i>
+                                    Aucun article ajouté au bon d'entrée.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="fermerModalEntree()" class="btn-cancel">Annuler</button>
+                <button type="submit" class="btn-submit"><i class="fas fa-check-circle"></i> Valider la réception</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ═════ MODAL APERCU SCAN ═════ -->
+<div class="mo-pdf" id="modal-scan">
+  <div class="mb-pdf">
+    <div class="mh-pdf" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+      <h5 id="scan-titre"><i class="fas fa-paperclip me-2"></i> Document scanné</h5>
+      <button class="mc-pdf" onclick="document.getElementById('modal-scan').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="mbody-pdf" id="scan-body" style="background: #1a1a1a; text-align: center; min-height: 400px; display: flex; align-items: center; justify-content: center;">
+      <div style="color:#aaa;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><br>Chargement...</div>
+    </div>
+    <div class="mfoot-pdf">
+      <button class="btn-nok-pdf" onclick="document.getElementById('modal-scan').classList.remove('open')">Fermer</button>
+      <button id="scan-btn-print" class="btn-ok-pdf" style="background: linear-gradient(135deg, #17a2b8, #117a8b);" onclick="imprimerScan()">
+        <i class="fas fa-print me-1"></i> Imprimer
+      </button>
+      <button id="scan-btn-replace" class="btn-ok-pdf" style="background: linear-gradient(135deg, #f59e0b, #d97706);" onclick="ouvrirRemplacerScan()">
+        <i class="fas fa-sync-alt me-1"></i> Remplacer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═════ MODAL REMPLACER SCAN ═════ -->
+<div class="mo-pdf" id="modal-remplacer-scan">
+  <div class="mb-pdf" style="max-width: 500px;">
+    <div class="mh-pdf" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+      <h5><i class="fas fa-upload me-2"></i> Remplacer le fichier scanné</h5>
+      <button class="mc-pdf" onclick="document.getElementById('modal-remplacer-scan').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="form-remplacer-scan" method="POST" enctype="multipart/form-data">
+      {% csrf_token %}
+      <div class="mbody-pdf" style="background: #2d2d2d; padding: 25px;">
+        <p style="color: #ccc; margin-bottom: 15px; font-size: 14px;">Nouveau fichier (PDF, JPG, PNG — max 1 Mo) :</p>
+        <input type="file" name="nouveau_scan" accept=".pdf,.jpg,.jpeg,.png" required
+               class="vd-input" style="padding: 10px; background: #1a1a1a; color: #fff; border-color: #f59e0b;"
+               onchange="if(this.files[0] && this.files[0].size > 1048576){ alert('Fichier trop lourd > 1 Mo'); this.value=''; }">
+      </div>
+      <div class="mfoot-pdf">
+        <button type="button" class="btn-nok-pdf" onclick="document.getElementById('modal-remplacer-scan').classList.remove('open')">Annuler</button>
+        <button type="submit" class="btn-ok-pdf" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+          <i class="fas fa-check me-1"></i> Confirmer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+/* ═════ MODAL PDF (lecteur natif) ═════ */
+function imprimerModal(url, titre) {
+    var modal   = document.getElementById('modal-pdf');
+    var iframe  = document.getElementById('pdf-iframe');
+    var loader  = document.getElementById('pdf-loader');
+    var titreEl = document.getElementById('pdf-titre');
+
+    if (titreEl) {
+        titreEl.innerHTML = '<i class="fas fa-print me-2"></i> ' + (titre || 'Document');
+    }
+
+    iframe.style.display = 'none';
+    loader.style.display = 'flex';
+    modal.classList.add('open');
+
+    iframe.onload = function() {
+        loader.style.display = 'none';
+        iframe.style.display = 'block';
+    };
+    iframe.onerror = function() {
+        loader.innerHTML = '<span style="color:#ff6b6b; font-weight:bold;">Erreur de chargement du document.</span>';
+    };
+
+    iframe.src = url;
+}
+
+    document.addEventListener('DOMContentLoaded', function() {
+        let modal = document.getElementById('modal-entree');
+        if (modal) { document.body.appendChild(modal); }
+        if (typeof jQuery !== 'undefined') {
+            $('.select2').select2({ dropdownParent: $('#modal-entree'), width: '100%' });
+        }
+    });
+
+    let compteurLignes = 0;
+
+    function ouvrirModalEntree() {
+        document.getElementById('modal-entree').style.display = 'flex';
+        if ($('#vd-magasin').val()) { $('#vd-magasin').trigger('change'); }
+    }
+
+    function fermerModalEntree() {
+        document.getElementById('modal-entree').style.display = 'none';
+        document.getElementById('form-saisie-entree').reset();
+        if ($('#vd-magasin').is('select')) { $('#vd-magasin').val(null).trigger('change'); }
+        $('select[name="fournisseur"]').val(null).trigger('change');
+        viderTableau();
+        if ($('#vd-magasin').is('select')) {
+            document.getElementById('vd-search-input').disabled = true;
+            document.getElementById('vd-search-input').style.backgroundColor = "var(--bg-input)";
+        }
+        document.getElementById('vd-dropdown').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        $('#vd-magasin').on('change', function() {
+            let searchInput = document.getElementById('vd-search-input');
+            let magasinId = $(this).val();
+            if (magasinId) {
+                searchInput.disabled = false;
+                searchInput.placeholder = "Taper le nom ou la référence de l'article reçu...";
+                searchInput.style.backgroundColor = "var(--bg-input)";
+            } else {
+                searchInput.disabled = true;
+                searchInput.placeholder = "⚠️ Veuillez d'abord choisir un Magasin de Destination...";
+                searchInput.style.backgroundColor = "var(--bg-stripe)";
+                searchInput.value = '';
+                document.getElementById('vd-dropdown').style.display = 'none';
+            }
+            let tbody = document.getElementById('vd-lignes-tbody');
+            if (tbody && tbody.children.length > 0 && tbody.children[0].id !== 'vd-ligne-vide') {
+                Swal.fire({ icon: 'info', title: 'Panier réinitialisé', text: 'Le magasin a changé.', confirmButtonColor: '#28a745' });
+                viderTableau();
+            }
+        });
+
+        document.getElementById('form-saisie-entree').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (compteurLignes === 0) {
+                Swal.fire({ icon: 'warning', title: 'Bon vide', text: "Ajoutez au moins un article !", confirmButtonColor: '#ffc107' });
+                return;
+            }
+
+            var fichierScan = document.querySelector('input[name="document_scan"]');
+            if (!fichierScan || !fichierScan.files || fichierScan.files.length === 0) {
+                Swal.fire({ icon: 'warning', title: 'Document scanné manquant', text: "Veuillez joindre le fichier scanné (PDF, JPG ou PNG).", confirmButtonColor: '#f59e0b' });
+                return;
+            }
+
+            const formElement = this;
+            Swal.fire({
+                title: 'Confirmer la réception ?',
+                html: "Vous allez enregistrer l'entrée de <b>" + compteurLignes + " article(s)</b> en stock.",
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check"></i> Oui, valider !',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Enregistrement...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    formElement.submit();
+                }
+            });
+        });
+
+        document.addEventListener('click', function(event) {
+            let dropdown = document.getElementById('vd-dropdown');
+            let searchInput = document.getElementById('vd-search-input');
+            if (searchInput && dropdown && !searchInput.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        if ($.fn.daterangepicker) {
+            $('#date_range').daterangepicker({
+                autoUpdateInput: false,
+                autoApply: true,
+                locale: {
+                    format: 'DD/MM/YYYY',
+                    daysOfWeek: ['Di','Lu','Ma','Me','Je','Ve','Sa'],
+                    monthNames: ['Janv','Fév','Mars','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'],
+                    firstDay: 1
+                }
+            });
+            $('#date_range').on('apply.daterangepicker', function(ev, picker) {
+                $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+                $('#input-page').val(1);
+                rafraichirTableau();
+            });
+            $('#date_range').on('keyup', function(e) {
+                if (e.keyCode === 8 || e.keyCode === 46) { $(this).val(''); $('#input-page').val(1); rafraichirTableau(); }
+            });
+        }
+
+        window.rafraichirTableau = function() {
+            $('#resultats-tableau').css('opacity', '0.4');
+            $.ajax({
+                url: window.location.pathname,
+                type: 'GET',
+                data: $('#form-recherche').serialize(),
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(html) {
+                    $('#resultats-tableau').html(html);
+                    $('#resultats-tableau').css('opacity', '1');
+                }
+            });
+        };
+
+        let typingTimer;
+        $('#input-q').on('input', function () {
+            clearTimeout(typingTimer);
+            $('#input-page').val(1);
+            typingTimer = setTimeout(rafraichirTableau, 400);
+        });
+
+        $('#form-recherche').on('submit', function(e) { e.preventDefault(); $('#input-page').val(1); rafraichirTableau(); });
+
+        var magasinInput = $('#vd-magasin');
+        if (magasinInput.length > 0 && magasinInput.val() !== "") { magasinInput.trigger('change'); }
+    });
+
+    function changerPageAjax(numeroPage) { document.getElementById('input-page').value = numeroPage; rafraichirTableau(); }
+
+    function toggleLignes(id) {
+        let trLignes = document.getElementById('lignes-' + id);
+        let icon = document.getElementById('icon-' + id);
+        let trParent = document.getElementById('bon-row-' + id);
+        if (trLignes.style.display === 'none') {
+            trLignes.style.display = 'table-row';
+            icon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+            trParent.style.background = 'rgba(40,167,69,0.08)';
+        } else {
+            trLignes.style.display = 'none';
+            icon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+            trParent.style.background = '';
+        }
+    }
+
+    window.afficherDocumentScan = function(urlDocument) {
+        Swal.fire({
+            title: '<i class="fas fa-file-signature" style="color:#1c5b96;"></i> Aperçu du document',
+            html: '<iframe id="visionneuseIframe" src="' + urlDocument + '" style="width: 100%; height: 60vh; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-stripe);"></iframe>',
+            width: '80%', showCloseButton: true, showCancelButton: true,
+            cancelButtonText: 'Fermer', confirmButtonText: '<i class="fas fa-print"></i> Imprimer',
+            confirmButtonColor: '#17a2b8', cancelButtonColor: '#6c757d',
+            preConfirm: () => {
+                let iframe = document.getElementById('visionneuseIframe');
+                iframe.contentWindow.focus(); iframe.contentWindow.print(); return false;
+            }
+        });
+    };
+
+    function confirmerAnnulationEntree(bonId, numeroBon) {
+        Swal.fire({
+            title: 'Annuler la réception ' + numeroBon,
+            html: '<div style="text-align:left; margin-top:10px;">' +
+                    '<label style="font-weight:bold; font-size:14px;">Motif de l\'annulation (Obligatoire) :</label>' +
+                    '<select id="swal-motif-select" class="form-control" style="width: 100%; margin-top:10px; background: var(--bg-card); color: var(--text-dark);">' +
+                    '<option value="">-- Rechercher un motif --</option>' +
+                    '{% for m in motifs_annulation %}<option value="{{ m.id }}">{{ m.libelle|escapejs }}</option>{% endfor %}' +
+                    '</select></div>',
+            icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545',
+            confirmButtonText: "Confirmer l'annulation", cancelButtonText: 'Retour',
+            didOpen: () => {
+                $('#swal-motif-select').select2({ dropdownParent: $('.swal2-container'), placeholder: "Tapez pour chercher un motif..." });
+            },
+            preConfirm: () => {
+                const motifId = $('#swal-motif-select').val();
+                if (!motifId) { Swal.showValidationMessage('Veuillez sélectionner un motif dans la liste'); }
+                return motifId;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                let form = document.getElementById('form-annuler-entree-' + bonId);
+                let inputMotif = document.createElement('input');
+                inputMotif.type = 'hidden'; inputMotif.name = 'motif_id'; inputMotif.value = result.value;
+                form.appendChild(inputMotif);
+                Swal.fire({ title: 'Vérification...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                form.submit();
+            }
+        });
+    }
+
+    function filtrerProduits() {
+        let input = document.getElementById('vd-search-input');
+        let dropdown = document.getElementById('vd-dropdown');
+        let magasinId = document.getElementById('vd-magasin').value;
+        let rows = document.querySelectorAll('.dropdown-item');
+        let hasVisible = false;
+
+        if (!magasinId) {
+            input.value = ''; input.blur();
+            if (!Swal.isVisible()) Swal.fire({ icon: 'info', title: 'Magasin requis', text: "Sélectionnez d'abord un magasin de destination.", confirmButtonColor: '#28a745' });
+            return;
+        }
+
+        let inputValue = input.value.toLowerCase();
+        if (inputValue.length < 1) { dropdown.style.display = 'none'; return; }
+
+        rows.forEach(row => {
+            let ref = row.getAttribute('data-ref').toLowerCase();
+            let nom = row.getAttribute('data-nom').toLowerCase();
+            if (ref.includes(inputValue) || nom.includes(inputValue)) {
+                let stocksData = JSON.parse(row.getAttribute('data-stocks') || '{}');
+                let dispo = stocksData[magasinId] || 0;
+                row.querySelector('.badge-stock').innerText = dispo;
+                row.style.display = ''; hasVisible = true;
+            } else { row.style.display = 'none'; }
+        });
+        dropdown.style.display = hasVisible ? 'block' : 'none';
+    }
+
+    function ajouterArticleDirect(rowElement) {
+        let id = rowElement.getAttribute('data-id');
+        let ref = rowElement.getAttribute('data-ref');
+        let nom = rowElement.getAttribute('data-nom');
+        // ═══ CORRECTION : vérifie article OU famille ═══
+        let gereLotsFamille = rowElement.getAttribute('data-gere-lots') === 'true';
+        let gereLotsArticle = rowElement.getAttribute('data-gere-lots-article') === 'true';
+        let gereLots = gereLotsArticle || gereLotsFamille;
+
+        let existingRow = document.getElementById('row-article-' + id);
+        if (existingRow) {
+            let currentQteInput = existingRow.querySelector('.input-ligne-qte');
+            currentQteInput.value = parseInt(currentQteInput.value) + 1;
+            currentQteInput.style.backgroundColor = "rgba(40,167,69,0.2)";
+            setTimeout(() => { currentQteInput.style.backgroundColor = ""; }, 500);
+        } else {
+            compteurLignes++;
+            const ligneVide = document.getElementById('vd-ligne-vide');
+            if (ligneVide) ligneVide.remove();
+
+            const tbody = document.getElementById('vd-lignes-tbody');
+            const tr = document.createElement('tr');
+            tr.id = 'row-article-' + id;
+
+            let htmlLotPeremption = '';
+            if (gereLots) {
+                htmlLotPeremption = 
+                    '<td style="text-align: center;">' +
+                    '<input type="text" name="lots[]" required placeholder="N° Lot *" class="vd-input" style="height: 35px; width: 100%; font-size: 13px; border: 1px solid #ffc107; background-color: var(--bg-input);" title="N° de lot obligatoire">' +
+                    '</td>' +
+                    '<td style="text-align: center;">' +
+                    '<input type="date" name="peremptions[]" required class="vd-input" style="height: 35px; width: 100%; font-size: 13px; border: 1px solid #ffc107; background-color: var(--bg-input);" title="Date de péremption obligatoire">' +
+                    '</td>';
+            } else {
+                htmlLotPeremption = 
+                    '<td style="text-align: center;">' +
+                    '<input type="hidden" name="lots[]" value="">' +
+                    '<span class="text-muted" style="font-size:12px; color:var(--text-light);">—</span>' +
+                    '</td>' +
+                    '<td style="text-align: center;">' +
+                    '<input type="hidden" name="peremptions[]" value="">' +
+                    '<span class="text-muted" style="font-size:12px; color:var(--text-light);">—</span>' +
+                    '</td>';
+            }
+
+            tr.innerHTML = 
+                '<td style="text-align: center; font-weight: bold; color: var(--text-medium);" class="col-num">' + compteurLignes + '</td>' +
+                '<td style="color: var(--text-medium); font-size: 12px;">' + ref + '</td>' +
+                '<td style="font-weight: bold; color: var(--primary-blue); font-size: 14px;">' + nom + '</td>' +
+                htmlLotPeremption +
+                '<td style="text-align: center;">' +
+                '<input type="number" name="quantites[]" value="1" min="1" class="input-ligne-qte" style="width: 70px;">' +
+                '<input type="hidden" name="articles[]" value="' + id + '">' +
+                '</td>' +
+                '<td style="text-align: center;">' +
+                '<input type="number" name="prix_unitaires[]" value="" min="0" step="0.01" placeholder="P.U." class="vd-input" style="height: 35px; width: 90px; font-size: 13px;" title="Prix Unitaire (Optionnel)">' +
+                '</td>' +
+                '<td style="text-align: center;">' +
+                '<button type="button" onclick="supprimerLigneVD(this)" style="color: #dc3545; border: none; background: var(--bg-hover); width: 30px; height: 30px; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>' +
+                '</td>';
+            tbody.appendChild(tr);
+        }
+        document.getElementById('vd-search-input').value = '';
+        document.getElementById('vd-dropdown').style.display = 'none';
+        document.getElementById('vd-search-input').focus();
+    }
+
+    function supprimerLigneVD(btn) {
+        btn.closest('tr').remove();
+        let lignes = document.querySelectorAll('#vd-lignes-tbody tr:not(#vd-ligne-vide)');
+        compteurLignes = 0;
+        lignes.forEach(ligne => { compteurLignes++; ligne.querySelector('.col-num').innerText = compteurLignes; });
+        if (document.getElementById('vd-lignes-tbody').children.length === 0) viderTableau();
+    }
+
+    function viderTableau() {
+        document.getElementById('vd-lignes-tbody').innerHTML = '<tr id="vd-ligne-vide"><td colspan="8" style="text-align: center; padding: 50px; color: var(--text-light);"><i class="fas fa-box" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.4;"></i>Aucun article ajouté.</td></tr>';
+        compteurLignes = 0;
+    }
+
+/* ═════════════ GESTION SCAN (aperçu + impression + remplacement) ═════════════ */
+var currentScanBonId = null;
+var currentScanUrl = null;
+var currentScanName = null;
+var currentScanType = null;
+
+function afficherScan(url, nomFichier, bonId) {
+    currentScanUrl = url;
+    currentScanName = nomFichier;
+    currentScanBonId = bonId;
+    currentScanType = 'pdf';
+    
+    var modal = document.getElementById('modal-scan');
+    var body = document.getElementById('scan-body');
+    var titre = document.getElementById('scan-titre');
+    var btnPrint = document.getElementById('scan-btn-print');
+    var btnReplace = document.getElementById('scan-btn-replace');
+    
+    titre.innerHTML = '<i class="fas fa-paperclip me-2"></i> ' + (nomFichier || 'Document scanné');
+    body.innerHTML = '<div style="color:#aaa;"><i class="fas fa-spinner fa-spin" style="font-size:24px;"></i><br>Chargement...</div>';
+    modal.classList.add('open');
+    
+    if (btnPrint) btnPrint.style.display = '';
+    if (btnReplace) btnReplace.style.display = '';
+    
+    var ext = (nomFichier || '').split('.').pop().toLowerCase();
+    
+    if (ext === 'pdf') {
+        currentScanType = 'pdf';
+        body.innerHTML = '<iframe class="scan-viewer" id="scan-viewer-current" src="' + url + '" style="width:100%; height:70vh; border:none; background:#525659;"></iframe>';
+    } else {
+        currentScanType = 'image';
+        body.innerHTML = '<img class="scan-viewer" id="scan-viewer-current" src="' + url + '" style="max-width:100%; max-height:70vh; border-radius:8px; box-shadow:0 4px 20px rgba(0,0,0,0.5);">';
+    }
+}
+
+function afficherScanVide(bonId) {
+    currentScanUrl = null;
+    currentScanName = null;
+    currentScanBonId = bonId;
+    currentScanType = null;
+    
+    var modal = document.getElementById('modal-scan');
+    var body = document.getElementById('scan-body');
+    var titre = document.getElementById('scan-titre');
+    var btnPrint = document.getElementById('scan-btn-print');
+    var btnReplace = document.getElementById('scan-btn-replace');
+    
+    titre.innerHTML = '<i class="fas fa-paperclip me-2"></i> Aucun document scanné';
+    body.innerHTML = '<div style="color:#888; text-align:center; padding:60px 20px;"><i class="fas fa-file-upload" style="font-size:50px; opacity:0.3; margin-bottom:15px; display:block;"></i><p style="font-size:14px;">Aucun fichier scanné n\'est joint à ce bon.</p><p style="font-size:12px; color:#666;">Vous pouvez joindre un fichier maintenant.</p></div>';
+    modal.classList.add('open');
+    
+    if (btnPrint) btnPrint.style.display = 'none';
+    if (btnReplace) {
+        btnReplace.innerHTML = '<i class="fas fa-plus me-1"></i> Joindre un fichier';
+        btnReplace.style.display = '';
+    }
+}
+function imprimerScan() {
+    if (!currentScanUrl) return;
+    if (currentScanType === 'pdf') {
+        var iframe = document.querySelector('#scan-body .scan-viewer');
+        if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        }
+    } else {
+        var printFrame = document.createElement('iframe');
+        printFrame.style.cssText = 'position:fixed;width:0;height:0;border:0;opacity:0;pointer-events:none;';
+        document.body.appendChild(printFrame);
+        var doc = printFrame.contentWindow.document;
+        doc.open();
+        doc.write('<html><head><title>Impression</title><style>body{margin:0;display:flex;align-items:center;justify-content:center;height:100vh;}img{max-width:100%;max-height:100vh;}</style><base target="_blank"></head><body>');
+        doc.write('<img src="' + currentScanUrl + '" onload="setTimeout(function(){window.focus();window.print();},100);">');
+        doc.write('</body></html>');
+        doc.close();
+        setTimeout(function() {
+            if (printFrame.parentNode) document.body.removeChild(printFrame);
+        }, 2000);
+    }
+}
+
+function ouvrirRemplacerScan() {
+    if (!currentScanBonId) return;
+    document.getElementById('modal-scan').classList.remove('open');
+    var form = document.getElementById('form-remplacer-scan');
+    form.action = '{% url 'remplacer_scan_entree' 0 %}'.replace('/0/', '/' + currentScanBonId + '/');
+    document.getElementById('modal-remplacer-scan').classList.add('open');
+}
+
+// Fermeture Escape / clic extérieur pour toutes les modales
+document.addEventListener('DOMContentLoaded', function() {
+    ['modal-pdf', 'modal-scan', 'modal-remplacer-scan'].forEach(function(id) {
+        var modal = document.getElementById(id);
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('open');
+            });
+        }
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            ['modal-pdf', 'modal-scan', 'modal-remplacer-scan'].forEach(function(id) {
+                var m = document.getElementById(id);
+                if (m) m.classList.remove('open');
+            });
+        }
+    });
+});
+</script>
+
+{% if request.GET.print_bon %}
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        setTimeout(function() {
+            const urlImpression = "{% url 'imprimer_bon_multi_lignes' request.GET.print_bon %}";
+            imprimerModal(urlImpression, "Bon d'Entrée");
+        }, 1000);
+    });
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,198 @@
+<style>
+  .ajustement-row {
+    border-bottom: 1px solid var(--border-light);
+    transition: background .12s;
+  }
+  .ajustement-row:hover { background: var(--bg-hover); }
+
+  .aj-date strong { color: var(--text-dark); font-size: 13px; }
+  .aj-date small { font-size: 11px; color: var(--text-light); }
+
+  .art-nom { font-weight: 700; color: #1c5b96; font-size: 14px; }
+  .art-ref { font-size: 11px; color: var(--text-light); }
+
+  .mag-tag {
+    background: rgba(28,91,150,0.12);
+    color: #1c5b96;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .qte-box-aj {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 60px;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-weight: 800;
+    font-size: 18px;
+    line-height: 1;
+  }
+  .qte-ajout   { background: rgba(40,167,69,0.15); color: #28a745; box-shadow: 0 0 0 2px rgba(40,167,69,0.25); }
+  .qte-retrait { background: rgba(220,53,69,0.15); color: #dc3545; box-shadow: 0 0 0 2px rgba(220,53,69,0.25); }
+
+  .motif-text { color: var(--text-medium); font-weight: 600; font-size: 13px; display: block; }
+  .comment-text { font-size: 12px; color: var(--text-light); font-style: italic; }
+
+  .tracab { font-size: 12px; color: var(--text-medium); line-height: 1.6; }
+  .tracab strong { color: var(--text-dark); }
+
+  .btn-scan {
+    background: #6c757d; color: white; border: none;
+    width: 32px; height: 32px; border-radius: 6px;
+    cursor: pointer; font-size: 13px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: .2s;
+  }
+  .btn-scan:hover { background: #495057; transform: translateY(-1px); }
+
+  .btn-signed {
+    background: #28a745; color: white; border: none;
+    padding: 6px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: .2s;
+  }
+  .btn-signed:hover { background: #1e7e34; transform: translateY(-1px); }
+
+  .btn-replace {
+    background: rgba(255,193,7,0.15); color: #856404;
+    width: 32px; height: 32px; border-radius: 6px;
+    cursor: pointer; font-size: 13px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: .2s;
+  }
+  .btn-replace:hover { background: #ffc107; color: #856404; }
+
+  .btn-upload {
+    background: #17a2b8; color: white;
+    padding: 6px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: .2s;
+  }
+  .btn-upload:hover { background: #117a8b; transform: translateY(-1px); }
+
+  .statut-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; text-transform: uppercase;
+  }
+  .statut-valide { background: rgba(40,167,69,0.15); color: #28a745; }
+  .statut-attente { background: rgba(255,193,7,0.15); color: #856404; }
+  .statut-brouillon { background: rgba(108,117,125,0.15); color: #6c757d; }
+
+  .btn-valider {
+    background: #28a745; color: white; border: none;
+    padding: 6px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: .2s;
+  }
+  .btn-valider:hover { background: #1e7e34; transform: translateY(-1px); }
+
+  /* DARK MODE */
+  body.dark-mode .art-nom { color: #5bc0de; }
+  body.dark-mode .mag-tag { background: rgba(100,181,246,0.15); color: #90caf9; }
+  body.dark-mode .qte-ajout   { background: rgba(129,199,132,0.2); color: #81c784; box-shadow: 0 0 0 2px rgba(129,199,132,0.35); }
+  body.dark-mode .qte-retrait { background: rgba(239,154,154,0.2); color: #ff8a80; box-shadow: 0 0 0 2px rgba(239,154,154,0.35); }
+  body.dark-mode .btn-replace { color: #ffe082; background: rgba(255,213,79,0.1); }
+  body.dark-mode .btn-replace:hover { background: #ffc107; color: #856404; }
+</style>
+
+{% for ajustement in ajustements %}
+<tr class="ajustement-row">
+  <td style="padding: 12px;">
+    <div class="aj-date"><strong>{{ ajustement.date_creation|date:"d/m/Y" }}</strong><br><small>{{ ajustement.date_creation|date:"H:i" }}</small></div>
+  </td>
+  <td style="padding: 12px;">
+    <div class="art-nom">{{ ajustement.article.designation }}</div>
+    {% if ajustement.article.reference %}<div class="art-ref">Ref. {{ ajustement.article.reference }}</div>{% endif %}
+  </td>
+  <td style="padding: 12px;">
+    <span class="mag-tag"><i class="fas fa-warehouse"></i>{{ ajustement.magasin.nom }}</span>
+  </td>
+  <td style="padding: 12px; text-align: center;">
+    {% if ajustement.motif == 'AJOUT' %}
+      <span class="qte-box-aj qte-ajout">+ {{ ajustement.quantite }}</span>
+    {% else %}
+      <span class="qte-box-aj qte-retrait">- {{ ajustement.quantite }}</span>
+    {% endif %}
+  </td>
+  <td style="padding: 12px;">
+    <span class="motif-text">{{ ajustement.get_motif_display }}</span>
+    {% if ajustement.commentaire %}
+    <span class="comment-text">{{ ajustement.commentaire }}</span>
+    {% endif %}
+  </td>
+  <td style="padding: 12px;">
+    <div class="tracab">
+      <div><i class="fas fa-user-edit" style="color:#fd7e14;margin-right:4px;"></i><strong>{{ ajustement.cree_par.username|default:"Systeme" }}</strong></div>
+      <div style="color:var(--text-light);font-size:11px;"><i class="fas fa-clock" style="margin-right:4px;"></i>{{ ajustement.date_creation|date:"d/m/Y a H:i" }}</div>
+    </div>
+  </td>
+  <td style="padding: 12px; text-align: center;">
+    {% if ajustement.statut_validation == 'VALIDE' %}
+      <span class="statut-badge statut-valide"><i class="fas fa-check-circle"></i> Valide</span>
+    {% elif ajustement.statut_validation == 'ATTENTE' %}
+      <span class="statut-badge statut-attente"><i class="fas fa-clock"></i> En attente</span>
+    {% else %}
+      <span class="statut-badge statut-brouillon"><i class="fas fa-edit"></i> Brouillon</span>
+    {% endif %}
+  </td>
+  <td style="padding: 12px; text-align: center;">
+    <div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;">
+      {% if ajustement.statut_validation == 'ATTENTE' and peut_valider %}
+        <button type="button" class="btn-valider" title="Valider l'ajustement" aria-label="Valider l'ajustement"
+                onclick="if(typeof confirmerValidation==='function'){confirmerValidation('{% url 'valider_ajustement' ajustement.id %}')}else{console.error('confirmerValidation non defini')}">
+          <i class="fas fa-check"></i> Valider
+        </button>
+      {% endif %}
+
+      <button type="button" class="btn-scan" onclick="if(typeof window.afficherDocumentScan==='function'){window.afficherDocumentScan('{% url 'imprimer_ajustement' ajustement.id %}')}else{console.error('afficherDocumentScan non defini')}" title="Imprimer" aria-label="Imprimer">
+        <i class="fas fa-print"></i>
+      </button>
+
+      {% if ajustement.document_scanne %}
+        <button type="button" class="btn-signed" onclick="if(typeof window.afficherDocumentScan==='function'){window.afficherDocumentScan('{{ ajustement.document_scanne.url }}')}else{console.error('afficherDocumentScan non defini')}" title="Document signe" aria-label="Voir document signe">
+          <i class="fas fa-file-signature"></i> Signe
+        </button>
+        {% if peut_modifier %}
+        <form action="{% url 'upload_fichier_generique' 'stock' 'ajustement' ajustement.id 'document_scanne' %}" method="POST" enctype="multipart/form-data" style="margin:0;" id="form-replace-{{ ajustement.id }}">
+          {% csrf_token %}
+          <label for="replace-{{ ajustement.id }}" class="btn-replace" title="Remplacer" aria-label="Remplacer le document">
+            <i class="fas fa-sync-alt"></i>
+          </label>
+          <input type="file" id="replace-{{ ajustement.id }}" name="document" style="display:none;" accept=".jpg,.jpeg,.png,.pdf"
+                 onchange="if(typeof confirmerRemplacer==='function'){confirmerRemplacer('form-replace-{{ ajustement.id }}')}else{console.error('confirmerRemplacer non defini')}">
+        </form>
+        {% endif %}
+      {% else %}
+        {% if peut_modifier %}
+        <form action="{% url 'upload_fichier_generique' 'stock' 'ajustement' ajustement.id 'document_scanne' %}" method="POST" enctype="multipart/form-data" style="margin:0;" id="form-upload-{{ ajustement.id }}">
+          {% csrf_token %}
+          <label for="upload-{{ ajustement.id }}" class="btn-upload" title="Joindre le scan" aria-label="Joindre le scan">
+            <i class="fas fa-upload"></i> Joindre
+          </label>
+          <input type="file" id="upload-{{ ajustement.id }}" name="document" style="display:none;" accept=".jpg,.jpeg,.png,.pdf"
+                 onchange="if(typeof confirmerUpload==='function'){confirmerUpload('form-upload-{{ ajustement.id }}')}else{console.error('confirmerUpload non defini')}">
+        </form>
+        {% endif %}
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="8" style="text-align:center;padding:50px;color:var(--text-light);">
+    <i class="fas fa-check-double" style="font-size:30px;display:block;margin-bottom:10px;opacity:.4;"></i>
+    Aucun ajustement ne correspond a cette recherche.
+  </td>
+</tr>
+{% endfor %}

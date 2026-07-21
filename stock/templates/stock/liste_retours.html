@@ -1,0 +1,757 @@
+{% extends "base_ui.html" %}
+{% block title %}Retours Services{% endblock %}
+
+{% block contenu %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+<style>
+  .swal2-container { z-index: 9999999 !important; }
+  .select2-dropdown { z-index: 9999999 !important; }
+  .select2-container .select2-selection--single { height: 41px !important; padding: 5px; border: 1px solid var(--border-color) !important; border-radius: 7px !important; background: var(--bg-input) !important; color: var(--text-dark) !important; }
+  .select2-container--default .select2-selection--single .select2-selection__arrow { height: 39px !important; }
+  .select2-container--default .select2-selection--single .select2-selection__rendered { color: var(--text-dark) !important; }
+
+  .rt-header { background: linear-gradient(135deg, #117a8b, #17a2b8); color: white; border-radius: 12px; padding: 20px 25px; margin-bottom: 22px; display: flex; align-items: center; justify-content: space-between; gap: 14px; box-shadow: 0 4px 15px rgba(23,162,184,.3); flex-wrap: wrap; }
+  .rt-header-left { display: flex; align-items: center; gap: 14px; }
+  .rt-header i.ico { font-size: 28px; opacity: .9; }
+  .rt-header h4 { margin: 0; font-size: 20px; font-weight: 700; }
+  .rt-header small { opacity:.85; font-size: 12px; }
+  .stat-chip { background: rgba(255,255,255,.18); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
+
+  .btn-new { background: var(--bg-card); color: #17a2b8; border: 1px solid rgba(23,162,184,0.4); padding: 10px 18px; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: .2s; box-shadow: 0 2px 6px var(--shadow); }
+  .btn-new:hover { background: rgba(23,162,184,0.12); transform: translateY(-1px); }
+
+  .card-table { background: var(--bg-card); border-radius: 12px; box-shadow: 0 2px 10px var(--shadow); overflow: hidden; border: 1px solid var(--border-light); }
+  .tb-bar { padding: 14px 18px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; background: var(--bg-hover); }
+  .tb-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+
+  .search-wrap { position: relative; }
+  .search-wrap i.ico-s { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 13px; pointer-events: none; }
+  .search-input { padding: 9px 12px 9px 32px; border: 1px solid var(--border-color); border-radius: 7px; font-size: 13px; outline: none; background: var(--bg-input); color: var(--text-dark); }
+  .search-input:focus { border-color: #17a2b8; box-shadow: 0 0 0 3px rgba(23,162,184,0.12); }
+  .search-input-q { flex: 3; min-width: 300px; }
+  .search-input-date { flex: 1; min-width: 160px; max-width: 220px; padding-right: 28px; }
+  .filter-sel { padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 7px; font-size: 13px; outline: none; background: var(--bg-input); color: var(--text-dark); cursor: pointer; }
+  .tb-info { font-size: 12px; color: var(--text-light); }
+
+  .rt-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .rt-table thead tr { background: var(--bg-hover); }
+  .rt-table thead th { padding: 11px 13px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; color: var(--text-light); border-bottom: 2px solid var(--border-color); white-space: nowrap; }
+  .rt-table thead th.c { text-align: center; }
+  .rt-table tbody tr.bon-row { border-bottom: 1px solid var(--border-light); transition: background .12s; cursor: pointer; }
+  .rt-table tbody tr.bon-row:hover { background: var(--bg-hover); }
+  .rt-table tbody tr.bon-row.annule { opacity: .65; background: rgba(220,53,69,0.04); }
+  .rt-table tbody td { padding: 12px 13px; vertical-align: middle; color: var(--text-dark); }
+  .rt-table tbody td.c { text-align: center; }
+
+  .num-bon { font-weight: 700; color: #5dade2; font-size: 13px; }
+  .num-bon.annule { color: var(--text-light); text-decoration: line-through; }
+  .svc-tag { background: rgba(23,162,184,0.12); color: #0c5460; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .mag-tag { background: rgba(28,91,150,0.12); color: #1c5b96; padding: 2px 9px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-annule { background: rgba(220,53,69,0.12); color: #721c24; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .count-tag { background: rgba(23,162,184,0.12); color: #0c5460; padding: 3px 9px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+
+  .chev { color: var(--text-light); font-size: 11px; transition: .2s; }
+
+  .detail-row { display: none; background: var(--bg-stripe); }
+  .detail-row.open { display: table-row; }
+  .detail-row td { padding: 16px 20px; }
+  .detail-inner { background: var(--bg-card); border-radius: 10px; border: 1px solid rgba(23,162,184,0.25); padding: 18px; box-shadow: 0 2px 8px var(--shadow); }
+  .detail-inner h6 { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; color: #5dade2; font-weight: 700; margin: 0 0 10px 0; }
+  .detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .detail-table thead th { padding: 7px 10px; background: var(--bg-hover); border-bottom: 1px solid var(--border-color); font-weight: 700; text-align: left; font-size: 11px; color: var(--text-light); }
+  .detail-table thead th.r { text-align: right; }
+  .detail-table tbody td { padding: 8px 10px; border-bottom: 1px solid var(--border-light); color: var(--text-dark); }
+  .detail-table tbody td.r { text-align: right; font-weight: 700; color: #5dade2; font-size: 14px; }
+
+  .btn-pdf { background: #1c5b96; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; transition: .2s; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; }
+  .btn-pdf:hover { background: #0d3b6e; transform: translateY(-1px); }
+
+  .pag-bar { padding: 14px 18px; border-top: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; background: var(--bg-hover); }
+  .pag-info { font-size: 12px; color: var(--text-light); }
+  .pag-ctrl { display: flex; gap: 4px; }
+  .pag-link { padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 5px; color: var(--text-medium); text-decoration: none; font-size: 12px; background: var(--bg-card); transition: .2s; }
+  .pag-link:hover { background: var(--bg-hover); color: #17a2b8; border-color: rgba(23,162,184,0.4); }
+  .pag-cur { padding: 5px 10px; border-radius: 5px; font-size: 12px; font-weight: 700; color: white; background: #17a2b8; }
+  .empty-row td { text-align: center; padding: 50px; color: var(--text-light); font-size: 14px; }
+
+  /* ── BOUTONS MODALES ── */
+  .btn-ok {
+    background: linear-gradient(135deg, #17a2b8, #117a8b);
+    color: white; border: none; padding: 10px 24px; border-radius: 8px;
+    font-weight: 700; font-size: 14px; cursor: pointer; transition: .2s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-ok:hover { opacity: 0.9; }
+  .btn-nok {
+    background: var(--bg-hover); color: var(--text-medium); border: none;
+    padding: 10px 20px; border-radius: 8px; font-size: 14px;
+    cursor: pointer; transition: .2s; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-nok:hover { background: var(--border-color); }
+
+  /* ── MODAL CRÉATION ── */
+  .mo {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6);
+    z-index: 9999999; align-items: center; justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .mo.open { display: flex; }
+  .mb {
+    background: var(--bg-card); border-radius: 12px; width: 92%; max-width: 820px;
+    max-height: 93vh; display: flex; flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25); animation: si .2s ease;
+  }
+  .mh {
+    background: linear-gradient(135deg,#117a8b,#17a2b8); color: white;
+    padding: 18px 24px; border-radius: 12px 12px 0 0;
+    display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+  }
+  .mh h5 { margin: 0; font-size: 16px; font-weight: 700; }
+  .mc {
+    background: rgba(255,255,255,.2); border: none; color: white;
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer;
+    font-size: 15px; transition: .2s; display: flex; align-items: center; justify-content: center;
+  }
+  .mc:hover { background: rgba(255,255,255,.35); }
+  .mbody { padding: 22px 24px; overflow-y: auto; flex: 1; min-height: 0; }
+  .mfoot {
+    padding: 14px 24px; border-top: 1px solid var(--border-light);
+    display: flex; justify-content: flex-end; gap: 10px;
+    background: var(--bg-stripe); border-radius: 0 0 12px 12px; flex-shrink: 0;
+  }
+
+  .fg { margin-bottom: 15px; }
+  .fg label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-medium); margin-bottom: 5px; }
+  .fg input, .fg select { width: 100%; padding: 9px 12px; border: 1px solid var(--border-color); border-radius: 7px; font-size: 13px; outline: none; transition: .2s; box-sizing: border-box; background: var(--bg-input); color: var(--text-dark); }
+  .fg input:focus, .fg select:focus { border-color: #17a2b8; box-shadow: 0 0 0 3px rgba(23,162,184,0.12); }
+  .fg2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+  /* ── BARRE DE RECHERCHE ARTICLE ── */
+  .search-article-wrap { position: relative; }
+  .search-article-wrap input {
+    width: 100%; padding: 10px 12px 10px 36px; border: 2px solid var(--border-color);
+    border-radius: 8px; font-size: 14px; outline: none; transition: .2s;
+    background: var(--bg-input); color: var(--text-dark); box-sizing: border-box;
+  }
+  .search-article-wrap input:focus { border-color: #17a2b8; box-shadow: 0 0 0 3px rgba(23,162,184,0.15); }
+  .search-article-wrap i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 14px; }
+  .search-results {
+    display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--bg-card); border: 1px solid var(--border-color);
+    border-radius: 8px; max-height: 220px; overflow-y: auto; z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  }
+  .search-results.open { display: block; }
+  .res-item {
+    padding: 10px 14px; cursor: pointer; border-bottom: 1px solid var(--border-light);
+    transition: .15s; display: flex; align-items: center; justify-content: space-between;
+  }
+  .res-item:last-child { border-bottom: none; }
+  .res-item:hover { background: rgba(23,162,184,0.1); }
+  .res-item .ref { font-size: 11px; color: var(--text-light); margin-left: 8px; }
+  .res-item .add-icon { color: #17a2b8; font-size: 13px; opacity: 0; transition: .15s; }
+  .res-item:hover .add-icon { opacity: 1; }
+  .res-empty { padding: 14px; text-align: center; color: var(--text-light); font-size: 13px; }
+
+  .lignes-box { border: 1px solid var(--border-color); border-radius: 10px; overflow: hidden; background: var(--bg-card); }
+  .lignes-head { background: var(--bg-hover); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border-light); }
+  .lignes-head h6 { margin: 0; font-size: 12px; font-weight: 700; color: var(--text-light); text-transform: uppercase; }
+  .ligne-item { padding: 12px 14px; border-bottom: 1px solid var(--border-light); position: relative; }
+  .ligne-item:last-child { border-bottom: none; }
+  .ligne-grid { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 32px; gap: 10px; align-items: end; }
+  .btn-rm { background: rgba(220,53,69,0.1); color: #dc3545; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; transition: .2s; }
+  .btn-rm:hover { background: #dc3545; color: white; }
+
+  .btn-clear-date { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-light); cursor:pointer; font-size:13px; padding:2px 5px; transition:.2s; }
+  .btn-clear-date:hover { color:#dc3545; }
+
+  /* ── MODAL PDF ── */
+  .mo-pdf {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    z-index: 9999999; align-items: flex-start; justify-content: center;
+    backdrop-filter: blur(3px); padding-top: 4vh; overflow-y: auto;
+  }
+  .mo-pdf.open { display: flex; }
+  .mb-pdf {
+    background: var(--bg-card); border-radius: 12px; width: 90%; max-width: 900px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: si .2s ease; margin-bottom: 4vh;
+  }
+  .mh-pdf {
+    background: linear-gradient(135deg, #17a2b8, #117a8b); color: white;
+    padding: 18px 24px; border-radius: 12px 12px 0 0;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .mh-pdf h5 { margin: 0; font-size: 16px; font-weight: 600; }
+  .mc-pdf {
+    background: rgba(255,255,255,0.2); border: none; color: white;
+    width: 32px; height: 32px; border-radius: 50%; font-size: 16px;
+    cursor: pointer; transition: .2s; display: inline-flex;
+    align-items: center; justify-content: center;
+  }
+  .mc-pdf:hover { background: rgba(255,255,255,0.4); }
+  .mfoot-pdf {
+    padding: 14px 24px; border-top: 1px solid var(--border-light);
+    display: flex; justify-content: flex-end; gap: 10px;
+    background: var(--bg-stripe); border-radius: 0 0 12px 12px;
+  }
+
+  @keyframes si { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── DARK MODE ── */
+  body.dark-mode .rt-header { background: linear-gradient(135deg, #0f5060, #0a3d4a); }
+  body.dark-mode .btn-new { color: #80deea; border-color: rgba(128,222,234,0.3); }
+  body.dark-mode .btn-new:hover { background: rgba(128,222,234,0.15); }
+  body.dark-mode .card-table { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+  body.dark-mode .tb-bar { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+  body.dark-mode .search-input { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+  body.dark-mode .search-input::placeholder { color: #94a3b8; }
+  body.dark-mode .filter-sel { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+  body.dark-mode .rt-table thead tr { background: var(--bg-hover, #334155); }
+  body.dark-mode .rt-table thead th { color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+  body.dark-mode .rt-table tbody tr.bon-row { border-color: var(--border-light, #475569); }
+  body.dark-mode .rt-table tbody tr.bon-row:hover { background: var(--bg-hover, #334155); }
+  body.dark-mode .rt-table tbody tr.bon-row.annule { background: rgba(220,53,69,0.08); }
+  body.dark-mode .rt-table tbody td { color: var(--text-dark, #cbd5e1); }
+  body.dark-mode .num-bon { color: #5bc0de; }
+  body.dark-mode .num-bon.annule { color: var(--text-light, #94a3b8); }
+  body.dark-mode .svc-tag { color: #80deea; background: rgba(128,222,234,0.15); }
+  body.dark-mode .mag-tag { color: #5bc0de; background: rgba(91,192,222,0.15); }
+  body.dark-mode .badge-annule { color: #f5a9b1; background: rgba(239,154,154,0.15); }
+  body.dark-mode .count-tag { color: #80deea; background: rgba(128,222,234,0.15); }
+  body.dark-mode .detail-inner { background: var(--bg-card, #1e293b); border-color: rgba(128,222,234,0.2); }
+  body.dark-mode .detail-inner h6 { color: #5bc0de; }
+  body.dark-mode .detail-table thead th { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+  body.dark-mode .detail-table tbody td { color: var(--text-dark, #cbd5e1); border-color: var(--border-light, #475569); }
+  body.dark-mode .detail-table tbody td.r { color: #5bc0de; }
+  body.dark-mode .detail-table tbody td strong { color: var(--text-light, #f1f5f9); }
+  body.dark-mode .pag-bar { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+  body.dark-mode .pag-link { background: var(--bg-card, #1e293b); color: var(--text-light, #94a3b8); border-color: var(--border-light, #475569); }
+  body.dark-mode .pag-link:hover { color: #5bc0de; background: var(--bg-hover, #334155); }
+  body.dark-mode .mb, body.dark-mode .mb-pdf { background: var(--bg-card, #1e293b); box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+  body.dark-mode .mbody { background: var(--bg-hover, #334155); }
+  body.dark-mode .mfoot, body.dark-mode .mfoot-pdf { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+  body.dark-mode .fg input, body.dark-mode .fg select { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+  body.dark-mode .fg label { color: var(--text-light, #94a3b8); }
+  body.dark-mode .lignes-box { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+  body.dark-mode .lignes-head { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+  body.dark-mode .lignes-head h6 { color: var(--text-light, #94a3b8); }
+  body.dark-mode .ligne-item { border-color: var(--border-light, #475569); }
+  body.dark-mode .btn-nok { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); }
+  body.dark-mode .btn-ok { background: linear-gradient(135deg, #0f5060, #117a8b); }
+  body.dark-mode .search-article-wrap input { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+  body.dark-mode .search-results { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+  body.dark-mode .res-item { border-color: var(--border-light, #475569); color: var(--text-light, #f1f5f9); }
+  body.dark-mode .res-item:hover { background: rgba(128,222,234,0.15); }
+  body.dark-mode .res-item .ref { color: #94a3b8; }
+  body.dark-mode .res-item .add-icon { color: #80deea; }
+</style>
+
+<div class="rt-header">
+  <div class="rt-header-left">
+    <i class="fas fa-undo-alt ico"></i>
+    <div>
+      <h4>Retours Services</h4>
+      <small>Réintégration de matériel non consommé</small>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <span class="stat-chip"><i class="fas fa-file-alt"></i> {{ retours_bons.paginator.count }} retour{% if retours_bons.paginator.count > 1 %}s{% endif %}</span>
+    {% if peut_creer %}
+    <button class="btn-new" onclick="ouvrirModal()">
+      <i class="fas fa-plus"></i> Nouveau Retour
+    </button>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card-table">
+  <div class="tb-bar">
+    <div class="tb-filters">
+      <form method="GET" id="form-q" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input type="hidden" name="per_page" value="{{ per_page|default:'15' }}">
+
+        <div class="search-wrap">
+          <i class="fas fa-search ico-s"></i>
+          <input type="text" name="q" value="{{ q|default:'' }}" id="input-q"
+                 class="search-input search-input-q" placeholder="N° bon, service, référence…">
+        </div>
+
+        <div class="search-wrap">
+          <i class="fas fa-calendar-alt ico-s"></i>
+          <input type="text" name="date_range" id="date_range" 
+                 value="{{ request.GET.date_range|default:'' }}"
+                 class="search-input search-input-date" 
+                 placeholder="JJ/MM/AAAA - JJ/MM/AAAA" readonly>
+          {% if request.GET.date_range %}
+          <button type="button" class="btn-clear-date" onclick="clearDateRange()" title="Effacer la période">
+            <i class="fas fa-times"></i>
+          </button>
+          {% endif %}
+        </div>
+
+        <select name="per_page" class="filter-sel" onchange="document.getElementById('form-q').submit()">
+          <option value="15"  {% if per_page == '15'  %}selected{% endif %}>15 / page</option>
+          <option value="50"  {% if per_page == '50'  %}selected{% endif %}>50 / page</option>
+          <option value="all" {% if per_page == 'all' %}selected{% endif %}>Tous</option>
+        </select>
+
+        {% if q or request.GET.date_range %}
+        <a href="{% url 'liste_retours_services' %}" style="font-size:12px;color:#17a2b8;text-decoration:none;padding:9px 12px;border: 1px solid var(--border-color);border-radius:7px;transition:.2s;">
+          <i class="fas fa-times"></i> Effacer
+        </a>
+        {% endif %}
+      </form>
+    </div>
+    <span class="tb-info">{{ retours_bons.paginator.count }} résultat{% if retours_bons.paginator.count > 1 %}s{% endif %}</span>
+  </div>
+
+  <div style="overflow-x:auto;">
+    <table class="rt-table">
+      <thead>
+        <tr>
+          <th style="width:4%;"></th>
+          <th style="width:15%;">N° Bon</th>
+          <th style="width:12%;">Date</th>
+          <th style="width:22%;">Service</th>
+          <th style="width:16%;">Magasin</th>
+          <th class="c" style="width:10%;">Articles</th>
+          <th style="width:13%;">Créé par</th>
+          <th class="c" style="width:8%;">Actions</th>
+        </tr>
+      </thead>
+      <tbody id="zone-tbody">
+        {% include 'stock/retours_lignes.html' %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if retours_bons.has_other_pages %}
+  <div class="pag-bar">
+    <span class="pag-info">{{ retours_bons.start_index }} – {{ retours_bons.end_index }} / {{ retours_bons.paginator.count }}</span>
+    <div class="pag-ctrl">
+      {% if retours_bons.has_previous %}
+      <a class="pag-link" href="?page={{ retours_bons.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if request.GET.date_range %}&date_range={{ request.GET.date_range }}{% endif %}&per_page={{ per_page }}">&laquo; Préc.</a>
+      {% endif %}
+      <span class="pag-cur">{{ retours_bons.number }}/{{ retours_bons.paginator.num_pages }}</span>
+      {% if retours_bons.has_next %}
+      <a class="pag-link" href="?page={{ retours_bons.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if request.GET.date_range %}&date_range={{ request.GET.date_range }}{% endif %}&per_page={{ per_page }}">Suiv. &raquo;</a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ════ MODAL IMPRESSION PDF ════ -->
+<div class="mo-pdf" id="modal-pdf">
+  <div class="mb-pdf" style="max-width:960px;">
+    <div class="mh-pdf">
+      <h5 id="pdf-titre" style="margin:0;"><i class="fas fa-print me-2"></i> Impression</h5>
+      <button class="mc-pdf" onclick="document.getElementById('modal-pdf').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <div id="pdf-body" style="padding:10px;min-height:300px;background:#525659;">
+      <div id="pdf-loader" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;gap:14px;">
+        <div style="width:40px;height:40px;border:4px solid #e0e0e0;border-top-color:#17a2b8;border-radius:50%;animation:spin .8s linear infinite;"></div>
+        <span style="color:white;font-size:13px;">Génération du document en cours…</span>
+      </div>
+      <iframe id="pdf-iframe" style="display:none;width:100%;height:72vh;border:none;border-radius:0 0 8px 8px;"></iframe>
+    </div>
+    <div class="mfoot-pdf" style="background:var(--bg-card);">
+      <button class="btn-nok" onclick="document.getElementById('modal-pdf').classList.remove('open')">Fermer</button>
+      <button class="btn-ok" onclick="document.getElementById('pdf-iframe').contentWindow.print()">
+        <i class="fas fa-print me-1"></i> Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL NOUVEAU RETOUR ══════════════════ -->
+{% if peut_creer %}
+<div class="mo" id="modal-retour" onclick="if(event.target===this)fermerModal()">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh">
+      <h5><i class="fas fa-undo-alt me-2"></i> Nouveau Bon de Retour</h5>
+      <button class="mc" onclick="fermerModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST" id="form-retour" action="{% url 'liste_retours_services' %}">
+      {% csrf_token %}
+      {% if magasin_actif %}
+      <input type="hidden" name="magasin" value="{{ magasin_actif.id }}">
+      {% endif %}
+
+      <div class="mbody">
+
+        <div class="fg">
+          <label>Service demandeur *</label>
+          <select name="service_demandeur" id="sel-service" required style="width:100%;" class="select2-retour">
+            <option value="">-- Choisir un service --</option>
+            {% for s in services %}
+            <option value="{{ s.id }}">{{ s.nom }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="fg">
+          <label>Référence externe (optionnel)</label>
+          <input type="text" name="reference_externe" placeholder="N° de bon physique, référence dossier…">
+        </div>
+
+        <!-- ════ BARRE DE RECHERCHE ARTICLE ════ -->
+        <div class="fg" style="margin-bottom: 8px;">
+          <label>Rechercher un article</label>
+          <div class="search-article-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="input-search-article" placeholder="Tapez le nom ou la référence…" autocomplete="off">
+            <div id="search-results" class="search-results"></div>
+          </div>
+        </div>
+
+        <div class="lignes-box">
+          <div class="lignes-head">
+            <h6><i class="fas fa-boxes me-1"></i> Articles à réintégrer <span id="badge-nb" style="background:rgba(23,162,184,0.2);color:#0c5460;padding:2px 8px;border-radius:10px;font-size:11px;margin-left:6px;">0</span></h6>
+          </div>
+          <div id="zone-lignes">
+            <!-- Les lignes seront injectées ici par JS -->
+          </div>
+          <div id="msg-vide" style="padding: 28px 20px; text-align: center; color: var(--text-light);">
+            <i class="fas fa-search" style="font-size: 32px; display: block; margin-bottom: 10px; opacity: .4;"></i>
+            <div style="font-size: 13px;">Recherchez un article ci-dessus pour l'ajouter à la liste</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermerModal()"><i class="fas fa-times me-1"></i>Annuler</button>
+        <button type="submit" class="btn-ok" id="btn-submit-retour"><i class="fas fa-save me-1"></i>Enregistrer le retour</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<script>
+/* ═════ DONNÉES ARTICLES ═════ */
+const ALL_ARTICLES = [
+    {% for a in articles %}
+    {id: {{ a.id }}, designation: "{{ a.designation|escapejs }}", reference: "{{ a.reference|default:""|escapejs }}"}{% if not forloop.last %},{% endif %}
+    {% endfor %}
+];
+
+/* ═════ MODAL PDF ═════ */
+function imprimerModal(url, titre) {
+    var modal = document.getElementById('modal-pdf');
+    document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-print me-2"></i>' + (titre||'');
+    var loader = document.getElementById('pdf-loader');
+    var iframe = document.getElementById('pdf-iframe');
+    loader.style.display = 'flex';
+    iframe.style.display = 'none';
+    iframe.src = '';
+    modal.classList.add('open');
+    iframe.onload = function() {
+        loader.style.display = 'none';
+        iframe.style.display = 'block';
+    };
+    iframe.src = url;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('modal-pdf').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('open');
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') document.getElementById('modal-pdf').classList.remove('open');
+    });
+});
+
+function toggleDetail(bonId) {
+    var detail = document.getElementById('detail-' + bonId);
+    var chev   = document.getElementById('chev-' + bonId);
+    var isOpen = detail && detail.classList.contains('open');
+
+    document.querySelectorAll('.detail-row.open').forEach(function(r){ r.classList.remove('open'); });
+    document.querySelectorAll('.chev').forEach(function(c){
+        c.classList.replace('fa-chevron-down','fa-chevron-right'); c.style.color='var(--text-light)';
+    });
+
+    if (!isOpen && detail) {
+        detail.classList.add('open');
+        if (chev) { chev.classList.replace('fa-chevron-right','fa-chevron-down'); chev.style.color='#17a2b8'; }
+    }
+}
+
+function clearDateRange() {
+    var dr = document.getElementById('date_range');
+    var form = document.getElementById('form-q');
+    if (dr) dr.value = '';
+    if (form) form.submit();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var timer;
+    var input = document.getElementById('input-q');
+    var tbody = document.getElementById('zone-tbody');
+    var form  = document.getElementById('form-q');
+
+    if (input) {
+        input.addEventListener('input', function() {
+            clearTimeout(timer);
+            if (tbody) tbody.style.opacity = '.4';
+            timer = setTimeout(function() {
+                var params = new URLSearchParams(new FormData(form)).toString();
+                fetch(window.location.pathname + '?' + params, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function(r){ return r.text(); })
+                .then(function(html) {
+                    if (tbody) { tbody.innerHTML = html; tbody.style.opacity = '1'; }
+                })
+                .catch(function() {
+                    if (tbody) tbody.style.opacity = '1';
+                });
+            }, 400);
+        });
+    }
+
+    if ($.fn.daterangepicker) {
+        var $dr = $('#date_range');
+        var existing = $dr.val();
+        var drConfig = {
+            autoUpdateInput: false,
+            autoApply: true,
+            locale: {
+                format: 'DD/MM/YYYY',
+                cancelLabel: 'Effacer',
+                applyLabel: 'Appliquer',
+                daysOfWeek: ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'],
+                monthNames: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc']
+            }
+        };
+
+        if (existing) {
+            var parts = existing.split(' - ');
+            if (parts.length === 2) {
+                drConfig.startDate = moment(parts[0], 'DD/MM/YYYY');
+                drConfig.endDate   = moment(parts[1], 'DD/MM/YYYY');
+            }
+        }
+
+        $dr.daterangepicker(drConfig);
+
+        $dr.on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+            if (form) form.submit();
+        });
+
+        $dr.on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+            if (form) form.submit();
+        });
+    }
+
+    if (typeof $ !== 'undefined') {
+        $('.select2-retour').select2({ width: '100%', dropdownParent: $('#modal-retour') });
+    }
+});
+
+function ouvrirModal() {
+    document.getElementById('modal-retour').classList.add('open');
+    setTimeout(function(){ document.getElementById('input-search-article').focus(); }, 100);
+}
+function fermerModal() {
+    document.getElementById('modal-retour').classList.remove('open');
+}
+document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape') fermerModal();
+});
+
+/* ═══════════════════════════════════════════════
+   RECHERCHE & AJOUT D'ARTICLES
+   ═══════════════════════════════════════════════ */
+(function() {
+    var searchInput = document.getElementById('input-search-article');
+    var resultsBox  = document.getElementById('search-results');
+    var zoneLignes  = document.getElementById('zone-lignes');
+    var msgVide     = document.getElementById('msg-vide');
+    var badgeNb     = document.getElementById('badge-nb');
+    var ligneIndex  = 0;
+
+    function updateCompteur() {
+        var nb = zoneLignes.querySelectorAll('.ligne-item').length;
+        badgeNb.textContent = nb;
+        msgVide.style.display = nb === 0 ? 'block' : 'none';
+    }
+
+    function ajouterLigneArticle(article) {
+        // Vérifie doublon
+        var existant = zoneLignes.querySelector('[data-article-id="' + article.id + '"]');
+        if (existant) {
+            Swal.fire({ icon: 'info', title: 'Déjà présent', text: 'Cet article est déjà dans la liste.', confirmButtonColor: '#17a2b8', timer: 2000 });
+            searchInput.value = '';
+            resultsBox.classList.remove('open');
+            searchInput.focus();
+            return;
+        }
+
+        ligneIndex++;
+        var div = document.createElement('div');
+        div.className = 'ligne-item';
+        div.setAttribute('data-article-id', article.id);
+        div.id = 'ligne-' + ligneIndex;
+
+        div.innerHTML = `
+            <div class="ligne-grid">
+                <div class="fg" style="margin:0;">
+                    <label>Article</label>
+                    <input type="hidden" name="articles[]" value="${article.id}">
+                    <div style="padding:9px 12px; background:var(--bg-stripe); border:1px solid var(--border-color); border-radius:7px; font-size:13px; font-weight:600; color:var(--text-dark);">
+                        ${article.designation}
+                        <span style="color:var(--text-light); font-size:11px; font-weight:400;">(${article.reference || '—'})</span>
+                    </div>
+                </div>
+                <div class="fg" style="margin:0;">
+                    <label>Quantité *</label>
+                    <input type="number" name="quantites[]" min="1" required value="1"
+                           style="width:100%; padding:8px; border:2px solid #28a745; border-radius:6px; text-align:center; font-weight:bold; color:#28a745; font-size:14px; outline:none; box-sizing:border-box;">
+                </div>
+                <div class="fg" style="margin:0;">
+                    <label>N° Lot</label>
+                    <input type="text" name="lots[]" placeholder="Optionnel"
+                           style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font-size:13px; outline:none; background:var(--bg-input); color:var(--text-dark); box-sizing:border-box;">
+                </div>
+                <div class="fg" style="margin:0;">
+                    <label>Péremption</label>
+                    <input type="date" name="peremptions[]"
+                           style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font-size:13px; outline:none; background:var(--bg-input); color:var(--text-dark); box-sizing:border-box;">
+                </div>
+                <button type="button" class="btn-rm" onclick="retirerLigne(this)" title="Retirer cet article">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        `;
+
+        zoneLignes.appendChild(div);
+        updateCompteur();
+
+        // Animation d'entrée
+        div.style.opacity = '0';
+        div.style.transform = 'translateY(-6px)';
+        div.style.transition = 'all .2s ease';
+        requestAnimationFrame(function(){
+            div.style.opacity = '1';
+            div.style.transform = 'translateY(0)';
+        });
+
+        searchInput.value = '';
+        resultsBox.classList.remove('open');
+        searchInput.focus();
+    }
+
+    window.retirerLigne = function(btn) {
+        var item = btn.closest('.ligne-item');
+        if (item) {
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(20px)';
+            item.style.transition = 'all .2s ease';
+            setTimeout(function(){ item.remove(); updateCompteur(); }, 200);
+        }
+    };
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            var q = this.value.trim().toLowerCase();
+            if (!q) { resultsBox.classList.remove('open'); return; }
+
+            var filtres = ALL_ARTICLES.filter(function(a){
+                return a.designation.toLowerCase().indexOf(q) !== -1 ||
+                       (a.reference && a.reference.toLowerCase().indexOf(q) !== -1);
+            });
+
+            if (filtres.length === 0) {
+                resultsBox.innerHTML = '<div class="res-empty"><i class="fas fa-inbox" style="margin-right:6px;"></i>Aucun article trouvé</div>';
+            } else {
+                resultsBox.innerHTML = filtres.slice(0, 8).map(function(a){
+                    return '<div class="res-item" data-id="' + a.id + '">' +
+                           '<span>' + a.designation + '<span class="ref">' + (a.reference || '—') + '</span></span>' +
+                           '<i class="fas fa-plus-circle add-icon"></i>' +
+                           '</div>';
+                }).join('');
+            }
+            resultsBox.classList.add('open');
+
+            resultsBox.querySelectorAll('.res-item').forEach(function(item){
+                item.addEventListener('click', function(){
+                    var id = parseInt(this.getAttribute('data-id'));
+                    var art = ALL_ARTICLES.find(function(x){ return x.id === id; });
+                    if (art) ajouterLigneArticle(art);
+                });
+            });
+        });
+
+        document.addEventListener('click', function(e){
+            if (!searchInput.contains(e.target) && !resultsBox.contains(e.target)) {
+                resultsBox.classList.remove('open');
+            }
+        });
+
+        searchInput.addEventListener('keydown', function(e){
+            if (e.key === 'ArrowDown' && resultsBox.classList.contains('open')) {
+                var first = resultsBox.querySelector('.res-item');
+                if (first) first.focus();
+            }
+        });
+    }
+
+    // Validation & soumission
+    var formRetour = document.getElementById('form-retour');
+    if (formRetour) {
+        formRetour.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            var nb = zoneLignes.querySelectorAll('.ligne-item').length;
+            if (nb === 0) {
+                Swal.fire({ icon: 'warning', title: 'Aucun article', text: 'Veuillez ajouter au moins un article.', confirmButtonColor: '#17a2b8' });
+                searchInput.focus();
+                return;
+            }
+
+            // Vérifie service sélectionné
+            var service = document.getElementById('sel-service');
+            if (service && !service.value) {
+                Swal.fire({ icon: 'warning', title: 'Service manquant', text: 'Veuillez sélectionner un service demandeur.', confirmButtonColor: '#17a2b8' });
+                return;
+            }
+
+            var f = this;
+            Swal.fire({
+                title: 'Enregistrer ce retour ?',
+                text: 'Le stock sera réintégré au magasin sélectionné.',
+                icon: 'question', showCancelButton: true,
+                confirmButtonColor: '#17a2b8', cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-save"></i> Enregistrer',
+                cancelButtonText: 'Annuler'
+            }).then(function(r) {
+                if (r.isConfirmed) {
+                    Swal.fire({ title: 'Enregistrement…', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
+                    f.submit();
+                }
+            });
+        });
+    }
+})();
+
+
+    /* ═════ AUTO-OPEN après création ═════ */
+    {% if request.GET.print_bon %}
+    (function() {
+        setTimeout(function() {
+            var urlImpression = "{% url 'imprimer_bon_multi_lignes' request.GET.print_bon %}";
+            imprimerModal(urlImpression, "Bon de Retour — {{ request.GET.print_bon }}");
+        }, 800);
+    })();
+    {% endif %}
+</script>
+{% endblock %}

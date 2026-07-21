@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fiche Matériel - {{ immo.code_patrimoine }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; color: #333; padding-bottom: 80px; }
+        .header { background: #1c5b96; color: white; padding: 20px; text-align: center; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .header h1 { margin: 0; font-size: 22px; }
+        .header p { margin: 5px 0 0 0; opacity: 0.8; font-size: 14px; }
+        .card { background: white; margin: 20px; border-radius: 15px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .statut-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; margin-bottom: 15px; }
+        .st-ACTIF { background: #d4edda; color: #155724; }
+        .st-EN_PANNE { background: #f8d7da; color: #721c24; }
+        .st-REFORME { background: #e2e3e5; color: #383d41; }
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid #f0f0f0; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #888; font-size: 13px; }
+        .info-val { font-weight: bold; font-size: 14px; text-align: right; }
+        .specs-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+        .spec-tag { background: #e8f0fe; color: #1c5b96; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; }
+        .floating-btn { position: fixed; bottom: 20px; left: 20px; right: 20px; background: #dc3545; color: white; text-align: center; padding: 15px; border-radius: 12px; font-size: 16px; font-weight: bold; text-decoration: none; box-shadow: 0 5px 15px rgba(220,53,69,0.3); transition: 0.2s; }
+        .floating-btn:active { transform: scale(0.98); }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <i class="fas fa-desktop" style="font-size: 40px; margin-bottom: 10px;"></i>
+        <h1>{{ immo.nom_affichage }}</h1>
+        <p>{{ immo.code_patrimoine }}</p>
+    </div>
+
+    <div class="card">
+        <div style="text-align: center;">
+            <span class="statut-badge st-{{ immo.statut }}">{{ immo.get_statut_display }}</span>
+        </div>
+
+        <div class="info-row">
+            <span class="info-label">Marque / Modèle</span>
+            <span class="info-val">{{ immo.marque.nom|default:"—" }} {{ immo.modele.nom|default:"" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">N° de Série</span>
+            <span class="info-val">{{ immo.numero_serie|default:"—" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Service</span>
+            <span class="info-val">{{ immo.service_affectation.nom|default:"—" }}</span>
+        </div>
+        <div class="info-row">
+            <span class="info-label">Localisation</span>
+            <span class="info-val">
+                {% if immo.bureau %}
+                    Bât. {{ immo.bureau.batiment.code }} / {{ immo.bureau.nom }}
+                {% else %}
+                    —
+                {% endif %}
+            </span>
+        </div>
+    </div>
+
+    {% if immo.specs_techniques %}
+    <div class="card">
+        <h3 style="margin-top: 0; font-size: 15px; color: #1c5b96;">Spécifications techniques</h3>
+        <div class="specs-tags">
+            {% for cle, valeur in immo.specs_techniques.items %}
+                <span class="spec-tag">{{ valeur }}</span>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <a href="{% url 'patrimoine_creer_intervention' immo.id %}" class="floating-btn">
+        <i class="fas fa-exclamation-triangle"></i> Signaler un problème
+    </a>
+
+    {% if messages %}
+        <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                {% for message in messages %}
+                    Swal.fire({
+                        icon: '{% if message.tags == "error" %}error{% else %}success{% endif %}',
+                        title: '{% if message.tags == "error" %}Erreur{% else %}Succès{% endif %}',
+                        text: '{{ message }}',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#1c5b96',
+                        timer: 4000
+                    });
+                {% endfor %}
+            });
+        </script>
+    {% endif %}
+
+</body>
+</html>

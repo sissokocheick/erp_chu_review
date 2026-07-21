@@ -1,0 +1,260 @@
+{% extends "base_ui.html" %}
+{% block contenu %}
+
+<div style="background: var(--card-bg); padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px var(--shadow);">
+
+    <!-- HEADER -->
+    <div style="border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 25px;">
+        <h2 style="color: var(--text-primary); margin: 0;">
+            <i class="fas fa-star-half-alt" style="color: #6f42c1;"></i> Taux de Satisfaction par Service
+        </h2>
+        <p style="color: var(--text-muted); margin-top: 5px; font-size: 14px;">
+            Croisement des demandes, livraisons et accusés de réception pour mesurer la satisfaction des services demandeurs.
+        </p>
+    </div>
+
+    <!-- FILTRES -->
+    <form method="GET" style="display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-end; margin-bottom: 25px; padding: 15px; background: var(--bg-stripe); border-radius: 6px; border: 1px solid var(--border-color);">
+        <div style="flex: 1; min-width: 220px;">
+            <label style="font-size: 12px; font-weight: bold; color: #6f42c1; display: block; margin-bottom: 5px;">
+                <i class="far fa-calendar-alt"></i> Période :
+            </label>
+            <input type="text" name="date_range" id="date_range_picker" value="{{ date_range }}" class="form-control" placeholder="JJ/MM/AAAA - JJ/MM/AAAA" style="width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px;">
+        </div>
+        <div style="flex: 1; min-width: 220px;">
+            <label style="font-size: 12px; font-weight: bold; color: #6f42c1; display: block; margin-bottom: 5px;">
+                <i class="fas fa-hospital-user"></i> Service :
+            </label>
+            <select name="service" class="form-control select2" style="width: 100%;">
+                <option value="">-- Tous les services --</option>
+                {% for s in services %}
+                    <option value="{{ s.id }}" {% if service_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <button type="submit" style="background: #6f42c1; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer;">
+                <i class="fas fa-filter"></i> Filtrer
+            </button>
+            <a href="{% url 'stats_satisfaction_services' %}" style="background: var(--bg-hover); color: var(--text-medium); border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; text-decoration: none; display: inline-block; margin-left: 5px;" rel="noopener noreferrer">
+                <i class="fas fa-undo"></i> Réinitialiser
+            </a>
+        </div>
+    </form>
+
+    <!-- KPI GLOBAUX -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-bottom: 25px;">
+        <div style="background: linear-gradient(135deg, #28a745, #1e7e34); color: white; padding: 18px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold;">{{ global.taux_satisfaction }}%</div>
+            <div style="font-size: 12px; opacity: 0.9;">Taux Satisfaction</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #17a2b8, #117a8b); color: white; padding: 18px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold;">{{ global.taux_reponse }}%</div>
+            <div style="font-size: 12px; opacity: 0.9;">Taux Réponse</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; padding: 18px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold;">{{ global.note_moyenne }}</div>
+            <div style="font-size: 12px; opacity: 0.9;">Note Moyenne /5</div>
+        </div>
+        <div style="background: linear-gradient(135deg, #6f42c1, #5a32a3); color: white; padding: 18px; border-radius: 8px; text-align: center;">
+            <div style="font-size: 24px; font-weight: bold;">{{ global.total_accuses }}</div>
+            <div style="font-size: 12px; opacity: 0.9;">Accusés Signés</div>
+        </div>
+    </div>
+
+    <!-- TABLEAU -->
+    <div style="overflow-x: auto; margin-bottom: 30px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 14px;">
+            <thead>
+                <tr style="background: #6f42c1; color: white;">
+                    <th style="padding: 12px; text-align: left;">Service</th>
+                    <th style="padding: 12px; text-align: center;">Demandes</th>
+                    <th style="padding: 12px; text-align: center;">Livraisons</th>
+                    <th style="padding: 12px; text-align: center;">Accusés</th>
+                    <th style="padding: 12px; text-align: center;">Satisfaits</th>
+                    <th style="padding: 12px; text-align: center;">Insatisfaits</th>
+                    <th style="padding: 12px; text-align: center;">Neutres</th>
+                    <th style="padding: 12px; text-align: center;">Taux Sat.</th>
+                    <th style="padding: 12px; text-align: center;">Taux Rép.</th>
+                    <th style="padding: 12px; text-align: center;">Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for stat in stats_services %}
+                <tr style="border-bottom: 1px solid var(--border-color);" class="{% if forloop.counter|divisibleby:2 %}table-striped{% endif %}">
+                    <td style="padding: 12px; font-weight: 600;">{{ stat.service.nom }}</td>
+                    <td style="padding: 12px; text-align: center;">{{ stat.total_demandes }}</td>
+                    <td style="padding: 12px; text-align: center;">{{ stat.total_livraisons }}</td>
+                    <td style="padding: 12px; text-align: center; font-weight: bold; color: #6f42c1;">{{ stat.total_accuses }}</td>
+                    <td style="padding: 12px; text-align: center; color: #28a745; font-weight: 600;">{{ stat.satisfaits }}</td>
+                    <td style="padding: 12px; text-align: center; color: #dc3545; font-weight: 600;">{{ stat.insatisfaits }}</td>
+                    <td style="padding: 12px; text-align: center; color: #6c757d;">{{ stat.neutres }}</td>
+                    <td style="padding: 12px; text-align: center;">
+                        <span style="background: {% if stat.taux_satisfaction >= 80 %}#d4edda; color: #155724;{% elif stat.taux_satisfaction >= 50 %}#fff3cd; color: #856404;{% else %}#f8d7da; color: #721c24;{% endif %} padding: 4px 10px; border-radius: 12px; font-weight: bold; font-size: 13px;">
+                            {{ stat.taux_satisfaction }}%
+                        </span>
+                    </td>
+                    <td style="padding: 12px; text-align: center;">{{ stat.taux_reponse }}%</td>
+                    <td style="padding: 12px; text-align: center; font-weight: bold;">{{ stat.note_moyenne }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="10" style="padding: 30px; text-align: center; color: var(--text-muted);">
+                        <i class="fas fa-inbox" style="font-size: 24px; margin-bottom: 10px; display: block;"></i>
+                        Aucune donnée de satisfaction trouvée pour cette période.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- GRAPHIQUES -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; margin-bottom: 20px;">
+        <div style="background: var(--bg-stripe); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <h5 style="margin: 0 0 15px 0; color: var(--text-primary);"><i class="fas fa-smile" style="color: #28a745;"></i> Taux de Satisfaction par Service</h5>
+            <canvas id="chartSat" height="220" aria-label="Graphique taux de satisfaction"></canvas>
+        </div>
+        <div style="background: var(--bg-stripe); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <h5 style="margin: 0 0 15px 0; color: var(--text-primary);"><i class="fas fa-reply" style="color: #17a2b8;"></i> Taux de Réponse par Service</h5>
+            <canvas id="chartRep" height="220" aria-label="Graphique taux de réponse"></canvas>
+        </div>
+        <div style="background: var(--bg-stripe); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <h5 style="margin: 0 0 15px 0; color: var(--text-primary);"><i class="fas fa-star" style="color: #ffc107;"></i> Note Moyenne par Service</h5>
+            <canvas id="chartNotes" height="220" aria-label="Graphique notes moyennes"></canvas>
+        </div>
+        <div style="background: var(--bg-stripe); padding: 20px; border-radius: 8px; border: 1px solid var(--border-color);">
+            <h5 style="margin: 0 0 15px 0; color: var(--text-primary);"><i class="fas fa-chart-pie" style="color: #6f42c1;"></i> Répartition Globale</h5>
+            <canvas id="chartRepartition" height="220" aria-label="Graphique répartition globale"></canvas>
+        </div>
+    </div>
+
+</div>
+
+<!-- SCRIPTS -->
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+{{ chart_labels|json_script:"chart-labels" }}
+{{ chart_sat|json_script:"chart-sat" }}
+{{ chart_rep|json_script:"chart-rep" }}
+{{ chart_notes|json_script:"chart-notes" }}
+{{ chart_repartition_labels|json_script:"chart-repartition-labels" }}
+{{ chart_repartition_data|json_script:"chart-repartition-data" }}
+
+<script>
+(function() {
+    'use strict';
+
+    const labels = JSON.parse(document.getElementById('chart-labels').textContent);
+    const chartSat = JSON.parse(document.getElementById('chart-sat').textContent);
+    const chartRep = JSON.parse(document.getElementById('chart-rep').textContent);
+    const chartNotes = JSON.parse(document.getElementById('chart-notes').textContent);
+    const repLabels = JSON.parse(document.getElementById('chart-repartition-labels').textContent);
+    const repData = JSON.parse(document.getElementById('chart-repartition-data').textContent);
+
+    const commonOptions = {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, max: 100 } }
+    };
+
+    new Chart(document.getElementById('chartSat'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Taux Satisfaction (%)',
+                data: chartSat,
+                backgroundColor: 'rgba(40, 167, 69, 0.7)',
+                borderColor: '#28a745',
+                borderWidth: 1
+            }]
+        },
+        options: commonOptions
+    });
+
+    new Chart(document.getElementById('chartRep'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Taux Réponse (%)',
+                data: chartRep,
+                backgroundColor: 'rgba(23, 162, 184, 0.7)',
+                borderColor: '#17a2b8',
+                borderWidth: 1
+            }]
+        },
+        options: commonOptions
+    });
+
+    new Chart(document.getElementById('chartNotes'), {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Note Moyenne',
+                data: chartNotes,
+                backgroundColor: 'rgba(255, 193, 7, 0.7)',
+                borderColor: '#ffc107',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, max: 5 } }
+        }
+    });
+
+    new Chart(document.getElementById('chartRepartition'), {
+        type: 'doughnut',
+        data: {
+            labels: repLabels,
+            datasets: [{
+                data: repData,
+                backgroundColor: ['#28a745', '#6c757d', '#dc3545']
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // Daterangepicker avec vérification jQuery
+    if (typeof $ !== 'undefined' && $.fn.daterangepicker) {
+        $('.select2').select2({ placeholder: "Rechercher un service...", allowClear: true });
+
+        $('#date_range_picker').daterangepicker({
+            locale: {
+                format: 'DD/MM/YYYY',
+                separator: ' - ',
+                applyLabel: 'Valider',
+                cancelLabel: 'Annuler',
+                fromLabel: 'De',
+                toLabel: 'À',
+                customRangeLabel: 'Personnalisé',
+                daysOfWeek: ['Di', 'Lu', 'Ma', 'Me', 'Je', 'Ve', 'Sa'],
+                monthNames: ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'],
+                firstDay: 1
+            },
+            autoUpdateInput: false
+        });
+        $('#date_range_picker').on('apply.daterangepicker', function(ev, picker) {
+            $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+        });
+        $('#date_range_picker').on('cancel.daterangepicker', function(ev, picker) {
+            $(this).val('');
+        });
+    }
+})();
+</script>
+
+{% endblock %}

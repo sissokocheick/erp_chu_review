@@ -1,0 +1,444 @@
+{% extends "base_ui.html" %}
+{% block contenu %}
+
+<style>
+    .page-header-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+    }
+    .page-header-bar h2 { color: var(--text-dark); margin: 0; font-size: 20px; }
+
+    .btn-new {
+        background: #1c5b96; color: white; border: none;
+        padding: 10px 15px; border-radius: 8px; font-weight: 700; font-size: 14px;
+        transition: 0.2s; box-shadow: 0 2px 8px rgba(28,91,150,0.3);
+        cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-new:hover { background: #0d3b6e; transform: translateY(-1px); }
+
+    .search-bar {
+        display: flex; gap: 15px; margin-bottom: 15px;
+        background: var(--bg-stripe); padding: 15px;
+        border-radius: 10px; border: 1px solid var(--border-light); flex-wrap: wrap;
+    }
+    .search-bar input {
+        flex: 1; padding: 10px; border: 2px solid var(--border-color);
+        border-radius: 8px; font-size: 13px; outline: none; min-width: 200px;
+        background: var(--bg-input); color: var(--text-dark); transition: 0.2s;
+    }
+    .search-bar input:focus { border-color: #17a2b8; box-shadow: 0 0 0 3px rgba(23,162,184,0.12); }
+    .btn-reset {
+        color: #dc3545; background: #ffebeb; padding: 10px 15px; border-radius: 8px;
+        text-decoration: none; font-weight: 700; font-size: 13px; display: inline-flex;
+        align-items: center; gap: 6px; border: 1px solid #f5c6cb; transition: 0.2s;
+    }
+    .btn-reset:hover { background: #f8d7da; }
+
+    .table-card {
+        background: var(--bg-card); border-radius: 10px;
+        box-shadow: 0 2px 10px var(--shadow); overflow: hidden;
+        border: 1px solid var(--border-light); transition: opacity 0.3s;
+    }
+    .table-card table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table-card thead tr { background: #1c5b96; }
+    .table-card thead th {
+        padding: 13px 15px; color: white; font-weight: 600;
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .table-card tbody tr { border-bottom: 1px solid var(--border-light); transition: background 0.2s; }
+    .table-card tbody tr:hover { background: var(--bg-hover); }
+    .table-card tbody td { padding: 13px 15px; vertical-align: middle; color: var(--text-dark); }
+
+    .badge-peremption { background: rgba(40,167,69,0.12); color: #155724; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(40,167,69,0.3); }
+    .badge-patrimoine { background: rgba(255,193,7,0.12); color: #856404; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; border: 1px solid rgba(255,193,7,0.3); }
+
+    .btn-action {
+        background: none; border: none; cursor: pointer; font-size: 16px;
+        width: 32px; height: 32px; border-radius: 8px; transition: 0.2s;
+        display: inline-flex; align-items: center; justify-content: center;
+    }
+    .btn-action.edit { color: #28a745; } .btn-action.edit:hover { background: rgba(40,167,69,0.15); }
+    .btn-action.delete { color: #dc3545; } .btn-action.delete:hover { background: rgba(220,53,69,0.15); }
+
+    .pagination-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-top: 20px; padding: 15px; background: var(--bg-stripe);
+        border-radius: 10px; border: 1px solid var(--border-light);
+        flex-wrap: wrap; gap: 12px;
+    }
+    .pagination-info { font-size: 13px; color: var(--text-medium); }
+    .pagination-info strong { color: var(--text-dark); }
+    .pagination-controls { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .page-btn {
+        padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color);
+        background: var(--bg-card); color: var(--text-dark); text-decoration: none;
+        font-size: 13px; font-weight: 600; transition: 0.2s; cursor: pointer;
+        min-width: 34px; text-align: center;
+    }
+    .page-btn:hover { background: #1c5b96; color: white; border-color: #1c5b96; }
+    .page-btn.active { background: #1c5b96; color: white; border-color: #1c5b96; }
+    .page-btn.disabled { opacity: 0.45; cursor: not-allowed; }
+    .per-page-select {
+        padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-color);
+        background: var(--bg-card); color: var(--text-dark); font-size: 13px; cursor: pointer;
+    }
+
+    body.dark-mode .pagination-bar { background: var(--bg-card); border-color: var(--border-light); }
+    body.dark-mode .pagination-info strong { color: var(--text-light); }
+    body.dark-mode .page-btn { background: var(--bg-hover); color: var(--text-light); border-color: var(--border-light); }
+    body.dark-mode .page-btn:hover { background: #117a8b; color: white; }
+    body.dark-mode .per-page-select { background: var(--bg-hover); color: var(--text-light); border-color: var(--border-light); }
+
+    .modal-overlay {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0,0,0,0.55); z-index: 9999999; align-items: center;
+        justify-content: center; backdrop-filter: blur(3px);
+    }
+    .modal-box {
+        background: var(--bg-card); width: 90%; max-width: 550px;
+        border-radius: 12px; box-shadow: 0 20px 50px var(--shadow);
+        overflow: hidden; animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
+    .modal-header {
+        background: linear-gradient(135deg, #1c5b96, #117a8b); color: white; padding: 18px 25px; display: flex;
+        justify-content: space-between; align-items: center; font-weight: 700;
+    }
+    .modal-body { padding: 25px; max-height: 65vh; overflow-y: auto; background: var(--bg-card); }
+    .modal-body label {
+        display: block; font-size: 11px; font-weight: 700; color: var(--text-medium);
+        text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;
+    }
+    .modal-body input, .modal-body select { width: 100%; box-sizing: border-box; }
+
+    .form-group { margin-bottom: 18px; }
+    .form-control {
+        width: 100%; padding: 11px 14px; border: 2px solid var(--border-color);
+        border-radius: 8px; font-size: 14px; background: var(--bg-input);
+        color: var(--text-dark); transition: 0.3s;
+    }
+    .form-control:focus { border-color: #17a2b8; box-shadow: 0 0 0 3px rgba(23,162,184,0.12); outline: none; }
+
+    .modal-footer {
+        padding: 15px 25px; border-top: 1px solid var(--border-light);
+        display: flex; justify-content: flex-end; gap: 10px; background: var(--bg-stripe);
+    }
+    .btn-cancel { background: var(--bg-hover); color: var(--text-medium); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    .btn-cancel:hover { background: var(--border-color); }
+    .btn-save { background: #1c5b96; color: white; border: none; padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    .btn-save:hover { background: #0d3b6e; }
+
+    .card-checkbox {
+        display: flex; align-items: flex-start; gap: 15px; padding: 18px;
+        border-radius: 10px; border: 1px solid var(--border-color); cursor: pointer;
+        transition: 0.2s; margin-bottom: 15px; background: var(--bg-stripe);
+    }
+    .card-checkbox:hover { background: var(--bg-hover); }
+    .card-checkbox input[type="checkbox"] { width: 22px; height: 22px; margin-top: 2px; cursor: pointer; accent-color: #17a2b8; }
+
+    .alert-form-errors {
+        background: var(--danger-light, #f8d7da);
+        color: var(--danger-text, #721c24);
+        padding: 12px 15px; border-radius: 8px; margin-bottom: 20px;
+        font-size: 13px; border-left: 5px solid #dc3545;
+    }
+
+    body.dark-mode .page-header-bar { border-bottom-color: var(--border-light, #475569); }
+    body.dark-mode .page-header-bar h2 { color: var(--text-light, #f1f5f9); }
+    body.dark-mode .btn-new { background: linear-gradient(135deg, #0f5060, #0a3d4a); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    body.dark-mode .btn-new:hover { background: #117a8b; }
+    body.dark-mode .search-bar { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+    body.dark-mode .search-bar input { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+    body.dark-mode .search-bar input::placeholder { color: #94a3b8; }
+    body.dark-mode .search-bar input:focus { border-color: #5bc0de; box-shadow: 0 0 0 3px rgba(91,192,222,0.1); }
+    body.dark-mode .btn-reset { background: rgba(220,53,69,0.15); color: #f5a9b1; border-color: rgba(220,53,69,0.3); }
+    body.dark-mode .table-card { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+    body.dark-mode .table-card thead tr { background: var(--bg-hover, #334155) !important; }
+    body.dark-mode .table-card thead th { color: var(--text-light, #f1f5f9) !important; }
+    body.dark-mode .table-card tbody tr { border-bottom-color: var(--border-light, #475569); }
+    body.dark-mode .table-card tbody tr:hover { background: var(--bg-hover, #334155); }
+    body.dark-mode .table-card tbody td { color: var(--text-dark, #cbd5e1); }
+    body.dark-mode .badge-peremption { background: rgba(129,199,132,0.15); color: #a5d6a7; border-color: rgba(129,199,132,0.3); }
+    body.dark-mode .badge-patrimoine { background: rgba(255,213,79,0.15); color: #ffe082; border-color: rgba(255,213,79,0.3); }
+    body.dark-mode .btn-action.edit { color: #81c784; }
+    body.dark-mode .btn-action.edit:hover { background: rgba(129,199,132,0.2); }
+    body.dark-mode .btn-action.delete { color: #ef9a9a; }
+    body.dark-mode .btn-action.delete:hover { background: rgba(239,154,154,0.2); }
+    body.dark-mode .modal-box { background: var(--bg-card, #1e293b); }
+    body.dark-mode .modal-header { background: linear-gradient(135deg, #0f5060, #0a3d4a); }
+    body.dark-mode .modal-body { background: var(--bg-card, #1e293b); }
+    body.dark-mode .modal-footer { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+    body.dark-mode .form-control { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+    body.dark-mode .form-control:focus { border-color: #5bc0de; box-shadow: 0 0 0 3px rgba(91,192,222,0.1); }
+    body.dark-mode .modal-body label { color: var(--text-light, #94a3b8); }
+    body.dark-mode .card-checkbox { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+    body.dark-mode .card-checkbox:hover { background: var(--bg-hover, #334155); }
+    body.dark-mode .card-checkbox strong { color: var(--text-light, #f1f5f9) !important; }
+    body.dark-mode .card-checkbox span { color: var(--text-light, #94a3b8) !important; }
+    body.dark-mode .btn-cancel { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); border-color: var(--border-light, #475569); }
+    body.dark-mode .btn-cancel:hover { background: var(--border-light, #475569); }
+    body.dark-mode .btn-save { background: linear-gradient(135deg, #0f5060, #0a3d4a); }
+    body.dark-mode .btn-save:hover { background: #117a8b; }
+    body.dark-mode .alert-form-errors { background: rgba(239,154,154,0.15); color: #f5a9b1; border-left-color: #ef9a9a; }
+    body.dark-mode .swal2-popup { background: var(--bg-card, #1e293b) !important; color: var(--text-light, #f1f5f9) !important; }
+    body.dark-mode .swal2-title { color: var(--text-light, #f1f5f9) !important; }
+    body.dark-mode .swal2-html-container { color: var(--text-dark, #cbd5e1) !important; }
+    body.dark-mode .swal2-confirm { background: #1c5b96 !important; }
+    body.dark-mode .swal2-cancel { background: #475569 !important; color: #f1f5f9 !important; }
+</style>
+
+<div>
+    <div class="page-header-bar">
+        <h2><i class="fas fa-tags" style="color: #17a2b8;"></i> Familles d'Articles</h2>
+        {% if peut_creer %}
+        <button type="button" onclick="ouvrirModaleNouveau()" class="btn-new">
+            <i class="fas fa-plus"></i> Nouvelle famille
+        </button>
+        {% endif %}
+    </div>
+
+    <form method="GET" class="search-bar" id="form-search-familles" onsubmit="return false;">
+        <input type="text" name="q" id="search-q" value="{{ request.GET.q|default:'' }}"
+               placeholder="Chercher par code ou intitulé..."
+               autocomplete="off" readonly onfocus="this.removeAttribute('readonly')"
+               oninput="rechercherFamilles(this.value);">
+        <a href="{% url 'liste_familles' %}" class="btn-reset" onclick="return confirmerReinitialisation(event);"><i class="fas fa-times"></i> Réinitialiser</a>
+    </form>
+
+    <div class="table-card" id="tableFamilles">
+        {% include 'stock/familles_contenu.html' %}
+    </div>
+</div>
+
+<div id="maModalePerso" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h5 style="margin: 0; font-size: 17px;"><i class="fas fa-tags me-2" style="color: #17a2b8;"></i> 
+                {% if request.GET.edit_famille %}Modification{% else %}Création{% endif %} Famille
+            </h5>
+            <button type="button" onclick="confirmerFermetureModale()" style="background: none; border: none; color: white; font-size: 24px; cursor: pointer;">&times;</button>
+        </div>
+        <form id="formFamille" method="POST" action="?{{ request.GET.urlencode }}">
+            {% csrf_token %}
+            <div class="modal-body">
+                {% if form.errors %}
+                <div class="alert-form-errors">
+                    <strong>Veuillez corriger ces erreurs :</strong>
+                    <ul style="margin: 5px 0 0 15px; padding: 0;">{% for field, errors in form.errors.items %}{% for error in errors %}<li>{{ field|title }} : {{ error }}</li>{% endfor %}{% endfor %}</ul>
+                </div>
+                {% endif %}
+                <div class="form-group"><label>Code Famille *</label>{{ form.code }}</div>
+                <div class="form-group"><label>Intitulé complet *</label>{{ form.intitule }}</div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group"><label>Type Famille *</label>{{ form.type_famille }}</div>
+                    <div class="form-group"><label>Valorisation *</label>{{ form.methode_valorisation }}</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group"><label>Catégorie</label>{{ form.categorie }}</div>
+                    <div class="form-group"><label>Ligne Budgétaire</label>{{ form.ligne_budgetaire }}</div>
+                </div>
+                <label class="card-checkbox">
+                    {{ form.gere_lots_peremption }}
+                    <div><strong style="color: #155724;"><i class="fas fa-clock"></i> Suivi des Péremptions</strong><br><span style="font-size:12px;color: var(--text-muted);">Cochez si les articles ont des dates d'expiration.</span></div>
+                </label>
+                <label class="card-checkbox">
+                    {{ form.est_immobilisable }}
+                    <div><strong style="color: #856404;"><i class="fas fa-building"></i> Gestion de Patrimoine</strong><br><span style="font-size:12px;color: var(--text-muted);">Cochez si ces articles sont des immobilisations.</span></div>
+                </label>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="confirmerFermetureModale()" class="btn-cancel">Annuler</button>
+                <button type="button" onclick="confirmerEnregistrement()" class="btn-save"><i class="fas fa-check-circle me-1"></i> Enregistrer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    let formModifie = false;
+    const EST_EN_MODIFICATION = {% if request.GET.edit_famille %}true{% else %}false{% endif %};
+
+    function ouvrirModaleNouveau() {
+        let urlParams = new URLSearchParams(window.location.search);
+        urlParams.delete('edit_famille'); urlParams.set('new', '1');
+        window.location.href = window.location.pathname + '?' + urlParams.toString();
+    }
+
+    function fermerModale() {
+        document.getElementById('maModalePerso').style.display = 'none';
+        let urlParams = new URLSearchParams(window.location.search);
+        urlParams.delete('edit_famille'); urlParams.delete('new');
+        window.location.href = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+    }
+
+    function confirmerFermetureModale() {
+        if (formModifie) {
+            Swal.fire({
+                title: 'Abandonner les modifications ?',
+                text: 'Vous avez des changements non enregistrés.',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-times"></i> Quitter sans sauver',
+                cancelButtonText: 'Rester'
+            }).then((result) => {
+                if (result.isConfirmed) fermerModale();
+            });
+        } else {
+            fermerModale();
+        }
+    }
+
+    function confirmerEnregistrement() {
+        const code = document.querySelector('input[name="code"]').value.trim();
+        const intitule = document.querySelector('input[name="intitule"]').value.trim();
+        const typeFamille = document.querySelector('select[name="type_famille"]').value;
+        const valorisation = document.querySelector('select[name="methode_valorisation"]').value;
+
+        if (!code || !intitule || !typeFamille || !valorisation) {
+            Swal.fire({
+                icon: 'error',
+                title: 'Champs obligatoires',
+                text: 'Veuillez remplir tous les champs marqués *.',
+                confirmButtonColor: '#dc3545'
+            });
+            return;
+        }
+
+        const actionText = EST_EN_MODIFICATION ? 'modifier' : 'créer';
+
+        Swal.fire({
+            title: 'Confirmer l\'enregistrement',
+            html: `Voulez-vous vraiment <b>${actionText}</b> cette famille ?`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#1c5b96',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-check"></i> Oui, enregistrer',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                document.getElementById('formFamille').submit();
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════════════════════
+    // RECHERCHE AJAX — recharge table + pagination + compteur
+    // ═══════════════════════════════════════════════════════
+    let _searchTimerFamilles = null;
+    function rechercherFamilles(query) {
+        clearTimeout(_searchTimerFamilles);
+        const container = document.getElementById('tableFamilles');
+        if (container) container.style.opacity = '0.4';
+
+        _searchTimerFamilles = setTimeout(() => {
+            // Lire per_page depuis l'URL actuelle (pas depuis un hidden input fige)
+            const urlParams = new URLSearchParams(window.location.search);
+            const perPage = urlParams.get('per_page') || '15';
+
+            let url = '{% url "liste_familles" %}?q=' + encodeURIComponent(query)
+                    + '&per_page=' + encodeURIComponent(perPage);
+
+            fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            })
+            .then(r => {
+                if (!r.ok) throw new Error('Erreur réseau');
+                return r.text();
+            })
+            .then(html => {
+                if (container) {
+                    container.innerHTML = html;
+                    container.style.opacity = '1';
+                }
+                // Met a jour l'URL sans recharger
+                const newUrl = window.location.pathname + '?q=' + encodeURIComponent(query)
+                             + '&per_page=' + encodeURIComponent(perPage);
+                window.history.replaceState({}, '', newUrl);
+            })
+            .catch(err => {
+                console.error('Recherche AJAX échouée :', err);
+                if (container) container.style.opacity = '1';
+            });
+        }, 400);
+    }
+
+    function confirmerSuppressionFamille(url, nom) {
+        Swal.fire({
+            title: 'Confirmation requise',
+            html: `Supprimer la famille : <br><b style="color:#dc3545">${nom}</b> ?<br><small style="color: #6c757d;">Cette action est définitive.</small>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-trash"></i> Oui, supprimer',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                if (csrfToken) {
+                    const csrfInput = document.createElement('input');
+                    csrfInput.type = 'hidden';
+                    csrfInput.name = 'csrfmiddlewaretoken';
+                    csrfInput.value = csrfToken.value;
+                    form.appendChild(csrfInput);
+                }
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    function confirmerReinitialisation(e) {
+        const q = document.querySelector('input[name="q"]').value.trim();
+        if (!q) return true;
+
+        e.preventDefault();
+        Swal.fire({
+            title: 'Réinitialiser la recherche ?',
+            text: 'Les filtres actuels seront effacés.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#17a2b8',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-sync-alt"></i> Réinitialiser',
+            cancelButtonText: 'Annuler'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = "{% url 'liste_familles' %}";
+            }
+        });
+        return false;
+    }
+
+    function changerParPage(val) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('page', '1');
+        params.set('per_page', val);
+        window.location.href = window.location.pathname + '?' + params.toString();
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const form = document.getElementById('formFamille');
+        if (form) {
+            form.querySelectorAll('input, select, textarea').forEach(el => {
+                el.addEventListener('change', () => { formModifie = true; });
+                el.addEventListener('input', () => { formModifie = true; });
+            });
+        }
+
+        let urlParams = new URLSearchParams(window.location.search);
+        let hasErrors = {% if form.errors %}true{% else %}false{% endif %};
+        if (urlParams.has('edit_famille') || hasErrors || urlParams.has('new')) {
+            document.getElementById('maModalePerso').style.display = 'flex';
+            setTimeout(() => { document.querySelector('input[name="code"]').focus(); }, 150);
+        }
+    });
+</script>
+{% endblock %}

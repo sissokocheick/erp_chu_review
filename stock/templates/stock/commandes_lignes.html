@@ -1,0 +1,429 @@
+{% for commande in commandes %}
+<tr id="cmd-row-{{ commande.id }}" style="border-bottom: 1px solid var(--cmd-border-light);">
+
+    <td style="padding: 12px; text-align: center;">
+        <button class="cmd-toggle" id="btn-toggle-{{ commande.id }}" data-action="toggle" data-cmd-id="{{ commande.id }}" title="Voir le detail">
+            <i class="fas fa-chevron-right" id="icon-{{ commande.id }}"></i>
+        </button>
+    </td>
+
+    <td style="padding: 12px; font-weight: 700; color: var(--cmd-accent);">{{ commande.numero_commande }}</td>
+
+    <td style="padding: 12px; white-space: nowrap;">
+        <div style="font-weight: 500;">{{ commande.date_commande|date:"d/m/Y" }}</div>
+        <div style="font-size: 11px; color: var(--cmd-text-secondary);">{{ commande.date_commande|date:"H:i" }}</div>
+    </td>
+
+    <td style="padding: 12px;">
+        <div style="font-weight: 600;">{{ commande.fournisseur.raison_sociale }}</div>
+    </td>
+
+    <td style="padding: 12px;">
+        {% if commande.famille %}
+            <span style="font-size:11px; color:var(--cmd-accent); font-weight:600;">{{ commande.famille.intitule }}</span>
+        {% else %}
+            <span style="font-size:11px; color:var(--cmd-text-secondary); font-style:italic;">—</span>
+        {% endif %}
+    </td>
+
+    <td style="padding: 12px;">
+        {% if commande.statut == 'EN_ATTENTE' %}
+            <span class="cmd-badge badge-attente"><i class="fas fa-clock"></i> En attente</span>
+        {% elif commande.statut == 'LIVRE_PARTIEL' %}
+            <span class="cmd-badge badge-partiel"><i class="fas fa-box-open"></i> Partielle</span>
+        {% elif commande.statut == 'LIVRE_TOTAL' %}
+            <span class="cmd-badge badge-livre"><i class="fas fa-check-double"></i> Livree</span>
+        {% elif commande.statut == 'SOLDE' %}
+            <span class="cmd-badge badge-solde"><i class="fas fa-lock"></i> Soldee</span>
+        {% else %}
+            <span class="cmd-badge badge-solde">{{ commande.get_statut_display }}</span>
+        {% endif %}
+    </td>
+
+    <td style="padding: 12px;">
+        {% if commande.statut_validation != 'VALIDE' %}
+        <span class="cmd-badge badge-brouillon"><i class="fas fa-pen-alt"></i> Brouillon</span>
+        {% else %}
+        <span class="cmd-badge badge-valide"><i class="fas fa-check-circle"></i> Validee</span>
+        {% endif %}
+    </td>
+
+    <td style="padding: 12px; font-size: 12px; color: var(--cmd-text-secondary);">
+        <i class="fas fa-user-edit" style="margin-right: 4px;"></i>
+        <strong style="color: var(--cmd-text);">{{ commande.cree_par.username|default:"Systeme" }}</strong>
+    </td>
+
+    <td style="padding: 12px; text-align: center;">
+        <div class="cmd-actions">
+
+            {% if commande.statut_validation != 'VALIDE' %}
+                {% if peut_creer %}
+                <a href="{% url 'modifier_commande' commande.id %}" class="cmd-btn cmd-btn-edit" title="Modifier">
+                    <i class="fas fa-edit"></i>
+                </a>
+                {% endif %}
+
+                {% if peut_valider %}
+                <a href="{% url 'valider_commande' commande.id %}" class="cmd-btn cmd-btn-valid" data-action="valider" data-href="{% url 'valider_commande' commande.id %}" title="Valider">
+                    <i class="fas fa-check-circle"></i>
+                </a>
+                {% endif %}
+
+                {% if peut_annuler %}
+                <button type="button" class="cmd-btn cmd-btn-del" data-action="supprimer" data-url="{% url 'supprimer_commande' commande.id %}" data-msg="Supprimer ce brouillon ?" title="Supprimer">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                {% endif %}
+
+            {% else %}
+                <button type="button" class="cmd-btn cmd-btn-print" data-action="imprimer" data-url="{% url 'imprimer_commande' commande.id %}" data-titre="{{ commande.numero_commande|escapejs }}" title="Imprimer">
+                    <i class="fas fa-print"></i>
+                </button>
+
+                {% if commande.statut == 'EN_ATTENTE' or commande.statut == 'LIVRE_PARTIEL' %}
+
+                    {% if peut_creer and commande.statut == 'EN_ATTENTE' %}
+                    <a href="{% url 'modifier_commande' commande.id %}" class="cmd-btn cmd-btn-edit" title="Modifier la commande">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% endif %}
+
+                    {% if peut_annuler %}
+                    <button type="button" class="cmd-btn cmd-btn-lock" data-action="solder" data-url="{% url 'solder_commande' commande.id %}" title="Solder (Cloturer le reliquat)">
+                        <i class="fas fa-lock"></i>
+                    </button>
+                    {% endif %}
+
+                {% endif %}
+            {% endif %}
+        </div>
+    </td>
+</tr>
+
+<tr id="lignes-{{ commande.id }}" class="cmd-detail-row">
+    <td colspan="9" style="padding: 0;">
+        <div class="cmd-detail-box">
+            <h4 class="cmd-detail-title"><i class="fas fa-shopping-basket"></i> Detail de la commande</h4>
+
+            {% if commande.objet %}
+            <div style="margin-bottom:14px;padding:10px 14px;background:var(--cmd-accent-light);border-left:4px solid var(--cmd-accent);border-radius:8px;">
+                <strong style="color:var(--cmd-accent);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Objet :</strong>
+                <span style="font-weight:600;color:var(--cmd-text);font-size:13px;">{{ commande.objet }}</span>
+            </div>
+            {% endif %}
+
+            <table class="cmd-detail-table">
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Designation</th>
+                        <th style="text-align: center;">Qte Demandee</th>
+                        <th style="text-align: center;">Qte Recue</th>
+                        <th style="text-align: center;">Reliquat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in commande.lignes_commande.all %}
+                    <tr>
+                        <td style="font-family: monospace; font-size: 12px; color: var(--cmd-text-secondary);">{{ ligne.article.reference|default:"—" }}</td>
+                        <td style="font-weight: 600;">{{ ligne.article.designation }}</td>
+                        <td style="text-align: center;" class="qte-demandee">{{ ligne.quantite_demandee }}</td>
+                        <td style="text-align: center;" class="qte-recue">{{ ligne.quantite_recue }}</td>
+                        <td style="text-align: center;" class="qte-reliquat">
+                            {% if ligne.reliquat > 0 %}{{ ligne.reliquat }}{% else %}<span class="qte-ok">✓</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align:center;padding:20px;color:var(--cmd-text-secondary);font-style:italic;">
+                            <i class="fas fa-info-circle"></i> Aucune ligne dans cette commande.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if commande.bons_reception.all %}
+            <div class="cmd-receptions">
+                <h5 class="cmd-receptions-title"><i class="fas fa-truck-loading"></i> Bons d'Entree lies (Receptions)</h5>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    {% for reception in commande.bons_reception.all %}
+                        <button type="button" class="cmd-reception-btn" data-action="imprimer" data-url="{% url 'imprimer_bon_multi_lignes' reception.id %}" data-titre="{{ reception.numero_bon|escapejs }}">
+                            <strong><i class="fas fa-file-invoice"></i> {{ reception.numero_bon }}</strong>
+                            <span class="ref-bl">Ref BL : {{ reception.reference_externe|default:"—" }}</span>
+                            <span class="date-bl">Le {{ reception.date_bon|date:"d/m/Y a H:i" }}</span>
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="9" style="padding: 48px; text-align: center; color: var(--cmd-text-secondary);">
+        <i class="fas fa-shopping-cart" style="font-size: 48px; color: var(--cmd-border); display: block; margin-bottom: 16px;"></i>
+        <p style="font-size: 15px; font-weight: 500;">Aucun resultat trouve.</p>
+    </td>
+</tr>
+{% endfor %}<style>
+  .cmd-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    color: var(--cmd-accent, #1c5b96);
+    transition: transform .2s;
+  }
+  .cmd-toggle:hover { transform: scale(1.1); }
+  
+  .cmd-row { border-bottom: 1px solid var(--cmd-border-light, #e0e0e0); }
+  .cmd-numero { font-weight: 700; color: var(--cmd-accent, #1c5b96); }
+  .cmd-date { font-weight: 500; white-space: nowrap; }
+  .cmd-heure { font-size: 11px; color: var(--cmd-text-secondary, #6c757d); }
+  .cmd-fournisseur { font-weight: 600; }
+  .cmd-famille { font-size:11px; color:var(--cmd-accent, #1c5b96); font-weight:600; }
+  .cmd-famille-empty { font-size:11px; color:var(--cmd-text-secondary, #6c757d); font-style:italic; }
+
+  .cmd-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 700;
+  }
+  .badge-attente { background: rgba(255,193,7,0.15); color: #856404; }
+  .badge-partiel { background: rgba(253,126,20,0.15); color: #e65100; }
+  .badge-livre { background: rgba(40,167,69,0.15); color: #155724; }
+  .badge-solde { background: rgba(108,117,125,0.15); color: #495057; }
+  .badge-brouillon { background: rgba(108,117,125,0.12); color: #6c757d; }
+  .badge-valide { background: rgba(40,167,69,0.15); color: #155724; }
+
+  .cmd-actions { display: flex; gap: 4px; justify-content: center; flex-wrap: wrap; }
+  .cmd-btn {
+    width: 28px; height: 28px;
+    border: none; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 12px; text-decoration: none;
+    transition: .2s;
+  }
+  .cmd-btn-edit { background: rgba(23,162,184,0.12); color: #0c5460; }
+  .cmd-btn-edit:hover { background: #17a2b8; color: white; }
+  .cmd-btn-valid { background: rgba(40,167,69,0.12); color: #155724; }
+  .cmd-btn-valid:hover { background: #28a745; color: white; }
+  .cmd-btn-del { background: rgba(220,53,69,0.12); color: #721c24; }
+  .cmd-btn-del:hover { background: #dc3545; color: white; }
+  .cmd-btn-print { background: rgba(108,117,125,0.12); color: #495057; }
+  .cmd-btn-print:hover { background: #6c757d; color: white; }
+  .cmd-btn-lock { background: rgba(142,68,173,0.12); color: #6c3483; }
+  .cmd-btn-lock:hover { background: #8e44ad; color: white; }
+
+  .cmd-detail-row { display: none; }
+  .cmd-detail-row.open { display: table-row; }
+  .cmd-detail-box { padding: 20px; background: var(--cmd-bg-stripe, #f8f9fa); }
+  .cmd-detail-title { margin: 0 0 14px 0; color: var(--cmd-accent, #1c5b96); font-size: 14px; }
+  
+  .cmd-detail-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .cmd-detail-table th,
+  .cmd-detail-table td { padding: 8px 12px; border: 1px solid var(--cmd-border-light, #e0e0e0); text-align: left; }
+  .cmd-detail-table th { background: var(--cmd-bg-hover, #f1f5f9); font-weight: 700; }
+  .cmd-detail-table td.center { text-align: center; }
+  
+  .qte-demandee { font-weight: 600; }
+  .qte-recue { color: #28a745; font-weight: 600; }
+  .qte-reliquat { color: #e74c3c; font-weight: 600; }
+  .qte-ok { color: #28a745; font-size: 14px; }
+
+  .cmd-receptions { margin-top: 16px; }
+  .cmd-receptions-title { margin: 0 0 10px 0; font-size: 13px; color: var(--cmd-text, #333); }
+  .cmd-reception-btn {
+    background: white;
+    border: 1px solid var(--cmd-border-light, #e0e0e0);
+    border-radius: 8px;
+    padding: 10px 14px;
+    cursor: pointer;
+    text-align: left;
+    transition: .2s;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 180px;
+  }
+  .cmd-reception-btn:hover { border-color: var(--cmd-accent, #1c5b96); box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  .ref-bl { font-size: 11px; color: var(--cmd-text-secondary, #6c757d); }
+  .date-bl { font-size: 10px; color: var(--cmd-text-light, #adb5bd); }
+
+  body.dark-mode .cmd-detail-box { background: var(--bg-hover, #334155); }
+  body.dark-mode .cmd-detail-table th { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); }
+  body.dark-mode .cmd-detail-table td { border-color: var(--border-light, #475569); color: var(--text-dark, #cbd5e1); }
+  body.dark-mode .cmd-reception-btn { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+</style>
+
+{% for commande in commandes %}
+<tr id="cmd-row-{{ commande.id }}" class="cmd-row">
+    <td style="padding: 12px; text-align: center;">
+        <button class="cmd-toggle" id="btn-toggle-{{ commande.id }}" data-action="toggle" data-cmd-id="{{ commande.id }}" title="Voir le detail" aria-label="Voir detail commande {{ commande.numero_commande|escapejs }}">
+            <i class="fas fa-chevron-right" id="icon-{{ commande.id }}"></i>
+        </button>
+    </td>
+
+    <td style="padding: 12px;" class="cmd-numero">{{ commande.numero_commande }}</td>
+
+    <td style="padding: 12px; white-space: nowrap;">
+        <div class="cmd-date">{{ commande.date_commande|date:"d/m/Y" }}</div>
+        <div class="cmd-heure">{{ commande.date_commande|date:"H:i" }}</div>
+    </td>
+
+    <td style="padding: 12px;">
+        <div class="cmd-fournisseur">{{ commande.fournisseur.raison_sociale }}</div>
+    </td>
+
+    <td style="padding: 12px;">
+        {% if commande.famille %}
+            <span class="cmd-famille">{{ commande.famille.intitule }}</span>
+        {% else %}
+            <span class="cmd-famille-empty">—</span>
+        {% endif %}
+    </td>
+
+    <td style="padding: 12px;">
+        {% if commande.statut == 'EN_ATTENTE' %}
+            <span class="cmd-badge badge-attente"><i class="fas fa-clock"></i> En attente</span>
+        {% elif commande.statut == 'LIVRE_PARTIEL' %}
+            <span class="cmd-badge badge-partiel"><i class="fas fa-box-open"></i> Partielle</span>
+        {% elif commande.statut == 'LIVRE_TOTAL' %}
+            <span class="cmd-badge badge-livre"><i class="fas fa-check-double"></i> Livree</span>
+        {% elif commande.statut == 'SOLDE' %}
+            <span class="cmd-badge badge-solde"><i class="fas fa-lock"></i> Soldee</span>
+        {% else %}
+            <span class="cmd-badge badge-solde">{{ commande.get_statut_display }}</span>
+        {% endif %}
+    </td>
+
+    <td style="padding: 12px;">
+        {% if commande.statut_validation != 'VALIDE' %}
+        <span class="cmd-badge badge-brouillon"><i class="fas fa-pen-alt"></i> Brouillon</span>
+        {% else %}
+        <span class="cmd-badge badge-valide"><i class="fas fa-check-circle"></i> Validee</span>
+        {% endif %}
+    </td>
+
+    <td style="padding: 12px; font-size: 12px; color: var(--cmd-text-secondary, #6c757d);">
+        <i class="fas fa-user-edit" style="margin-right: 4px;"></i>
+        <strong style="color: var(--cmd-text, #333);">{{ commande.cree_par.username|default:"Systeme" }}</strong>
+    </td>
+
+    <td style="padding: 12px; text-align: center;">
+        <div class="cmd-actions">
+
+            {% if commande.statut_validation != 'VALIDE' %}
+                {% if peut_creer %}
+                <a href="{% url 'modifier_commande' commande.id %}" class="cmd-btn cmd-btn-edit" title="Modifier" aria-label="Modifier commande {{ commande.numero_commande|escapejs }}">
+                    <i class="fas fa-edit"></i>
+                </a>
+                {% endif %}
+
+                {% if peut_valider %}
+                <a href="{% url 'valider_commande' commande.id %}" class="cmd-btn cmd-btn-valid" data-action="valider" data-href="{% url 'valider_commande' commande.id %}" title="Valider" aria-label="Valider commande {{ commande.numero_commande|escapejs }}">
+                    <i class="fas fa-check-circle"></i>
+                </a>
+                {% endif %}
+
+                {% if peut_annuler %}
+                <button type="button" class="cmd-btn cmd-btn-del" data-action="supprimer" data-url="{% url 'supprimer_commande' commande.id %}" data-msg="Supprimer ce brouillon ?" title="Supprimer" aria-label="Supprimer commande {{ commande.numero_commande|escapejs }}">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+                {% endif %}
+
+            {% else %}
+                <button type="button" class="cmd-btn cmd-btn-print" data-action="imprimer" data-url="{% url 'imprimer_commande' commande.id %}" data-titre="{{ commande.numero_commande|escapejs }}" title="Imprimer" aria-label="Imprimer commande {{ commande.numero_commande|escapejs }}">
+                    <i class="fas fa-print"></i>
+                </button>
+
+                {% if commande.statut == 'EN_ATTENTE' or commande.statut == 'LIVRE_PARTIEL' %}
+
+                    {% if peut_creer and commande.statut == 'EN_ATTENTE' %}
+                    <a href="{% url 'modifier_commande' commande.id %}" class="cmd-btn cmd-btn-edit" title="Modifier la commande" aria-label="Modifier commande {{ commande.numero_commande|escapejs }}">
+                        <i class="fas fa-edit"></i>
+                    </a>
+                    {% endif %}
+
+                    {% if peut_annuler %}
+                    <button type="button" class="cmd-btn cmd-btn-lock" data-action="solder" data-url="{% url 'solder_commande' commande.id %}" title="Solder (Cloturer le reliquat)" aria-label="Solder commande {{ commande.numero_commande|escapejs }}">
+                        <i class="fas fa-lock"></i>
+                    </button>
+                    {% endif %}
+
+                {% endif %}
+            {% endif %}
+        </div>
+    </td>
+</tr>
+
+<tr id="lignes-{{ commande.id }}" class="cmd-detail-row">
+    <td colspan="9" style="padding: 0;">
+        <div class="cmd-detail-box">
+            <h4 class="cmd-detail-title"><i class="fas fa-shopping-basket"></i> Detail de la commande</h4>
+
+            {% if commande.objet %}
+            <div style="margin-bottom:14px;padding:10px 14px;background:var(--cmd-accent-light, #e3f2fd);border-left:4px solid var(--cmd-accent, #1c5b96);border-radius:8px;">
+                <strong style="color:var(--cmd-accent, #1c5b96);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;">Objet :</strong>
+                <span style="font-weight:600;color:var(--cmd-text, #333);font-size:13px;">{{ commande.objet }}</span>
+            </div>
+            {% endif %}
+
+            <table class="cmd-detail-table">
+                <thead>
+                    <tr>
+                        <th>Reference</th>
+                        <th>Designation</th>
+                        <th class="center">Qte Demandee</th>
+                        <th class="center">Qte Recue</th>
+                        <th class="center">Reliquat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in commande.lignes_commande.all %}
+                    <tr>
+                        <td style="font-family: monospace; font-size: 12px; color: var(--cmd-text-secondary, #6c757d);">{{ ligne.article.reference|default:"—" }}</td>
+                        <td style="font-weight: 600;">{{ ligne.article.designation }}</td>
+                        <td class="center qte-demandee">{{ ligne.quantite_demandee }}</td>
+                        <td class="center qte-recue">{{ ligne.quantite_recue }}</td>
+                        <td class="center qte-reliquat">
+                            {% if ligne.reliquat > 0 %}{{ ligne.reliquat }}{% else %}<span class="qte-ok">✓</span>{% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" style="text-align:center;padding:20px;color:var(--cmd-text-secondary, #6c757d);font-style:italic;">
+                            <i class="fas fa-info-circle"></i> Aucune ligne dans cette commande.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            {% if commande.bons_reception.all %}
+            <div class="cmd-receptions">
+                <h5 class="cmd-receptions-title"><i class="fas fa-truck-loading"></i> Bons d'Entree lies (Receptions)</h5>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    {% for reception in commande.bons_reception.all %}
+                        <button type="button" class="cmd-reception-btn" data-action="imprimer" data-url="{% url 'imprimer_bon_multi_lignes' reception.id %}" data-titre="{{ reception.numero_bon|escapejs }}">
+                            <strong><i class="fas fa-file-invoice"></i> {{ reception.numero_bon }}</strong>
+                            <span class="ref-bl">Ref BL : {{ reception.reference_externe|default:"—" }}</span>
+                            <span class="date-bl">Le {{ reception.date_bon|date:"d/m/Y a H:i" }}</span>
+                        </button>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="9" style="padding: 48px; text-align: center; color: var(--cmd-text-secondary, #6c757d);">
+        <i class="fas fa-shopping-cart" style="font-size: 48px; color: var(--cmd-border, #e0e0e0); display: block; margin-bottom: 16px;"></i>
+        <p style="font-size: 15px; font-weight: 500;">Aucun resultat trouve.</p>
+    </td>
+</tr>
+{% endfor %}

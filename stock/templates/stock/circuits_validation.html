@@ -1,0 +1,77 @@
+{% extends "base_ui.html" %}
+{% block contenu %}
+
+<div style="background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+    <div style="margin-bottom: 25px; border-bottom: 2px solid #eee; padding-bottom: 15px;">
+        <h2 style="color: #333; margin:0;"><i class="fas fa-check-double" style="color: #17a2b8;"></i> Circuits de Validation</h2>
+        <p style="color: #666; margin-top: 5px; font-size: 14px;">Parametrez les autorisations hierarchiques requises pour chaque type de mouvement.</p>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+        {% for circuit in circuits %}
+        <div style="border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; background: #fdfdfd;">
+
+            <div style="background: {% if circuit.est_actif %}#eaf5ea{% else %}#f8f9fa{% endif %}; padding: 15px 20px; border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                <h4 style="margin: 0; color: {% if circuit.est_actif %}#28a745{% else %}#6c757d{% endif %}; font-size: 16px;">
+                    <i class="fas {% if circuit.type_document == 'COMMANDE' %}fa-shopping-cart{% elif circuit.type_document == 'ENTREE' %}fa-arrow-down{% elif circuit.type_document == 'SORTIE' %}fa-arrow-up{% else %}fa-exchange-alt{% endif %}"></i>
+                    {{ circuit.get_type_document_display }}
+                </h4>
+                <span style="font-size: 12px; font-weight: bold; padding: 4px 10px; border-radius: 12px; background: {% if circuit.est_actif %}#28a745{% else %}#6c757d{% endif %}; color: white;">
+                    {% if circuit.est_actif %}ACTIF{% else %}INACTIF{% endif %}
+                </span>
+            </div>
+
+            <form method="POST" style="padding: 20px;">
+                {% csrf_token %}
+                <input type="hidden" name="circuit_id" value="{{ circuit.id }}">
+
+                <div style="display: flex; gap: 20px; align-items: flex-start;">
+
+                    <div style="flex: 1; max-width: 250px;">
+                        <label style="font-weight: bold; color: #444; font-size: 14px; display: block; margin-bottom: 10px;">Statut du circuit :</label>
+                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                            <input type="checkbox" name="est_actif" {% if circuit.est_actif %}checked{% endif %} style="width: 20px; height: 20px; cursor: pointer;">
+                            <span style="font-size: 14px; color: #333;">Exiger une validation hierarchique</span>
+                        </label>
+                        <p style="font-size: 11px; color: #888; margin-top: 5px;">Si decoche, l'action sera automatiquement validee par le systeme.</p>
+                    </div>
+
+                    <div style="flex: 2;">
+                        <label style="font-weight: bold; color: #444; font-size: 14px; display: block; margin-bottom: 10px;">Utilisateurs autorises a valider :</label>
+
+                        <select name="valideurs" class="form-control select2-multiple" multiple="multiple" style="width: 100%;">
+                            {% for u in utilisateurs %}
+                                <option value="{{ u.id }}" {% if u in circuit.valideurs.all %}selected{% endif %}>
+                                    {{ u.first_name }} {{ u.last_name }} ({{ u.username }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <p style="font-size: 11px; color: #888; margin-top: 5px;">Vous pouvez selectionner plusieurs personnes.</p>
+                    </div>
+
+                    <div style="flex: 0; display: flex; align-items: flex-end; padding-top: 25px;">
+                        <button type="submit" style="background: #17a2b8; color: white; border: none; padding: 10px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 4px rgba(23,162,184,0.3); transition: 0.2s;" onmouseover="this.style.background='#138496'" onmouseout="this.style.background='#17a2b8'">
+                            <i class="fas fa-save"></i> Mettre a jour
+                        </button>
+                    </div>
+                </div>
+            </form>
+
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof jQuery !== 'undefined') {
+            $('.select2-multiple').select2({
+                placeholder: "Cliquez pour ajouter des utilisateurs...",
+                allowClear: true,
+                width: '100%'
+            });
+        }
+    });
+</script>
+
+{% endblock %}

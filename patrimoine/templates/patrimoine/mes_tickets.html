@@ -1,0 +1,481 @@
+{% extends "base_ui.html" %}
+{% block title %}Mes Demandes — Suivi des pannes{% endblock %}
+
+{% block contenu %}
+<style>
+  /* Header façon Helpdesk */
+  .th-header { background: linear-gradient(135deg, #17a2b8, #117a8b); color: white; border-radius: 10px; padding: 22px 26px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 18px rgba(23, 162, 184, 0.3); flex-wrap: wrap; gap: 14px; }
+  .th-header h4 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+  .th-header small { opacity: 0.85; font-size: 13px; font-weight: 400; }
+  
+  .btn-new-ticket { background: white; color: #117a8b; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: 0.2s; text-decoration: none;}
+  .btn-new-ticket:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); color: #117a8b;}
+
+  /* Filtres / Onglets fluides */
+  .ticket-filters { display: flex; gap: 10px; margin-bottom: 20px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .t-filter { padding: 10px 20px; border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; border: none; background: transparent; color: #6c757d; display: flex; align-items: center; gap: 8px; text-decoration: none;}
+  .t-filter:hover { background: #f0f3f7; color: #333; }
+  .t-filter.active { background: #17a2b8; color: white; box-shadow: 0 4px 10px rgba(23,162,184,0.2); }
+
+  /* Table des tickets modernisée */
+  .card-table { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; }
+  .tk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tk-table thead tr { background: #f8f9fa; border-bottom: 2px solid #eef0f3; }
+  .tk-table thead th { padding: 14px 18px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; text-align: left; }
+  .tk-table tbody tr { border-bottom: 1px solid #f0f3f7; transition: all 0.2s ease; cursor: pointer; }
+  .tk-table tbody tr:hover { background: #f4fbff; transform: translateX(2px); }
+  .tk-table tbody td { padding: 15px 18px; vertical-align: middle; }
+
+  /* Badges de Statut */
+  .status-badge { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
+  .st-nouvelle { background: #e8f0fe; color: #1c5b96; border: 1px solid #c5d8f5; }
+  .st-en_cours { background: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+  .st-attente { background: #fff0f0; color: #dc3545; border: 1px solid #f5c6cb; }
+  .st-resolue { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+  .st-fermee { background: #f0f3f7; color: #6c757d; border: 1px solid #dde3ea; }
+
+  /* Urgence */
+  .urgence-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .urg-faible { background: #28a745; box-shadow: 0 0 5px rgba(40,167,69,0.5); }
+  .urg-moyenne { background: #ffc107; box-shadow: 0 0 5px rgba(255,193,7,0.5); }
+  .urg-haute { background: #fd7e14; box-shadow: 0 0 5px rgba(253,126,20,0.5); }
+  .urg-critique { background: #dc3545; box-shadow: 0 0 5px rgba(220,53,69,0.8); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(220,53,69,0.7); } 70% { box-shadow: 0 0 0 6px rgba(220,53,69,0); } 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); } }
+
+  .empty-row td { text-align: center; padding: 60px 20px; color: #aaa; font-size: 14px; }
+
+  /* 🟢 DESIGN DU BOUTON RAPPORT & MODALE IMPRESSION */
+  .btn-print { background: #e8fdf1; color: #28a745; border: 1px solid #c3e6cb; padding: 6px 12px; border-radius: 6px; cursor: pointer; margin-right: 15px; transition: 0.2s; font-weight: 700; font-size: 12px; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-print:hover { background: #28a745; color: white; }
+
+  .mo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
+  .mo.open { display: flex; }
+  .mb { background: #f0f3f7; border-radius: 12px; width: 95%; max-width: 900px; max-height: 95vh; display: flex; flex-direction: column; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: slideIn 0.3s ease; overflow: hidden; }
+  @keyframes slideIn { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .mh { padding: 15px 25px; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #117a8b, #17a2b8); color: white; }
+  .mc { background: rgba(255,255,255,0.25); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 15px; transition: 0.2s;}
+  .mc:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
+  .mbody { overflow-y: auto; padding: 20px; }
+  .mfoot { padding: 15px 25px; border-top: 1px solid #eef0f3; display: flex; justify-content: flex-end; gap: 10px; background: white; }
+  .btn-ok { background: #28a745; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.2s;}
+  .btn-ok:hover { background: #218838; transform: translateY(-2px); }
+  .btn-nok { background: #e2e3e5; color: #383d41; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 14px; transition: 0.2s;}
+  .btn-nok:hover { background: #d6d8db; }
+
+  /* 📄 STYLE FORMAT A4 ISO POUR LE PDF */
+  .pdf-page { background: white; width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm; box-shadow: 0 0 15px rgba(0,0,0,0.1); font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11px; color: #000; box-sizing: border-box; }
+  .etat-header { width: 100%; border-collapse: collapse; margin-bottom: 10px; text-align: center; font-size: 10px; }
+  .etat-header td { vertical-align: top; }
+  .etat-gauche, .etat-droite { width: 40%; font-weight: bold; }
+  .etat-centre { width: 20%; }
+  .cartouche-iso { width: 100%; border-collapse: collapse; border: 1.5px solid #000; text-align: center; margin-bottom: 20px; }
+  .cartouche-iso td { border: 1px solid #000; padding: 4px; vertical-align: middle; }
+  .c-logo-box { width: 25%; font-size: 10px; font-weight: bold; }
+  .c-logo-box img { max-height: 55px; margin-bottom: 5px; object-fit: contain; }
+  .c-ps2 { width: 50%; font-size: 11px; font-weight: bold; color: #1c5b96; text-transform: uppercase; }
+  .c-title { font-size: 16px; font-weight: bold; text-transform: uppercase; padding: 10px !important; }
+  .c-code { width: 25%; text-align: left; font-size: 10px; padding-left: 8px !important; }
+  .info-table { width: 100%; font-size: 12px; margin-bottom: 20px; border-collapse: collapse; }
+  .info-table td { padding: 6px; border: 1px solid #ddd; }
+  .info-table th { padding: 6px; border: 1px solid #ddd; background: #f4f4f4; text-align: left; width: 25%; }
+  .box-text { border: 1.5px solid #000; padding: 10px; margin-bottom: 20px; font-size: 12px; min-height: 80px; }
+  .box-title { font-weight: bold; background: #f4f4f4; padding: 5px; border-bottom: 1.5px solid #000; margin: -10px -10px 10px -10px; font-size: 11px; text-transform: uppercase; }
+  .signatures-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; text-align: center; font-size: 10px; page-break-inside: avoid; margin-top: 30px; }
+  .signatures-table th, .signatures-table td { border: 1px solid #000; padding: 6px; width: 50%; vertical-align: top; }
+  .signatures-table th { font-weight: bold; background-color: #f4f4f4; text-transform: uppercase; }
+  .sig-space { height: 90px; margin: 10px 0; display: flex; align-items: center; justify-content: center; }
+  .sig-img { max-width: 150px; max-height: 80px; object-fit: contain; }
+  .sig-empty { font-style: italic; color: #888; font-size: 9px; display: block; margin-top: 35px; }
+  .footer-pdf { text-align: center; font-size: 8px; font-weight: bold; margin-top: 30px; border-top: 1px solid #000; padding-top: 5px; color: #555; }
+
+  @media print {
+      body * { visibility: hidden; }
+      #mo-rapport, #mo-rapport * { visibility: visible; }
+      #mo-rapport { position: absolute; left: 0; top: 0; width: 100%; background: none; display: block; z-index: 999999; }
+      .mb { box-shadow: none; border-radius: 0; width: 100%; max-width: 100%; margin: 0; padding: 0; background: white; max-height: none; }
+      .pdf-page { width: 100%; min-height: auto; padding: 0; margin: 0; box-shadow: none; }
+      .no-print { display: none !important; }
+      .mbody { padding: 0; overflow: visible; }
+      @page { size: A4 portrait; margin: 1cm; }
+  }
+</style>
+
+<div class="th-header no-print">
+  <div style="display:flex;align-items:center;gap:18px;">
+    <div style="background: rgba(255,255,255,0.2); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+        <i class="fas fa-headset" style="font-size:30px;"></i>
+    </div>
+    <div>
+      <h4>Mes Demandes d'Intervention</h4>
+      <small>Suivez l'état de vos signalements de pannes et réparations en temps réel.</small>
+    </div>
+  </div>
+ <a href="{% url 'patrimoine_declarer_panne_pc' %}" class="btn-new-ticket">
+    <i class="fas fa-plus"></i> Signaler une panne
+  </a>
+</div>
+
+<div class="ticket-filters no-print">
+  <a href="?tab=encours&per_page={{ per_page }}" class="t-filter {% if current_tab != 'historique' %}active{% endif %}">
+    <i class="fas fa-tools"></i> En cours de traitement ({{ stats.en_cours }})
+  </a>
+  <a href="?tab=historique&per_page={{ per_page }}" class="t-filter {% if current_tab == 'historique' %}active{% endif %}">
+    <i class="fas fa-history"></i> Historique (Terminées / Annulées) ({{ stats.resolus }})
+  </a>
+</div>
+
+<div class="no-print" style="margin-bottom: 20px; background: white; padding: 14px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 12px; border: 1px solid #eef0f3; transition: all 0.2s;" onfocusin="this.style.borderColor='#17a2b8'; this.style.boxShadow='0 4px 12px rgba(23,162,184,0.15)';" onfocusout="this.style.borderColor='#eef0f3'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)';">
+    <i class="fas fa-search" style="color: #adb5bd; font-size: 18px;"></i>
+    <input type="text" id="magic-search" placeholder="Rechercher un ticket, une machine, un statut, une date..." style="border: none; outline: none; width: 100%; font-size: 14px; color: #333; background: transparent;">
+</div>
+
+<div class="card-table no-print">
+  <div style="overflow-x:auto;">
+    <table class="tk-table">
+      <thead>
+        <tr>
+          <th>N° Ticket</th>
+          <th>Équipement concerné</th>
+          <th>Date de signalement</th>
+          <th>Urgence</th>
+          <th>Statut Actuel</th>
+          <th style="text-align:right;">Détails</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ticket in tickets %}
+        <tr class="tk-row" onclick="window.location.href='{% url 'patrimoine_suivi_ticket' ticket.id %}'">
+          
+          <td>
+            <div style="font-weight:700; color:#17a2b8;">
+                <i class="fas fa-ticket-alt" style="margin-right: 5px; opacity: 0.7;"></i>
+                {{ ticket.id|stringformat:"04d" }}
+            </div>
+          </td>
+          
+          <td>
+            <div style="font-weight:700; color:#333; font-size: 14px;">{{ ticket.immobilisation.nom_affichage }}</div>
+<div style="font-size:11px; color:#888; margin-top: 3px;">
+    <i class="fas fa-barcode"></i> {{ ticket.immobilisation.code_patrimoine }} 
+
+{% if ticket.immobilisation.contrat_maintenance and ticket.immobilisation.contrat_maintenance.statut == 'ACTIF' %}
+<div style="margin-top: 6px; display: inline-block; background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 800; border: 1px solid #ffeeba;">
+    <i class="fas fa-shield-alt"></i> MATÉRIEL SOUS CONTRAT
+</div>
+{% endif %} 
+                {% if ticket.immobilisation.bureau %}
+                — <i class="fas fa-map-marker-alt" style="margin-left: 5px;"></i> {{ ticket.immobilisation.bureau.nom }}
+                {% endif %}
+            </div>
+          </td>
+          
+          <td>
+            <div style="color:#555; font-weight: 600;">{{ ticket.date_signalement|date:"d/m/Y" }}</div>
+            <div style="font-size:11px; color:#aaa;">à {{ ticket.date_signalement|date:"H:i" }}</div>
+          </td>
+          
+          <td>
+            <div style="display: flex; align-items: center; font-size: 12px; font-weight: 600; color: #555;">
+                {% if ticket.degre_urgence == 'FAIBLE' %}<span class="urgence-dot urg-faible"></span> Faible
+                {% elif ticket.degre_urgence == 'MOYENNE' %}<span class="urgence-dot urg-moyenne"></span> Moyenne
+                {% elif ticket.degre_urgence == 'HAUTE' %}<span class="urgence-dot urg-haute"></span> Haute
+                {% elif ticket.degre_urgence == 'CRITIQUE' %}<span class="urgence-dot urg-critique"></span> Critique
+                {% else %}<span class="urgence-dot urg-moyenne"></span> Moyenne{% endif %}
+            </div>
+          </td>
+          
+          <td>
+            {% if ticket.statut == 'NOUVELLE' or ticket.statut == 'OUVERT' %}
+                <span class="status-badge st-nouvelle"><i class="fas fa-inbox"></i> Nouvelle</span>
+            {% elif ticket.statut == 'EN_COURS' or ticket.statut == 'PLANIFIEE' %}
+                <span class="status-badge st-en_cours"><i class="fas fa-cog fa-spin"></i> Pris en charge</span>
+            {% elif ticket.statut == 'EN_ATTENTE_PIECES' %}
+                <span class="status-badge st-attente"><i class="fas fa-box-open"></i> Attente de pièce</span>
+            {% elif ticket.statut == 'RESOLUE' or ticket.statut == 'FERME' or ticket.statut == 'TERMINEE' or ticket.statut == 'CLOTUREE' %}
+                <span class="status-badge st-resolue"><i class="fas fa-check-circle"></i> Terminé</span>
+            {% elif ticket.statut == 'ANNULE' or ticket.statut == 'ANNULEE' %}
+                <span class="status-badge st-fermee"><i class="fas fa-times-circle"></i> Annulé</span>
+            {% else %}
+                <span class="status-badge st-fermee">{{ ticket.get_statut_display }}</span>
+            {% endif %}
+          </td>
+          
+          <td style="text-align:right;">
+            {% if ticket.actions_effectuees %}
+                <button type="button" class="btn-print" onclick="event.stopPropagation(); ouvrirModalRapport({{ ticket.id }})" title="Lire et Imprimer le rapport">
+                    <i class="fas fa-file-invoice"></i> Rapport
+                </button>
+                
+                <div id="data-rapport-{{ ticket.id }}" style="display:none;">
+                    <div class="d-equip">{{ ticket.immobilisation.nom_affichage }}</div>
+                    <div class="d-code">{{ ticket.immobilisation.code_patrimoine }}</div>
+                    <div class="d-service">{{ ticket.immobilisation.service_affectation.nom|default:"Non spécifié"|upper }}</div>
+                    <div class="d-date">{{ ticket.date_signalement|date:"d/m/Y à H:i" }}</div>
+                    <div class="d-fin">{{ ticket.date_fin_intervention|date:"d/m/Y à H:i"|default:"-" }}</div>
+                    <div class="d-urg">{{ ticket.get_degre_urgence_display|upper }}</div>
+                    <div class="d-panne">{{ ticket.description_probleme|linebreaksbr }}</div>
+                    <div class="d-tech">{{ ticket.intervenant.get_full_name|default:ticket.intervenant.username }}</div>
+                    <div class="d-text">{{ ticket.actions_effectuees|linebreaksbr }}</div>
+                    <div class="d-demandeur-name">{{ ticket.cree_par.get_full_name|default:ticket.cree_par.username|upper }}</div>
+                    <div class="d-demandeur-sig">{% if ticket.cree_par.profil.signature %}{{ ticket.cree_par.profil.signature.url }}{% endif %}</div>
+                    <div class="d-tech-name">{{ ticket.intervenant.get_full_name|default:ticket.intervenant.username|upper }}</div>
+                    <div class="d-tech-sig">{% if ticket.intervenant.profil.signature %}{{ ticket.intervenant.profil.signature.url }}{% endif %}</div>
+                </div>
+            {% endif %}
+            
+            <i class="fas fa-chevron-right" style="color:#ccc;"></i>
+          </td>
+        </tr>
+        {% empty %}
+        <tr class="empty-row">
+          <td colspan="6">
+            <div style="background: #f8f9fa; display: inline-block; padding: 30px; border-radius: 50%; margin-bottom: 20px;">
+                {% if current_tab == 'historique' %}
+                    <i class="fas fa-history" style="font-size:40px; color:#6c757d;"></i>
+                {% else %}
+                    <i class="fas fa-shield-check" style="font-size:40px; color:#28a745;"></i>
+                {% endif %}
+            </div>
+            <div style="font-size: 16px; font-weight: bold; color: #333;">
+                {% if current_tab == 'historique' %}Aucun historique.{% else %}Aucune panne à l'horizon !{% endif %}
+            </div>
+            <div style="color: #888; margin-top: 5px;">
+                {% if current_tab == 'historique' %}Vous n'avez aucune demande terminée ou annulée.{% else %}Tout fonctionne à merveille.{% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  {% if tickets.has_other_pages or tickets.paginator.count > 0 %}
+  <div style="padding:14px 18px; border-top:1px solid #f0f3f7; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; background: white;">
+    <form method="GET" style="margin: 0; display: flex; align-items: center; gap: 8px;">
+        <input type="hidden" name="tab" value="{{ current_tab }}">
+        <span style="font-size:12px; color:#6c757d; font-weight:600;">Afficher :</span>
+        <select name="per_page" onchange="this.form.submit()" style="padding: 4px 10px; font-size: 13px; border: 1px solid #dde3ea; border-radius: 6px; outline: none; cursor: pointer;">
+            <option value="10" {% if per_page == '10' %}selected{% endif %}>10</option>
+            <option value="30" {% if per_page == '30' %}selected{% endif %}>30</option>
+            <option value="100" {% if per_page == '100' %}selected{% endif %}>100</option>
+            <option value="all" {% if per_page == 'all' %}selected{% endif %}>Tous</option>
+        </select>
+        <span style="font-size:12px; color:#adb5bd; margin-left: 5px;">| Total : {{ tickets.paginator.count }} ticket{% if tickets.paginator.count > 1 %}s{% endif %}</span>
+    </form>
+
+    {% if tickets.has_other_pages %}
+    <div style="display:flex; gap:4px;">
+      {% if tickets.has_previous %}
+      <a href="?page={{ tickets.previous_page_number }}&per_page={{ per_page }}&tab={{ current_tab }}" style="padding:6px 12px; border:1px solid #dde3ea; border-radius:5px; font-size:12px; text-decoration:none; color:#495057; font-weight:600; transition:0.2s;" onmouseover="this.style.background='#f0f3f7'" onmouseout="this.style.background='white'">‹ Précédent</a>
+      {% endif %}
+      
+      <span style="padding:6px 14px; border-radius:5px; font-size:12px; font-weight:700; color:white; background:#17a2b8; box-shadow: 0 2px 5px rgba(23,162,184,0.3);">{{ tickets.number }} / {{ tickets.paginator.num_pages }}</span>
+      
+      {% if tickets.has_next %}
+      <a href="?page={{ tickets.next_page_number }}&per_page={{ per_page }}&tab={{ current_tab }}" style="padding:6px 12px; border:1px solid #dde3ea; border-radius:5px; font-size:12px; text-decoration:none; color:#495057; font-weight:600; transition:0.2s;" onmouseover="this.style.background='#f0f3f7'" onmouseout="this.style.background='white'">Suivant ›</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {% endif %}
+</div>
+
+<div class="mo" id="mo-rapport" onclick="if(event.target===this)fermerModalRapport()">
+  <div class="mb">
+    
+    <div class="mh no-print">
+      <h5 style="margin: 0;"><i class="fas fa-file-pdf me-2"></i> Prévisualisation du Rapport d'Intervention</h5>
+      <button type="button" class="mc" onclick="fermerModalRapport()"><i class="fas fa-times"></i></button>
+    </div>
+    
+    <div class="mbody" id="print-area">
+        <div class="pdf-page">
+            
+            <table class="etat-header">
+                <tr>
+                    <td class="etat-gauche">
+                        Ministère de la Santé, de l'Hygiène Publique<br>
+                        et de la Couverture Maladie Universelle
+                    </td>
+                    <td class="etat-centre"></td>
+                    <td class="etat-droite">
+                        République de Côte d'Ivoire<br>
+                        <span style="font-weight: normal; font-size: 9px; font-style: italic;">Union - Discipline - Travail</span>
+                    </td>
+                </tr>
+            </table>
+
+            <table class="cartouche-iso">
+                <tr>
+                    <td rowspan="4" class="c-logo-box">
+                        <img src="/static/img/logo.jpg" alt="Logo CHU" onerror="this.style.display='none'"><br>
+                        Centre Hospitalier et<br>Universitaire d'Angré
+                    </td>
+                    <td class="c-ps2">SERVICE TECHNIQUE / MAINTENANCE</td>
+                    <td class="c-code">Code : ENR-SAV/TECH-001</td>
+                </tr>
+                <tr>
+                    <td rowspan="3" class="c-title">RAPPORT D'INTERVENTION<br>TECHNIQUE (SAV)</td>
+                    <td class="c-code">Imprimé le : {% now "d/m/Y" %}</td>
+                </tr>
+                <tr>
+                    <td class="c-code">Révisé le : 19/05/2025</td>
+                </tr>
+                <tr>
+                    <td class="c-code">Version : 002</td>
+                </tr>
+            </table>
+
+            <table class="info-table">
+                <tr>
+                    <th>N° de Ticket</th>
+                    <td><strong style="color:#117a8b; font-size:14px;">#<span id="r-id"></span></strong></td>
+                    <th>Date Signalement</th>
+                    <td id="r-date"></td>
+                </tr>
+                <tr>
+                    <th>Service Demandeur</th>
+                    <td id="r-service"></td>
+                    <th>Urgence</th>
+                    <td id="r-urg"></td>
+                </tr>
+                <tr>
+                    <th>Équipement</th>
+                    <td id="r-equip"></td>
+                    <th>Clôturé le</th>
+                    <td id="r-fin"></td>
+                </tr>
+                <tr>
+                    <th>Code Patrimoine</th>
+                    <td style="font-family: monospace; font-weight: bold;" id="r-code"></td>
+                    <th>Technicien</th>
+                    <td id="r-tech"></td>
+                </tr>
+            </table>
+
+            <div class="box-text">
+                <div class="box-title" style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Problème signalé (Symptômes)</div>
+                <div id="r-panne" style="color: #333;"></div>
+            </div>
+
+            <div class="box-text">
+                <div class="box-title" style="color: #28a745;"><i class="fas fa-clipboard-check"></i> Diagnostic et Actions du Technicien</div>
+                <div id="r-text" style="color: #155724; font-weight: 500;"></div>
+            </div>
+
+            <table class="signatures-table">
+                <thead>
+                    <tr>
+                        <th>Le Demandeur / Utilisateur</th>
+                        <th>Le Technicien Intervenant</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>
+                            <div class="sig-space">
+                                <img id="r-sig-dem" class="sig-img" style="display:none;">
+                                <span id="r-no-sig-dem" class="sig-empty">Signature électronique manquante<br>À signer manuellement</span>
+                            </div>
+                            <div style="font-size: 10px; font-weight: bold; color: #117a8b;" id="r-name-dem"></div>
+                        </td>
+                        <td>
+                            <div class="sig-space">
+                                <img id="r-sig-tech" class="sig-img" style="display:none;">
+                                <span id="r-no-sig-tech" class="sig-empty">Signature électronique manquante<br>À signer manuellement</span>
+                            </div>
+                            <div style="font-size: 10px; font-weight: bold; color: #117a8b;" id="r-name-tech"></div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="footer-pdf">
+                ANGRE BESSIKOI Adresse : 28 BP 1350 ABIDJAN Tel : 2722496400 CC N° : 1821717-Q<br>
+                Service Maintenance & Infrastructures | Plateforme ERP CHU Angré
+            </div>
+
+        </div>
+    </div>
+
+    <div class="mfoot no-print">
+      <button type="button" class="btn-nok" onclick="fermerModalRapport()">Fermer</button>
+      <button type="button" class="btn-ok" onclick="window.print()"><i class="fas fa-print me-1"></i> Imprimer le Rapport</button>
+    </div>
+    
+  </div>
+</div>
+
+<script>
+// --- SCRIPT 1 : GESTION DE LA MODALE PDF ---
+function ouvrirModalRapport(id) {
+    let dataDiv = document.getElementById('data-rapport-' + id);
+    if (!dataDiv) return;
+
+    document.getElementById('r-id').innerText = id.toString().padStart(4, '0');
+    document.getElementById('r-equip').innerHTML = dataDiv.querySelector('.d-equip').innerHTML;
+    document.getElementById('r-code').innerHTML = dataDiv.querySelector('.d-code').innerHTML;
+    document.getElementById('r-service').innerHTML = dataDiv.querySelector('.d-service').innerHTML;
+    document.getElementById('r-date').innerHTML = dataDiv.querySelector('.d-date').innerHTML;
+    document.getElementById('r-fin').innerHTML = dataDiv.querySelector('.d-fin').innerHTML;
+    document.getElementById('r-urg').innerHTML = dataDiv.querySelector('.d-urg').innerHTML;
+    document.getElementById('r-panne').innerHTML = dataDiv.querySelector('.d-panne').innerHTML;
+    document.getElementById('r-tech').innerHTML = dataDiv.querySelector('.d-tech').innerHTML;
+    document.getElementById('r-text').innerHTML = dataDiv.querySelector('.d-text').innerHTML;
+    
+    document.getElementById('r-name-dem').innerHTML = dataDiv.querySelector('.d-demandeur-name').innerHTML;
+    document.getElementById('r-name-tech').innerHTML = dataDiv.querySelector('.d-tech-name').innerHTML;
+
+    let sigDemUrl = dataDiv.querySelector('.d-demandeur-sig').innerHTML.trim();
+    let sigDemImg = document.getElementById('r-sig-dem');
+    let noSigDem = document.getElementById('r-no-sig-dem');
+    if (sigDemUrl) {
+        sigDemImg.src = sigDemUrl;
+        sigDemImg.style.display = 'block';
+        noSigDem.style.display = 'none';
+    } else {
+        sigDemImg.style.display = 'none';
+        noSigDem.style.display = 'block';
+    }
+
+    let sigTechUrl = dataDiv.querySelector('.d-tech-sig').innerHTML.trim();
+    let sigTechImg = document.getElementById('r-sig-tech');
+    let noSigTech = document.getElementById('r-no-sig-tech');
+    if (sigTechUrl) {
+        sigTechImg.src = sigTechUrl;
+        sigTechImg.style.display = 'block';
+        noSigTech.style.display = 'none';
+    } else {
+        sigTechImg.style.display = 'none';
+        noSigTech.style.display = 'block';
+    }
+
+    document.getElementById('mo-rapport').classList.add('open');
+}
+
+function fermerModalRapport() {
+    document.getElementById('mo-rapport').classList.remove('open');
+}
+
+// --- SCRIPT 2 : RECHERCHE MAGIQUE ---
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('magic-search');
+    const tableRows = document.querySelectorAll('.tk-table tbody tr.tk-row');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+
+            tableRows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                if (text.includes(query)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    }
+});
+</script>
+{% endblock %}

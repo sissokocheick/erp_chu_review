@@ -1,0 +1,49 @@
+<style>
+  .hist-row-hover { transition: background 0.2s; }
+  .hist-row-hover:hover { background: #f8f9fa; }
+  body.dark-mode .hist-row-hover:hover { background: var(--bg-hover, #334155); }
+
+  .hist-cell-date { padding: 12px; color: #666; }
+  body.dark-mode .hist-cell-date { color: var(--text-medium, #94a3b8); }
+
+  .hist-cell-user { padding: 12px; font-weight: bold; color: #1c5b96; }
+  body.dark-mode .hist-cell-user { color: var(--primary-blue, #60a5fa); }
+
+  .hist-cell { padding: 12px; }
+
+  .hist-cell-model { padding: 12px; font-weight: bold; color: #444; }
+  body.dark-mode .hist-cell-model { color: var(--text-light, #f1f5f9); }
+
+  .hist-cell-detail { padding: 12px; color: #555; }
+  body.dark-mode .hist-cell-detail { color: var(--text-medium, #94a3b8); }
+
+  .hist-empty { padding: 40px; text-align: center; color: #999; }
+  body.dark-mode .hist-empty { color: var(--text-light, #94a3b8); }
+</style>
+
+{% for ligne in journal_activites %}
+<tr style="border-bottom: 1px solid #eee; transition: background 0.2s;" class="hist-row-hover">
+    <td class="hist-cell-date">
+        <strong>{{ ligne.date|date:"d/m/Y" }}</strong> à {{ ligne.date|date:"H:i:s" }}
+    </td>
+    <td class="hist-cell-user">
+        <i class="fas fa-user-circle" style="color: #aaa; margin-right: 4px;"></i> {{ ligne.utilisateur }}
+    </td>
+    <td class="hist-cell">
+        {{ ligne.action|safe }}  {# TODO: Vérifier que ligne.action est bien échappé côté serveur #}
+    </td>
+    <td class="hist-cell-model">
+        {{ ligne.modele }}
+    </td>
+    <td class="hist-cell-detail">
+        {{ ligne.element }}
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="5" class="hist-empty">
+        <i class="fas fa-folder-open" style="font-size: 30px; color: #ddd; display: block; margin-bottom: 10px;"></i>
+        Aucun historique correspondant à cette recherche.
+    </td>
+</tr>
+{% endfor %}

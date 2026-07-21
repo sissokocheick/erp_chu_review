@@ -1,0 +1,271 @@
+{% extends "base_ui.html" %}
+{% block contenu %}
+
+<style>
+  .sign-container { max-width: 800px; margin: 0 auto; }
+  .sign-card { background: var(--bg-card); border-radius: 12px; padding: 24px; box-shadow: 0 4px 15px var(--shadow); margin-bottom: 20px; }
+  .sign-header { text-align: center; padding-bottom: 20px; border-bottom: 2px solid var(--border-color); margin-bottom: 24px; }
+  .sign-header i { font-size: 40px; color: #1c5b96; margin-bottom: 10px; display: block; }
+  .sign-header h2 { color: var(--text-dark); margin: 0; font-size: 22px; }
+  .sign-header .sub { color: var(--text-light); margin-top: 6px; font-size: 13px; }
+
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; margin-bottom: 4px; }
+  .info-grid div { color: var(--text-dark); }
+  .info-grid span { color: var(--text-light); }
+
+  .articles-list { display: flex; flex-wrap: wrap; gap: 8px; max-height: 160px; overflow-y: auto; padding-right: 4px; }
+  .article-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--bg-hover); border: 1px solid var(--border-color);
+    padding: 6px 12px; border-radius: 20px; font-size: 12px; color: var(--text-dark);
+    font-weight: 600; white-space: nowrap;
+  }
+  .article-pill i { color: #1c5b96; font-size: 10px; }
+  .article-pill .qte {
+    background: #1c5b96; color: white; font-size: 10px; font-weight: 700;
+    min-width: 20px; height: 20px; border-radius: 50%; display: inline-flex;
+    align-items: center; justify-content: center; padding: 0 6px;
+  }
+
+  .sondage-box { background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; padding: 20px; }
+  body.dark-mode .sondage-box { background: rgba(255,193,7,0.08); border-color: rgba(255,193,7,0.3); }
+
+  .radio-group { display: flex; gap: 16px; margin: 12px 0; padding-left: 4px; flex-wrap: wrap; }
+  .radio-card {
+    flex: 1; min-width: 140px; padding: 12px 16px; border-radius: 8px; border: 2px solid var(--border-color);
+    background: var(--bg-card); cursor: pointer; display: flex; align-items: center; gap: 10px;
+    transition: .15s; font-weight: 600; font-size: 13px;
+  }
+  .radio-card:hover { border-color: #1c5b96; }
+  .radio-card.active-oui { border-color: #28a745; background: rgba(39,174,96,0.08); color: #28a745; }
+  .radio-card.active-non { border-color: #dc3545; background: rgba(220,53,69,0.08); color: #dc3545; }
+  .radio-card input { width: 18px; height: 18px; accent-color: #1c5b96; cursor: pointer; }
+
+  .obs-bloc { display: none; margin-top: 14px; animation: fadeIn .2s ease; }
+  .obs-bloc.visible { display: block; }
+  .obs-bloc label { font-size: 12px; font-weight: 700; color: #dc3545; display: block; margin-bottom: 6px; }
+  .obs-bloc textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-dark); font-family: inherit; resize: vertical; }
+
+  .signature-frame { text-align: center; margin-bottom: 20px; }
+  .signature-frame .lbl { font-size: 12px; color: var(--text-light); margin-bottom: 8px; }
+  .signature-box { border: 2px dashed #1c5b96; border-radius: 8px; padding: 14px; display: inline-block; background: var(--bg-card); min-width: 280px; min-height: 60px; }
+  .signature-box img { max-height: 80px; max-width: 100%; object-fit: contain; }
+  .signature-box .no-sig { color: var(--text-light); font-size: 13px; padding: 10px; }
+  .signature-frame .name { font-size: 12px; color: var(--text-light); margin-top: 6px; font-weight: 600; }
+
+  .btn-sign { background: linear-gradient(135deg,#1c5b96,#007bff); color: white; padding: 12px 36px; border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: .2s; }
+  .btn-sign:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(28,91,150,0.3); }
+  .btn-back { background: var(--bg-hover); color: var(--text-medium); border: 1px solid var(--border-color); padding: 10px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+
+  .badge-livraison { display: inline-flex; align-items: center; gap: 6px; background: rgba(28,91,150,0.1); color: #1c5b96; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-magasin { display: inline-flex; align-items: center; gap: 6px; background: rgba(253,126,20,0.1); color: #fd7e14; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  @media(max-width:600px){ .info-grid { grid-template-columns: 1fr; } .radio-group { flex-direction: column; } }
+</style>
+
+<div class="sign-container">
+
+  <!-- HEADER -->
+  <div class="sign-card">
+    <div class="sign-header">
+      <i class="fas fa-file-signature"></i>
+      <h2>Accusé de réception & Sondage</h2>
+      <div class="sub">
+        Demande <strong>{{ demande.numero_demande }}</strong> — Livraison <strong>#{{ livraison.numero_livraison }}</strong>
+        {% if livraison.bon_sortie %} — Bon <strong>{{ livraison.bon_sortie.numero_bon }}</strong>{% endif %}
+      </div>
+    </div>
+
+    <!-- Infos livraison -->
+    <div style="background: var(--bg-stripe); border-radius: 8px; padding: 16px; border-left: 4px solid #1c5b96; margin-bottom: 20px;">
+      <div class="info-grid">
+        <div><span><i class="fas fa-hospital" style="width:16px;"></i> Service :</span> <strong>{{ demande.service_demandeur.nom }}</strong></div>
+        <div><span><i class="fas fa-user" style="width:16px;"></i> Livré par :</span> <strong>{{ livraison.livre_par.get_full_name|default:livraison.livre_par.username }}</strong></div>
+        <div><span><i class="fas fa-warehouse" style="width:16px;"></i> Magasin :</span> <strong>{{ demande.magasin_cible.nom|default:"—" }}</strong></div>
+        <div><span><i class="fas fa-calendar-alt" style="width:16px;"></i> Date :</span> <strong>{{ livraison.date_livraison|date:"d/m/Y à H:i" }}</strong></div>
+      </div>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+        <span class="badge-livraison"><i class="fas fa-dolly"></i> {{ livraison.quantite_livree }} unité(s) livrée(s)</span>
+        {% if demande.magasin_cible %}<span class="badge-magasin"><i class="fas fa-warehouse"></i> {{ demande.magasin_cible.nom }}</span>{% endif %}
+      </div>
+    </div>
+
+    <!-- Articles en pills compacts -->
+    <h3 style="font-size: 12px; font-weight: 700; color: var(--text-light); margin-bottom: 10px; text-transform: uppercase; letter-spacing: .5px;">
+      <i class="fas fa-boxes" style="color: #1c5b96;"></i> Articles livrés ({{ livraison.lignes_livraison.count }})
+    </h3>
+    <div class="articles-list">
+      {% for ligne in livraison.lignes_livraison.all %}
+      <div class="article-pill" title="{{ ligne.article.designation|escape }}">
+        <i class="fas fa-box"></i>
+        <span>{{ ligne.article.designation|truncatechars:25 }}</span>
+        <span class="qte">{{ ligne.quantite_livree }}</span>
+      </div>
+      {% empty %}
+      <span style="color:var(--text-light); font-size:12px;">Aucun article</span>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- SIGNATURE & SONDAGE -->
+  <div class="sign-card sondage-box">
+    <h3 style="margin: 0 0 18px; font-size: 15px; color: #856404; display:flex; align-items:center; gap:8px;">
+      <i class="fas fa-signature"></i> Votre signature & Évaluation
+    </h3>
+
+    {% if a_signature %}
+    <div class="signature-frame">
+      <div class="lbl">Signature enregistrée dans votre profil :</div>
+      <div class="signature-box">
+        {% if profil.signature %}
+          <img src="{{ profil.signature.url }}" alt="Signature de {{ request.user.get_full_name|default:request.user.username }}" loading="lazy">
+        {% else %}
+          <div class="no-sig"><i class="fas fa-exclamation-circle"></i> Image non disponible</div>
+        {% endif %}
+      </div>
+      <div class="name">{{ request.user.get_full_name|default:request.user.username }}</div>
+    </div>
+
+    <form method="POST" id="formSignature">
+      {% csrf_token %}
+
+      <div style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 16px; border-radius: 8px; margin-bottom: 20px;">
+        <label style="font-size: 13px; font-weight: 700; color: var(--text-dark); display: block; margin-bottom: 12px;">
+          <i class="fas fa-poll-h" style="color: #1c5b96;"></i> SONDAGE QUALITÉ : Êtes-vous satisfait de cette livraison ? <span style="color: #dc3545;">*</span>
+        </label>
+
+        <!-- 2 OPTIONS : OUI / NON -->
+        <div class="radio-group" role="radiogroup" aria-label="Satisfaction de la livraison">
+          <label class="radio-card" id="card-oui" onclick="selectSatisfaction('oui')" role="radio" aria-checked="false" tabindex="0">
+            <input type="radio" name="satisfaction" value="oui" required onchange="selectSatisfaction('oui')" aria-label="Satisfait">
+            <i class="fas fa-smile"></i> Oui, satisfait
+          </label>
+          <label class="radio-card" id="card-non" onclick="selectSatisfaction('non')" role="radio" aria-checked="false" tabindex="0">
+            <input type="radio" name="satisfaction" value="non" required onchange="selectSatisfaction('non')" aria-label="Insatisfait">
+            <i class="fas fa-frown"></i> Non, insatisfait
+          </label>
+        </div>
+
+        <div id="bloc-observations" class="obs-bloc">
+          <label for="input-observations"><i class="fas fa-exclamation-circle"></i> Veuillez préciser le motif de votre insatisfaction :</label>
+          <textarea name="observations" id="input-observations" rows="3" placeholder="Décrivez le problème rencontré..."></textarea>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;">
+        <a href="{% url url_retour %}" class="btn-back" rel="noopener noreferrer"><i class="fas fa-arrow-left"></i> Retour</a>
+        <button type="button" onclick="confirmerSignature()" class="btn-sign" aria-label="Signer et confirmer la réception">
+          <i class="fas fa-check-circle"></i> Je signe et confirme
+        </button>
+      </div>
+      <button type="submit" id="btn-submit-cache" style="display: none;" aria-hidden="true"></button>
+    </form>
+
+    {% else %}
+    <div style="text-align: center; padding: 30px;">
+      <i class="fas fa-exclamation-triangle" style="font-size: 32px; color: #dc3545; margin-bottom: 12px;"></i>
+      <p style="color: #dc3545; font-weight: 700; margin: 0;">Aucune signature enregistrée dans votre profil.</p>
+      <p style="color: var(--text-light); font-size: 13px; margin-top: 6px;">Contactez un administrateur pour enregistrer votre signature.</p>
+      <a href="{% url url_retour %}" class="btn-back" style="margin-top: 14px;" rel="noopener noreferrer"><i class="fas fa-arrow-left"></i> Retour</a>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  function selectSatisfaction(valeur) {
+    const cardOui = document.getElementById('card-oui');
+    const cardNon = document.getElementById('card-non');
+    const blocObs = document.getElementById('bloc-observations');
+    const inputObs = document.getElementById('input-observations');
+
+    if (!cardOui || !cardNon || !blocObs || !inputObs) return;
+
+    cardOui.classList.remove('active-oui');
+    cardNon.classList.remove('active-non');
+    cardOui.setAttribute('aria-checked', 'false');
+    cardNon.setAttribute('aria-checked', 'false');
+
+    if (valeur === 'oui') {
+      cardOui.classList.add('active-oui');
+      cardOui.setAttribute('aria-checked', 'true');
+      cardOui.querySelector('input').checked = true;
+      blocObs.classList.remove('visible');
+      inputObs.removeAttribute('required');
+      inputObs.value = '';
+    } else {
+      cardNon.classList.add('active-non');
+      cardNon.setAttribute('aria-checked', 'true');
+      cardNon.querySelector('input').checked = true;
+      blocObs.classList.add('visible');
+      inputObs.setAttribute('required', 'required');
+    }
+  }
+
+  function confirmerSignature() {
+    const form = document.getElementById('formSignature');
+    if (!form) return;
+    const satisfaction = form.querySelector('input[name="satisfaction"]:checked');
+
+    if (!satisfaction) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({ icon: 'warning', title: 'Sondage requis', text: 'Veuillez choisir si vous êtes satisfait ou non de la livraison.', confirmButtonColor: '#1c5b96' });
+      } else {
+        alert('Veuillez choisir si vous êtes satisfait ou non de la livraison.');
+      }
+      return;
+    }
+
+    if (!form.checkValidity()) {
+      const hiddenBtn = document.getElementById('btn-submit-cache');
+      if (hiddenBtn) hiddenBtn.click();
+      return;
+    }
+
+    const msg = satisfaction.value === 'non'
+      ? "Votre signalement d'insatisfaction sera transmis au magasin. Confirmer ?"
+      : "Votre signature sera apposée et la livraison validée. Action irréversible.";
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        icon: 'question',
+        title: 'Confirmer la réception ?',
+        text: msg,
+        showCancelButton: true,
+        confirmButtonText: 'Signer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#1c5b96',
+        cancelButtonColor: '#6c757d'
+      }).then(result => {
+        if (result.isConfirmed) {
+          Swal.showLoading();
+          form.submit();
+        }
+      });
+    } else {
+      if (confirm(msg)) {
+        form.submit();
+      }
+    }
+  }
+
+  // Gestion clavier pour les radio cards
+  document.querySelectorAll('.radio-card').forEach(function(card) {
+    card.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.click();
+      }
+    });
+  });
+
+  // Exposer globalement
+  window.selectSatisfaction = selectSatisfaction;
+  window.confirmerSignature = confirmerSignature;
+})();
+</script>
+{% endblock %}

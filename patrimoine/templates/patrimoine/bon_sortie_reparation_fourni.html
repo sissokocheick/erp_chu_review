@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Bon de Sortie pour Réparation - {{ intervention.id }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; color: #000; margin: 0; padding: 20px; }
+        .header { display: flex; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 20px; margin-bottom: 30px; }
+        .logo { font-size: 24px; font-weight: bold; }
+        .title { text-align: center; font-size: 22px; font-weight: bold; text-decoration: underline; margin-bottom: 30px; text-transform: uppercase; }
+        .box { border: 1px solid #000; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .box-title { font-weight: bold; margin-bottom: 10px; text-transform: uppercase; font-size: 14px; border-bottom: 1px solid #ccc; padding-bottom: 5px; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #000; padding: 10px; text-align: left; font-size: 14px; }
+        th { background-color: #f2f2f2; }
+        .signatures { display: flex; justify-content: space-between; margin-top: 50px; }
+        .sign-box { width: 30%; text-align: center; height: 100px; border-top: 1px dashed #000; padding-top: 10px; }
+        @media print {
+            body { padding: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+
+    <div class="no-print" style="text-align: center; margin-bottom: 20px;">
+        <button onclick="window.print()" style="padding: 10px 20px; background: #000; color: white; border: none; cursor: pointer; font-weight: bold; font-size: 16px;">🖨️ Imprimer ce Bon / Sauvegarder en PDF</button>
+    </div>
+
+    <div class="header">
+        <div class="logo">CHU ANGRÉ</div>
+        <div style="text-align: right;">
+            <strong>Date :</strong> {{ today|default:intervention.date_appel_prestataire|date:"d/m/Y" }}<br>
+            <strong>Réf Ticket :</strong> #{{ intervention.id|stringformat:"04d" }}
+        </div>
+    </div>
+
+    <div class="title">Bon de Sortie pour Réparation Externe</div>
+
+    <div class="box">
+        <div class="box-title">Informations du Prestataire</div>
+        <strong>Entreprise :</strong> {{ intervention.prestataire_concerne.raison_sociale|default:"-" }}<br>
+        <strong>Technicien contacté / intervenu :</strong> {{ intervention.technicien_appele.nom|default:"-" }} {{ intervention.technicien_appele.prenom|default:"" }}<br>
+        <strong>Téléphone :</strong> {{ intervention.technicien_appele.telephone|default:"-" }}
+    </div>
+
+    <div class="box">
+        <div class="box-title">Matériel Emporté</div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Code / SN</th>
+                    <th>Désignation de l'équipement</th>
+                    <th>Service d'origine</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ intervention.immobilisation.code_patrimoine }}</td>
+                    <td>{{ intervention.immobilisation.nom_affichage }}</td>
+                    <td>{{ intervention.immobilisation.service_affectation.nom|default:"-" }} (Bât. {{ intervention.immobilisation.bureau.batiment.code }})</td>
+                </tr>
+            </tbody>
+        </table>
+        <p><strong>Motif de la panne :</strong> {{ intervention.description_probleme }}</p>
+    </div>
+
+    <div class="signatures">
+        <div class="sign-box">
+            <strong>Service Technique (CHU)</strong><br>
+            <span style="font-size: 12px; color: #555;">{{ request.user.get_full_name|default:request.user.username }}</span>
+        </div>
+        <div class="sign-box">
+            <strong>Technicien Prestataire</strong><br>
+            <span style="font-size: 12px; color: #555;">(Signature et Cachet)</span>
+        </div>
+        <div class="sign-box">
+            <strong>Sécurité (Visa Sortie)</strong><br>
+            <span style="font-size: 12px; color: #555;">Date et Heure : ___/___/____ à ___:___</span>
+        </div>
+    </div>
+
+</body>
+</html>

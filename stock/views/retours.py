@@ -1,0 +1,268 @@
+import os
+import logging
+from datetime import datetime
+from decimal import Decimal
+
+from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.db import IntegrityError
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import render, redirect, get_object_or_404
+from django.urls import reverse
+from django.utils import timezone
+
+from accounts.permissions import verifier_permission
+from core.pdf_service import DocumentGenerator
+from ..decorators import magasin_requis, catch_errors
+from ..models import (
+    BonMouvement, LigneBon, MotifAnnulation,
+    Article, Magasin, Service,
+    Fournisseur, Beneficiaire,
+)
+from ..services import NumeroGenerator, StockService, PDFService, NotificationService
+from ..services.bon_service import BonService
+from .catalogue import paginer, get_magasins_autorises
+from .common import _has_perm_bon
+from .common_views import render_liste, get_magasin_actif, build_redirect_url
+from django.contrib.auth import get_user_model
+
+logger = logging.getLogger(__name__)
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_retours_services')
+@magasin_requis
+@catch_errors(redirect_url='liste_retours_services')
+def liste_retours_services(request):
+    """Dispatcher : GET affiche, POST crée."""
+    if request.method == 'POST':
+        return _creer_retour(request)
+    return _afficher_retours(request)
+
+
+def _afficher_retours(request):
+    """Branche GET : filtres, pagination, contexte."""
+    entreprise = request.entreprise
+    magasin_id = request.session.get('magasin_actif_id')
+
+    qs = BonMouvement.objects.filter(
+        type_bon='RETOUR_SERVICE',
+        magasin_id=magasin_id,
+        magasin__entreprise=entreprise
+    ).select_related('magasin', 'service_demandeur', 'cree_par').prefetch_related(
+        'lignes_bon__article'
+    ).order_by('-date_bon')
+
+    extra = {
+        'services': Service.objects.filter(entreprise=entreprise).order_by('nom'),
+        'magasins': Magasin.objects.filter(entreprise=entreprise).order_by('nom'),
+        'articles': Article.objects.filter(entreprise=entreprise).order_by('designation'),
+        'magasin_actif': get_magasin_actif(request),
+        'peut_creer': _has_perm_bon(request.user, 'add', 'RETOUR_SERVICE'),
+        'peut_annuler': _has_perm_bon(request.user, 'change', 'RETOUR_SERVICE'),
+    }
+    return render_liste(
+        request, qs,
+        template='stock/liste_retours.html',
+        ajax_template='stock/retours_lignes.html',
+        context_object_name='retours_bons',
+        date_field='date_bon',
+        texte_champs=[
+            'numero_bon__icontains',
+            'service_demandeur__nom__icontains',
+            'reference_externe__icontains',
+        ],
+        context_extra=extra
+    )
+
+
+def _creer_retour(request):
+    """Branche POST : validation, création via service, redirection."""
+    entreprise = request.entreprise
+    magasin_id = request.session.get('magasin_actif_id')
+
+    action = request.POST.get('action')
+    if action == 'creer_beneficiaire':
+        nom = request.POST.get('nom_complet', '').strip()
+        poste = request.POST.get('poste', '').strip()
+        service_id = request.POST.get('service')
+        if nom:
+            b = Beneficiaire.objects.create(
+                nom_complet=nom, poste=poste,
+                service_id=service_id if service_id else None,
+                entreprise=entreprise
+            )
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True, 'id': b.id,
+                    'nom': b.nom_complet, 'poste': b.poste,
+                    'service_id': b.service_id
+                })
+        return JsonResponse({'success': False})
+
+    service_id = request.POST.get('service_demandeur')
+    ref_ext = request.POST.get('reference_externe', '').strip()
+    article_ids = request.POST.getlist('articles[]')
+    quantites = request.POST.getlist('quantites[]')
+    lots = request.POST.getlist('lots[]')
+    peremptions = request.POST.getlist('peremptions[]')
+
+    magasin_post = request.POST.get('magasin')
+    magasin_id_effectif = magasin_post or magasin_id
+
+    # ── Vérification autorisation magasin ──
+    magasins_autorises = get_magasins_autorises(request)
+    if magasin_id_effectif and not magasins_autorises.filter(id=magasin_id_effectif).exists():
+        messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
+        return redirect('liste_retours_services')
+
+    if not magasin_id_effectif:
+        messages.error(request, "⛔ Aucun magasin actif sélectionné.")
+        return redirect('liste_retours_services')
+    if not article_ids:
+        messages.error(request, "❌ Vous devez ajouter au moins un article.")
+        return redirect('liste_retours_services')
+
+    magasins_autorises = get_magasins_autorises(request)
+    if not magasins_autorises.filter(id=magasin_id_effectif).exists():
+        messages.error(request, "⛔ Magasin non autorisé.")
+        return redirect('liste_retours_services')
+
+    # Conversion IDs → objets
+    magasin = get_object_or_404(Magasin, id=magasin_id_effectif, entreprise=entreprise)
+
+    service = None
+    if service_id:
+        service = get_object_or_404(Service, id=service_id, entreprise=entreprise)
+
+    # CORRECTION : validation des articles contre l'entreprise
+    articles_valides = set(
+        Article.objects.filter(
+            id__in=[aid for aid in article_ids if aid],
+            entreprise=entreprise
+        ).values_list('id', flat=True)
+    )
+
+    lignes = []
+    for aid, qte, lot, peremp in zip(article_ids, quantites, lots, peremptions):
+        if aid and qte and int(qte) > 0:
+            if int(aid) not in articles_valides:
+                messages.error(
+                    request,
+                    "⛔ Un ou plusieurs articles sélectionnés n'appartiennent pas à votre entreprise."
+                )
+                return redirect('liste_retours_services')
+            lignes.append({
+                'article_id': aid,
+                'quantite': int(qte),
+                'numero_lot': lot or None,
+                'date_peremption': peremp or None,
+            })
+
+    try:
+        bon = BonService.creer_bon_retour(
+            lignes=lignes,
+            utilisateur=request.user,
+            magasin=magasin,
+            service=service,
+            reference_externe=ref_ext,
+        )
+    except IntegrityError as e:
+        logger.exception("[RETOUR] IntegrityError création bon : %s", e)
+        messages.error(request, "⛔ Erreur lors de la création du bon. Vérifiez la console pour le détail.")
+        return redirect('liste_retours_services')
+
+    messages.success(request, f"✅ Bon de retour {bon.numero_bon} enregistré ! ({len(lignes)} article(s))")
+    return redirect(f"{reverse('liste_retours_services')}?print_bon={bon.id}")
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_retours_services')
+@magasin_requis
+@catch_errors(redirect_url='liste_retours_services')
+def imprimer_bon_retour(request, bon_id):
+    entreprise = request.entreprise
+    bon = get_object_or_404(
+        BonMouvement,
+        id=bon_id,
+        type_bon='RETOUR_SERVICE',
+        magasin__entreprise=entreprise
+    )
+    service_poste = getattr(bon.service_demandeur, 'poste_telephone', '') if bon.service_demandeur else ''
+    gen = DocumentGenerator(request=request, entreprise=entreprise)
+    pdf_bytes = gen.bon_retour(bon, extra_context={'service_poste': service_poste})
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="bon_retour_{bon.numero_bon}.pdf"'
+    return response
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_retours_services')
+def apercu_bon_retour(request, bon_id):
+    User = get_user_model()
+
+    bon = get_object_or_404(
+        BonMouvement,
+        id=bon_id,
+        type_bon='RETOUR_SERVICE',
+        magasin__entreprise=request.entreprise
+    )
+
+    lignes_brutes = list(bon.lignes_bon.select_related('article').all())
+    total_qte = sum(l.quantite for l in lignes_brutes)
+
+    entreprise = request.entreprise
+    pdf_config = {}
+    if entreprise and hasattr(entreprise, 'get_pdf_config'):
+        try:
+            pdf_config = entreprise.get_pdf_config() or {}
+        except Exception:
+            pdf_config = {}
+
+    lignes_data = []
+    for ligne in lignes_brutes:
+        article = ligne.article
+        unite = 'U'
+        for attr in ('unite_distribution', 'unite_mesure', 'unite'):
+            if hasattr(article, attr):
+                val = getattr(article, attr)
+                if val:
+                    unite = val
+                    break
+        lignes_data.append({
+            'reference': getattr(article, 'reference', '') or '',
+            'designation': getattr(article, 'designation', '') or '',
+            'unite': unite,
+            'quantite': ligne.quantite,
+        })
+    nb_lignes = len(lignes_data)
+    empty_lines = list(range(max(0, 12 - nb_lignes)))
+
+    chef_service = None
+    if bon.service_demandeur:
+        chef_service = User.objects.filter(
+            profil__service=bon.service_demandeur,
+            profil__est_chef_service=True,
+            is_active=True,
+            profil__entreprise=entreprise
+        ).first()
+
+    responsable = getattr(bon.magasin, 'responsable', None) if bon.magasin else None
+    magasinier = bon.cree_par
+
+    context = {
+        'is_apercu': True,
+        'bon': bon,
+        'lignes': lignes_brutes,
+        'lignes_data': lignes_data,
+        'empty_lines': empty_lines,
+        'total_qte': total_qte,
+        'chef_service': chef_service,
+        'responsable': responsable,
+        'magasinier': magasinier,
+        'entreprise': entreprise,
+        'logo_url': request.build_absolute_uri(entreprise.logo.url) if entreprise and entreprise.logo else None,
+        'date_impression': timezone.now(),
+        'pdf_config': pdf_config,
+    }
+    return render(request, 'stock/pdf/bon_retour.html', context)

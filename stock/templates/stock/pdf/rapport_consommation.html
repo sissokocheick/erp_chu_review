@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="fr" style="height:100%;">
+<head>
+    <meta charset="UTF-8">
+    <title>Bilan des Consommations</title>
+    <style>
+        @page {
+            size: A4 portrait;
+            margin: 8mm 8mm 10mm 8mm;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 10pt;
+            color: #000;
+            background: #fff;
+        }
+
+        .page-table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+        }
+        .page-table td { padding: 0; }
+        .cell-content { vertical-align: top; }
+        .cell-footer {
+            vertical-align: bottom;
+            height: 1px;
+            padding-top: 10px;
+        }
+
+        /* ── Top Header ── */
+        .top-header {
+            width: 100%;
+            display: table;
+            margin-bottom: 6px;
+        }
+        .top-header > div {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+            font-size: 9pt;
+        }
+        .top-header-left { text-align: center; }
+        .top-header-left .ministry { font-weight: bold; }
+        .top-header-right { text-align: center; }
+        .top-header-right .republic { font-weight: bold; }
+        .top-header-right .motto { font-style: italic; }
+
+        /* ── Cartouche principal ── */
+        .main-cartridge {
+            width: 100%;
+            display: table;
+            border: 2px solid #000;
+            margin-bottom: 10px;
+        }
+        .main-cartridge > div {
+            display: table-cell;
+            vertical-align: middle;
+        }
+        .cart-col-logo {
+            width: 20%;
+            text-align: center;
+            padding: 6px;
+            border-right: 2px solid #000;
+        }
+        .cart-col-logo img {
+            max-width: 100%;
+            height: auto;
+            max-height: 70px;
+            display: block;
+            margin: 0 auto;
+        }
+        .cart-col-logo .institution-text {
+            font-size: 7pt;
+            text-align: center;
+            color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+            margin-top: 3px;
+        }
+        .cart-col-title {
+            width: 55%;
+            text-align: center;
+            border-right: 2px solid #000;
+            padding: 0;
+        }
+        .cart-col-title .process {
+            font-size: 8pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 4px 3px;
+            border-bottom: 2px solid #000;
+        }
+        .cart-col-title .doc-title {
+            font-size: 14pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 6px 3px 2px;
+        }
+        .cart-col-title .doc-subtitle {
+            font-size: 9pt;
+            font-weight: bold;
+            text-transform: uppercase;
+            text-align: center;
+            padding: 2px 3px 6px;
+        }
+        .cart-col-quality {
+            width: 25%;
+            padding: 6px 8px;
+            font-size: 8pt;
+            text-align: left;
+        }
+        .cart-col-quality .q-row { margin-bottom: 3px; white-space: nowrap; }
+        .cart-col-quality .q-label { font-weight: bold; }
+
+        /* ── Info box ── */
+        .info-box {
+            margin-bottom: 12px;
+            padding: 8px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 3px;
+            font-size: 9pt;
+        }
+        .info-row { margin-bottom: 4px; }
+        .info-label { font-weight: bold; color: #1c5b96; }
+
+        /* ── Tableau ── */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 9pt;
+        }
+        th {
+            background-color: #1c5b96;
+            color: white;
+            text-align: left;
+            padding: 6px 8px;
+            font-size: 8pt;
+            text-transform: uppercase;
+            border: 1px solid #1c5b96;
+        }
+        td {
+            padding: 5px 8px;
+            border: 1px solid #999;
+            vertical-align: middle;
+        }
+        .row-famille {
+            background-color: #e9ecef;
+            font-weight: bold;
+            color: #495057;
+            font-size: 9pt;
+            text-transform: uppercase;
+        }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .qte-col { font-weight: bold; color: #dc3545; font-size: 11pt; }
+        .no-data {
+            text-align: center;
+            padding: 30px;
+            color: #888;
+            font-style: italic;
+            border: 1px dashed #ccc;
+        }
+
+        /* ── Footer ── */
+        .footer-chu {
+            text-align: center;
+            font-size: 7pt;
+            line-height: 1.3;
+        }
+        .footer-line {
+            border: none;
+            border-top: 2px solid #2e86c1;
+            margin-bottom: 4px;
+        }
+        .footer-chu .address { color: {{ pdf_config.couleur_principale|default:"#1c5b96" }}; font-weight: bold; margin-bottom: 1px; }
+        .footer-chu .direction-fin { color: #c0392b; font-weight: bold; margin-bottom: 1px; }
+        .footer-chu .postes { color: {{ pdf_config.couleur_principale|default:"#1c5b96" }}; font-weight: bold; }
+    </style>
+<base target="_blank">
+</head>
+<body>
+
+<table class="page-table">
+    <tr>
+        <td class="cell-content">
+
+            <!-- Top Header -->
+            <div class="top-header">
+                <div class="top-header-left">
+                    <div class="ministry">{{ pdf_config.ministere_label|default:"Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle" }}</div>
+                </div>
+                <div class="top-header-right">
+                    <div class="republic">{{ pdf_config.republique_label|default:"République de Côte d'Ivoire" }}</div>
+                    <div class="motto">{{ pdf_config.devise_label|default:"Union-Discipline-Travail" }}</div>
+                </div>
+            </div>
+
+            <!-- Cartouche principal -->
+            <div class="main-cartridge">
+                <div class="cart-col-logo">
+                    {% if pdf_config.afficher_logo and logo_url %}
+                        <img src="{{ logo_url }}" alt="Logo {{ entreprise.nom|default:'' }}">
+                    {% else %}
+                        <div style="height:55px;"></div>
+                    {% endif %}
+                    <div class="institution-text">{{ entreprise.nom|default:"" }}</div>
+                </div>
+                <div class="cart-col-title">
+                    <div class="process">{{ pdf_config.ps2_label|default:"PS2 : GERER LES PRESTATIONS EXTERNES" }}</div>
+                    <div class="doc-title">BILAN DES CONSOMMATIONS</div>
+                    <div class="doc-subtitle">SORTIES DE STOCK</div>
+                </div>
+                <div class="cart-col-quality">
+                    <div class="q-row"><span class="q-label">Code :</span> {{ pdf_config.code_document|default:"ENR-CONS/DAF-007" }}</div>
+                    <div class="q-row"><span class="q-label">Créé le :</span> {{ pdf_config.date_creation_doc|default:"10/06/2024" }}</div>
+                    <div class="q-row"><span class="q-label">Révisé le :</span> {{ pdf_config.date_revision_doc|default:"19/05/2025" }}</div>
+                    <div class="q-row"><span class="q-label">Version :</span> {{ pdf_config.version_doc|default:"002" }}</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-row">
+                    <span class="info-label">Période :</span>
+                    Du {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Service :</span>
+                    {% if service %}{{ service.nom|upper }}{% else %}TOUS LES SERVICES{% endif %}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Généré le :</span>
+                    {{ date_impression|date:"d/m/Y à H:i" }} par {{ edite_par.get_full_name|default:edite_par.username }}
+                </div>
+            </div>
+
+            {% if consommations %}
+                {% regroup consommations by article__famille__intitule as liste_par_famille %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 15%;">Référence</th>
+                            <th style="width: 50%;">Désignation</th>
+                            <th style="width: 20%;">Unité</th>
+                            <th style="width: 15%; text-align: right;">Qté Totale</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for famille in liste_par_famille %}
+                            <tr class="row-famille">
+                                <td colspan="4">{{ famille.grouper|default:"SANS FAMILLE" }}</td>
+                            </tr>
+                            {% for item in famille.list %}
+                            <tr>
+                                <td style="color: #666;">{{ item.article__reference|default:"-" }}</td>
+                                <td><strong>{{ item.article__designation }}</strong></td>
+                                <td style="color: #666;">{{ item.article__unite_distribution|default:"U" }}</td>
+                                <td class="text-right qte-col">{{ item.total_sorti }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="no-data">
+                    <h3>Aucune consommation enregistrée</h3>
+                    <p>Il n'y a eu aucune sortie pour les critères sélectionnés.</p>
+                </div>
+            {% endif %}
+
+        </td>
+    </tr>
+    <tr>
+        <td class="cell-footer">
+            <div class="footer-chu">
+                <hr class="footer-line">
+                <div class="address">{{ entreprise.adresse|default:"" }}</div>
+                <div class="direction-fin">{{ pdf_config.direction_label|default:"Direction des Affaires Financières" }} * {{ pdf_config.sous_direction_label|default:"Sous-Direction de la Logistique" }}</div>
+                <div class="postes">{{ pdf_config.service_label|default:"Service Approvisionnement et Gestion des Stocks" }}</div>
+            </div>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

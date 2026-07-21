@@ -1,0 +1,277 @@
+{% extends "base_ui.html" %}
+{% block title %}Modifier — {{ immo.nom_affichage }}{% endblock %}
+
+{% block contenu %}
+<style>
+  .vs-header{background:linear-gradient(135deg,#6f42c1,#563d7c);color:white;border-radius:10px;padding:20px 26px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 18px rgba(111,66,193,.3);flex-wrap:wrap;gap:14px;}
+  .vs-header h4{margin:0;font-size:20px;font-weight:700;}
+  .vs-header small{opacity:.85;font-size:12px;}
+  .card{background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:24px;margin-bottom:18px;}
+  .card h5{margin:0 0 18px;font-size:14px;font-weight:700;color:#333;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #f0f3f7;padding-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .card h5 i{color:#6f42c1;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
+  .fg{margin-bottom:14px;}
+  .fg label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#495057;margin-bottom:5px;}
+  .fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1px solid #dde3ea;border-radius:7px;font-size:13px;outline:none;box-sizing:border-box;transition:.2s;}
+  .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#6f42c1;box-shadow:0 0 0 3px rgba(111,66,193,.1);}
+  .btn-save{background:#6f42c1;color:white;border:none;padding:12px 28px;border-radius:7px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.2s;}
+  .btn-save:hover{background:#563d7c;}
+  .btn-cancel{background:#f0f3f7;color:#6c757d;border:none;padding:12px 18px;border-radius:7px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;}
+  .btn-cancel:hover{background:#dde3ea;}
+  .select2-container .select2-selection--single{height:41px!important;padding:5px;border:1px solid #dde3ea!important;border-radius:7px!important;}
+  .select2-container--default .select2-selection--single .select2-selection__arrow{height:39px!important;}
+</style>
+
+<div class="vs-header">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <i class="fas fa-edit" style="font-size:28px;opacity:.9;"></i>
+    <div>
+      <h4>Modifier l'équipement</h4>
+      <small>{{ immo.code_patrimoine }} — {{ immo.nom_affichage }}</small>
+    </div>
+  </div>
+  <a href="javascript:history.back()" style="background:rgba(255,255,255,.2);color:white;padding:8px 16px;border-radius:7px;text-decoration:none;font-size:13px;font-weight:600;">
+    <i class="fas fa-arrow-left" style="margin-right:6px;"></i> Retour
+  </a>
+</div>
+
+<form method="POST">
+{% csrf_token %}
+
+<div class="card">
+  <h5><i class="fas fa-tag"></i> Identification du bien</h5>
+  <div class="grid2">
+    <div class="fg">
+      <label>Code patrimoine / Asset Tag</label>
+      <input type="text" name="code_patrimoine" value="{{ immo.code_patrimoine|default_if_none:'' }}">
+    </div>
+    <div class="fg">
+      <label>N° de série (SN)</label>
+      <input type="text" name="numero_serie" value="{{ immo.numero_serie|default_if_none:'' }}">
+    </div>
+    <div class="fg">
+      <label>Nom / Désignation complète</label>
+      <input type="text" name="nom_affichage" value="{{ immo.nom_affichage|default_if_none:'' }}" required>
+    </div>
+    <div class="fg">
+      <label>Statut de la machine</label>
+      <select name="statut" class="select2-init">
+        <option value="ACTIF" {% if immo.statut == 'ACTIF' %}selected{% endif %}>🟢 En service / Actif</option>
+        <option value="EN_PANNE" {% if immo.statut == 'EN_PANNE' %}selected{% endif %}>🔴 En panne / Réparation</option>
+        <option value="REFORME" {% if immo.statut == 'REFORME' %}selected{% endif %}>⚫ Réformé / Mis au rebut</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>Type d'équipement</label>
+      <select name="type_equipement" class="select2-init">
+        <option value="">-- Choisir --</option>
+        {% regroup types by categorie as categories_list %}
+        {% for categorie in categories_list %}
+            <optgroup label="📦 {{ categorie.grouper.nom }}">
+                {% for t in categorie.list %}
+                    <option value="{{ t.id }}" {% if immo.type_equipement_id == t.id %}selected{% endif %}>↳ {{ t.nom }}</option>
+                {% endfor %}
+            </optgroup>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="fg">
+      <label>Marque</label>
+      <select name="marque" id="sel-marque" class="select2-init">
+        <option value="">-- Aucune --</option>
+        {% for m in marques %}
+        <option value="{{ m.id }}" {% if immo.marque_id == m.id %}selected{% endif %}>{{ m.nom }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h5><i class="fas fa-map-marker-alt"></i> Localisation & Affectation</h5>
+  <div class="grid2">
+    <div class="fg">
+      <label>Service d'affectation</label>
+      <select name="service" id="sel-service" class="select2-init">
+        <option value="">-- Aucun --</option>
+        {% for s in services %}
+        <option value="{{ s.id }}" {% if immo.service_affectation_id == s.id %}selected{% endif %}>{{ s.nom }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    
+    <div style="background:#f8f9fa; border:1px solid #dde3ea; border-radius:8px; padding:15px; grid-column:1/-1;">
+        <div class="grid3">
+            <div class="fg">
+                <label>Bâtiment</label>
+                <select id="select-batiment" class="select2-init">
+                    <option value="">-- Sélectionner --</option>
+                    {% for b in batiments %}
+                    <option value="{{ b.id }}" {% if immo.bureau and immo.bureau.etage.batiment.id == b.id %}selected{% endif %}>🏢 {{ b.nom }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="fg">
+                <label>Étage</label>
+                <select id="select-etage" class="select2-init">
+                    <option value="">-- Sélectionner d'abord le bâtiment --</option>
+                    {% if immo.bureau %}
+                    <option value="{{ immo.bureau.etage.id }}" selected>↳ {{ immo.bureau.etage.nom }}</option>
+                    {% endif %}
+                </select>
+            </div>
+            <div class="fg">
+                <label>Bureau (Destination)</label>
+                <select id="select-bureau" name="bureau" class="select2-init" style="border-color:#6f42c1;">
+                    <option value="">-- Sélectionner d'abord l'étage --</option>
+                    {% if immo.bureau %}
+                    <option value="{{ immo.bureau.id }}" selected>🚪 {{ immo.bureau.nom }}</option>
+                    {% endif %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="fg" style="grid-column:1/-1;">
+      <label>Emplacement précis dans la salle</label>
+      <input type="text" name="emplacement_exact" value="{{ immo.emplacement_exact|default_if_none:'' }}" placeholder="Ex: Sur le bureau à gauche...">
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <h5><i class="fas fa-calculator"></i> Acquisition & Suivi</h5>
+  <div class="grid3">
+    <div class="fg">
+      <label>Valeur d'acquisition (FCFA)</label>
+      <input type="number" step="0.01" name="valeur_acquisition" value="{{ immo.valeur_acquisition }}">
+    </div>
+    <div class="fg">
+      <label>Date d'expiration Garantie</label>
+      <input type="date" name="garantie_expiration" value="{{ immo.garantie_expiration|date:'Y-m-d' }}">
+    </div>
+    <div class="fg">
+      <label>Action requise (Alertes)</label>
+      <select name="action_requise" class="select2-init">
+        <option value="RAS" {% if immo.action_requise == 'RAS' %}selected{% endif %}>Aucune action requise</option>
+        <option value="MAINTENANCE" {% if immo.action_requise == 'MAINTENANCE' %}selected{% endif %}>Maintenance à planifier</option>
+        <option value="REPARATION" {% if immo.action_requise == 'REPARATION' %}selected{% endif %}>Réparation urgente</option>
+        <option value="REMPLACEMENT" {% if immo.action_requise == 'REMPLACEMENT' %}selected{% endif %}>Remplacement à prévoir</option>
+      </select>
+    </div>
+    <div class="fg" style="grid-column:1/-1;">
+      <label>Notes & Commentaires internes</label>
+      <textarea name="notes" rows="3">{{ immo.notes }}</textarea>
+    </div>
+  </div>
+</div>
+
+<div style="display:flex;justify-content:flex-end;gap:12px;margin-top:8px;">
+  <a href="javascript:history.back()" class="btn-cancel"><i class="fas fa-times"></i> Annuler</a>
+  <button type="submit" class="btn-save"><i class="fas fa-save"></i> Enregistrer les modifications</button>
+</div>
+
+</form>
+
+<script>
+if (typeof $ !== 'undefined') {
+  $(document).ready(function() {
+    // 1. Initialisation
+    $('.select2-init').select2({ width: '100%' });
+    
+    var isUpdatingLoc = false; // Verrou de sécurité
+
+    // 2. Le Super-Filtre Omnidirectionnel avec gestion d'erreurs
+    function updateLocalisation() {
+        if (isUpdatingLoc) return;
+        isUpdatingLoc = true;
+
+        var serviceId = $('#sel-service').val() || '';
+        var batimentId = $('#select-batiment').val() || '';
+        var etageId = $('#select-etage').val() || '';
+        var bureauId = $('#select-bureau').val() || '';
+
+        var url = `/patrimoine/ajax/localisation/?service=${serviceId}&batiment=${batimentId}&etage=${etageId}&bureau=${bureauId}`;
+
+        // On interroge le cerveau Python
+        $.getJSON(url, function(data) {
+            
+            function updateSelect($el, dataList, defaultText, prefix) {
+                var currentVal = $el.val();
+                $el.empty().append(new Option(defaultText, ''));
+                var found = false;
+                
+                dataList.forEach(function(item) {
+                    var optText = prefix ? prefix + ' ' + item.nom : item.nom;
+                    var opt = new Option(optText, item.id);
+                    if (item.id == currentVal) {
+                        opt.selected = true;
+                        found = true;
+                    }
+                    $el.append(opt);
+                });
+                
+                // Auto-sélection s'il n'y a qu'un seul choix logique
+                if (!found && dataList.length === 1) {
+                    $el.val(dataList[0].id);
+                } else if (!found) {
+                    $el.val('');
+                }
+            }
+
+            updateSelect($('#sel-service'), data.services, '-- Choisir un service --', '');
+            updateSelect($('#select-batiment'), data.batiments, '-- Sélectionner un bâtiment --', '🏢');
+            updateSelect($('#select-etage'), data.etages, '-- Sélectionner un étage --', '↳');
+            updateSelect($('#select-bureau'), data.bureaux, '-- Sélectionner un bureau --', '🚪');
+
+            // Mise à jour visuelle (sans relancer d'événement 'change' pour éviter la boucle)
+            $('#sel-service, #select-batiment, #select-etage, #select-bureau').trigger('change.select2');
+
+            isUpdatingLoc = false; // On déverrouille
+            
+        }).fail(function(jqxhr, textStatus, error) {
+            isUpdatingLoc = false;
+            console.error("Erreur serveur AJAX :", error);
+            // 🔴 ALERTE VISUELLE EN CAS DE CRASH DU SERVEUR
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur Système',
+                text: "Le serveur n'arrive pas à filtrer les lieux. Avez-vous bien mis à jour la base de données (makemigrations / migrate) ?"
+            });
+        });
+    }
+
+    // 3. Écouteurs avec nettoyage visuel immédiat
+    $('#sel-service').on('change', function() {
+        if (isUpdatingLoc) return;
+        // On vide visuellement les listes enfants tout de suite
+        $('#select-batiment, #select-etage, #select-bureau').val('').trigger('change.select2'); 
+        updateLocalisation();
+    });
+
+    $('#select-batiment').on('change', function() {
+        if (isUpdatingLoc) return;
+        $('#select-etage, #select-bureau').val('').trigger('change.select2');
+        updateLocalisation();
+    });
+
+    $('#select-etage').on('change', function() {
+        if (isUpdatingLoc) return;
+        $('#select-bureau').val('').trigger('change.select2');
+        updateLocalisation();
+    });
+
+    $('#select-bureau').on('change', function() {
+        if (isUpdatingLoc) return;
+        updateLocalisation();
+    });
+
+    // Lancement initial des fonctions annexes (Specs, Modèles...)
+    var t = document.getElementById('sel-type'); if (t && t.value) chargerSpecs(t.value); 
+    var m = document.getElementById('sel-marque'); if (m && m.value) chargerModeles(m.value);
+  });
+}
+</script>
+
+{% endblock %}

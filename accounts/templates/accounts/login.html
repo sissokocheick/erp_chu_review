@@ -1,0 +1,769 @@
+<!-- templates/accounts/login.html -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusERP - Connexion Sécurisée</title>
+
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border-color: #cbd5e1;
+            --input-bg: #ffffff;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --accent-light: rgba(37, 99, 235, 0.1);
+            --alert-error-bg: #fef2f2;
+            --alert-error-text: #ef4444;
+            --alert-success-bg: #f0fdf4;
+            --alert-success-text: #22c55e;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(255, 255, 255, 0.5);
+        }
+
+        body.dark-mode {
+            --bg-main: #0f172a;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --input-bg: #1e293b;
+            --accent: #3b82f6;
+            --accent-hover: #60a5fa;
+            --accent-light: rgba(59, 130, 246, 0.15);
+            --alert-error-bg: rgba(239, 68, 68, 0.1);
+            --alert-error-text: #f87171;
+            --alert-success-bg: rgba(34, 197, 94, 0.1);
+            --alert-success-text: #4ade80;
+            --card-bg: rgba(30, 41, 59, 0.85);
+            --card-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--bg-main);
+            color: var(--text-primary);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+
+        /* ========== SPLIT LAYOUT ========== */
+        .layout-wrapper {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* ========== PANNEAU GAUCHE : BRANDING COLORÉ ========== */
+        .brand-panel {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 3rem 4rem;
+            color: white;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #2563eb 50%, #1e3a8a 70%, #0f172a 100%);
+            background-size: 400% 400%;
+            animation: brandGradient 15s ease infinite;
+        }
+
+        @keyframes brandGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Orbes colorés flottants */
+        .brand-panel .orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(60px);
+            opacity: 0.4;
+            animation: orbFloat ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .brand-panel .orb-1 {
+            width: 400px; height: 400px;
+            background: radial-gradient(circle, rgba(56, 189, 248, 0.7) 0%, transparent 70%);
+            top: -10%; left: -10%;
+            animation-duration: 20s;
+        }
+        .brand-panel .orb-2 {
+            width: 350px; height: 350px;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.6) 0%, transparent 70%);
+            bottom: 20%; right: -10%;
+            animation-duration: 25s; animation-delay: -5s;
+        }
+        .brand-panel .orb-3 {
+            width: 300px; height: 300px;
+            background: radial-gradient(circle, rgba(20, 184, 166, 0.5) 0%, transparent 70%);
+            top: 40%; left: 40%;
+            animation-duration: 22s; animation-delay: -10s;
+        }
+        .brand-panel .orb-4 {
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, rgba(244, 114, 182, 0.4) 0%, transparent 70%);
+            bottom: -5%; left: 10%;
+            animation-duration: 28s; animation-delay: -3s;
+        }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -25px) scale(1.1); }
+            50% { transform: translate(-20px, 30px) scale(0.95); }
+            75% { transform: translate(25px, 15px) scale(1.05); }
+        }
+
+        /* Formes géométriques */
+        .brand-panel .shape {
+            position: absolute;
+            opacity: 0.12;
+            animation: floatShape ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        .brand-panel .shape-1 {
+            width: 180px; height: 180px;
+            border: 2px solid rgba(56, 189, 248, 0.6);
+            border-radius: 50%;
+            top: 15%; right: 15%;
+            animation-duration: 22s;
+        }
+        .brand-panel .shape-2 {
+            width: 140px; height: 140px;
+            background: linear-gradient(135deg, rgba(168, 85, 247, 0.3), rgba(56, 189, 248, 0.2));
+            clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+            bottom: 30%; left: 5%;
+            animation-duration: 28s; animation-delay: -4s;
+        }
+        .brand-panel .shape-3 {
+            width: 120px; height: 120px;
+            border: 2px solid rgba(20, 184, 166, 0.5);
+            border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+            top: 60%; right: 25%;
+            animation-duration: 32s; animation-delay: -8s;
+        }
+        .brand-panel .shape-4 {
+            width: 100px; height: 100px;
+            background: rgba(251, 191, 36, 0.15);
+            clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+            bottom: 15%; right: 40%;
+            animation-duration: 26s; animation-delay: -12s;
+        }
+        .brand-panel .shape-5 {
+            width: 80px; height: 80px;
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            top: 10%; left: 30%;
+            animation-duration: 30s; animation-delay: -6s;
+        }
+
+        @keyframes floatShape {
+            0%, 100% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            33% { transform: translate(25px, -25px) rotate(120deg) scale(1.1); }
+            66% { transform: translate(-15px, 20px) rotate(240deg) scale(0.9); }
+        }
+
+        /* Grille subtile */
+        .brand-panel .grid-overlay {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+
+        /* Vignette */
+        .brand-panel .vignette {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.3) 100%);
+            pointer-events: none;
+        }
+
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            position: relative;
+            z-index: 2;
+            animation: fadeInDown 0.8s ease forwards;
+        }
+
+        .brand-header svg {
+            width: 42px; height: 42px;
+            filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));
+        }
+
+        .brand-content {
+            position: relative;
+            z-index: 2;
+            max-width: 480px;
+            animation: fadeInUp 1s ease 0.2s both;
+        }
+
+        .brand-content h2 {
+            font-size: 3.2rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            letter-spacing: -1px;
+            text-shadow: 0 2px 20px rgba(0,0,0,0.2);
+        }
+
+        .brand-content p {
+            font-size: 1.125rem;
+            color: rgba(255, 255, 255, 0.85);
+            line-height: 1.7;
+        }
+
+        .brand-footer {
+            position: relative;
+            z-index: 2;
+            opacity: 0.6;
+            font-size: 0.85rem;
+            animation: fadeIn 1.2s ease 0.4s both;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 0.6; }
+        }
+
+        /* ========== PANNEAU DROIT : FORMULAIRE ========== */
+        .form-panel {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            position: relative;
+            background: var(--bg-main);
+            transition: background 0.5s ease;
+        }
+
+        /* Fond subtil panneau droit */
+        .form-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(37, 99, 235, 0.04) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+
+        .login-box {
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 1;
+            animation: slideUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(25px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .login-header {
+            margin-bottom: 2.5rem;
+        }
+
+        .login-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+            letter-spacing: -0.5px;
+            color: var(--text-primary);
+        }
+
+        .login-header p {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+        }
+
+        /* --- Floating Labels Inputs --- */
+        .form-floating {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 1.25rem 1rem 0.5rem;
+            font-size: 1rem;
+            font-family: inherit;
+            color: var(--text-primary);
+            background-color: var(--input-bg);
+            border: 1.5px solid var(--border-color);
+            border-radius: 12px;
+            outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s, background-color 0.3s;
+        }
+
+        .form-control:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 4px var(--accent-light);
+        }
+
+        .form-floating label {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+            font-size: 1rem;
+            pointer-events: none;
+            transition: all 0.2s ease;
+            transform-origin: left top;
+        }
+
+        .form-control:focus ~ label,
+        .form-control:not(:placeholder-shown) ~ label {
+            top: 0.5rem;
+            transform: translateY(0) scale(0.75);
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        /* Sélecteur personnalisé */
+        .custom-select-wrapper {
+            position: relative;
+            margin-bottom: 2rem;
+        }
+
+        .custom-select-wrapper > label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            transition: color 0.3s;
+        }
+
+        select.form-control {
+            padding: 0.875rem 1rem;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            color: var(--text-primary);
+        }
+
+        body.dark-mode select.form-control {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 0.5rem;
+            font-size: 1rem;
+            transition: color 0.2s, transform 0.2s;
+            border-radius: 6px;
+        }
+
+        .password-toggle:hover {
+            color: var(--accent);
+            background: var(--accent-light);
+        }
+
+        /* Bouton d'action amélioré */
+        .btn-login {
+            width: 100%;
+            padding: 0.875rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            background-size: 200% 200%;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-login::before {
+            content: '';
+            position: absolute;
+            top: 0; left: -100%;
+            width: 100%; height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(37, 99, 235, 0.4);
+            background-position: 100% 0;
+        }
+
+        .btn-login:hover::before {
+            left: 100%;
+        }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
+        .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            position: absolute;
+            top: 1.5rem; right: 1.5rem;
+            background: var(--input-bg);
+            border: 1.5px solid var(--border-color);
+            color: var(--text-secondary);
+            width: 42px; height: 42px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 10;
+            font-size: 1rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: scale(1.1) rotate(15deg);
+            box-shadow: 0 0 15px var(--accent-light);
+        }
+
+        /* Alertes */
+        .alert {
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1.5rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            animation: shake 0.5s ease;
+            border: 1px solid transparent;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .alert i {
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .alert-error {
+            background: var(--alert-error-bg);
+            color: var(--alert-error-text);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .alert-success {
+            background: var(--alert-success-bg);
+            color: var(--alert-success-text);
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-5px); }
+            40% { transform: translateX(5px); }
+            60% { transform: translateX(-3px); }
+            80% { transform: translateX(3px); }
+        }
+
+        /* Spinner CSS */
+        .spinner {
+            display: none;
+            width: 20px; height: 20px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .btn-login.loading .spinner { display: block; }
+        .btn-login.loading .btn-text { display: none; }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Footer info session */
+        .session-info {
+            text-align: center;
+            margin-top: 1.5rem;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            opacity: 0.8;
+        }
+
+        .session-info i {
+            font-size: 0.75rem;
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .brand-panel { display: none; }
+            .form-panel {
+                padding: 1.5rem;
+                background: linear-gradient(180deg, var(--bg-main) 0%, var(--bg-main) 100%);
+            }
+            .login-box { max-width: 100%; }
+            .login-header h1 { font-size: 1.6rem; }
+        }
+
+        @media (max-width: 480px) {
+            .form-panel { padding: 1rem; }
+            .login-header { margin-bottom: 1.5rem; }
+            .form-floating { margin-bottom: 1.2rem; }
+            .custom-select-wrapper { margin-bottom: 1.5rem; }
+        }
+    </style>
+
+</head>
+<body>
+
+    <script>
+        // Anti-flash mode sombre
+        (function() {
+            var m = document.cookie.match('(^|;) ?theme_pref=([^;]*)(;|$)');
+            if ((m && m[2] === 'dark') || localStorage.getItem('nexuserp_dark_mode') === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+        })();
+    </script>
+
+    <div class="layout-wrapper">
+        <!-- Panneau de gauche (Branding animé) -->
+        <div class="brand-panel">
+            <div class="orb orb-1"></div>
+            <div class="orb orb-2"></div>
+            <div class="orb orb-3"></div>
+            <div class="orb orb-4"></div>
+
+            <div class="shape shape-1"></div>
+            <div class="shape shape-2"></div>
+            <div class="shape shape-3"></div>
+            <div class="shape shape-4"></div>
+            <div class="shape shape-5"></div>
+
+            <div class="grid-overlay"></div>
+            <div class="vignette"></div>
+
+            <div class="brand-header">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="24" r="20" stroke="white" stroke-width="2" opacity="0.2"/>
+                    <circle cx="24" cy="24" r="8" fill="white"/>
+                    <path d="M24 4L24 16M44 24L32 24M24 44L24 32M4 24L16 24" stroke="white" stroke-width="2" opacity="0.6" stroke-linecap="round"/>
+                </svg>
+                <span>NexusERP</span>
+            </div>
+
+            <div class="brand-content">
+                <h2>Gérez votre écosystème en temps réel.</h2>
+                <p>L'espace de travail unifié pour piloter vos ressources, fluidifier vos processus et accélérer votre croissance avec précision.</p>
+            </div>
+
+            <div class="brand-footer">
+                &copy; 2026 Nexus Systems. Tous droits réservés.
+            </div>
+        </div>
+
+        <!-- Panneau de droite (Formulaire) -->
+        <div class="form-panel">
+            <button type="button" class="theme-toggle" id="themeToggle" title="Basculer le thème">
+                <i class="fas fa-moon" id="themeIcon"></i>
+            </button>
+
+            <div class="login-box">
+                <div class="login-header">
+                    <h1>Bon retour</h1>
+                    <p>Veuillez entrer vos identifiants pour continuer.</p>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+                            <i class="fas {% if message.tags == 'error' %}fa-circle-exclamation{% else %}fa-check-circle{% endif %}"></i>
+                            <span>{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <!-- Honeypot anti-bot -->
+                <input type="text" name="a_username" style="position:absolute;opacity:0;top:-1000px;" tabindex="-1" autocomplete="off">
+                <input type="password" name="a_password" style="position:absolute;opacity:0;top:-1000px;" tabindex="-1" autocomplete="off">
+
+                <form method="POST" action="{% url 'accounts:custom_login' %}" id="loginForm" novalidate autocomplete="off">
+                    {% csrf_token %}
+                    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+
+                    <div class="form-floating">
+                        <input type="text"
+                               name="username"
+                               id="id_username"
+                               class="form-control"
+                               placeholder=" "
+                               required
+                               value="{{ request.POST.username|default:'' }}"
+                               autofocus
+                               autocomplete="off"
+                               autocorrect="off"
+                               autocapitalize="off"
+                               spellcheck="false">
+                        <label for="id_username">Login</label>
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="password"
+                               name="password"
+                               id="id_password"
+                               class="form-control"
+                               placeholder=" "
+                               required
+                               autocomplete="new-password"
+                               autocorrect="off"
+                               autocapitalize="off"
+                               spellcheck="false">
+                        <label for="id_password">Mot de passe</label>
+                        <button type="button" class="password-toggle" id="passwordToggle" aria-label="Afficher/Masquer">
+                            <i class="fas fa-eye" id="passwordIcon"></i>
+                        </button>
+                    </div>
+
+                    <div class="custom-select-wrapper">
+                        <label for="entreprise_slug">Entité juridique</label>
+                        <select name="entreprise_slug" id="entreprise_slug" class="form-control" required autocomplete="off">
+                            <option value="">Sélectionnez votre environnement...</option>
+                            {% for e in entreprises %}
+                                <option value="{{ e.slug }}" {% if request.POST.entreprise_slug == e.slug %}selected{% endif %}>
+                                    {{ e.nom }}
+                                </option>
+                            {% empty %}
+                                <option value="" disabled>Aucune entité disponible</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="btn-login" id="submitBtn">
+                        <span class="btn-text"><i class="fas fa-arrow-right-to-bracket"></i> Accéder à l'espace</span>
+                        <div class="spinner"></div>
+                    </button>
+                </form>
+
+                <div class="session-info">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>Session sécurisée &bull; 15 minutes d'inactivité</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            const passwordToggle = document.getElementById('passwordToggle');
+            const idPassword = document.getElementById('id_password');
+            const passwordIcon = document.getElementById('passwordIcon');
+            const loginForm = document.getElementById('loginForm');
+            const submitBtn = document.getElementById('submitBtn');
+            const selectEntreprise = document.getElementById('entreprise_slug');
+
+            // Sync icône thème
+            const isDark = body.classList.contains('dark-mode');
+            themeIcon.className = isDark ? 'fas fa-sun' : 'fas fa-moon';
+
+            themeToggle.addEventListener('click', () => {
+                body.classList.toggle('dark-mode');
+                const willBeDark = body.classList.contains('dark-mode');
+                themeIcon.className = willBeDark ? 'fas fa-sun' : 'fas fa-moon';
+                localStorage.setItem('nexuserp_dark_mode', willBeDark);
+                document.cookie = 'theme_pref=' + (willBeDark ? 'dark' : 'light') + '; path=/; max-age=2592000; SameSite=Lax';
+            });
+
+            passwordToggle.addEventListener('click', () => {
+                const isPassword = idPassword.type === 'password';
+                idPassword.type = isPassword ? 'text' : 'password';
+                passwordIcon.className = isPassword ? 'fas fa-eye-slash' : 'fas fa-eye';
+                passwordToggle.setAttribute('aria-label', isPassword ? 'Masquer' : 'Afficher');
+
+                // Auto-masquage après 30s
+                if (isPassword) {
+                    setTimeout(() => {
+                        if (idPassword.type === 'text') {
+                            idPassword.type = 'password';
+                            passwordIcon.className = 'fas fa-eye';
+                        }
+                    }, 30000);
+                }
+            });
+
+            // Mémoriser la dernière entreprise
+            const lastSlug = localStorage.getItem('nexuserp_last_entreprise_slug');
+            if (lastSlug && selectEntreprise) {
+                const opt = selectEntreprise.querySelector('option[value="' + lastSlug + '"]');
+                if (opt) opt.selected = true;
+            }
+
+            loginForm.addEventListener('submit', () => {
+                if (selectEntreprise && selectEntreprise.value) {
+                    localStorage.setItem('nexuserp_last_entreprise_slug', selectEntreprise.value);
+                }
+                submitBtn.classList.add('loading');
+                submitBtn.disabled = true;
+            });
+        });
+    </script>
+
+</body>
+</html>

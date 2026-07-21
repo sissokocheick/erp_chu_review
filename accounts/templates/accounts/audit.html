@@ -1,0 +1,302 @@
+{% extends 'base_ui.html' %}
+{% load static %}
+
+{% block title %}Journal d'Audit Sécurité — NexusERP{% endblock %}
+
+{% block contenu %}
+<style>
+.nx-alert { padding: 12px 16px; border-radius: 8px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+.nx-alert-danger { background: #fee2e2; color: #991b1b; border-left: 4px solid #dc2626; }
+.nx-alert-warning { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
+.nx-alert-info { background: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
+.nx-alert i { font-size: 16px; }
+.nx-export-btn { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+.nx-export-btn:hover { background: #059669; }
+.nx-periode-btn { padding: 6px 12px; border: 1px solid #d1d5db; background: white; border-radius: 6px; font-size: 12px; cursor: pointer; text-decoration: none; color: #374151; }
+.nx-periode-btn.active { background: #1c5b96; color: white; border-color: #1c5b96; }
+.nx-duree-badge { background: #f3f4f6; color: #6b7280; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-family: monospace; }
+.nx-top-user { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: #f9fafb; border-radius: 8px; margin-bottom: 6px; }
+.nx-top-user-rank { width: 24px; height: 24px; border-radius: 50%; background: #1c5b96; color: white; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: bold; }
+.nx-top-user-rank.bronze { background: #cd7f32; }
+.nx-top-user-rank.silver { background: #9ca3af; }
+.nx-top-user-rank.gold { background: #f59e0b; }
+</style>
+
+<div class="nx-container">
+    <div class="nx-between" style="margin-bottom: 20px;">
+        <div>
+            <h2 style="margin: 0; color: var(--text-dark);"><i class="fas fa-user-secret" style="color: var(--primary-blue);"></i> Journal d'Audit Sécurité</h2>
+            <small style="color: var(--text-light);">Traçabilité des connexions, modifications critiques et actions administratives</small>
+        </div>
+        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}{% if periode %}periode={{ periode }}&{% endif %}{% if date_debut %}date_debut={{ date_debut }}&{% endif %}{% if date_fin %}date_fin={{ date_fin }}&{% endif %}export=csv" class="nx-export-btn">
+            <i class="fas fa-file-csv"></i> Exporter CSV
+        </a>
+    </div>
+
+    <!-- 🔴 ALERTES SÉCURITÉ -->
+    {% if alertes %}
+    <div style="margin-bottom: 20px;">
+        {% for alerte in alertes %}
+        <div class="nx-alert nx-alert-{{ alerte.niveau }}">
+            <i class="fas {{ alerte.icone }}"></i>
+            <span>{{ alerte.message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- FILTRES -->
+    <div class="nx-card" style="margin-bottom: 20px;">
+        <div class="nx-card-body" style="padding: 16px;">
+            <form method="GET" id="form-audit-filtres" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
+                <div>
+                    <label style="font-size: 11px; color: var(--text-light); display: block; margin-bottom: 4px;">Recherche</label>
+                    <input type="text" name="q" value="{{ q }}" placeholder="Utilisateur, IP..." class="nx-input" style="width: 220px;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; color: var(--text-light); display: block; margin-bottom: 4px;">Type</label>
+                    <select name="type_filtre" class="nx-select" style="width: 150px;">
+                        <option value="">Tous</option>
+                        <option value="CONNEXION" {% if type_filtre == 'CONNEXION' %}selected{% endif %}>Connexions</option>
+                        <option value="DECONNEXION" {% if type_filtre == 'DECONNEXION' %}selected{% endif %}>Déconnexions</option>
+                        <option value="ECHEC" {% if type_filtre == 'ECHEC' %}selected{% endif %}>Échecs</option>
+                        <option value="ADMIN" {% if type_filtre == 'ADMIN' %}selected{% endif %}>Admin</option>
+                        <option value="PASSWORD_CHANGE" {% if type_filtre == 'PASSWORD_CHANGE' %}selected{% endif %}>MDP changé</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 11px; color: var(--text-light); display: block; margin-bottom: 4px;">Période</label>
+                    <div style="display: flex; gap: 4px;">
+                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}periode=7" class="nx-periode-btn {% if periode == '7' %}active{% endif %}">7j</a>
+                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}periode=30" class="nx-periode-btn {% if periode == '30' or not periode %}active{% endif %}">30j</a>
+                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}periode=90" class="nx-periode-btn {% if periode == '90' %}active{% endif %}">90j</a>
+                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}periode=all" class="nx-periode-btn {% if periode == 'all' %}active{% endif %}">Tout</a>
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size: 11px; color: var(--text-light); display: block; margin-bottom: 4px;">Du</label>
+                    <input type="date" name="date_debut" value="{{ date_debut }}" class="nx-input" style="width: 140px;">
+                </div>
+                <div>
+                    <label style="font-size: 11px; color: var(--text-light); display: block; margin-bottom: 4px;">Au</label>
+                    <input type="date" name="date_fin" value="{{ date_fin }}" class="nx-input" style="width: 140px;">
+                </div>
+                <input type="hidden" name="periode" value="custom">
+                <button type="submit" class="nx-btn nx-btn-primary" style="height: 38px;"><i class="fas fa-filter"></i> Filtrer</button>
+                {% if q or type_filtre or periode != '30' or date_debut %}
+                <a href="{% url 'accounts:journal_audit' %}" class="nx-btn nx-btn-light" style="height: 38px;"><i class="fas fa-times"></i></a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- KPI -->
+    <div class="nx-kpi-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 20px;">
+        <div class="nx-kpi nx-kpi-blue">
+            <div class="nx-kpi-icon"><i class="fas fa-sign-in-alt"></i></div>
+            <div><div class="nx-kpi-val">{{ total_connexions }}</div><div class="nx-kpi-lbl">Connexions</div></div>
+        </div>
+        <div class="nx-kpi nx-kpi-red">
+            <div class="nx-kpi-icon"><i class="fas fa-times-circle"></i></div>
+            <div><div class="nx-kpi-val">{{ total_echecs }}</div><div class="nx-kpi-lbl">Échecs</div></div>
+        </div>
+        <div class="nx-kpi nx-kpi-purple">
+            <div class="nx-kpi-icon"><i class="fas fa-shield-alt"></i></div>
+            <div><div class="nx-kpi-val">{{ total_admin }}</div><div class="nx-kpi-lbl">Actions Admin</div></div>
+        </div>
+        <div class="nx-kpi nx-kpi-green">
+            <div class="nx-kpi-icon"><i class="fas fa-users"></i></div>
+            <div><div class="nx-kpi-val">{{ utilisateurs_actifs }}</div><div class="nx-kpi-lbl">Sessions ouvertes</div></div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 320px; gap: 20px;">
+        <!-- TABLE PRINCIPALE -->
+        <div>
+            <div class="nx-card">
+                <div class="nx-card-header">
+                    <h4><i class="fas fa-list-alt"></i> Événements d'audit</h4>
+                    <span class="nx-badge nx-badge-grey">{{ page_obj.paginator.count }} événement(s)</span>
+                </div>
+                <div class="nx-card-body" style="padding: 0;">
+                    <table class="nx-table">
+                        <thead>
+                            <tr>
+                                <th>Date & Heure</th>
+                                <th>Utilisateur</th>
+                                <th>Type</th>
+                                <th>Description</th>
+                                <th>IP</th>
+                                <th>Durée</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for evt in page_obj %}
+                            <tr>
+                                <td style="white-space: nowrap; font-size: 12px; color: var(--text-light);">
+                                    <i class="far fa-clock" style="margin-right: 4px;"></i>{{ evt.date_creation|date:'d/m/Y H:i:s' }}
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                        <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">
+                                            {{ evt.utilisateur.username|first|upper }}
+                                        </div>
+                                        <div>
+                                            <div style="font-weight: 600; font-size: 13px;">{{ evt.utilisateur.get_full_name|default:evt.utilisateur.username }}</div>
+                                            <div style="font-size: 11px; color: var(--text-light);">{{ evt.utilisateur.email|default:"—" }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if evt.type_action == 'CONNEXION' %}
+                                        <span class="nx-badge nx-badge-green"><i class="fas fa-sign-in-alt"></i> Connexion</span>
+                                    {% elif evt.type_action == 'DECONNEXION' %}
+                                        <span class="nx-badge nx-badge-blue"><i class="fas fa-sign-out-alt"></i> Déconnexion</span>
+                                    {% elif evt.type_action == 'ECHEC' %}
+                                        <span class="nx-badge nx-badge-red"><i class="fas fa-times-circle"></i> Échec</span>
+                                    {% elif evt.type_action == 'ADMIN' %}
+                                        <span class="nx-badge nx-badge-purple"><i class="fas fa-cog"></i> Admin</span>
+                                    {% elif evt.type_action == 'PASSWORD_CHANGE' %}
+                                        <span class="nx-badge nx-badge-orange"><i class="fas fa-key"></i> MDP changé</span>
+                                    {% else %}
+                                        <span class="nx-badge nx-badge-grey">{{ evt.type_action }}</span>
+                                    {% endif %}
+                                </td>
+                                <td style="font-size: 13px; max-width: 300px;">{{ evt.description }}</td>
+                                <td style="font-size: 12px; color: var(--text-light); font-family: monospace;">
+                                    {% if evt.adresse_ip %}{{ evt.adresse_ip }}{% else %}—{% endif %}
+                                </td>
+                                <td>
+                                    {% if evt.type_action == 'CONNEXION' %}
+                                        <span class="nx-duree-badge">en cours</span>
+                                    {% elif evt.type_action == 'DECONNEXION' %}
+                                        <span class="nx-duree-badge">—</span>
+                                    {% else %}
+                                        <span class="nx-duree-badge">—</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="nx-empty">
+                                    <i class="fas fa-clipboard-check"></i>
+                                    Aucun événement d'audit trouvé pour cette période.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% if page_obj.has_other_pages %}
+                <div class="nx-card-footer">
+                    <div class="nx-pag">
+                        {% if page_obj.has_previous %}
+                            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if type_filtre %}&type_filtre={{ type_filtre|urlencode }}{% endif %}{% if periode %}&periode={{ periode }}{% endif %}{% if date_debut %}&date_debut={{ date_debut }}{% endif %}{% if date_fin %}&date_fin={{ date_fin }}{% endif %}"><i class="fas fa-chevron-left"></i></a>
+                        {% endif %}
+                        <span class="active">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
+                        {% if page_obj.has_next %}
+                            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if type_filtre %}&type_filtre={{ type_filtre|urlencode }}{% endif %}{% if periode %}&periode={{ periode }}{% endif %}{% if date_debut %}&date_debut={{ date_debut }}{% endif %}{% if date_fin %}&date_fin={{ date_fin }}{% endif %}"><i class="fas fa-chevron-right"></i></a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- PANNEAU LATÉRAL -->
+        <div>
+            <!-- TOP UTILISATEURS -->
+            {% if top_utilisateurs %}
+            <div class="nx-card" style="margin-bottom: 20px;">
+                <div class="nx-card-header">
+                    <h4><i class="fas fa-trophy"></i> Top connexions</h4>
+                </div>
+                <div class="nx-card-body" style="padding: 12px;">
+                    {% for user, duree in top_utilisateurs %}
+                    <div class="nx-top-user">
+                        <div class="nx-top-user-rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">{{ forloop.counter }}</div>
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; font-size: 13px;">{{ user.get_full_name|default:user.username }}</div>
+                            <div style="font-size: 11px; color: var(--text-light);">{{ user.email|default:"" }}</div>
+                        </div>
+                        <div style="font-size: 12px; font-weight: 600; color: var(--primary-blue);">{{ duree }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- SESSIONS OUVERTES -->
+            {% if sessions_ouvertes %}
+            <div class="nx-card" style="margin-bottom: 20px;">
+                <div class="nx-card-header">
+                    <h4><i class="fas fa-door-open"></i> Sessions ouvertes</h4>
+                    <span class="nx-badge nx-badge-green">{{ sessions_ouvertes|length }}</span>
+                </div>
+                <div class="nx-card-body" style="padding: 12px;">
+                    {% for session in sessions_ouvertes %}
+                    <div style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">
+                        <div style="font-weight: 600;">{{ session.utilisateur.get_full_name|default:session.utilisateur.username }}</div>
+                        <div style="color: var(--text-light); display: flex; justify-content: space-between; margin-top: 2px;">
+                            <span>Depuis {{ session.derniere_connexion|date:'d/m H:i' }}</span>
+                            <span style="color: #dc2626; font-weight: 600;">{{ session.duree }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- DERNIÈRES SESSIONS -->
+            {% if sessions %}
+            <div class="nx-card" style="margin-bottom: 20px;">
+                <div class="nx-card-header">
+                    <h4><i class="fas fa-history"></i> Dernières sessions</h4>
+                </div>
+                <div class="nx-card-body" style="padding: 12px;">
+                    {% for session in sessions %}
+                    <div style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">
+                        <div style="font-weight: 600;">{{ session.utilisateur.get_full_name|default:session.utilisateur.username }}</div>
+                        <div style="color: var(--text-light); display: flex; justify-content: space-between; margin-top: 2px;">
+                            <span>{{ session.debut|date:'d/m H:i' }} → {{ session.fin|date:'H:i' }}</span>
+                            <span style="color: var(--primary-blue); font-weight: 600;">{{ session.duree_str }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- ACTIONS ADMIN DJANGO -->
+            {% if log_entries %}
+            <div class="nx-card">
+                <div class="nx-card-header">
+                    <h4><i class="fas fa-cogs"></i> Admin Django</h4>
+                </div>
+                <div class="nx-card-body" style="padding: 0; max-height: 300px; overflow-y: auto;">
+                    <table class="nx-table" style="font-size: 11px;">
+                        <thead>
+                            <tr><th>Date</th><th>Action</th><th>Objet</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for log in log_entries %}
+                            <tr>
+                                <td style="white-space: nowrap;">{{ log.action_time|date:'d/m H:i' }}</td>
+                                <td>
+                                    {% if log.is_addition %}<span class="nx-badge nx-badge-green" style="font-size: 10px;">+</span>
+                                    {% elif log.is_change %}<span class="nx-badge nx-badge-blue" style="font-size: 10px;">~</span>
+                                    {% elif log.is_deletion %}<span class="nx-badge nx-badge-red" style="font-size: 10px;">×</span>
+                                    {% endif %}
+                                </td>
+                                <td style="max-width: 150px; overflow: hidden; text-overflow: ellipsis;">{{ log.object_repr }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

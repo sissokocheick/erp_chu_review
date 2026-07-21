@@ -1,0 +1,176 @@
+<!--
+  SNIPPET À INTÉGRER dans ton template stock/liste_sorties.html
+  (ou le modal/formulaire de création de bon de sortie)
+
+  Prérequis :
+  1. Chaque ligne d'article doit avoir :
+     - un <select name="articles[]"> pour l'article
+     - un <input name="quantites[]"> pour la quantité
+     - un <select name="lots[]"> pour le lot (ce snippet l'ajoute dynamiquement)
+  2. Un <input hidden id="magasin_actif_id" value="{{ magasin_actif_id }}">
+     ou récupérer le magasin sélectionné dans le formulaire.
+  3. Ajouter dans urls.py :
+     path('api/lots/<int:article_id>/<int:magasin_id>/', views.api_lots_disponibles, name='api_lots_disponibles'),
+-->
+
+<style>
+  .lot-select-wrapper { display: none; margin-top: 6px; }
+  .lot-select-wrapper.visible { display: block; }
+  .lot-select-wrapper select {
+    width: 100%; padding: 6px 10px; border-radius: 4px;
+    border: 1px solid #ced4da; font-size: 13px;
+  }
+  .lot-badge {
+    font-size: 11px; color: #6c757d; margin-left: 6px;
+  }
+  .lot-erreur {
+    color: #dc3545; font-size: 12px; margin-top: 4px; display: none;
+  }
+</style>
+
+<!-- EXEMPLE DE LIGNE DYNAMIQUE (à adapter à ton système de lignes) -->
+<div id="ligne-modele" class="ligne-article" style="display:none;">
+  <div class="row">
+    <div class="col-md-5">
+      <select name="articles[]" class="form-select select-article" required>
+        <option value="">-- Choisir un article --</option>
+        {% for art in articles %}
+          <option value="{{ art.id }}"
+                  data-gere-lots="{{ art.famille.gere_lots_peremption|yesno:'true,false' }}">
+            {{ art.designation }}
+          </option>
+        {% endfor %}
+      </select>
+      <!-- Zone lot injectée ici -->
+      <div class="lot-select-wrapper">
+        <select name="lots[]" class="select-lot" disabled aria-label="Sélectionner un lot">
+          <option value="">-- Choisir un lot --</option>
+        </select>
+        <span class="lot-badge"></span>
+        <div class="lot-erreur">⚠️ Veuillez sélectionner un lot</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <input type="number" name="quantites[]" class="form-control" min="1" required placeholder="Qté" aria-label="Quantité">
+    </div>
+    <div class="col-md-2">
+      <button type="button" class="btn btn-sm btn-danger btn-supprimer-ligne" aria-label="Supprimer la ligne">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  var magasinInput = document.getElementById('magasin_actif_id');
+  var magasinSelect = document.querySelector('[name="magasin"]');
+  var MAGASIN_ID = (magasinInput && magasinInput.value) || 
+                   (magasinSelect && magasinSelect.value) || null;
+
+  // ── Quand on change d'article, charger les lots si nécessaire ──
+  document.addEventListener('change', function(e) {
+    if (!e.target.classList.contains('select-article')) return;
+    const selectArticle = e.target;
+    const option = selectArticle.selectedOptions[0];
+    if (!option) return;
+    const gereLots = option.dataset.gereLots === 'true';
+    const articleId = selectArticle.value;
+    const wrapper = selectArticle.closest('.ligne-article, .row')?.querySelector('.lot-select-wrapper');
+    const selectLot = wrapper?.querySelector('.select-lot');
+
+    if (!wrapper || !selectLot) return;
+
+    // Réinitialiser
+    selectLot.innerHTML = '<option value="">-- Choisir un lot --</option>';
+    selectLot.disabled = true;
+    wrapper.classList.remove('visible');
+    const badge = wrapper.querySelector('.lot-badge');
+    if (badge) badge.textContent = '';
+    const erreur = wrapper.querySelector('.lot-erreur');
+    if (erreur) erreur.style.display = 'none';
+
+    if (!gereLots || !articleId || !MAGASIN_ID) return;
+
+    // Appel AJAX avec CSRF
+    var csrfEl = document.querySelector('[name=csrfmiddlewaretoken]');
+    var headers = { 'X-Requested-With': 'XMLHttpRequest' };
+    if (csrfEl) headers['X-CSRFToken'] = csrfEl.value;
+
+    fetch('/stock/api/lots/' + articleId + '/' + MAGASIN_ID + '/', { headers: headers })
+      .then(function(r) {
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        return r.json();
+      })
+      .then(function(data) {
+        if (data.lots && data.lots.length > 0) {
+          data.lots.forEach(function(lot) {
+            const opt = document.createElement('option');
+            const peremp = lot.expiry_date ? ' (Péremption: ' + lot.expiry_date + ')' : '';
+            opt.value = lot.batch_number;
+            opt.textContent = 'Lot ' + lot.batch_number + ' — ' + lot.quantite_physique + ' dispo' + peremp;
+            selectLot.appendChild(opt);
+          });
+          selectLot.disabled = false;
+          wrapper.classList.add('visible');
+        } else if (data.gere_lots) {
+          // Article gère les lots mais aucun lot en stock
+          const opt = document.createElement('option');
+          opt.value = "";
+          opt.textContent = "⚠️ Aucun lot disponible";
+          selectLot.appendChild(opt);
+          wrapper.classList.add('visible');
+          if (badge) badge.textContent = '(Stock général utilisé)';
+        }
+      })
+      .catch(function(err) {
+        console.error('Erreur chargement lots:', err);
+        if (erreur) {
+          erreur.style.display = 'block';
+          erreur.textContent = 'Erreur de chargement : ' + (err.message || 'inconnue');
+        }
+      });
+  });
+
+  // ── Validation avant soumission ──
+  var form = document.getElementById('form-sortie');
+  if (form) {
+    form.addEventListener('submit', function(e) {
+      let valide = true;
+      form.querySelectorAll('.ligne-article, .row').forEach(function(ligne) {
+        const selArticle = ligne.querySelector('.select-article');
+        const selLot = ligne.querySelector('.select-lot');
+        const wrapper = ligne.querySelector('.lot-select-wrapper');
+        if (!selArticle || !selLot || !wrapper) return;
+
+        const option = selArticle.selectedOptions[0];
+        if (!option) return;
+        const gereLots = option.dataset.gereLots === 'true';
+        const lotVal = selLot.value;
+
+        const erreur = wrapper.querySelector('.lot-erreur');
+        if (gereLots && wrapper.classList.contains('visible') && !lotVal) {
+          e.preventDefault();
+          if (erreur) {
+            erreur.style.display = 'block';
+            erreur.textContent = '⚠️ Veuillez sélectionner un lot';
+          }
+          valide = false;
+        } else if (erreur) {
+          erreur.style.display = 'none';
+        }
+      });
+      return valide;
+    });
+  }
+
+  // Mise à jour du MAGASIN_ID si le magasin change
+  if (magasinSelect) {
+    magasinSelect.addEventListener('change', function() {
+      MAGASIN_ID = magasinSelect.value || (magasinInput && magasinInput.value) || null;
+    });
+  }
+})();
+</script>

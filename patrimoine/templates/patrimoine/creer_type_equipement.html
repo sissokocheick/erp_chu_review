@@ -1,0 +1,140 @@
+{% extends "core/base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <h2><i class="fas fa-plus-circle"></i> Créer un nouveau Type d'Équipement</h2>
+    <p class="text-muted">Définissez les caractéristiques techniques que l'agent devra remplir pour ce matériel.</p>
+
+    <form method="POST" id="formTypeEquipement">
+        {% csrf_token %}
+        
+        <div class="card p-4 mb-4">
+            <h5>Informations Générales</h5>
+            <div class="row">
+                <div class="col-md-4">
+                    <label>Code (ex: INF-PC, CLIM-SPLIT) *</label>
+                    <input type="text" name="code" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label>Nom du Type (ex: Ordinateur Portable) *</label>
+                    <input type="text" name="nom" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label>Catégorie *</label>
+                    <select name="categorie" class="form-control" required>
+                        <option value="">-- Choisir --</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.nom }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="row mt-3">
+                <div class="col-md-4">
+                    <label>Durée d'amortissement (Années)</label>
+                    <input type="number" name="duree_amortissement_defaut" class="form-control" value="5">
+                </div>
+            </div>
+        </div>
+
+        <div class="card p-4 mb-4">
+            <h5><i class="fas fa-cogs"></i> Caractéristiques Techniques (Formulaire Dynamique)</h5>
+            <p style="font-size: 0.9em; color: #666;">Ajoutez les champs que l'agent devra remplir (ex: RAM, Puissance, IP...)</p>
+            
+            <div id="liste-caracteristiques">
+                </div>
+
+            <button type="button" class="btn btn-outline-primary mt-3" onclick="ajouterLigne()">
+                <i class="fas fa-plus"></i> Ajouter une caractéristique
+            </button>
+        </div>
+
+        <input type="hidden" name="specs_schema_cache" id="specsSchemaCache">
+
+        <button type="submit" class="btn btn-success btn-lg">💾 Enregistrer le Type d'Équipement</button>
+    </form>
+</div>
+
+<script>
+    const conteneur = document.getElementById('liste-caracteristiques');
+
+    // 1. Fonction pour ajouter une ligne visuelle
+    function ajouterLigne() {
+        const div = document.createElement('div');
+        div.className = 'row mt-2 align-items-end ligne-caracteristique';
+        
+        div.innerHTML = `
+            <div class="col-md-3">
+                <label>Nom du champ</label>
+                <input type="text" class="form-control input-label" placeholder="Ex: Processeur" required>
+            </div>
+            <div class="col-md-3">
+                <label>Type de donnée</label>
+                <select class="form-control input-type" onchange="gererAffichageOptions(this)">
+                    <option value="text">Texte court</option>
+                    <option value="number">Nombre</option>
+                    <option value="date">Date</option>
+                    <option value="select">Liste déroulante</option>
+                </select>
+            </div>
+            <div class="col-md-4 zone-options" style="display: none;">
+                <label>Choix (séparés par des virgules)</label>
+                <input type="text" class="form-control input-options" placeholder="Ex: Core i3, Core i5, Core i7">
+            </div>
+            <div class="col-md-2">
+                <button type="button" class="btn btn-danger w-100" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        conteneur.appendChild(div);
+    }
+
+    // 2. Affiche/Cache le champ des choix selon le type sélectionné
+    function gererAffichageOptions(selectElement) {
+        const zoneOptions = selectElement.closest('.ligne-caracteristique').querySelector('.zone-options');
+        if (selectElement.value === 'select') {
+            zoneOptions.style.display = 'block';
+        } else {
+            zoneOptions.style.display = 'none';
+        }
+    }
+
+    // 3. Transformateur de texte en clé JSON
+    function slugify(text) {
+        return text.toString().toLowerCase()
+            .replace(/\s+/g, '_').replace(/[^\w\-]+/g, '')
+            .replace(/\-\-+/g, '_').replace(/^-+/, '').replace(/-+$/, '');
+    }
+
+    // 4. Fabrication du JSON à la sauvegarde
+    document.getElementById('formTypeEquipement').addEventListener('submit', function(e) {
+        let specsArray = [];
+        let lignes = document.querySelectorAll('.ligne-caracteristique');
+        
+        lignes.forEach(function(ligne) {
+            let label = ligne.querySelector('.input-label').value;
+            let type = ligne.querySelector('.input-type').value;
+            let optionsBrutes = ligne.querySelector('.input-options').value;
+            
+            if(label.trim() !== '') {
+                // Si c'est un menu déroulant, on découpe les options grâce aux virgules
+                let optionsList = [];
+                if (type === 'select' && optionsBrutes.trim() !== '') {
+                    optionsList = optionsBrutes.split(',').map(item => item.trim());
+                }
+
+                specsArray.push({
+                    "key": slugify(label),
+                    "label": label,
+                    "type": type,
+                    "options": optionsList, // On intègre la liste des choix
+                    "required": false
+                });
+            }
+        });
+        document.getElementById('specsSchemaCache').value = JSON.stringify(specsArray);
+    });
+</script>
+
+{% endblock %}

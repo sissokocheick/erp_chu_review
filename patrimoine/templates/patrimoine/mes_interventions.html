@@ -1,0 +1,389 @@
+{% extends "base_ui.html" %}
+{% block title %}Mon Espace Technique{% endblock %}
+
+{% block contenu %}
+<style>
+  /* ── EN-TÊTE ── */
+  .tech-header { background: linear-gradient(135deg, #1e293b, #0f172a); color: white; padding: 25px 30px; border-radius: 12px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+  .tech-header h3 { margin: 0; font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+  
+  /* ── ONGLETS ── */
+  .tech-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eef0f3; padding-bottom: 10px; overflow-x: auto; }
+  .t-tab { background: transparent; border: none; padding: 10px 20px; font-size: 15px; font-weight: 800; color: #64748b; cursor: pointer; border-radius: 8px; transition: 0.2s; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .t-tab:hover { background: #f1f5f9; color: #1e293b; }
+  .t-tab.active { background: #3b82f6; color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
+  .t-tab .badge-count { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; font-size: 12px; }
+
+  /* Contenu des onglets */
+  .tab-pane { display: none; animation: fadeIn 0.3s ease; }
+  .tab-pane.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ── BARRE D'OUTILS (Recherche & Filtres) ── */
+  .toolbar-magique { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; background: white; padding: 10px 15px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+  
+  .search-magic { position: relative; width: 100%; max-width: 350px; transition: all 0.3s ease; }
+  .search-magic:focus-within { max-width: 450px; }
+  .search-magic i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #adb5bd; transition: 0.3s; }
+  .search-magic:focus-within i { color: #3b82f6; }
+  .search-magic input { width: 100%; padding: 10px 14px 10px 38px; border: 1px solid #dde3ea; border-radius: 20px; font-size: 13px; outline: none; background: #f8fafc; transition: 0.3s; box-sizing: border-box;}
+  .search-magic input:focus { background: white; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+
+  /* ── CARTES ── */
+  .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-bottom: 20px;}
+  .ticket-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; display: flex; flex-direction: column; cursor: pointer; }
+  .ticket-card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.05); }
+  .tc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+  .tc-equip { font-size: 16px; font-weight: 800; color: #1e293b; line-height: 1.2; margin-bottom: 4px; }
+  .tc-code { font-family: monospace; font-size: 12px; color: #64748b; background: #f1f5f9; padding: 3px 6px; border-radius: 4px; }
+  .tc-body { flex: 1; font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 15px; }
+  .tc-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
+  .btn-open { background: #f1f5f9; color: #3b82f6; padding: 8px 15px; border-radius: 6px; font-weight: 800; font-size: 12px; text-decoration: none; transition: 0.2s; display: inline-block; }
+  .ticket-card:hover .btn-open { background: #3b82f6; color: white; }
+
+  /* États masqués pour le JS */
+  .search-hidden { display: none !important; }
+  .type-hidden { display: none !important; }
+
+  /* ── PAGINATION ── */
+  .pagination-container { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: white; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 10px; }
+  .pagination-info { font-size: 13px; color: #64748b; font-weight: 600; }
+  .pagination-buttons { display: flex; gap: 6px; }
+  .page-btn { padding: 6px 12px; border: 1px solid #dde3ea; background: white; color: #475569; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; transition: 0.2s; }
+  .page-btn:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e0; }
+  .page-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; box-shadow: 0 2px 6px rgba(59,130,246,0.3); }
+  .page-btn:disabled { color: #cbd5e0; cursor: not-allowed; background: #f8fafc; }
+</style>
+
+<div class="tech-header">
+    <h3>
+        <div style="background: rgba(255,255,255,0.1); width: 45px; height: 45px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 10px;">
+            <i class="fas fa-wrench" style="color: #60a5fa;"></i>
+        </div>
+        Espace Technicien
+    </h3>
+    <div style="text-align: right;">
+        <div style="font-size: 14px; font-weight: 700;">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">
+            <i class="fas fa-filter"></i> Mode: <strong style="color:white;">{{ mode_visibilite }}</strong>
+        </div>
+    </div>
+</div>
+
+<div class="tech-tabs">
+    <button class="t-tab active" data-target="tab-encours" onclick="switchTechTab('tab-encours')">
+        <i class="fas fa-tasks"></i> Mes Tâches <span class="badge-count">{{ a_faire_perso.count|add:en_cours.count|add:a_valider.count }}</span>
+    </button>
+    {% if mode_visibilite != 'DISPATCH' %}
+    <button class="t-tab" data-target="tab-libres" onclick="switchTechTab('tab-libres')">
+        <i class="fas fa-inbox"></i> Pannes Libres <span class="badge-count">{{ pannes_libres.count }}</span>
+    </button>
+    {% endif %}
+    <button class="t-tab" data-target="tab-historique" onclick="switchTechTab('tab-historique')">
+        <i class="fas fa-history"></i> Mon Historique <span class="badge-count">{{ historique_perso.count }}</span>
+    </button>
+</div>
+
+<div id="tab-encours" class="tab-pane active">
+    
+    <div class="toolbar-magique">
+        <div class="search-magic">
+            <i class="fas fa-search"></i>
+            <input type="text" class="live-search" data-target="grid-encours" placeholder="Rechercher un équipement, service, panne...">
+        </div>
+    </div>
+
+    <div class="grid-cards" id="grid-encours" data-current-page="1">
+        {% for ticket in a_faire_perso %}
+        <div class="ticket-card" style="border-left: 4px solid #ef4444;" onclick="window.location.href='{% url 'detail_intervention' ticket.id %}'">
+            <div class="tc-head">
+                <div><div class="tc-equip">{{ ticket.immobilisation.nom_affichage }}</div><div class="tc-code">{{ ticket.immobilisation.code_patrimoine }}</div></div>
+                <span style="font-size:10px; font-weight:bold; background:#fee2e2; color:#b91c1c; padding:4px 8px; border-radius:10px;">{{ ticket.get_statut_display }}</span>
+            </div>
+            <div class="tc-body">
+                <strong>Problème:</strong> {{ ticket.description_probleme|truncatechars:80 }}<br><br>
+                <span style="font-size:11px; color:#64748b;"><i class="fas fa-map-marker-alt"></i> {{ ticket.immobilisation.service_affectation.nom|default:"Service non précisé" }}</span>
+            </div>
+            <div class="tc-foot">
+                <span style="font-size:11px; color:#94a3b8;"><i class="far fa-clock"></i> {{ ticket.date_signalement|date:"d/m à H:i" }}</span>
+                <span class="btn-open">Ouvrir</span>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% for ticket in en_cours %}
+        <div class="ticket-card" style="border-left: 4px solid #f59e0b;" onclick="window.location.href='{% url 'detail_intervention' ticket.id %}'">
+            <div class="tc-head">
+                <div><div class="tc-equip">{{ ticket.immobilisation.nom_affichage }}</div><div class="tc-code">{{ ticket.immobilisation.code_patrimoine }}</div></div>
+                <span style="font-size:10px; font-weight:bold; background:#fef3c7; color:#b45309; padding:4px 8px; border-radius:10px;">{{ ticket.get_statut_display }}</span>
+            </div>
+            <div class="tc-body">
+                Prise en charge depuis le {{ ticket.date_debut_intervention|date:"d/m/Y" }}<br><br>
+                <span style="font-size:11px; color:#64748b;"><i class="fas fa-map-marker-alt"></i> {{ ticket.immobilisation.service_affectation.nom|default:"Service non précisé" }}</span>
+            </div>
+            <div class="tc-foot">
+                <span style="font-size:11px; color:#94a3b8; font-weight:bold;"><i class="fas fa-tools"></i> En atelier</span>
+                <span class="btn-open" style="color:#b45309; background:#fef3c7;">Reprendre</span>
+            </div>
+        </div>
+        {% endfor %}
+
+        {% for ticket in a_valider %}
+        <div class="ticket-card" style="border-left: 4px solid #3b82f6; background: #f8fafc;" onclick="window.location.href='{% url 'detail_intervention' ticket.id %}'">
+            <div class="tc-head">
+                <div><div class="tc-equip">{{ ticket.immobilisation.nom_affichage }}</div><div class="tc-code">{{ ticket.immobilisation.code_patrimoine }}</div></div>
+                <span style="font-size:10px; font-weight:bold; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:10px;">ATTENTE CHEF</span>
+            </div>
+            <div class="tc-body">
+                Travail terminé. En attente de la validation finale.<br><br>
+                <span style="font-size:11px; color:#64748b;"><i class="fas fa-check-circle"></i> Fini le {{ ticket.date_fin_intervention|date:"d/m/Y" }}</span>
+            </div>
+            <div class="tc-foot">
+                <span class="btn-open" style="background:white; border:1px solid #cbd5e0; color:#475569;">Consulter</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <div id="pag-grid-encours"></div>
+</div>
+
+{% if mode_visibilite != 'DISPATCH' %}
+<div id="tab-libres" class="tab-pane">
+    
+    <div class="toolbar-magique">
+        <div class="search-magic">
+            <i class="fas fa-search"></i>
+            <input type="text" class="live-search" data-target="grid-libres" placeholder="Rechercher une panne libre...">
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <label style="font-size:12px; font-weight:800; color:#475569;"><i class="fas fa-filter"></i> Type d'équipement</label>
+            <select id="filtre-type-equip" onchange="appliquerFiltreType('grid-libres')" style="padding:8px 12px; border:1px solid #cbd5e0; border-radius:8px; outline:none; font-size:13px; background:#f8fafc;">
+                <option value="ALL">Tous les types</option>
+                {% for type in types_equipements %}
+                <option value="{{ type.id }}">{{ type.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <div class="grid-cards" id="grid-libres" data-current-page="1">
+        {% for ticket in pannes_libres %}
+        <div class="ticket-card" data-type-id="{{ ticket.immobilisation.type_equipement.id }}" style="border-left: 4px solid #8b5cf6;" onclick="window.location.href='{% url 'detail_intervention' ticket.id %}'">
+            <div class="tc-head">
+                <div><div class="tc-equip">{{ ticket.immobilisation.nom_affichage }}</div><div class="tc-code">{{ ticket.immobilisation.code_patrimoine }}</div></div>
+                <span style="font-size:10px; font-weight:bold; background:#f3e8ff; color:#6d28d9; padding:4px 8px; border-radius:10px;">NON ASSIGNÉ</span>
+            </div>
+            <div class="tc-body">
+                <strong>Signalé par:</strong> {{ ticket.cree_par.get_full_name }}<br>
+                <strong>Problème:</strong> {{ ticket.description_probleme|truncatechars:80 }}<br><br>
+                <span style="font-size:11px; background:#f1f5f9; padding:4px 8px; border-radius:6px;"><i class="fas fa-map-marker-alt"></i> Bât. {{ ticket.immobilisation.bureau.batiment.code|default:"?" }} - Bur. {{ ticket.immobilisation.bureau.nom|default:"?" }}</span>
+            </div>
+            <div class="tc-foot">
+                <span style="font-size:11px; color:#94a3b8; font-weight:bold;">{{ ticket.date_signalement|timesince }}</span>
+                <span class="btn-open" style="background:#8b5cf6; color:white;">Ouvrir</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="pag-grid-libres"></div>
+</div>
+{% endif %}
+
+<div id="tab-historique" class="tab-pane">
+    
+    <div class="toolbar-magique">
+        <div class="search-magic">
+            <i class="fas fa-search"></i>
+            <input type="text" class="live-search" data-target="grid-historique" placeholder="Rechercher dans mes archives...">
+        </div>
+    </div>
+
+    <div class="grid-cards" id="grid-historique" data-current-page="1">
+        {% for ticket in historique_perso %}
+        <div class="ticket-card" style="border-left: 4px solid #10b981; background: #f8fafc;" onclick="window.location.href='{% url 'detail_intervention' ticket.id %}'">
+            <div class="tc-head">
+                <div><div class="tc-equip" style="color:#475569;">{{ ticket.immobilisation.nom_affichage }}</div><div class="tc-code">{{ ticket.immobilisation.code_patrimoine }}</div></div>
+                <span style="font-size:10px; font-weight:bold; background:#d1fae5; color:#065f46; padding:4px 8px; border-radius:10px;"><i class="fas fa-check-circle"></i> {{ ticket.get_statut_display }}</span>
+            </div>
+            <div class="tc-body" style="font-size:12px;">
+                <strong>Diagnostic identifié :</strong><br>
+                <div style="background:white; border:1px solid #e2e8f0; padding:8px; border-radius:6px; margin-top:5px; margin-bottom:10px; color:#1e293b;">
+                    {{ ticket.diagnostic|default:"Aucun diagnostic renseigné"|truncatechars:60 }}
+                </div>
+                <span style="color:#64748b;"><i class="far fa-calendar-check"></i> Clôturé le {{ ticket.date_fin_intervention|date:"d/m/Y à H:i" }}</span>
+            </div>
+            <div class="tc-foot">
+                <span class="btn-open" style="background:white; border:1px solid #cbd5e0; color:#475569;">Voir l'archive</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div id="pag-grid-historique"></div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    
+    // ==========================================
+    // 1. PERSISTANCE DE L'ONGLET ACTIF
+    // ==========================================
+    let activeTab = localStorage.getItem('activeTechTab');
+    if (activeTab && document.getElementById(activeTab)) {
+        switchTechTab(activeTab);
+    } else {
+        switchTechTab('tab-encours'); // Par défaut
+    }
+
+    // ==========================================
+    // 2. MOTEUR DE RECHERCHE ET PAGINATION
+    // ==========================================
+    const ELEMENTS_PAR_PAGE = 8; // Nombre de cartes par page
+
+    // Fonction globale pour calculer et afficher la pagination d'une grille
+    window.majPagination = function(gridId) {
+        let container = document.getElementById(gridId);
+        if (!container) return;
+        
+        // On récupère toutes les cartes de cette grille
+        let cards = Array.from(container.querySelectorAll('.ticket-card'));
+        
+        // On ne garde que celles qui ne sont PAS cachées par la recherche ou le filtre de type
+        let visibleCards = cards.filter(c => !c.classList.contains('search-hidden') && !c.classList.contains('type-hidden'));
+        
+        let totalPages = Math.ceil(visibleCards.length / ELEMENTS_PAR_PAGE);
+        let currentPage = parseInt(container.getAttribute('data-current-page') || 1);
+        if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+        container.setAttribute('data-current-page', currentPage);
+        
+        // Cacher toutes les cartes, puis n'afficher que celles de la page courante
+        cards.forEach(c => c.style.display = 'none'); 
+        
+        visibleCards.forEach((card, index) => {
+            let start = (currentPage - 1) * ELEMENTS_PAR_PAGE;
+            let end = start + ELEMENTS_PAR_PAGE;
+            if (index >= start && index < end) {
+                card.style.display = 'flex';
+            }
+        });
+        
+        // Générer le code HTML des boutons de pagination
+        let pagWrapper = document.getElementById('pag-' + gridId);
+        if (!pagWrapper) return;
+        
+        if (visibleCards.length === 0) {
+            pagWrapper.innerHTML = `
+            <div style="text-align: center; padding: 40px; color: #94a3b8; background: white; border-radius: 12px; width: 100%; border: 1px dashed #cbd5e0;">
+                <i class="fas fa-ghost fa-3x" style="margin-bottom: 15px; opacity:0.3;"></i><br>
+                Aucun résultat trouvé pour votre recherche.
+            </div>`;
+            return;
+        }
+
+        if (totalPages <= 1) {
+            pagWrapper.innerHTML = ''; // Pas besoin de pagination pour 1 seule page
+            return;
+        }
+
+        let html = `<div class="pagination-container">
+            <div class="pagination-info">Affiche ${((currentPage - 1) * ELEMENTS_PAR_PAGE) + 1} à ${Math.min(visibleCards.length, currentPage * ELEMENTS_PAR_PAGE)} sur ${visibleCards.length}</div>
+            <div class="pagination-buttons">
+                <button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changerPage('${gridId}', ${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+        
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changerPage('${gridId}', ${i})">${i}</button>`;
+            } else if (i === currentPage - 2 || i === currentPage + 2) {
+                if (!html.endsWith('...</span>')) html += `<span style="padding: 5px 2px; color: #adb5bd; font-size:10px;">...</span>`;
+            }
+        }
+        
+        html += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="changerPage('${gridId}', ${currentPage + 1})"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>`;
+        
+        pagWrapper.innerHTML = html;
+    };
+
+    // Fonction quand on clique sur un bouton de page
+    window.changerPage = function(gridId, page) {
+        document.getElementById(gridId).setAttribute('data-current-page', page);
+        majPagination(gridId);
+    };
+
+    // ==========================================
+    // 3. ECOUTEURS POUR LA RECHERCHE MAGIQUE
+    // ==========================================
+    document.querySelectorAll('.live-search').forEach(input => {
+        input.addEventListener('keyup', function() {
+            let filtre = this.value.toLowerCase().trim();
+            let gridId = this.getAttribute('data-target');
+            let container = document.getElementById(gridId);
+            if (!container) return;
+
+            let cards = container.querySelectorAll('.ticket-card');
+                
+            cards.forEach(card => {
+                let texte = card.textContent.toLowerCase();
+                if (texte.includes(filtre)) {
+                    card.classList.remove('search-hidden');
+                } else {
+                    card.classList.add('search-hidden');
+                }
+            });
+            
+            // Retour en page 1 et recalcul
+            container.setAttribute('data-current-page', 1);
+            majPagination(gridId);
+        });
+    });
+
+    // ==========================================
+    // 4. INITIALISATION DE TOUS LES ONGLETS
+    // ==========================================
+    majPagination('grid-encours');
+    majPagination('grid-libres');
+    majPagination('grid-historique');
+});
+
+// ==========================================
+// FONCTIONS GLOBALES
+// ==========================================
+
+// Fonction de navigation
+function switchTechTab(tabId) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.t-tab').forEach(t => t.classList.remove('active'));
+    
+    document.getElementById(tabId).classList.add('active');
+    
+    // Activer le bon bouton
+    let btn = document.querySelector(`button[data-target="${tabId}"]`);
+    if(btn) btn.classList.add('active');
+    
+    // Sauvegarder dans le navigateur
+    localStorage.setItem('activeTechTab', tabId);
+}
+
+// Fonction du filtre par Type (Uniquement pour Pannes Libres)
+function appliquerFiltreType(gridId) {
+    let filtreSelectionne = document.getElementById('filtre-type-equip').value;
+    let container = document.getElementById(gridId);
+    let cards = container.querySelectorAll('.ticket-card');
+    
+    cards.forEach(card => {
+        let typeCarte = card.getAttribute('data-type-id');
+        if (filtreSelectionne === 'ALL' || filtreSelectionne === typeCarte) {
+            card.classList.remove('type-hidden');
+        } else {
+            card.classList.add('type-hidden');
+        }
+    });
+
+    container.setAttribute('data-current-page', 1);
+    window.majPagination(gridId);
+}
+</script>
+{% endblock %}

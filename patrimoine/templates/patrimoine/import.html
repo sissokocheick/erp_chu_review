@@ -1,0 +1,178 @@
+{% extends "base_ui.html" %}
+{% block title %}Import Excel — Patrimoine{% endblock %}
+
+{% block contenu %}
+<style>
+  .imp-header { background:linear-gradient(135deg,#1c5b96,#0d47a1); color:white; border-radius:10px; padding:20px 26px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 18px rgba(28,91,150,.3); flex-wrap:wrap; gap:14px; }
+  .imp-header h4 { margin:0; font-size:20px; font-weight:700; }
+  .imp-header small { opacity:.85; font-size:12px; }
+  .card { background:white; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); padding:24px; margin-bottom:20px; }
+  .card h5 { margin:0 0 18px; font-size:15px; font-weight:700; color:#333; border-bottom:2px solid #f0f3f7; padding-bottom:10px; }
+  .fg { margin-bottom:16px; }
+  .fg label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#495057; margin-bottom:5px; }
+  .fg select, .fg input { width:100%; padding:10px 12px; border:1px solid #dde3ea; border-radius:7px; font-size:13px; outline:none; box-sizing:border-box; }
+  .fg select:focus, .fg input:focus { border-color:#1c5b96; box-shadow:0 0 0 3px rgba(28,91,150,.1); }
+  .types-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-bottom:20px; }
+  .type-card { border:2px solid #dde3ea; border-radius:10px; padding:14px; cursor:pointer; transition:.2s; display:flex; align-items:center; gap:10px; }
+  .type-card:hover { border-color:#1c5b96; background:#f0f6ff; }
+  .type-card.selected { border-color:#1c5b96; background:#e8f0fe; }
+  .type-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; background:#e8f0fe; flex-shrink:0; }
+  .type-nom { font-weight:700; font-size:13px; color:#333; }
+  .type-cat { font-size:11px; color:#888; }
+  .drop-zone { border:2px dashed #dde3ea; border-radius:10px; padding:40px; text-align:center; cursor:pointer; transition:.2s; }
+  .drop-zone:hover, .drop-zone.dragover { border-color:#1c5b96; background:#f0f6ff; }
+  .drop-zone i { font-size:40px; color:#adb5bd; display:block; margin-bottom:12px; }
+  .btn-dl { background:#f0f3f7; color:#495057; border:1px solid #dde3ea; padding:9px 16px; border-radius:7px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; text-decoration:none; transition:.2s; }
+  .btn-dl:hover { background:#e2e6ea; }
+  .btn-submit { background:#1c5b96; color:white; border:none; padding:12px 28px; border-radius:7px; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:.2s; }
+  .btn-submit:hover { background:#0d47a1; }
+  .log-row { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; border-radius:7px; margin-bottom:6px; }
+  .log-ok { background:#d4edda; }
+  .log-warn { background:#fff3cd; }
+  .log-err { background:#f8d7da; }
+  .info-box { background:#e8f0fe; border-left:4px solid #1c5b96; border-radius:0 7px 7px 0; padding:12px 16px; font-size:13px; color:#0d47a1; margin-bottom:16px; }
+</style>
+
+<div class="imp-header">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <i class="fas fa-file-import" style="font-size:28px;opacity:.9;"></i>
+    <div>
+      <h4>Import Excel — Patrimoine</h4>
+      <small>Chaque type d'équipement a son propre template téléchargeable</small>
+    </div>
+  </div>
+</div>
+
+<form method="POST" enctype="multipart/form-data" id="form-import">
+  {% csrf_token %}
+
+  <!-- Étape 1 : choisir le type -->
+  <div class="card">
+    <h5><span style="background:#1c5b96;color:white;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;margin-right:8px;">1</span> Choisir le type d'équipement</h5>
+    <div class="info-box"><i class="fas fa-info-circle" style="margin-right:7px;"></i> Sélectionnez d'abord un type, puis téléchargez le template Excel correspondant. Les colonnes bleues sont fixes, les violettes sont propres à ce type.</div>
+    <div class="types-grid" id="types-grid">
+      {% for t in types %}
+      <div class="type-card" onclick="selectionnerType({{ t.id }}, '{{ t.nom|escapejs }}', '{{ t.categorie.nom|escapejs }}')" id="tc-{{ t.id }}">
+        <div class="type-icon" style="background:{{ t.categorie.couleur|default:'#e9ecef' }}22;">
+          <i class="{{ t.categorie.icone|default:'fas fa-box' }}" style="color:{{ t.categorie.couleur|default:'#6c757d' }};"></i>
+        </div>
+        <div>
+          <div class="type-nom">{{ t.nom }}</div>
+          <div class="type-cat">{{ t.categorie.nom }}</div>
+        </div>
+      </div>
+      {% empty %}
+      <div style="grid-column:1/-1;text-align:center;padding:30px;color:#bbb;">
+        Aucun type configuré. <a href="{% url 'patrimoine_parametres' %}" style="color:#1c5b96;">Configurer les types →</a>
+      </div>
+      {% endfor %}
+    </div>
+    <input type="hidden" name="type_equipement" id="type-selected">
+    <div id="btn-dl-wrap" style="display:none;margin-top:10px;">
+      <a href="#" id="btn-dl-template" class="btn-dl" target="_blank">
+        <i class="fas fa-download" style="color:#1d6f42;"></i> Télécharger le template Excel
+      </a>
+    </div>
+  </div>
+
+  <!-- Étape 2 : uploader -->
+  <div class="card">
+    <h5><span style="background:#1c5b96;color:white;width:24px;height:24px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:12px;margin-right:8px;">2</span> Uploader le fichier rempli</h5>
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('fichier-input').click()">
+      <i class="fas fa-cloud-upload-alt" id="dz-icon"></i>
+      <div id="dz-text" style="font-size:14px;color:#6c757d;margin-bottom:8px;">Cliquer ou glisser-déposer un fichier .xlsx</div>
+      <div id="dz-filename" style="font-size:13px;color:#1c5b96;font-weight:700;display:none;"></div>
+    </div>
+    <input type="file" name="fichier" id="fichier-input" accept=".xlsx,.xls" style="display:none;" onchange="afficherFichier(this)">
+  </div>
+
+  <!-- Bouton submit -->
+  <div style="text-align:center;">
+    <button type="button" class="btn-submit" onclick="lancerImport()">
+      <i class="fas fa-rocket"></i> Lancer l'import
+    </button>
+  </div>
+</form>
+
+{% if logs_recents %}
+<div class="card" style="margin-top:20px;">
+  <h5><i class="fas fa-history" style="margin-right:8px;color:#6c757d;"></i> Imports récents</h5>
+  {% for log in logs_recents %}
+  <div class="log-row {% if log.statut == 'OK' %}log-ok{% elif log.statut == 'PARTIEL' %}log-warn{% else %}log-err{% endif %}">
+    <div>
+      <div style="font-weight:700;font-size:13px;">
+        {% if log.type_equipement %}{{ log.type_equipement.nom }}{% else %}Import générique{% endif %}
+      </div>
+      <div style="font-size:11px;color:#555;">{{ log.date_creation|date:"d/m/Y H:i" }} — {{ log.nb_crees }} créés, {{ log.nb_mis_a_jour }} mis à jour{% if log.nb_erreurs %}, {{ log.nb_erreurs }} erreurs{% endif %}</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;font-weight:700;">{{ log.get_statut_display }}</span>
+      <a href="{% url 'patrimoine_import_log' log.id %}" style="font-size:12px;color:#1c5b96;text-decoration:none;">Détail →</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<script>
+var typeSelectionne = null;
+
+function selectionnerType(id, nom, cat) {
+  document.querySelectorAll('.type-card').forEach(function(c){ c.classList.remove('selected'); });
+  document.getElementById('tc-' + id).classList.add('selected');
+  document.getElementById('type-selected').value = id;
+  typeSelectionne = id;
+  var dl = document.getElementById('btn-dl-template');
+  dl.href = '/patrimoine/import/template/' + id + '/';
+  document.getElementById('btn-dl-wrap').style.display = 'block';
+}
+
+function afficherFichier(input) {
+  if (input.files && input.files[0]) {
+    var nom = input.files[0].name;
+    document.getElementById('dz-icon').style.color = '#28a745';
+    document.getElementById('dz-text').style.display = 'none';
+    document.getElementById('dz-filename').style.display = 'block';
+    document.getElementById('dz-filename').innerHTML = '<i class="fas fa-file-excel" style="color:#1d6f42;margin-right:6px;"></i>' + nom;
+    document.getElementById('drop-zone').style.borderColor = '#28a745';
+    document.getElementById('drop-zone').style.background = '#f0fff4';
+  }
+}
+
+var dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', function(e){ e.preventDefault(); this.classList.add('dragover'); });
+dz.addEventListener('dragleave', function(){ this.classList.remove('dragover'); });
+dz.addEventListener('drop', function(e){
+  e.preventDefault(); this.classList.remove('dragover');
+  var files = e.dataTransfer.files;
+  if (files.length) {
+    document.getElementById('fichier-input').files = files;
+    afficherFichier(document.getElementById('fichier-input'));
+  }
+});
+
+function lancerImport() {
+  if (!typeSelectionne) {
+    Swal.fire('', 'Veuillez sélectionner un type d\'équipement.', 'warning');
+    return;
+  }
+  if (!document.getElementById('fichier-input').files.length) {
+    Swal.fire('', 'Veuillez choisir un fichier Excel.', 'warning');
+    return;
+  }
+  Swal.fire({
+    title: 'Lancer l\'import ?',
+    text: 'Les biens seront créés ou mis à jour.',
+    icon: 'question', showCancelButton: true,
+    confirmButtonColor: '#1c5b96', cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-rocket"></i> Importer',
+    cancelButtonText: 'Annuler'
+  }).then(function(r) {
+    if (r.isConfirmed) {
+      Swal.fire({ title: 'Import en cours…', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
+      document.getElementById('form-import').submit();
+    }
+  });
+}
+</script>
+{% endblock %}

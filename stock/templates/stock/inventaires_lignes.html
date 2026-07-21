@@ -1,0 +1,175 @@
+<style>
+  .inv-cell { padding: 12px; }
+  .inv-icon { color: var(--text-light); margin-right: 4px; }
+  .inv-icon-fixed { color: var(--text-light); width: 14px; }
+</style>
+
+<style>
+  .campagne-row {
+    border-bottom: 1px solid var(--border-light);
+    transition: background .12s;
+  }
+  .campagne-row:hover { background: var(--bg-hover); }
+
+  .badge-en-cours {
+    background: rgba(255,193,7,0.15); color: #856404;
+    padding: 4px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge-a-valider {
+    background: rgba(23,162,184,0.15); color: #0c5460;
+    padding: 4px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge-valide {
+    background: rgba(40,167,69,0.15); color: #155724;
+    padding: 4px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+  .badge-annule {
+    background: rgba(220,53,69,0.15); color: #721c24;
+    padding: 4px 10px; border-radius: 12px;
+    font-size: 11px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+  }
+
+  .badge-type {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .3px;
+    margin-left: 6px;
+  }
+  .badge-type-general { background: rgba(108,117,125,0.15); color: #495057; }
+  .badge-type-famille { background: rgba(23,162,184,0.15); color: #0c5460; }
+  .badge-type-perso   { background: rgba(111,66,193,0.15); color: #5a189a; }
+
+  .btn-action {
+    width: 32px; height: 32px; border: none; border-radius: 6px;
+    cursor: pointer; font-size: 13px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: .2s;
+  }
+  .btn-print-fiche {
+    background: rgba(111,66,193,0.12); color: #6f42c1;
+  }
+  .btn-print-fiche:hover { background: #6f42c1; color: white; }
+  .btn-print-result {
+    background: rgba(40,167,69,0.12); color: #155724;
+  }
+  .btn-print-result:hover { background: #28a745; color: white; }
+  .btn-saisir {
+    background: #17a2b8; color: white; padding: 6px 12px;
+    border-radius: 6px; font-size: 12px; font-weight: 700;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    transition: .2s;
+  }
+  .btn-saisir:hover { background: #117a8b; }
+  .btn-voir {
+    background: #6c757d; color: white; padding: 6px 12px;
+    border-radius: 6px; font-size: 12px; font-weight: 700;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 5px;
+    transition: .2s;
+  }
+  .btn-voir:hover { background: #495057; }
+
+  /* DARK MODE */
+  body.dark-mode .badge-en-cours { background: rgba(255,213,79,0.15); color: #ffe082; }
+  body.dark-mode .badge-a-valider { background: rgba(128,222,234,0.15); color: #80deea; }
+  body.dark-mode .badge-valide { background: rgba(129,199,132,0.15); color: #a5d6a7; }
+  body.dark-mode .badge-annule { background: rgba(239,154,154,0.15); color: #f5a9b1; }
+  body.dark-mode .badge-type-general { background: rgba(108,117,125,0.25); color: #cfd8dc; }
+  body.dark-mode .badge-type-famille { background: rgba(128,222,234,0.2); color: #80deea; }
+  body.dark-mode .badge-type-perso   { background: rgba(179,157,219,0.2); color: #b39ddb; }
+  body.dark-mode .btn-print-fiche { color: #b39ddb; background: rgba(111,66,193,0.15); }
+  body.dark-mode .btn-print-fiche:hover { background: #6f42c1; color: white; }
+  body.dark-mode .btn-print-result { color: #a5d6a7; background: rgba(129,199,132,0.15); }
+  body.dark-mode .btn-print-result:hover { background: #28a745; color: white; }
+</style>
+
+{% for campagne in campagnes %}
+<tr class="campagne-row">
+  <td class="inv-cell">
+    <strong style="color:var(--text-dark);font-size:13px;">{{ campagne.date_creation|date:"d/m/Y" }}</strong><br>
+    <small style="color:var(--text-light);font-size:11px;">{{ campagne.date_creation|date:"H:i" }}</small>
+  </td>
+  <td class="inv-cell">
+    <strong style="color:#1c5b96;font-size:14px;">{{ campagne.titre }}</strong>
+    {% if campagne.type_campagne == 'GENERAL' %}
+      <span class="badge-type badge-type-general">Général</span>
+    {% elif campagne.type_campagne == 'PAR_FAMILLE' %}
+      <span class="badge-type badge-type-famille">Famille</span>
+    {% elif campagne.type_campagne == 'PERSONNALISE' %}
+      <span class="badge-type badge-type-perso">Perso</span>
+    {% endif %}
+  </td>
+  <td class="inv-cell">
+    <span style="font-weight:600;color:var(--text-dark);">
+      <i class="fas fa-warehouse" class="inv-icon"></i>{{ campagne.magasin.nom }}
+    </span>
+  </td>
+  <td class="inv-cell">
+    {% if campagne.statut == 'EN_COURS' %}
+      <span class="badge-en-cours"><i class="fas fa-edit"></i> En cours</span>
+    {% elif campagne.statut == 'A_VALIDER' %}
+      <span class="badge-a-valider"><i class="fas fa-user-clock"></i> À valider</span>
+    {% elif campagne.statut == 'VALIDE' %}
+      <span class="badge-valide"><i class="fas fa-check-circle"></i> Validé</span>
+    {% else %}
+      <span class="badge-annule"><i class="fas fa-times-circle"></i> Annulé</span>
+    {% endif %}
+  </td>
+  <td style="padding: 12px; font-size: 12px; color: var(--text-medium); line-height: 1.6;">
+    <div><i class="fas fa-user" class="inv-icon-fixed"></i> <b style="color:var(--text-dark);">{{ campagne.cree_par.username|default:"Système" }}</b></div>
+    {% if campagne.valide_par %}
+    <div><i class="fas fa-user-check" class="inv-icon-fixed"></i> Validé par {{ campagne.valide_par.username }}</div>
+    {% endif %}
+  </td>
+  <td style="padding: 12px; text-align: center;">
+    <div style="display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;">
+
+      {# ✅ Fiche de comptage UNIQUEMENT si inventaire en cours (pas après validation) #}
+      {% if campagne.statut == 'EN_COURS' or campagne.statut == 'A_VALIDER' %}
+      <button type="button" class="btn-action btn-print-fiche"
+              onclick="window.afficherDocumentScan('{% url 'imprimer_fiche_comptage_stock' campagne.id %}')"
+              title="Fiche de comptage vierge">
+        <i class="fas fa-print"></i>
+      </button>
+      {% endif %}
+
+      {# ✅ Résultat final UNIQUEMENT si inventaire validé #}
+      {% if campagne.statut == 'VALIDE' %}
+      <button type="button" class="btn-action btn-print-result"
+              onclick="window.afficherDocumentScan('{% url 'imprimer_resultat_inventaire' campagne.id %}')"
+              title="Imprimer le résultat (écarts)">
+        <i class="fas fa-file-invoice"></i>
+      </button>
+      {% endif %}
+
+      {% if campagne.statut == 'EN_COURS' and peut_modifier %}
+      <a href="{% url 'saisir_inventaire' campagne.id %}" class="btn-saisir" title="Saisir">
+        <i class="fas fa-edit"></i> Saisir
+      </a>
+      {% else %}
+      <a href="{% url 'saisir_inventaire' campagne.id %}" class="btn-voir" title="Consulter">
+        <i class="fas fa-eye"></i> Voir
+      </a>
+      {% endif %}
+
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="6" style="text-align:center;padding:50px;color:var(--text-light);">
+    <i class="fas fa-folder-open" style="font-size:30px;display:block;margin-bottom:10px;opacity:.4;"></i>
+    Aucune campagne d'inventaire trouvée.
+  </td>
+</tr>
+{% endfor %}

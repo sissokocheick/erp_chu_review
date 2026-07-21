@@ -1,0 +1,200 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Fiche de Comptage — {{ campagne.titre }}</title>
+<style>
+    @page {
+        size: A4 landscape;
+        margin: 12mm 12mm 55mm 12mm;
+    }
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        padding: 0 0 55mm 0;
+        font-family: 'Helvetica', 'Arial', sans-serif;
+        font-size: 10.5pt;
+        color: #000;
+        line-height: 1.25;
+        background: #fff;
+    }
+
+    .bottom-fixed {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        page-break-inside: avoid;
+    }
+
+    .etat-header { width: 100%; border-collapse: collapse; margin-bottom: 6px; text-align: center; font-size: 9.5px; }
+    .etat-header td { vertical-align: top; }
+    .etat-gauche, .etat-droite { width: 40%; font-weight: bold; }
+    .etat-centre { width: 20%; }
+
+    .cartouche-iso { width: 100%; border-collapse: collapse; border: 1.5px solid #000; text-align: center; margin-bottom: 12px; }
+    .cartouche-iso td { border: 1px solid #000; padding: 3px; vertical-align: middle; }
+    .c-logo-box { width: 25%; font-size: 9px; font-weight: bold; }
+    .c-logo-box img { max-height: 50px; margin-bottom: 3px; object-fit: contain; }
+    .c-ps2 { width: 50%; font-size: 10px; font-weight: bold; color: #1c5b96; text-transform: uppercase; }
+    .c-title { font-size: 15px; font-weight: bold; text-transform: uppercase; padding: 6px !important; color: #6f42c1; }
+    .c-code { width: 25%; text-align: left; font-size: 9px; padding-left: 6px !important; }
+
+    .info-table { width: 100%; font-size: 10px; margin-bottom: 10px; }
+    .info-table td { padding: 2px 0; }
+
+    .items-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; border: 1.5px solid #000; }
+    .items-table th, .items-table td { border: 1px solid #000; padding: 4px 5px; }
+    .items-table th { text-align: center; font-size: 9px; font-weight: bold; background-color: #6f42c1; color: white; text-transform: uppercase; }
+    .items-table td { font-size: 10px; }
+    .text-center { text-align: center; }
+    .text-left { text-align: left; }
+    .text-right { text-align: right; }
+
+    .signatures-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; text-align: center; font-size: 9px; }
+    .signatures-table th, .signatures-table td { border: 1px solid #000; padding: 4px; width: 33.33%; vertical-align: top; }
+    .signatures-table th { font-weight: bold; background-color: #f4f4f4; }
+    .sig-space { height: 50px; margin: 5px 0; text-align: center; }
+    .sig-img { max-width: 120px; max-height: 45px; object-fit: contain; }
+    .sig-empty { font-style: italic; color: #888; font-size: 8px; display: block; margin-top: 15px; }
+    .sig-name { font-size: 8px; font-weight: bold; color: #1c5b96; margin-top: 3px; }
+
+    .footer-static { text-align: center; font-size: 7.5px; font-weight: bold; margin-top: 4px; border-top: 1px solid #000; padding-top: 3px; color: #555; }
+
+    .badge {
+        display: inline-block; padding: 2px 8px; border-radius: 10px;
+        font-size: 9px; font-weight: bold;
+    }
+    .badge-en-cours { background: #fff3cd; color: #856404; }
+    .badge-valide { background: #d4edda; color: #155724; }
+    .badge-annule { background: #f8d7da; color: #721c24; }
+</style>
+</head>
+<body>
+
+    <table class="etat-header">
+        <tr>
+            <td class="etat-gauche">Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</td>
+            <td class="etat-centre"></td>
+            <td class="etat-droite">République de Côte d'Ivoire<br><span style="font-weight:normal;font-size:8px;font-style:italic;">Union - Discipline - Travail</span></td>
+        </tr>
+    </table>
+
+    <table class="cartouche-iso">
+        <tr>
+            <td rowspan="4" class="c-logo-box">
+                {% if pdf_config.afficher_logo and logo_url %}<img src="{{ logo_url }}" alt="Logo"><br>{% else %}<img src="/static/img/logo.jpg" alt="Logo"><br>{% endif %}
+                {{ entreprise.nom|default:"NexusERP" }}
+            </td>
+            <td class="c-ps2">MAGASIN : {{ campagne.magasin.nom|default:"GESTION DES STOCKS"|upper }}</td>
+            <td class="c-code">Code : {{ pdf_config.code_document|default:"ENR-FCI/DAF-001" }}</td>
+        </tr>
+        <tr><td rowspan="3" class="c-title">FICHE DE COMPTAGE<br>INVENTAIRE PHYSIQUE</td><td class="c-code">Créé le : {{ pdf_config.date_creation_doc|default:"10/06/2024" }}</td></tr>
+        <tr><td class="c-code">Révisé le : {{ pdf_config.date_revision_doc|default:"19/05/2025" }}</td></tr>
+        <tr><td class="c-code">Version : {{ pdf_config.version_doc|default:"002" }}</td></tr>
+    </table>
+
+    <table class="info-table">
+        <tr>
+            <td style="width:60%;"><strong>Campagne N° :</strong> <span style="color:#6f42c1;font-weight:bold;">{{ campagne.titre|upper }}</span></td>
+            <td style="width:40%;"><strong>Date :</strong> {{ campagne.date_creation|date:"d/m/Y" }}</td>
+        </tr>
+        <tr>
+            <td><strong>Magasin :</strong> {{ campagne.magasin.nom }}</td>
+            <td><strong>Tirage du :</strong> {% now "d/m/Y à H:i" %}</td>
+        </tr>
+        <tr>
+            <td><strong>Créée par :</strong> {% if campagne.cree_par %}{{ campagne.cree_par.get_full_name|default:campagne.cree_par.username|upper }}{% else %}SYSTÈME{% endif %}</td>
+            <td><strong>Statut :</strong>
+                {% if campagne.statut == 'EN_COURS' %}<span class="badge badge-en-cours">En cours</span>
+                {% elif campagne.statut == 'A_VALIDER' %}<span class="badge badge-en-cours">À valider</span>
+                {% elif campagne.statut == 'VALIDE' %}<span class="badge badge-valide">Validé</span>
+                {% else %}<span class="badge badge-annule">Annulé</span>{% endif %}
+            </td>
+        </tr>
+        <tr>
+            <td style="color:#555;"><strong>Nombre d'articles :</strong> {{ lignes|length }}</td>
+            <td></td>
+        </tr>
+    </table>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width:4%;">N°</th>
+                <th style="width:12%;">RÉF.</th>
+                <th style="width:34%;">DÉSIGNATION</th>
+                <th style="width:14%;">FAMILLE</th>
+                <th style="width:12%;">STOCK THÉORIQUE</th>
+                <th style="width:12%;">STOCK PHYSIQUE</th>
+                <th style="width:12%;">ÉCART</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in lignes %}
+            <tr>
+                <td class="text-center">{{ forloop.counter }}</td>
+                <td class="text-center">{{ ligne.article.reference|default:"-" }}</td>
+                <td class="text-left"><strong>{{ ligne.article.designation }}</strong></td>
+                <td class="text-center">{{ ligne.article.famille.intitule|default:"-" }}</td>
+                <td class="text-center" style="font-weight:bold;color:#1c5b96;">{{ ligne.quantite_theorique }}</td>
+                <td class="text-center"></td>
+                <td class="text-center"></td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" class="text-center" style="padding:20px;color:#888;">Aucun article dans cette campagne.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="bottom-fixed">
+        <table class="signatures-table">
+            <thead>
+                <tr>
+                    <th>Le Compteur</th>
+                    <th>Le Vérificateur</th>
+                    <th>Celui qui a tiré la fiche</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>
+                        <strong>COMPTEUR</strong>
+                        <div class="sig-space"><span class="sig-empty">À signer manuellement</span></div>
+                        <div class="sig-name">Nom & Prénom</div>
+                    </td>
+                    <td>
+                        <strong>VÉRIFICATEUR</strong>
+                        <div class="sig-space"><span class="sig-empty">À signer manuellement</span></div>
+                        <div class="sig-name">Nom & Prénom</div>
+                    </td>
+                    <td>
+                        <strong>IMPRIMEUR</strong>
+                        <div class="sig-space">
+                            {% if imprimeur_sig %}
+                                <img src="{{ imprimeur_sig }}" class="sig-img">
+                            {% else %}
+                                <div style="height:45px;"></div>
+                            {% endif %}
+                        </div>
+                        <div class="sig-name">
+                            {% if edite_par %}{{ edite_par.get_full_name|default:edite_par.username|upper }}{% else %}..................................{% endif %}
+                        </div>
+                        {% if date_impression %}<div style="font-size:8px; color:#333;">{{ date_impression|date:"d/m/Y" }}</div>{% endif %}
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="footer-static">
+            {{ entreprise.adresse|default:"ANGRE BESSIKOI — 28 BP 1350 ABIDJAN" }} Tel : {{ entreprise.telephone|default:"2722496400" }} CC N° : {{ entreprise.cc|default:"1821717-Q" }}<br>
+            Fiche de comptage générée par NexusERP — {{ date_impression|default:""|date:"d/m/Y H:i" }}
+        </div>
+    </div>
+
+</body>
+</html>

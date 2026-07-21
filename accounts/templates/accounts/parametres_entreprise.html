@@ -1,0 +1,159 @@
+{% extends "base_ui.html" %}
+{% block title %}Paramètres Entreprise — {{ entreprise.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="nx-container">
+    <div class="nx-between" style="margin-bottom: 20px;">
+        <div>
+            <h2 style="margin:0; font-size: 22px; color: var(--text-dark);">
+                <i class="fas fa-building" style="color: var(--primary-blue);"></i> Configuration de l'Entreprise
+            </h2>
+            <p style="margin:4px 0 0; font-size: 13px; color: var(--text-medium);">
+                Identité visuelle, coordonnées et mentions légales de l'entreprise.
+                <br><strong>Les signataires, préfixes et hiérarchie sont gérés dans</strong>
+                <a href="{% url 'accounts:config_documents_globaux' %}" style="color: var(--primary-blue);">Configuration Documents PDF →</a>
+            </p>
+        </div>
+        <a href="{% url 'accounts:config_documents_globaux' %}" class="nx-btn nx-btn-light">
+            <i class="fas fa-file-contract"></i> Config. Documents PDF
+        </a>
+    </div>
+
+    {% if form.errors %}
+    <div class="nx-alert nx-alert-red" style="margin-bottom: 20px;">
+        <strong><i class="fas fa-times-circle"></i> Erreurs :</strong>
+        <ul style="margin:8px 0 0 18px; padding:0;">
+            {% for field in form %}
+                {% if field.errors %}
+                    <li><strong>{{ field.label }} :</strong> {{ field.errors|striptags }}</li>
+                {% endif %}
+            {% endfor %}
+            {% for error in form.non_field_errors %}
+                <li><strong>Général :</strong> {{ error }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- ═════ IDENTITÉ & CONTACT ═════ -->
+        <div class="nx-card" style="margin-bottom: 20px;">
+            <div class="nx-card-header">
+                <h4><i class="fas fa-id-card" style="color: var(--primary-blue);"></i> Identité & Contact</h4>
+            </div>
+            <div class="nx-card-body">
+                <div class="nx-row">
+                    <div class="nx-col" style="flex:2;">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Nom de l'entreprise</label>
+                            {{ form.nom }}
+                        </div>
+                        <div class="nx-row">
+                            <div class="nx-col">
+                                <div class="nx-form-group">
+                                    <label class="nx-label">Email de contact</label>
+                                    {{ form.email_contact }}
+                                </div>
+                            </div>
+                            <div class="nx-col">
+                                <div class="nx-form-group">
+                                    <label class="nx-label">Téléphone</label>
+                                    {{ form.telephone }}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="nx-form-group">
+                            <label class="nx-label">Adresse</label>
+                            {{ form.adresse }}
+                        </div>
+                        <div class="nx-row">
+                            <div class="nx-col">
+                                <div class="nx-form-group">
+                                    <label class="nx-label">Ville</label>
+                                    {{ form.ville }}
+                                </div>
+                            </div>
+                            <div class="nx-col">
+                                <div class="nx-form-group">
+                                    <label class="nx-label">Pays</label>
+                                    {{ form.pays }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="nx-col" style="flex:1;">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Slug (identifiant unique)</label>
+                            {{ form.slug }}
+                        </div>
+                        <div class="nx-form-group">
+                            <label class="nx-label">Couleur principale</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input type="text" name="couleur_principale" class="nx-input" value="{{ form.couleur_principale.value|default:'#1c5b96' }}" maxlength="7" id="id_couleur_text" style="font-family:monospace; flex:1;">
+                                <input type="color" value="{{ form.couleur_principale.value|default:'#1c5b96' }}" oninput="document.getElementById('id_couleur_text').value=this.value" style="width:40px; height:36px; border:none; cursor:pointer; padding:0; background:none;">
+                            </div>
+                        </div>
+                        <div class="nx-form-group">
+                            <label class="nx-label">Logo (PNG/JPG, max 2 Mo)</label>
+                            {{ form.logo }}
+                            {% if entreprise.logo and entreprise.logo.name %}
+                            <div style="margin-top:8px; padding:8px; background:var(--bg-hover); border-radius:6px; display:inline-block;">
+                                <img src="{{ entreprise.logo.url }}" style="max-height:80px; border-radius:4px;" onerror="this.style.display='none';">
+                                <div style="font-size:11px; margin-top:4px; color:var(--text-light);">{{ entreprise.logo.name }}</div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="nx-form-group">
+                            <label class="nx-label">Cachet / Tampon (PNG, max 2 Mo)</label>
+                            {{ form.cachet }}
+                            {% if entreprise.cachet and entreprise.cachet.name %}
+                            <div style="margin-top:8px; padding:8px; background:var(--bg-hover); border-radius:6px; display:inline-block;">
+                                <img src="{{ entreprise.cachet.url }}" style="max-height:60px; border-radius:4px;" onerror="this.style.display='none';">
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═════ COORDONNÉES LÉGALES ═════ -->
+        <div class="nx-card" style="margin-bottom: 20px;">
+            <div class="nx-card-header">
+                <h4><i class="fas fa-balance-scale" style="color: #6f42c1;"></i> Coordonnées Légales</h4>
+            </div>
+            <div class="nx-card-body">
+                <div class="nx-row">
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Compte Contribuable (CC)</label>
+                            {{ form.cc }}
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">IFU</label>
+                            {{ form.ifu }}
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">RCCM</label>
+                            {{ form.rccm }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+            <a href="{% url 'accounts:accueil_personnalise' %}" class="nx-btn nx-btn-light">Annuler</a>
+            <button type="submit" class="nx-btn nx-btn-primary">
+                <i class="fas fa-save"></i> Enregistrer
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

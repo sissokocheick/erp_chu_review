@@ -1,0 +1,712 @@
+{% extends "base_ui.html" %}
+
+{% block contenu %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+<style>
+    .page-header-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+    }
+    .page-header-bar h2 { color: var(--text-dark); margin: 0; font-size: 20px; }
+
+    .btn-new {
+        background: #007bff; color: white; border: none;
+        padding: 10px 15px; border-radius: 8px; font-weight: 700; font-size: 14px;
+        transition: 0.2s; box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+        cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-new:hover { background: #0056b3; transform: translateY(-1px); }
+
+    .search-bar {
+        display: flex; gap: 15px; margin-bottom: 15px;
+        background: var(--bg-stripe); padding: 15px;
+        border-radius: 10px; border: 1px solid var(--border-light); flex-wrap: wrap;
+    }
+    .search-bar input {
+        padding: 10px; border: 2px solid var(--border-color);
+        border-radius: 8px; font-size: 13px; outline: none;
+        background: var(--bg-input); color: var(--text-dark); transition: 0.2s;
+    }
+    .search-bar input:focus { border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.1); }
+    .search-bar .search-input-q { flex: 3; min-width: 300px; }
+    .search-bar .search-input-date { flex: 1; min-width: 160px; max-width: 220px; }
+    .btn-reset {
+        color: #dc3545; background: #ffebeb; padding: 10px 20px; border-radius: 8px;
+        text-decoration: none; font-weight: 700; font-size: 13px; display: inline-flex;
+        align-items: center; gap: 8px; border: 1px solid #f5c6cb; transition: 0.2s;
+    }
+    .btn-reset:hover { background: #f8d7da; }
+
+    .per-page-bar {
+        display: flex; justify-content: flex-end; margin-bottom: 15px;
+    }
+    .per-page-bar select {
+        padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border-color);
+        cursor: pointer; background: var(--bg-card); color: var(--text-dark);
+    }
+
+    .table-card {
+        background: var(--bg-card); border-radius: 10px;
+        box-shadow: 0 2px 10px var(--shadow); overflow: hidden;
+        border: 1px solid var(--border-light);
+    }
+    .table-card table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table-card table.main-table thead tr { background: #007bff; }
+    .table-card table.main-table thead th {
+        padding: 13px 15px; color: white; font-weight: 600;
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border: none;
+    }
+    .table-card table.main-table tbody tr { border-bottom: 1px solid var(--border-light); transition: background 0.2s; }
+    .table-card table.main-table tbody tr:hover { background: var(--bg-hover); }
+    .table-card table.main-table tbody td { padding: 13px 15px; vertical-align: middle; color: var(--text-dark); }
+
+    /* Toggle */
+    .btn-toggle-row {
+        background: none; border: none; cursor: pointer;
+        color: var(--text-light); padding: 4px; border-radius: 4px;
+        transition: all 0.2s; font-size: 14px;
+    }
+    .btn-toggle-row:hover { color: #007bff; }
+    .btn-toggle-row i { transition: transform 0.2s; }
+
+    /* Modal saisie */
+    .modal-overlay {
+        display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.55); z-index: 2147483647; align-items: flex-start;
+        justify-content: center; backdrop-filter: blur(3px); padding-top: 5vh; overflow-y: auto;
+    }
+    .modal-box {
+        background: var(--bg-card); width: 95%; max-width: 1100px;
+        border-radius: 12px; box-shadow: 0 20px 50px var(--shadow);
+        display: flex; flex-direction: column; margin-bottom: 5vh;
+    }
+    .modal-header {
+        background: linear-gradient(135deg, #1c5b96, #007bff); color: white;
+        padding: 18px 25px; border-radius: 12px 12px 0 0; display: flex;
+        justify-content: space-between; align-items: center; font-weight: 700;
+    }
+    .modal-body { padding: 25px; background: var(--bg-stripe); }
+    .vd-section {
+        background: var(--bg-card); padding: 20px; border-radius: 10px;
+        box-shadow: 0 2px 8px var(--shadow); margin-bottom: 20px;
+        border: 1px solid var(--border-light);
+    }
+    .vd-label { font-size: 12px; font-weight: 700; color: var(--text-medium); text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .vd-input {
+        width: 100%; padding: 10px 12px; border: 2px solid var(--border-color);
+        border-radius: 8px; font-size: 14px; box-sizing: border-box; transition: 0.2s;
+        background: var(--bg-input); color: var(--text-dark);
+    }
+    .vd-input:focus { border-color: #007bff; outline: none; box-shadow: 0 0 0 3px rgba(0,123,255,0.1); }
+    .vd-table-header { background: var(--thead-bg); color: white; font-size: 13px; text-transform: uppercase; }
+    .vd-table th { padding: 12px; font-weight: 600; }
+    .vd-table td { padding: 12px; border-bottom: 1px solid var(--border-light); font-size: 14px; vertical-align: middle; color: var(--text-dark); }
+    .modal-footer {
+        padding: 20px 25px; background: var(--bg-stripe); border-top: 1px solid var(--border-light);
+        display: flex; justify-content: flex-end; gap: 15px; border-radius: 0 0 12px 12px;
+    }
+    .btn-cancel { background: var(--bg-card); color: var(--text-medium); border: 1px solid var(--border-color); padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    .btn-submit { background: #007bff; color: white; border: none; padding: 10px 30px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 15px; box-shadow: 0 4px 10px rgba(0,123,255,0.3); }
+
+    .dropdown-item:hover { background: var(--bg-hover) !important; }
+    .badge-stock { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+    .stock-ok { background: rgba(40,167,69,0.15); color: #155724; }
+    .stock-zero { background: rgba(220,53,69,0.15); color: #721c24; }
+    .input-ligne-qte { border: 2px solid var(--border-color); border-radius: 6px; padding: 6px; text-align: center; font-weight: bold; width: 80px; font-size: 15px; background: var(--bg-input); color: var(--text-dark); }
+    .input-ligne-qte:focus { border-color: #007bff; outline: none; }
+
+    .swal2-container { z-index: 2147483647 !important; }
+    .select2-container .select2-selection--single { height: 42px; border: 1px solid var(--border-color); border-radius: 8px; }
+    .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 42px; padding-left: 12px; }
+    .select2-container--default .select2-selection--single .select2-selection__arrow { height: 40px; }
+
+    /* ═══════════════════════════════════════════════
+       MODAL PDF (style gestion_demandes)
+       ═══════════════════════════════════════════════ */
+    .mo-pdf {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+        z-index: 99999; align-items: flex-start; justify-content: center;
+        backdrop-filter: blur(3px); padding-top: 4vh; overflow-y: auto;
+    }
+    .mo-pdf.open { display: flex; }
+    .mb-pdf {
+        background: var(--bg-card); border-radius: 12px; width: 90%; max-width: 900px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: si .2s ease; margin-bottom: 4vh;
+    }
+    @keyframes si { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .mh-pdf {
+        background: linear-gradient(135deg, #17a2b8, #117a8b); color: white;
+        padding: 18px 24px; border-radius: 12px 12px 0 0;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .mc-pdf {
+        background: rgba(255,255,255,0.2); border: none; color: white;
+        width: 32px; height: 32px; border-radius: 50%; font-size: 16px;
+        cursor: pointer; transition: .2s; display: inline-flex;
+        align-items: center; justify-content: center;
+    }
+    .mc-pdf:hover { background: rgba(255,255,255,0.4); }
+    .mfoot-pdf {
+        padding: 14px 24px; border-top: 1px solid var(--border-light);
+        display: flex; justify-content: flex-end; gap: 10px;
+        background: var(--bg-stripe); border-radius: 0 0 12px 12px;
+    }
+    .btn-ok-pdf {
+        background: linear-gradient(135deg, #17a2b8, #117a8b); color: white;
+        border: none; padding: 10px 24px; border-radius: 8px;
+        font-weight: 700; font-size: 14px; cursor: pointer; transition: .2s;
+    }
+    .btn-ok-pdf:hover { opacity: 0.9; }
+    .btn-nok-pdf {
+        background: var(--bg-hover); color: var(--text-medium); border: none;
+        padding: 10px 20px; border-radius: 8px; font-size: 14px;
+        cursor: pointer; transition: .2s;
+    }
+    .btn-nok-pdf:hover { background: var(--border-color); }
+
+    /* ═══════════════════════════════════════════════
+       DARK MODE — liste_sorties.html
+       ═══════════════════════════════════════════════ */
+    body.dark-mode .page-header-bar { border-bottom-color: var(--border-light); }
+    body.dark-mode .page-header-bar h2 { color: var(--text-light, #f1f5f9); }
+
+    /* Tableau principal */
+    body.dark-mode .table-card { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+    body.dark-mode .table-card table.main-table thead tr { background: var(--bg-hover, #334155) !important; }
+    body.dark-mode .table-card table.main-table thead th { color: var(--text-light, #f1f5f9) !important; }
+    body.dark-mode .table-card table.main-table tbody tr { background: var(--bg-card, #1e293b); border-bottom-color: var(--border-light, #475569); }
+    body.dark-mode .table-card table.main-table tbody tr:hover { background: var(--bg-hover, #334155); }
+    body.dark-mode .table-card table.main-table tbody td { color: var(--text-dark, #cbd5e1); }
+
+    /* Search bar */
+    body.dark-mode .search-bar { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+    body.dark-mode .search-bar input { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+    body.dark-mode .search-bar input::placeholder { color: #94a3b8; }
+    body.dark-mode .search-bar input:focus { border-color: #5bc0de; box-shadow: 0 0 0 3px rgba(91,192,222,0.1); }
+    body.dark-mode .btn-reset { background: rgba(220,53,69,0.15); color: #f5a9b1; border-color: rgba(220,53,69,0.3); }
+    body.dark-mode .per-page-bar select { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+
+    /* Toggle */
+    body.dark-mode .btn-toggle-row { color: var(--text-light, #94a3b8); }
+    body.dark-mode .btn-toggle-row:hover { color: #5bc0de; }
+
+    /* Modal saisie */
+    body.dark-mode .modal-box { background: var(--bg-card, #1e293b); }
+    body.dark-mode .modal-body { background: var(--bg-hover, #334155); }
+    body.dark-mode .modal-footer { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+    body.dark-mode .vd-section { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+    body.dark-mode .vd-input { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+    body.dark-mode .vd-input:focus { border-color: #5bc0de; box-shadow: 0 0 0 3px rgba(91,192,222,0.1); }
+    body.dark-mode .vd-label { color: var(--text-light, #94a3b8); }
+    body.dark-mode .vd-table td { color: var(--text-dark, #cbd5e1); border-bottom-color: var(--border-light, #475569); }
+    body.dark-mode .dropdown-item:hover { background: var(--bg-hover, #334155) !important; }
+    body.dark-mode .input-ligne-qte { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+    body.dark-mode .badge-stock { background: var(--bg-hover, #334155); }
+    body.dark-mode .stock-ok { color: #81c784; }
+    body.dark-mode .stock-zero { color: #ef9a9a; }
+    body.dark-mode .btn-cancel { background: var(--bg-card, #1e293b); color: var(--text-light, #94a3b8); border-color: var(--border-light, #475569); }
+    body.dark-mode .btn-submit { background: linear-gradient(135deg, #0d6efd, #0056b3); }
+
+    /* Modal PDF dark mode */
+    body.dark-mode .mb-pdf { background: var(--bg-card, #1e293b); }
+    body.dark-mode .mfoot-pdf { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+    body.dark-mode .btn-nok-pdf { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); }
+
+    /* Détail des lignes (sorties_lignes.html) */
+    body.dark-mode .detail-card-sortie { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+    body.dark-mode .detail-card-sortie h4 { color: #5bc0de; }
+    body.dark-mode .detail-table-sortie thead { background: var(--bg-hover, #334155); }
+    body.dark-mode .detail-table-sortie th { color: var(--text-light, #f1f5f9); border-bottom-color: var(--border-light, #475569); }
+    body.dark-mode .detail-table-sortie td { color: var(--text-dark, #cbd5e1); border-bottom-color: var(--border-light, #475569); }
+    body.dark-mode .detail-table-sortie td strong { color: var(--text-light, #f1f5f9); }
+</style>
+
+<div>
+    <div class="page-header-bar">
+        <h2><i class="fas fa-sign-out-alt" style="color: #007bff;"></i> Bons de Sortie (Consommation)</h2>
+        {% if peut_creer %}
+        <button type="button" onclick="ouvrirModalSortie()" class="btn-new">
+            <i class="fas fa-plus-circle"></i> Nouveau Bon de Sortie
+        </button>
+        {% endif %}
+    </div>
+
+    <form id="form-recherche" method="GET" class="search-bar">
+        <input type="hidden" name="per_page" value="{{ per_page|default:'15' }}">
+        <input type="hidden" name="page" id="input-page" value="1">
+        <input type="text" id="input-q" name="q" class="search-input-q" value="{{ q|default:'' }}" placeholder="N° Bon, Service, Référence...">
+        <input type="text" id="date_range" name="date_range" class="search-input-date" value="{{ date_range|default:'' }}" placeholder="JJ/MM/AAAA - JJ/MM/AAAA">
+        <a href="{% url 'liste_sorties' %}" class="btn-reset"><i class="fas fa-sync-alt"></i> Réinitialiser</a>
+    </form>
+
+    <div class="per-page-bar">
+        <form id="form-per-page" method="GET">
+            {% if q %}<input type="hidden" name="q" value="{{ q_bon }}">{% endif %}
+            {% if date_range %}<input type="hidden" name="date_range" value="{{ date_range }}">{% endif %}
+            <label style="font-size: 13px; color: var(--text-medium); font-weight: bold;">
+                Afficher
+                <select name="per_page" onchange="document.getElementById('form-per-page').submit();">
+                    <option value="15" {% if per_page == '15' %}selected{% endif %}>15</option>
+                    <option value="50" {% if per_page == '50' %}selected{% endif %}>50</option>
+                    <option value="100" {% if per_page == '100' %}selected{% endif %}>100</option>
+                    <option value="all" {% if per_page == 'all' %}selected{% endif %}>Toutes</option>
+                </select>
+                lignes
+            </label>
+        </form>
+    </div>
+
+    <div class="table-card">
+        <table class="main-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;"></th>
+                    <th>N° Bon</th>
+                    <th>Date</th>
+                    <th>Magasin Source</th>
+                    <th>Service Demandeur</th>
+                    <th>Articles</th>
+                    <th>Traçabilité</th>
+                    <th style="text-align: center;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="resultats-tableau">
+                {% include 'stock/sorties_lignes.html' %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ═════ MODAL IMPRESSION PDF ═════ -->
+<div class="mo-pdf" id="modal-pdf">
+  <div class="mb-pdf">
+    <div class="mh-pdf">
+      <h5 id="pdf-titre" style="margin:0; font-size:16px; font-weight:600;"><i class="fas fa-print me-2"></i> Impression</h5>
+      <button class="mc-pdf" onclick="document.getElementById('modal-pdf').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:10px; min-height:300px; background:#525659;">
+      <div id="pdf-loader" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px; gap:14px;">
+        <div style="width:40px; height:40px; border:4px solid #e0e0e0; border-top-color:#17a2b8; border-radius:50%; animation:spin .8s linear infinite;"></div>
+        <span style="color:white; font-size:13px;">Génération du document en cours…</span>
+      </div>
+      <iframe id="pdf-iframe" style="display:none; width:100%; height:72vh; border:none; border-radius:0 0 8px 8px;"></iframe>
+    </div>
+    <div class="mfoot-pdf">
+      <button class="btn-nok-pdf" onclick="document.getElementById('modal-pdf').classList.remove('open')">Fermer</button>
+      <button class="btn-ok-pdf" onclick="document.getElementById('pdf-iframe').contentWindow.print()">
+        <i class="fas fa-print me-1"></i> Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== MODALE SAISIE SORTIE ========== -->
+{% if peut_creer %}
+<div id="modal-sortie" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <h3 style="margin: 0; font-size: 18px;"><i class="fas fa-shopping-cart"></i> Saisie de Sortie de Stock</h3>
+            <button type="button" onclick="fermerModalSortie()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; font-size: 18px;">&times;</button>
+        </div>
+        <form id="form-saisie-sortie" method="POST">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="vd-section" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                    <div>
+                        <label class="vd-label">Magasin Source *</label>
+                        {% if magasins|length == 1 %}
+                            {% for m in magasins %}
+                                <input type="hidden" name="magasin" id="vd-magasin" value="{{ m.id }}">
+                                <div style="padding: 10px; background: var(--bg-input); border: 2px solid var(--border-color); border-radius: 8px; font-weight: bold; color: var(--primary-blue); height: 42px; display: flex; align-items: center;">
+                                    <i class="fas fa-lock" style="color: var(--text-medium); margin-right: 8px;"></i> {{ m.nom }}
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <select name="magasin" id="vd-magasin" required class="vd-input select2" style="width: 100%;">
+                                <option value="">-- Choisir le magasin --</option>
+                                {% for m in magasins %}<option value="{{ m.id }}">{{ m.nom }}</option>{% endfor %}
+                            </select>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label class="vd-label">Service Demandeur *</label>
+                        <select name="service_demandeur" required class="vd-input select2">
+                            <option value="">-- Chercher un service --</option>
+                            {% for s in services %}<option value="{{ s.id }}">{{ s.nom }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="vd-label">Réf / N° de Demande *</label>
+                        <input type="text" name="reference_externe" required placeholder="Ex: COMMANDE-44" class="vd-input">
+                    </div>
+                    <div>
+                        <label class="vd-label">Date</label>
+                        <input type="text" value="{% now 'd/m/Y' %}" readonly class="vd-input" style="background: var(--bg-stripe); color: var(--text-medium); font-weight: bold;">
+                    </div>
+                </div>
+
+                <div class="vd-section" style="position: relative; z-index: 50; background: var(--bg-stripe); border-left: 5px solid #007bff;">
+                    <label class="vd-label" style="color: #007bff;"><i class="fas fa-search"></i> Ajouter des produits au panier</label>
+                    <input type="text" id="vd-search-input" class="vd-input" disabled placeholder="⚠️ Veuillez d'abord choisir un Magasin Source en haut..." oninput="filtrerProduits()" style="border: 2px solid #b8daff; height: 50px; font-size: 15px; background: var(--bg-stripe);">
+                    <div id="vd-dropdown" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: var(--bg-card); border: 1px solid #007bff; border-radius: 8px; box-shadow: 0 10px 25px var(--shadow); max-height: 300px; overflow-y: auto; margin-top: 5px;">
+                        <table style="width: 100%; border-collapse: collapse; margin: 0;">
+                            <thead style="background: var(--bg-stripe); position: sticky; top: 0; box-shadow: 0 2px 5px var(--shadow);">
+                                <tr>
+                                    <th style="padding: 10px; text-align: left; font-size: 12px; color: var(--text-medium);">Réf</th>
+                                    <th style="padding: 10px; text-align: left; font-size: 12px; color: var(--text-medium);">Désignation</th>
+                                    <th style="padding: 10px; text-align: right; font-size: 12px; color: var(--text-medium);">En Stock</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vd-dropdown-body">
+                                {% for a in articles %}
+                                <tr class="dropdown-item"
+                                    data-id="{{ a.id }}"
+                                    data-ref="{{ a.reference|default:'-'|escapejs }}"
+                                    data-nom="{{ a.designation|escapejs }}"
+                                    data-stocks='{ {% for s in a.stocks.all %}"{{ s.magasin.id }}": {{ s.quantite_physique }}{% if not forloop.last %}, {% endif %}{% endfor %} }'
+                                    onclick="ajouterArticleDirect(this)"
+                                    style="cursor: pointer; border-bottom: 1px solid var(--border-light);">
+                                    <td style="padding: 12px; font-weight: bold; width: 20%; color: var(--text-medium);">{{ a.reference|default:'-' }}</td>
+                                    <td style="padding: 12px; width: 60%; font-size: 14px;"><strong style="color:var(--text-dark);">{{ a.designation }}</strong></td>
+                                    <td style="padding: 12px; width: 20%; text-align: right;"><span class="badge-stock stock-ok">Calcul...</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="vd-section" style="padding: 0; overflow: hidden;">
+                    <table class="vd-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead class="vd-table-header">
+                            <tr>
+                                <th style="width: 5%; text-align: center;">#</th>
+                                <th style="width: 15%;">Réf.</th>
+                                <th style="width: 45%;">Désignation de l'article</th>
+                                <th style="width: 15%; text-align: center;">Stock Dispo</th>
+                                <th style="width: 15%; text-align: center;">Quantité Sortie</th>
+                                <th style="width: 5%; text-align: center;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="vd-lignes-tbody">
+                            <tr id="vd-ligne-vide">
+                                <td colspan="6" style="text-align: center; padding: 50px; color: var(--text-light);">
+                                    <i class="fas fa-box-open" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.4;"></i>
+                                    Aucun article ajouté.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="fermerModalSortie()" class="btn-cancel">Annuler & Fermer</button>
+                <button type="submit" class="btn-submit"><i class="fas fa-check-circle"></i> Valider la sortie</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<script>
+    /* ═════ CSRF TOKEN pour JS ═════ */
+    const CSRF_TOKEN = '{{ csrf_token }}';
+
+    /* ═════ MODAL PDF ═════ */
+    function imprimerModal(url, titre) {
+        var modal = document.getElementById('modal-pdf');
+        document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-print me-2"></i> ' + (titre || 'Bon de sortie');
+        var loader = document.getElementById('pdf-loader');
+        var iframe = document.getElementById('pdf-iframe');
+        loader.style.display = 'flex'; iframe.style.display = 'none'; iframe.src = '';
+        modal.classList.add('open');
+        iframe.onload = function(){ loader.style.display='none'; iframe.style.display='block'; };
+        iframe.src = url;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Ouverture auto modal PDF après création d'un bon
+        var urlParams = new URLSearchParams(window.location.search);
+        var imprimerId = urlParams.get('imprimer_id');
+        if (imprimerId) {
+            window.history.replaceState({}, '', window.location.pathname);
+            var printUrl = "{% url 'imprimer_bon_multi_lignes' 999999 %}".replace('999999', imprimerId);
+            setTimeout(function() {
+                imprimerModal(printUrl, 'Bon de Sortie');
+            }, 300);
+        }
+
+        let modal = document.getElementById('modal-sortie');
+        if (modal) { document.body.appendChild(modal); }
+        if (typeof jQuery !== 'undefined') {
+            $('.select2').select2({ dropdownParent: $('#modal-sortie'), width: '100%' });
+        }
+
+        // Gestion fermeture modal PDF (clic extérieur + Escape)
+        var modalPdf = document.getElementById('modal-pdf');
+        if (modalPdf) {
+            modalPdf.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('open');
+            });
+        }
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                var mp = document.getElementById('modal-pdf');
+                if (mp) mp.classList.remove('open');
+            }
+        });
+    });
+
+    let compteurLignes = 0;
+
+    function ouvrirModalSortie() {
+        document.getElementById('modal-sortie').style.display = 'flex';
+        if ($('#vd-magasin').val()) { $('#vd-magasin').trigger('change'); }
+    }
+
+    function fermerModalSortie() {
+        document.getElementById('modal-sortie').style.display = 'none';
+        document.getElementById('form-saisie-sortie').reset();
+        if ($('#vd-magasin').is('select')) { $('#vd-magasin').val(null).trigger('change'); }
+        $('select[name="service_demandeur"]').val(null).trigger('change');
+        viderTableau();
+        if ($('#vd-magasin').is('select')) {
+            document.getElementById('vd-search-input').disabled = true;
+            document.getElementById('vd-search-input').style.backgroundColor = "var(--bg-stripe)";
+        }
+        document.getElementById('vd-dropdown').style.display = 'none';
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        $('#vd-magasin').on('change', function() {
+            let searchInput = document.getElementById('vd-search-input');
+            let magasinId = $(this).val();
+            if (magasinId) {
+                searchInput.disabled = false;
+                searchInput.placeholder = "Taper le nom ou la référence de l'article...";
+                searchInput.style.backgroundColor = "var(--bg-input)";
+            } else {
+                searchInput.disabled = true;
+                searchInput.placeholder = "⚠️ Veuillez d'abord choisir un Magasin Source en haut...";
+                searchInput.style.backgroundColor = "var(--bg-stripe)";
+                searchInput.value = '';
+                document.getElementById('vd-dropdown').style.display = 'none';
+            }
+            let tbody = document.getElementById('vd-lignes-tbody');
+            if (tbody && tbody.children.length > 0 && tbody.children[0].id !== 'vd-ligne-vide') {
+                Swal.fire({ icon: 'info', title: 'Panier réinitialisé', text: 'Le magasin source a changé.', confirmButtonColor: '#007bff' });
+                viderTableau();
+            }
+        });
+
+        document.getElementById('form-saisie-sortie').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (compteurLignes === 0) {
+                Swal.fire({ icon: 'warning', title: 'Panier vide', text: "Ajoutez au moins un article !", confirmButtonColor: '#ffc107' });
+                return;
+            }
+            Swal.fire({
+                title: 'Confirmer la sortie ?',
+                html: `Vous allez valider la sortie de <b>${compteurLignes} article(s)</b>.<br>Les stocks seront déduits.`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#28a745',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: '<i class="fas fa-check"></i> Oui, valider !',
+                cancelButtonText: 'Annuler'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Enregistrement...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+                    this.submit();
+                }
+            });
+        });
+
+        document.addEventListener('click', function(event) {
+            let dropdown = document.getElementById('vd-dropdown');
+            let searchInput = document.getElementById('vd-search-input');
+            if (searchInput && dropdown && !searchInput.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+
+        if ($.fn.daterangepicker) {
+            $('#date_range').daterangepicker({
+                autoUpdateInput: false, autoApply: true,
+                locale: {
+                    format: 'DD/MM/YYYY',
+                    daysOfWeek: ['Di','Lu','Ma','Me','Je','Ve','Sa'],
+                    monthNames: ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'],
+                    firstDay: 1
+                }
+            });
+            $('#date_range').on('apply.daterangepicker', function(ev, picker) {
+                $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+                $('#input-page').val(1); rafraichirTableau();
+            });
+            $('#date_range').on('keyup', function(e) { if(e.keyCode === 8 || e.keyCode === 46) { $(this).val(''); $('#input-page').val(1); rafraichirTableau(); } });
+        }
+
+        window.rafraichirTableau = function() {
+            $('#resultats-tableau').css('opacity', '0.4');
+            $.ajax({ url: window.location.pathname, type: 'GET', data: $('#form-recherche').serialize(), headers: { 'X-Requested-With': 'XMLHttpRequest' }, success: function(html) { $('#resultats-tableau').html(html); $('#resultats-tableau').css('opacity', '1'); } });
+        };
+        let typingTimer;
+        $('#input-q').on('input', function () { clearTimeout(typingTimer); $('#input-page').val(1); typingTimer = setTimeout(rafraichirTableau, 400); });
+        $('#form-recherche').on('submit', function(e) { e.preventDefault(); $('#input-page').val(1); rafraichirTableau(); });
+        var magasinInput = $('#vd-magasin');
+        if (magasinInput.length > 0 && magasinInput.val() !== "" && magasinInput.val() !== undefined) {
+            magasinInput.trigger('change');
+        }
+    });
+
+    function changerPageAjax(numeroPage) { document.getElementById('input-page').value = numeroPage; rafraichirTableau(); }
+
+    function toggleLignes(id) {
+        let trLignes = document.getElementById('lignes-' + id);
+        let icon = document.getElementById('icon-' + id);
+        let trParent = document.getElementById('bon-row-' + id);
+        if (trLignes.style.display === 'none') {
+            trLignes.style.display = 'table-row';
+            icon.classList.replace('fa-chevron-right', 'fa-chevron-down');
+            trParent.style.background = 'rgba(0,123,255,0.06)';
+        } else {
+            trLignes.style.display = 'none';
+            icon.classList.replace('fa-chevron-down', 'fa-chevron-right');
+            trParent.style.background = '';
+        }
+    }
+
+    window.afficherDocumentScan = function(urlDocument) {
+        Swal.fire({ title: '<i class="fas fa-file-signature" style="color:#1c5b96;"></i> Aperçu du document', html: `<iframe id="visionneuseIframe" src="${urlDocument}" style="width: 100%; height: 60vh; border: 1px solid var(--border-color); border-radius: 8px; background: var(--bg-stripe);"></iframe>`, width: '80%', showCloseButton: true, showCancelButton: true, cancelButtonText: 'Fermer', confirmButtonText: '<i class="fas fa-print"></i> Imprimer', confirmButtonColor: '#17a2b8', cancelButtonColor: '#6c757d', preConfirm: () => { let iframe = document.getElementById('visionneuseIframe'); iframe.contentWindow.focus(); iframe.contentWindow.print(); return false; } });
+    };
+
+    function confirmerAnnulationSortie(bonId, numeroBon) {
+        Swal.fire({ title: 'Annuler la sortie ' + numeroBon, html: `<div style="text-align:left; margin-top:10px;"><label style="font-weight:bold;">Motif :</label><select id="swal-motif-select-sortie" class="form-control" style="width:100%;margin-top:10px;"><option value="">-- Sélectionner --</option>{% for m in motifs_annulation %}<option value="{{ m.id }}">{{ m.libelle }}</option>{% endfor %}</select></div>`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: "Confirmer l'annulation", cancelButtonText: 'Retour', didOpen: () => { if (typeof $ !== 'undefined') { $('#swal-motif-select-sortie').select2({ dropdownParent: $('.swal2-container'), placeholder: "Tapez pour chercher..." }); } }, preConfirm: () => { const motifId = document.getElementById('swal-motif-select-sortie').value; if (!motifId) { Swal.showValidationMessage('Veuillez sélectionner un motif'); } return motifId; } }).then((result) => { if (result.isConfirmed) { let form = document.getElementById('form-annuler-sortie-' + bonId); let inputMotif = document.createElement('input'); inputMotif.type = 'hidden'; inputMotif.name = 'motif_id'; inputMotif.value = result.value; form.appendChild(inputMotif); Swal.fire({ title: 'Annulation en cours...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } }); form.submit(); } });
+    }
+
+    function filtrerProduits() {
+        let input = document.getElementById('vd-search-input').value.toLowerCase();
+        let dropdown = document.getElementById('vd-dropdown');
+        let magasinId = document.getElementById('vd-magasin').value;
+        let rows = document.querySelectorAll('.dropdown-item');
+        let hasVisible = false;
+        if (input.length < 1) { dropdown.style.display = 'none'; return; }
+        rows.forEach(row => {
+            let ref = row.getAttribute('data-ref').toLowerCase();
+            let nom = row.getAttribute('data-nom').toLowerCase();
+            if (ref.includes(input) || nom.includes(input)) {
+                let stocksData = {};
+                try {
+                    stocksData = JSON.parse(row.getAttribute('data-stocks') || '{}');
+                } catch (e) {
+                    stocksData = {};
+                    console.warn('Erreur parsing stocks pour article', row.getAttribute('data-id'));
+                }
+                let dispo = stocksData[magasinId] || 0;
+                let badge = row.querySelector('.badge-stock');
+                badge.innerText = dispo + " en stock";
+                if (dispo > 0) { badge.className = "badge-stock stock-ok"; row.style.opacity = '1'; }
+                else { badge.className = "badge-stock stock-zero"; row.style.opacity = '0.5'; }
+                row.setAttribute('data-current-dispo', dispo);
+                row.style.display = ''; hasVisible = true;
+            } else { row.style.display = 'none'; }
+        });
+        dropdown.style.display = hasVisible ? 'block' : 'none';
+    }
+
+    function confirmerValidationBon(bonId, numeroBon, serviceNom, nbArticles, urlValidation) {
+    Swal.fire({
+        title: '<i class="fas fa-stamp" style="color:#007bff;"></i> Validation hiérarchique',
+        html: `
+            <div style="text-align:left; font-size:14px; line-height:1.6;">
+                <p>Vous allez approuver le bon de sortie :</p>
+                <div style="background:var(--bg-stripe,#f8f9fa); border-left:4px solid #007bff; padding:12px 15px; border-radius:6px; margin:12px 0; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+                    <div style="font-weight:bold; color:#1c5b96; font-size:17px; margin-bottom:4px;">
+                        <i class="fas fa-file-invoice"></i> ${numeroBon}
+                    </div>
+                    <div style="color:#555; font-size:13px; margin-bottom:3px;">
+                        <i class="fas fa-hospital" style="width:18px; color:#888;"></i> ${serviceNom}
+                    </div>
+                    <div style="color:#555; font-size:13px;">
+                        <i class="fas fa-box" style="width:18px; color:#888;"></i> ${nbArticles} article(s)
+                    </div>
+                </div>
+                <div style="color:#856404; background:#fff3cd; border:1px solid #ffeaa7; padding:10px 14px; border-radius:6px; font-size:13px;">
+                    <i class="fas fa-signature" style="margin-right:6px;"></i>
+                    Votre signature sera automatiquement apposée dans la case <strong>"Vu pour exécution"</strong> du PDF.
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-check"></i> Oui, valider',
+        cancelButtonText: 'Annuler',
+        width: '500px',
+        allowOutsideClick: false,
+        focusConfirm: false
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = urlValidation;
+            form.style.display = 'none';
+
+            const csrf = document.createElement('input');
+            csrf.type = 'hidden';
+            csrf.name = 'csrfmiddlewaretoken';
+            csrf.value = CSRF_TOKEN;
+            form.appendChild(csrf);
+
+            document.body.appendChild(form);
+
+            Swal.fire({
+                title: 'Validation en cours…',
+                html: 'Mise à jour du bon et régénération du PDF',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+
+            form.submit();
+        }
+    });
+}
+
+    function ajouterArticleDirect(rowElement) {
+        let id = rowElement.getAttribute('data-id');
+        let ref = rowElement.getAttribute('data-ref');
+        let nom = rowElement.getAttribute('data-nom');
+        let dispo = parseInt(rowElement.getAttribute('data-current-dispo'));
+        if (dispo <= 0) { Swal.fire({ icon: 'error', title: 'Rupture de Stock', html: `Impossible d'ajouter <b>${nom}</b>.`, confirmButtonColor: '#dc3545' }); return; }
+        let existingRow = document.getElementById('row-article-' + id);
+        if (existingRow) {
+            let currentQteInput = existingRow.querySelector('.input-ligne-qte');
+            let nouvelleQte = parseInt(currentQteInput.value) + 1;
+            if (nouvelleQte > dispo) { Swal.fire({ icon: 'warning', title: 'Stock max atteint', text: `Il ne reste que ${dispo} unité(s).`, confirmButtonColor: '#ffc107' }); return; }
+            currentQteInput.value = nouvelleQte; currentQteInput.style.backgroundColor = "rgba(40,167,69,0.2)";
+            setTimeout(() => { currentQteInput.style.backgroundColor = ""; }, 500);
+        } else {
+            compteurLignes++;
+            const ligneVide = document.getElementById('vd-ligne-vide'); if (ligneVide) ligneVide.remove();
+            const tbody = document.getElementById('vd-lignes-tbody'); const tr = document.createElement('tr'); tr.id = 'row-article-' + id;
+            tr.innerHTML = `<td style="text-align: center; font-weight: bold; color: var(--text-medium);" class="col-num">${compteurLignes}</td><td style="color: var(--text-medium);">${ref}</td><td style="font-weight: bold; color: var(--primary-blue); font-size: 15px;">${nom}</td><td style="text-align: center; font-weight: bold; color: #28a745;">${dispo}</td><td style="text-align: center;"><input type="number" name="quantites[]" value="1" min="1" max="${dispo}" class="input-ligne-qte" onchange="verifierQteMax(this, ${dispo})"><input type="hidden" name="articles[]" value="${id}"></td><td style="text-align: center;"><button type="button" onclick="supprimerLigneVD(this)" style="color: #dc3545; border: none; background: var(--bg-hover); width: 30px; height: 30px; border-radius: 4px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button></td>`;
+            tbody.appendChild(tr);
+        }
+        document.getElementById('vd-search-input').value = ''; document.getElementById('vd-dropdown').style.display = 'none'; document.getElementById('vd-search-input').focus();
+    }
+
+    function verifierQteMax(inputElement, maxDispo) { let v = parseInt(inputElement.value); if (v > maxDispo) { Swal.fire({ toast: true, position: 'top-end', icon: 'warning', title: `Quantité ajustée à ${maxDispo} (Maximum).`, showConfirmButton: false, timer: 4000 }); inputElement.value = maxDispo; } else if (v < 1 || isNaN(v)) { inputElement.value = 1; } }
+
+    function supprimerLigneVD(btn) { btn.closest('tr').remove(); recalculerNumeros(); if (document.getElementById('vd-lignes-tbody').children.length === 0) viderTableau(); }
+    function recalculerNumeros() { const lignes = document.querySelectorAll('#vd-lignes-tbody tr:not(#vd-ligne-vide)'); compteurLignes = 0; lignes.forEach(ligne => { compteurLignes++; ligne.querySelector('.col-num').innerText = compteurLignes; }); }
+    function viderTableau() { document.getElementById('vd-lignes-tbody').innerHTML = `<tr id="vd-ligne-vide"><td colspan="6" style="text-align: center; padding: 50px; color: var(--text-light);"><i class="fas fa-box-open" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.4;"></i>Aucun article ajouté.</td></tr>`; compteurLignes = 0; }
+</script>
+
+
+{% endblock %}

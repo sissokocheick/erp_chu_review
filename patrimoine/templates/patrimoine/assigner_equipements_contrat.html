@@ -1,0 +1,117 @@
+{% extends "base_ui.html" %}
+{% block title %}Couverture du Contrat{% endblock %}
+
+{% block contenu %}
+<div style="background: linear-gradient(135deg, #4f46e5, #4338ca); color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);">
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <div style="background: rgba(255,255,255,0.2); width: 50px; height: 50px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px;">
+            <i class="fas fa-link"></i>
+        </div>
+        <div>
+            <h3 style="margin: 0; font-weight: 800; font-size: 22px;">Couverture du Contrat</h3>
+            <div style="font-size: 14px; opacity: 0.9; margin-top: 5px;">Contrat Réf: <strong>{{ contrat.reference }}</strong> — Prestataire: <strong>{{ contrat.prestataire.raison_sociale }}</strong></div>
+        </div>
+    </div>
+    <a href="{% url 'patrimoine_contrats' %}" style="background: rgba(255,255,255,0.2); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid rgba(255,255,255,0.3); transition: 0.2s;"><i class="fas fa-arrow-left"></i> Retour aux contrats</a>
+</div>
+
+<div style="background: white; padding: 20px; border-radius: 12px; border: 1px solid #e2e8f0; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+    <form method="GET" style="display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: flex-end;">
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">Bâtiment</label>
+            <select name="batiment" class="form-control select2-init" style="width: 100%;" onchange="this.form.submit()">
+                <option value="">Tous les bâtiments</option>
+                {% for b in batiments %}
+                <option value="{{ b.id }}" {% if batiment_id == b.id|stringformat:'s' %}selected{% endif %}>{{ b.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">Service Utilisateur</label>
+            <select name="service" class="form-control select2-init" style="width: 100%;" onchange="this.form.submit()">
+                <option value="">Tous les services</option>
+                {% for s in services %}
+                <option value="{{ s.id }}" {% if service_id == s.id|stringformat:'s' %}selected{% endif %}>{{ s.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase;">Type d'équipement</label>
+            <select name="type" class="form-control select2-init" style="width: 100%;" onchange="this.form.submit()">
+                <option value="">Tous les types</option>
+                {% for t in types_equipement %}
+                <option value="{{ t.id }}" {% if type_id == t.id|stringformat:'s' %}selected{% endif %}>{{ t.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <a href="?" style="background: #fee2e2; color: #dc2626; padding: 10px 15px; border-radius: 8px; text-decoration: none; font-weight: bold; border: 1px solid #fca5a5; display: inline-flex; align-items: center; gap: 8px; height: 42px; box-sizing: border-box;"><i class="fas fa-times"></i> Réinitialiser</a>
+    </form>
+</div>
+
+<form method="POST">
+    {% csrf_token %}
+    <div style="background: white; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.02);">
+        <table style="width: 100%; border-collapse: collapse; text-align: left;">
+            <thead style="background: #f8fafc; border-bottom: 2px solid #e2e8f0;">
+                <tr>
+                    <th style="padding: 15px 20px; width: 40px;"><input type="checkbox" id="check-all" style="width: 18px; height: 18px; accent-color: #4f46e5; cursor: pointer;"></th>
+                    <th style="padding: 15px 20px; font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase;">Code & Désignation</th>
+                    <th style="padding: 15px 20px; font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase;">Catégorie & Type</th>
+                    <th style="padding: 15px 20px; font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase;">Service Affectation</th>
+                    <th style="padding: 15px 20px; font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase;">Localisation</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for eq in equipements %}
+                <tr style="border-bottom: 1px solid #f1f5f9; transition: 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+                    <td style="padding: 15px 20px;">
+                        <input type="checkbox" name="equipements" value="{{ eq.id }}" class="check-equip" style="width: 18px; height: 18px; accent-color: #4f46e5; cursor: pointer;" {% if eq.contrat_maintenance_id == contrat.id %}checked{% endif %}>
+                    </td>
+                    <td style="padding: 15px 20px;">
+                        <div style="font-weight: 800; color: #1e293b; font-size: 14px;">{{ eq.nom_affichage }}</div>
+                        <div style="font-family: monospace; font-size: 12px; color: #64748b; background: #e2e8f0; display: inline-block; padding: 2px 6px; border-radius: 4px; margin-top: 4px;">{{ eq.code_patrimoine }}</div>
+                    </td>
+                    <td style="padding: 15px 20px;">
+                        <span style="background: {{ eq.type_equipement.categorie.couleur }}22; color: {{ eq.type_equipement.categorie.couleur }}; padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: bold;"><i class="{{ eq.type_equipement.categorie.icone }}"></i> {{ eq.type_equipement.categorie.nom }}</span><br>
+                        <span style="font-size: 12px; color: #475569; margin-top: 4px; display: inline-block;">{{ eq.type_equipement.nom }}</span>
+                    </td>
+                    <td style="padding: 15px 20px; font-size: 13px; font-weight: 600; color: #334155;">{{ eq.service_affectation.nom|default:"-" }}</td>
+                    <td style="padding: 15px 20px; font-size: 13px; color: #475569;">
+                        <i class="fas fa-building" style="color: #cbd5e0; margin-right: 5px;"></i> {{ eq.bureau.etage.batiment.nom|default:"-" }}<br>
+                        <span style="font-size: 11px; color: #94a3b8; margin-left: 18px;">Bureau: {{ eq.bureau.nom|default:"-" }}</span>
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" style="text-align: center; padding: 50px 20px; color: #94a3b8;">
+                        <div style="background: #f1f5f9; width: 60px; height: 60px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 24px; color: #10b981; margin: 0 auto 15px auto;">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <strong style="font-size: 16px; color: #475569;">Aucun équipement libre trouvé.</strong><br>
+                        Soit vos filtres sont trop stricts, soit toutes ces machines ont déjà un contrat actif.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        
+        {% if equipements %}
+        <div style="padding: 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end;">
+            <button type="submit" style="background: #4f46e5; color: white; border: none; padding: 12px 25px; border-radius: 8px; font-size: 14px; font-weight: bold; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s;"><i class="fas fa-save"></i> Mettre sous contrat</button>
+        </div>
+        {% endif %}
+    </div>
+</form>
+
+<script>
+    // Permet de tout cocher / décocher d'un coup
+    document.getElementById('check-all').addEventListener('change', function() {
+        let checkboxes = document.querySelectorAll('.check-equip');
+        checkboxes.forEach(cb => cb.checked = this.checked);
+    });
+
+    if (typeof $ !== 'undefined') {
+        $('.select2-init').select2();
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,727 @@
+import logging
+# stock/services/bon_service.py
+from django.db import transaction
+from django.core.exceptions import ValidationError, PermissionDenied
+from django.utils import timezone
+from stock.models import BonMouvement, Mouvement, StockItem, LigneBon
+from stock.services.stock_transaction_service import StockTransactionService
+
+logger = logging.getLogger(__name__)
+
+
+class BonService:
+    """Service métier pour la gestion des bons (entrée, sortie, hors stock, retour).
+
+    RÈGLES DE SIGNATURE :
+    - Tous les paramètres sont des objets (pas d'ID)
+    - `utilisateur` = User instance
+    - `magasin` = Magasin instance
+    - `lignes` = list[dict] avec article_id, quantite, etc.
+
+    ORDRE DES CASES DE SIGNATURE :
+    - Case 1 : Demandeur / Émission
+    - Case 2 : Vu pour exécution / Validation
+    - Case 3 : Magasinier / Créateur du bon
+    - Case 4+ : Responsable, Contrôleur, Réceptionnaire
+    """
+
+    @staticmethod
+    def _verifier_entreprise(utilisateur, magasin):
+        """✅ CORRECTION : Vérifie que l'utilisateur appartient à la même entreprise que le magasin."""
+        try:
+            entreprise_user = utilisateur.profil.entreprise
+        except AttributeError:
+            raise PermissionDenied("Utilisateur sans profil entreprise.")
+        if magasin.entreprise != entreprise_user:
+            raise PermissionDenied(
+                f"Accès refusé : le magasin '{magasin.nom}' n'appartient pas à votre entreprise."
+            )
+
+    @staticmethod
+    def _enregistrer_validation(bon, utilisateur, ordre_case, commentaire=""):
+        """Enregistre une signature snapshotée dans ValidationDocument."""
+        from accounts.utils import get_fonction_valideur
+        from stock.models import ValidationDocument
+        profil = getattr(utilisateur, 'profil', None)
+        signature_img = None
+        if profil and getattr(profil, 'signature', None):
+            signature_img = profil.signature
+
+        # ✅ CORRECTION : signature_image dans defaults pour éviter double save
+        defaults = {
+            'valideur': utilisateur,
+            'fonction_snapshot': get_fonction_valideur(utilisateur),
+            'commentaire': commentaire,
+        }
+        if signature_img:
+            defaults['signature_image'] = signature_img
+
+        val, created = ValidationDocument.objects.update_or_create(
+            bon=bon,
+            ordre=ordre_case,
+            defaults=defaults
+        )
+        return val
+
+    @staticmethod
+    def _get_articles_en_bulk(article_ids):
+        """✅ CORRECTION : Récupère les articles en une seule requête pour éviter N+1."""
+        from stock.models import Article
+        return Article.objects.filter(id__in=article_ids).in_bulk()
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # BON D'ENTRÉE
+    # ═══════════════════════════════════════════════════════════════════════
+    @classmethod
+    @transaction.atomic
+    def creer_bon_entree(cls, lignes, utilisateur, magasin,
+                         commentaire="", reference_document=None,
+                         fournisseur=None, reference_externe=None):
+        """Crée un bon d'entrée avec mouvements de stock.
+
+        Args:
+            lignes: list[dict] — [{'article_id': int, 'quantite': int, 
+                                    'prix_unitaire': Decimal|None,
+                                    'numero_lot': str|None, 'date_peremption': str|None}]
+            utilisateur: User instance
+            magasin: Magasin instance
+            commentaire: str
+            reference_document: str|None
+            fournisseur: Fournisseur instance|None
+            reference_externe: str|None
+        """
+        # ✅ CORRECTION : isolation entreprise
+        cls._verifier_entreprise(utilisateur, magasin)
+
+        bon_kwargs = {
+            'type_bon': 'ENTREE',
+            'magasin': magasin,
+            'cree_par': utilisateur,
+            'commentaire': commentaire,
+            'statut_validation': 'VALIDE',
+        }
+        if reference_externe:
+            bon_kwargs['reference_externe'] = reference_externe
+        if reference_document:
+            bon_kwargs['reference_document'] = reference_document
+        if fournisseur:
+            bon_kwargs['fournisseur'] = fournisseur
+
+        bon = BonMouvement.objects.create(**bon_kwargs)
+
+        # ✅ CORRECTION : récupérer tous les articles en une requête
+        article_ids = sorted([l.get('article_id') for l in lignes if l.get('article_id')])
+        articles_map = cls._get_articles_en_bulk(article_ids)
+
+        # ✅ CORRECTION : verrouiller tous les StockItem concernés AVANT la boucle pour éviter deadlocks
+        # Tri par article_id garantit un ordre de verrouillage cohérent entre threads
+        # On verrouille par (article_id, batch_number) pour couvrir TOUS les cas (avec et sans lot)
+        from stock.models import StockItem
+        from django.db.models import Q
+
+        # Regrouper les lignes par (article_id, batch_number) pour verrouiller correctement
+        lignes_par_batch = {}
+        for l in lignes:
+            aid = l.get('article_id')
+            batch = l.get('numero_lot') or None
+            if aid:
+                lignes_par_batch.setdefault((aid, batch), []).append(l)
+
+        for (article_id, batch) in sorted(lignes_par_batch.keys()):
+            filtre = {'article_id': article_id, 'magasin': magasin}
+            if batch:
+                filtre['batch_number'] = batch
+            else:
+                filtre['batch_number__isnull'] = True
+            StockItem.objects.select_for_update().filter(**filtre).first()
+
+        for ligne_data in lignes:
+            article_id = ligne_data.get('article_id')
+            quantite = ligne_data.get('quantite')
+            prix_unitaire = ligne_data.get('prix_unitaire')
+            numero_lot = ligne_data.get('numero_lot')
+            date_peremption = ligne_data.get('date_peremption')
+
+            # ✅ CORRECTION : lever ValidationError au lieu de silencier
+            if not article_id:
+                raise ValidationError("Ligne sans article_id.")
+            if not quantite or quantite <= 0:
+                raise ValidationError(f"Quantité invalide pour article_id={article_id} : {quantite}")
+
+            article = articles_map.get(article_id)
+            if not article:
+                raise ValidationError(f"Article ID {article_id} introuvable.")
+
+            ligne_kwargs = {
+                'bon': bon,
+                'article': article,
+                'quantite': quantite,
+            }
+            if prix_unitaire is not None:
+                ligne_kwargs['prix_unitaire'] = prix_unitaire
+            if numero_lot:
+                ligne_kwargs['numero_lot'] = numero_lot
+            if date_peremption:
+                ligne_kwargs['date_peremption'] = date_peremption
+
+            LigneBon.objects.create(**ligne_kwargs)
+
+            mouvement = Mouvement(
+                type_mouvement='ENTREE',
+                article=article,
+                magasin=magasin,
+                quantite=quantite,
+                prix_unitaire=prix_unitaire,
+                utilisateur=utilisateur,
+                reference_document=bon.numero_bon,
+                numero_lot=numero_lot,
+                date_peremption=date_peremption,
+            )
+            StockTransactionService.executer(mouvement)
+
+        # ── Snapshot : créateur = magasinier (case 3) ──
+        cls._enregistrer_validation(bon, utilisateur, ordre_case=3, commentaire="Création bon d'entrée")
+
+        return bon
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # BON DE SORTIE
+    # ═══════════════════════════════════════════════════════════════════════
+    @classmethod
+    @transaction.atomic
+    def creer_bon_sortie(cls, lignes, utilisateur, magasin,
+                         circuit_validation=None, commentaire="",
+                         reference_document=None, demande=None,
+                         service_demandeur=None, reference_externe=None):
+        """Crée un bon de sortie.
+
+        Args:
+            lignes: list[dict] — [{'article_id': int, 'quantite': int}]
+            utilisateur: User instance
+            magasin: Magasin instance
+            circuit_validation: CircuitValidation instance|None
+            commentaire: str
+            reference_document: str|None
+            demande: DemandeMateriel instance|None
+            service_demandeur: Service instance|None
+            reference_externe: str|None
+        """
+        # ✅ CORRECTION : isolation entreprise
+        cls._verifier_entreprise(utilisateur, magasin)
+
+        statut = 'ATTENTE' if circuit_validation and circuit_validation.est_actif else 'VALIDE'
+
+        # ✅ CORRECTION : charger articles_map UNE SEULE FOIS (factorisé avant le if)
+        from stock.models import Article
+        article_ids = [l.get('article_id') for l in lignes if l.get('article_id')]
+        articles_map = Article.objects.filter(id__in=article_ids).in_bulk()
+
+        # ✅ CORRECTION : vérifier le stock AVANT de créer le bon (mode VALIDE) avec verrou pessimiste
+        if statut == 'VALIDE':
+            # Verrouiller tous les StockItem concernés
+            stock_items = {}
+            for ligne_data in lignes:
+                article_id = ligne_data.get('article_id')
+                quantite = ligne_data.get('quantite')
+                if not article_id or not quantite or quantite <= 0:
+                    continue
+                article = articles_map.get(article_id)
+                if not article:
+                    continue
+                stock_item = StockItem.objects.select_for_update().filter(
+                    article=article, magasin=magasin
+                ).first()
+                qte_dispo = stock_item.quantite_physique if stock_item else 0
+                if qte_dispo < quantite:
+                    raise ValidationError(
+                        f"Stock insuffisant pour {article.designation} : "
+                        f"{qte_dispo} disponible(s), {quantite} demandé(s).",
+                        code='stock_insuffisant'
+                    )
+                stock_items[article_id] = stock_item
+
+        # ✅ CORRECTION : cohérence service_demandeur vs demande
+        if demande and demande.service_demandeur:
+            if service_demandeur and service_demandeur != demande.service_demandeur:
+                logger.warning(
+                    f"Incohérence service_demandeur : fourni={service_demandeur}, "
+                    f"demande={demande.service_demandeur}. Utilisation de la demande."
+                )
+            service_demandeur = demande.service_demandeur
+
+        bon_kwargs = {
+            'type_bon': 'SORTIE',
+            'magasin': magasin,
+            'cree_par': utilisateur,
+            'commentaire': commentaire,
+            'statut_validation': statut,
+        }
+        if reference_externe:
+            bon_kwargs['reference_externe'] = reference_externe
+        if reference_document:
+            bon_kwargs['reference_document'] = reference_document
+        if service_demandeur:
+            bon_kwargs['service_demandeur'] = service_demandeur
+
+        bon = BonMouvement.objects.create(**bon_kwargs)
+
+        if demande:
+            from stock.models import DemandeMateriel
+            if isinstance(demande, DemandeMateriel):
+                bon.demande_origine = demande
+                bon.save(update_fields=['demande_origine'])
+
+        # Si pas de circuit, exécuter immédiatement
+        if statut == 'VALIDE':
+            for ligne_data in lignes:
+                article_id = ligne_data.get('article_id')
+                quantite = ligne_data.get('quantite')
+
+                if not article_id or not quantite or quantite <= 0:
+                    continue
+
+                article = articles_map.get(article_id)
+                if not article:
+                    continue
+
+                LigneBon.objects.create(
+                    bon=bon, article=article, quantite=quantite
+                )
+
+                mouvement = Mouvement(
+                    type_mouvement='SORTIE',
+                    article=article,
+                    magasin=magasin,
+                    quantite=quantite,
+                    utilisateur=utilisateur,
+                    reference_document=bon.numero_bon,
+                )
+                StockTransactionService.executer(mouvement)
+        else:
+            # En attente : créer les lignes sans mouvement
+            for ligne_data in lignes:
+                article_id = ligne_data.get('article_id')
+                quantite = ligne_data.get('quantite')
+                if not article_id or not quantite or quantite <= 0:
+                    continue
+                article = articles_map.get(article_id)
+                if not article:
+                    continue
+                LigneBon.objects.create(
+                    bon=bon, article=article, quantite=quantite
+                )
+
+        # ── Snapshot : créateur = magasinier (case 3) ──
+        cls._enregistrer_validation(bon, utilisateur, ordre_case=3, commentaire="Création bon de sortie")
+
+        # ── Snapshot : demandeur = case 1 (si demande liée) ──
+        if demande and hasattr(demande, 'demandeur') and demande.demandeur:
+            cls._enregistrer_validation(bon, demande.demandeur, ordre_case=1, commentaire="Demandeur")
+        elif service_demandeur:
+            # Chercher le chef de service
+            from django.contrib.auth.models import User
+            # ✅ CORRECTION : order_by pour déterminisme
+            chef = User.objects.filter(
+                profil__service=service_demandeur,
+                profil__est_chef_service=True,
+                is_active=True
+            ).order_by('id').first()
+            if chef:
+                cls._enregistrer_validation(bon, chef, ordre_case=1, commentaire="Chef de service demandeur")
+
+        return bon
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # BON HORS STOCK
+    # ═══════════════════════════════════════════════════════════════════════
+    @classmethod
+    @transaction.atomic
+    def creer_bon_hors_stock(cls, lignes, utilisateur, magasin,
+                             commentaire="", reference_document=None,
+                             service_demandeur=None, reference_externe=None,
+                             destinataire=None, fournisseur=None):
+        """Crée un bon hors stock (pas d'impact sur stock physique).
+
+        Args:
+            lignes: list[dict] — [{'article_id': int, 'quantite': int}]
+            utilisateur: User instance
+            magasin: Magasin instance
+            commentaire: str
+            reference_document: str|None
+            service_demandeur: Service instance|None
+            reference_externe: str|None
+            destinataire: Beneficiaire instance|None
+            fournisseur: Fournisseur instance|None
+        """
+        # ✅ CORRECTION : isolation entreprise
+        cls._verifier_entreprise(utilisateur, magasin)
+
+        bon_kwargs = {
+            'type_bon': 'SORTIE_HORS_STOCK',
+            'magasin': magasin,
+            'cree_par': utilisateur,
+            'commentaire': commentaire,
+            'statut_validation': 'VALIDE',
+        }
+        if reference_externe:
+            bon_kwargs['reference_externe'] = reference_externe
+        if reference_document:
+            bon_kwargs['reference_document'] = reference_document
+        if service_demandeur:
+            bon_kwargs['service_demandeur'] = service_demandeur
+        if destinataire:
+            bon_kwargs['destinataire'] = destinataire
+        if fournisseur:
+            bon_kwargs['fournisseur'] = fournisseur
+
+        bon = BonMouvement.objects.create(**bon_kwargs)
+
+        # ✅ CORRECTION : articles en bulk
+        article_ids = [l.get('article_id') for l in lignes if l.get('article_id')]
+        from stock.models import Article
+        articles_map = Article.objects.filter(id__in=article_ids).in_bulk()
+
+        for ligne_data in lignes:
+            article_id = ligne_data.get('article_id')
+            quantite = ligne_data.get('quantite')
+
+            if not article_id or not quantite or quantite <= 0:
+                continue
+
+            article = articles_map.get(article_id)
+            if not article:
+                continue
+
+            LigneBon.objects.create(
+                bon=bon, article=article, quantite=quantite
+            )
+
+            mouvement = Mouvement(
+                type_mouvement='SORTIE_HORS_STOCK',
+                article=article,
+                magasin=magasin,
+                quantite=quantite,
+                utilisateur=utilisateur,
+                reference_document=bon.numero_bon,
+            )
+            # Pas d'impact stock — update_stock=False doit être géré par Mouvement.save()
+            mouvement.save(update_stock=False)
+
+        # ── Snapshot : créateur = magasinier (case 3) ──
+        cls._enregistrer_validation(bon, utilisateur, ordre_case=3, commentaire="Création bon hors stock")
+
+        return bon
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # BON DE RETOUR SERVICE
+    # ═══════════════════════════════════════════════════════════════════════
+    @classmethod
+    @transaction.atomic
+    def creer_bon_retour(cls, lignes, utilisateur, magasin,
+                         commentaire="", reference_document=None,
+                         service=None, reference_externe=None):
+        """Crée un bon de retour service (entrée de stock).
+
+        Args:
+            lignes: list[dict] — [{'article_id': int, 'quantite': int,
+                                    'numero_lot': str|None, 'date_peremption': str|None}]
+            utilisateur: User instance
+            magasin: Magasin instance
+            commentaire: str
+            reference_document: str|None
+            service: Service instance|None
+            reference_externe: str|None
+        """
+        # ✅ CORRECTION : isolation entreprise
+        cls._verifier_entreprise(utilisateur, magasin)
+
+        bon_kwargs = {
+            'type_bon': 'RETOUR_SERVICE',
+            'magasin': magasin,
+            'cree_par': utilisateur,
+            'commentaire': commentaire,
+            'statut_validation': 'VALIDE',
+        }
+        if service:
+            bon_kwargs['service_demandeur'] = service
+        if reference_externe:
+            bon_kwargs['reference_externe'] = reference_externe
+        if reference_document:
+            bon_kwargs['reference_document'] = reference_document
+
+        bon = BonMouvement.objects.create(**bon_kwargs)
+
+        # ✅ CORRECTION : articles en bulk
+        article_ids = [l.get('article_id') for l in lignes if l.get('article_id')]
+        from stock.models import Article
+        articles_map = Article.objects.filter(id__in=article_ids).in_bulk()
+
+        for ligne_data in lignes:
+            article_id = ligne_data.get('article_id')
+            quantite = ligne_data.get('quantite')
+            numero_lot = ligne_data.get('numero_lot')
+            date_peremption = ligne_data.get('date_peremption')
+
+            if not article_id or not quantite or quantite <= 0:
+                continue
+
+            article = articles_map.get(article_id)
+            if not article:
+                continue
+
+            ligne_kwargs = {
+                'bon': bon,
+                'article': article,
+                'quantite': quantite,
+            }
+            if numero_lot:
+                ligne_kwargs['numero_lot'] = numero_lot
+            if date_peremption:
+                ligne_kwargs['date_peremption'] = date_peremption
+
+            LigneBon.objects.create(**ligne_kwargs)
+
+            mouvement = Mouvement(
+                type_mouvement='RETOUR_SERVICE',
+                article=article,
+                magasin=magasin,
+                quantite=quantite,
+                utilisateur=utilisateur,
+                reference_document=bon.numero_bon,
+                numero_lot=numero_lot,
+                date_peremption=date_peremption,
+            )
+            StockTransactionService.executer(mouvement)
+
+        # ── Snapshot : créateur = magasinier (case 3) ──
+        cls._enregistrer_validation(bon, utilisateur, ordre_case=3, commentaire="Création bon de retour")
+
+        return bon
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # VALIDATION D'UN BON DE SORTIE
+    # ═══════════════════════════════════════════════════════════════════════
+    @classmethod
+    @transaction.atomic
+    def valider_bon_sortie(cls, bon, utilisateur):
+        """Passe un bon ATTENTE en VALIDE et crée les mouvements de sortie."""
+        if bon.statut_validation == 'VALIDE':
+            raise ValueError("Bon déjà validé.")
+        if bon.statut_validation == 'REJETE':
+            raise ValueError("Bon rejeté, impossible de valider.")
+
+        # ✅ CORRECTION : vérifier entreprise
+        cls._verifier_entreprise(utilisateur, bon.magasin)
+
+        # ✅ CORRECTION : revérifier le stock AVANT validation (le stock a pu changer)
+        from stock.models import StockItem
+        for ligne in bon.lignes_bon.select_related('article').all():
+            stock_item = StockItem.objects.select_for_update().filter(
+                article=ligne.article, magasin=bon.magasin
+            ).first()
+            qte_dispo = stock_item.quantite_physique if stock_item else 0
+            if qte_dispo < ligne.quantite:
+                raise ValidationError(
+                    f"Stock insuffisant pour {ligne.article.designation} : "
+                    f"{qte_dispo} disponible(s), {ligne.quantite} demandé(s). "
+                    f"Le stock a changé depuis la création du bon.",
+                    code='stock_insuffisant'
+                )
+
+        bon.statut_validation = 'VALIDE'
+        bon.date_validation = timezone.now()
+        bon.valide_par = utilisateur
+        bon.save(update_fields=['statut_validation', 'date_validation', 'valide_par'])
+
+        # ── Snapshot de la validation (case 2 : Vu pour exécution) ──
+        cls._enregistrer_validation(bon, utilisateur, ordre_case=2, commentaire="Validation circuit de validation")
+
+        # Créer les mouvements de sortie
+        for ligne in bon.lignes_bon.all():
+            mouvement = Mouvement(
+                type_mouvement='SORTIE',
+                article=ligne.article,
+                magasin=bon.magasin,
+                quantite=ligne.quantite,
+                utilisateur=utilisateur,
+                reference_document=bon.numero_bon,
+            )
+            StockTransactionService.executer(mouvement)
+
+        return bon
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # ANNULATIONS
+    # ═══════════════════════════════════════════════════════════════════════
+    @classmethod
+    @transaction.atomic
+    def annuler_bon_entree(cls, bon, motif, utilisateur):
+        """Annule un bon d'entrée et remet le stock via contre-mouvements."""
+        if bon.est_annule:
+            raise ValueError("Bon déjà annulé.")
+
+        # ✅ CORRECTION : vérifier entreprise
+        cls._verifier_entreprise(utilisateur, bon.magasin)
+
+        # ✅ CORRECTION : gérer motif comme string ou objet
+        motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
+
+        mouvements = Mouvement.objects.filter(
+            reference_document=bon.numero_bon,
+            type_mouvement='ENTREE'
+        )
+
+        for mouvement_original in mouvements:
+            try:
+                StockTransactionService.annuler_par_contre_mouvement(
+                    mouvement_original=mouvement_original,
+                    utilisateur=utilisateur,
+                    commentaire=f"Annulation du bon {bon.numero_bon}. Motif : {motif_libelle}"
+                )
+            except ValidationError as e:
+                # ✅ CORRECTION : test sur le code d'erreur + fallback message
+                code_erreur = getattr(e, 'code', None)
+                message_erreur = str(e)
+                if code_erreur == 'stock_insuffisant' or "Stock insuffisant" in message_erreur:
+                    # Forcer un ajustement négatif
+                    prix_unitaire = mouvement_original.prix_unitaire
+                    mouvement = Mouvement(
+                        type_mouvement='AJUSTEMENT_NEG_FORCE',
+                        article=mouvement_original.article,
+                        magasin=mouvement_original.magasin,
+                        quantite=mouvement_original.quantite,
+                        prix_unitaire=prix_unitaire,
+                        utilisateur=utilisateur,
+                        reference_document=f"ANNUL-FORCE-{bon.numero_bon}",
+                        commentaire=f"Annulation forcée bon {bon.numero_bon} (stock déjà consommé). Motif : {motif_libelle}",
+                    )
+                    # ✅ CORRECTION : utiliser AJUSTEMENT_NEG_FORCE pour contourner la vérif stock
+                    StockTransactionService.executer(mouvement)
+                    logger.warning(
+                        f"AJUSTEMENT FORCÉ négatif : bon={bon.numero_bon}, "
+                        f"article={mouvement_original.article}, qte={mouvement_original.quantite}, "
+                        f"user={utilisateur}, motif={motif_libelle}"
+                    )
+                    # ✅ CORRECTION : notification explicite aux responsables
+                    try:
+                        from accounts.models import Notification
+                        from django.contrib.auth.models import User
+                        responsables = User.objects.filter(
+                            profil__entreprise=bon.magasin.entreprise,
+                            profil__est_chef_service=True,
+                            is_active=True
+                        )
+                        for resp in responsables:
+                            Notification.objects.create(
+                                utilisateur=resp,
+                                titre="⚠️ Ajustement forcé lors d'annulation",
+                                message=(
+                                    f"Un ajustement négatif a été forcé lors de l'annulation "
+                                    f"du bon {bon.numero_bon}. Stock déjà consommé. "
+                                    f"Motif : {motif_libelle}"
+                                ),
+                                url=f"/stock/bons/{bon.id}/",
+                                type_notif="ALERTE_STOCK"
+                            )
+                    except Exception:
+                        logger.exception("Échec notification ajustement forcé")
+                else:
+                    raise
+
+        bon.est_annule = True
+        # ✅ CORRECTION : gérer motif comme objet ou string
+        if hasattr(motif, 'pk'):
+            bon.motif_annulation = motif
+        bon.annule_par = utilisateur
+        bon.date_annulation = timezone.now()
+        bon.save(update_fields=['est_annule', 'motif_annulation', 'annule_par', 'date_annulation'])
+
+        return bon
+
+    @classmethod
+    @transaction.atomic
+    def annuler_bon_sortie(cls, bon, motif, utilisateur):
+        """Annule un bon de sortie et remet le stock via contre-mouvements."""
+        if bon.est_annule:
+            raise ValueError("Bon déjà annulé.")
+
+        # ✅ CORRECTION : vérifier entreprise
+        cls._verifier_entreprise(utilisateur, bon.magasin)
+
+        # ✅ CORRECTION : vérifier si une demande est liée et mettre à jour son statut
+        motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
+
+        if bon.demande_origine_id:
+            from stock.models import DemandeMateriel
+            try:
+                demande = DemandeMateriel.objects.get(pk=bon.demande_origine_id)
+                if demande.statut not in ('ANNULEE', 'CLOTUREE'):
+                    demande.statut = 'EN_ATTENTE'
+                    demande.bon_sortie_lie = None
+                    demande.save(update_fields=['statut', 'bon_sortie_lie'])
+            except DemandeMateriel.DoesNotExist:
+                pass
+
+        mouvements = Mouvement.objects.filter(
+            reference_document=bon.numero_bon,
+            type_mouvement='SORTIE'
+        )
+
+        for mouvement_original in mouvements:
+            StockTransactionService.annuler_par_contre_mouvement(
+                mouvement_original=mouvement_original,
+                utilisateur=utilisateur,
+                commentaire=f"Annulation du bon {bon.numero_bon}. Motif : {motif_libelle}"
+            )
+
+        bon.est_annule = True
+        if hasattr(motif, 'pk'):
+            bon.motif_annulation = motif
+        bon.annule_par = utilisateur
+        bon.date_annulation = timezone.now()
+        bon.save(update_fields=['est_annule', 'motif_annulation', 'annule_par', 'date_annulation'])
+
+        return bon
+
+    @classmethod
+    @transaction.atomic
+    def annuler_bon_hors_stock(cls, bon, motif, utilisateur):
+        """Annule un bon hors stock (pas de contre-mouvement stock)."""
+        if bon.est_annule:
+            raise ValueError("Bon déjà annulé.")
+
+        # ✅ CORRECTION : vérifier entreprise
+        cls._verifier_entreprise(utilisateur, bon.magasin)
+
+        # ✅ CORRECTION : soft delete des mouvements hors stock (pas de hard delete)
+        mouvements_hs = Mouvement.objects.filter(
+            reference_document=bon.numero_bon,
+            type_mouvement='SORTIE_HORS_STOCK'
+        )
+        for mvt in mouvements_hs:
+            mvt.est_annule = True
+            mvt.save(update_fields=['est_annule'])
+
+        bon.est_annule = True
+        if hasattr(motif, 'pk'):
+            bon.motif_annulation = motif
+        bon.annule_par = utilisateur
+        bon.date_annulation = timezone.now()
+        bon.save(update_fields=['est_annule', 'motif_annulation', 'annule_par', 'date_annulation'])
+
+        return bon
+
+    @classmethod
+    @transaction.atomic
+    def calculer_numero_livraison(cls, commande):
+        """Calcule le prochain numéro de livraison pour une commande."""
+        # ✅ CORRECTION : transaction atomique + select_for_update
+        from stock.models import BonMouvement
+        dernier = BonMouvement.objects.select_for_update().filter(
+            commande_liee=commande,
+            is_deleted=False
+        ).order_by('-numero_livraison').first()
+
+        if not dernier or dernier.numero_livraison is None:
+            return 1
+        return dernier.numero_livraison + 1

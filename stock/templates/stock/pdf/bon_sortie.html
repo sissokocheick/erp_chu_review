@@ -1,0 +1,700 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Bon de Sortie {{ bon.numero_bon }}</title>
+<style>
+@page {
+    size: A4;
+    margin: 10mm 7mm 1mm 7mm;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 10pt;
+    line-height: 1.35;
+    color: #000;
+}
+
+.page {
+    width: 100%;
+}
+
+.page-flex {
+    display: flex;
+    flex-direction: column;
+    min-height: 277mm;
+}
+
+.content-main {
+    flex: 1 1 auto;
+}
+
+.bloc-bas {
+    width: 100%;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-top: auto;
+    padding-bottom: 0;
+}
+
+.page-flex .bloc-bas {
+    width: 100%;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-top: auto;
+    padding-bottom: 0;
+}
+
+.en-tete-etatique {
+    width: 100%;
+    font-size: 10pt;
+    margin-bottom: 1mm;
+}
+.en-tete-etatique td {
+    vertical-align: middle;
+}
+
+.cartouche {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1mm;
+}
+.cartouche td {
+    border: 1px solid #000;
+    padding: 1mm;
+    vertical-align: middle;
+}
+
+.service-infos {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1mm;
+    font-size: 8pt;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+    margin-bottom: 0;
+    table-layout: fixed;
+}
+.data-table thead {
+    display: table-header-group;
+}
+.data-table thead tr,
+.data-table tbody tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.data-table th,
+.data-table td {
+    border: 1px solid #000;
+    padding: 0.5mm 1mm;
+    vertical-align: middle;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+.data-table th {
+    text-align: center;
+    font-weight: bold;
+    background-color: #f0f0f0;
+}
+
+.sondage-box {
+    border: 2px solid #000;
+    padding: 1mm 2mm;
+    font-size: 8pt;
+    margin-bottom: 0.5mm;
+}
+.sondage-title {
+    font-weight: bold;
+    margin-bottom: 0.5mm;
+}
+.sondage-title span {
+    text-decoration: underline;
+}
+.sondage-note {
+    font-style: italic;
+    margin-bottom: 1mm;
+}
+
+.signatures-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+    margin-bottom: 0;
+    margin-top: 0.5mm;
+    table-layout: fixed;
+}
+.signatures-table td {
+    width: 25%;
+    border: 2px solid #000;
+    vertical-align: top;
+    padding: 0;
+    height: 32mm;
+    position: relative;
+}
+
+.sig-case-title {
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 8pt;
+    text-decoration: underline;
+    padding: 1mm 0.5mm 0 0.5mm;
+    line-height: 1.2;
+}
+
+.sig-case-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: calc(32mm - 7pt);
+    padding: 0 1mm 0.5mm 1mm;
+}
+
+.sig-name-top {
+    text-align: center;
+    font-size: 9pt;
+    font-weight: bold;
+    margin-top: 0.5mm;
+}
+
+.sig-image-center {
+    text-align: center;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sig-image-center img {
+    max-height: 18mm;
+    max-width: 80%;
+}
+
+.sig-fonction-bottom {
+    text-align: center;
+    font-size: 8pt;
+    font-style: italic;
+    margin-bottom: 0mm;
+    margin-top: 0.5mm;
+}
+
+.sig-default-bottom {
+    text-align: center;
+    font-size: 8pt;
+    margin-top: auto;
+    padding-bottom: 0.5mm;
+    line-height: 1.3;
+}
+
+.sig-empty-space {
+    flex: 1;
+}
+
+.sig-date {
+    text-align: center;
+    font-size: 6pt;
+    font-weight: bold;
+    color: #333;
+    margin-top: 0.5mm;
+}
+
+.pied-trait {
+    border: none;
+    margin: 0;
+}
+.pied-texte {
+    text-align: center;
+    font-size: 7pt;
+    color: #1c5b96;
+    margin-top: 1mm;
+    width: 100%;
+}
+
+.page-break {
+    page-break-before: always;
+}
+
+img { max-width: 100%; height: auto; }
+
+.pagination {
+    text-align: right;
+    font-size: 9pt;
+    margin-top: 0.5mm;
+    width: 100%;
+}
+</style>
+<base target="_blank">
+</head>
+<body>
+
+{% if not est_multi_page %}
+<div class="page page-flex">
+
+  <div class="content-main">
+
+    <div>
+      {% if pdf_config.cartouche.afficher_republique or pdf_config.cartouche.afficher_devise %}
+<table class="en-tete-etatique">
+  <tr>
+    <td style="width:50%; vertical-align:middle; text-align:left;">
+      <div style="display:inline-block; text-align:center;">
+        <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
+      </div>
+    </td>
+    
+    <td style="width:50%; vertical-align:middle; text-align:right;">
+      <div style="display:inline-block; text-align:center;">
+        
+        {% if pdf_config.cartouche.afficher_republique %}
+          <strong>République de Côte d'Ivoire</strong><br>
+        {% endif %}
+        
+        {% if pdf_config.cartouche.afficher_devise %}
+          <em>Union - Discipline - Travail</em>
+        {% endif %}
+        
+      </div>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+      <table class="cartouche">
+        <tr>
+          <td style="width:25%; text-align:center; vertical-align:middle;">
+            {% if pdf_config.cartouche.afficher_logo and logo_url %}
+              <img src="{{ logo_url }}" style="max-height:18mm;">
+            {% endif %}
+          </td>
+          <td style="width:50%; text-align:center; vertical-align:middle; border-left:none; padding:0;">
+    {% if pdf_config.metadonnees.ps2_label %}
+      <div style="font-size:10pt; font-weight:bold; padding:1mm 1mm 0 1mm;">{{ pdf_config.metadonnees.ps2_label }}</div>
+      <div style="border-top:1px solid #000; margin:0;"></div>
+    {% endif %}
+    <div style="font-size:15pt; font-weight:bold; text-transform:uppercase; padding:1mm 1mm 0 1mm;">BON DE SORTIE</div>
+    <div style="font-size:13pt; font-weight:bold; text-transform:uppercase; padding:0 1mm 1mm 1mm;">DE MATERIELS ET FOURNITURES</div>
+</td>
+          <td style="width:25%; vertical-align:top; text-align:left; border-left:none; font-size:10pt; font-weight:bold;">
+            {% if pdf_config.metadonnees.code_document %}Code : {{ pdf_config.metadonnees.code_document }}<br>{% endif %}
+            {% if pdf_config.metadonnees.date_creation_doc %}Cree le : {{ pdf_config.metadonnees.date_creation_doc }}<br>{% endif %}
+            {% if pdf_config.metadonnees.date_revision_doc %}Revise le : {{ pdf_config.metadonnees.date_revision_doc }}<br>{% endif %}
+            {% if pdf_config.metadonnees.version_doc %}Version : {{ pdf_config.metadonnees.version_doc }}{% endif %}
+          </td>
+        </tr>
+      </table>
+
+      <table class="service-infos">
+        <tr>
+          <td style="width:50%; vertical-align:top;">
+            {% if service %}
+              <div style="border:2px solid #000; padding:2mm; display:inline-block; min-width:60%;">
+                <div style="font-size:10pt; font-weight:bold; text-align:center; text-transform:uppercase;">{{ service.nom }}</div>
+                <div style="font-size:9pt; font-weight:bold; text-align:center; margin-top:1mm;">
+                  {% if service_code %}<em>CODE :</em> {{ service_code }}&nbsp;&nbsp;&nbsp;{% endif %}
+                  {% if service_poste %}<em>POSTE :</em> {{ service_poste }}{% endif %}
+                </div>
+              </div>
+            {% endif %}
+          </td>
+          <td style="width:50%; vertical-align:top; text-align:right; font-size:10pt;">
+            {% if demande and demande.numero_demande %}
+              <strong><em>Demande N&deg; : {{ demande.numero_demande }}</em></strong><br>
+              {% if est_livraison_partielle and numero_livraison %}
+              <strong><em>Livraison N&deg; : <span style="font-size:11pt;">{{ numero_livraison }}</span></em></strong><br>
+              {% endif %}
+            {% elif bon.demande_origine and bon.demande_origine.numero_demande %}
+              <strong><em>Demande N&deg; : {{ bon.demande_origine.numero_demande }}</em></strong><br>
+            {% elif bon.reference_externe %}
+              <strong><em>Demande N&deg; : {{ bon.reference_externe }}</em></strong><br>
+            {% endif %}
+            <strong><em>BON N&deg; : <span style="font-size:11pt;">{{ bon.numero_bon }}</span></em></strong><br>
+            <strong><em>Date : {{ bon.date_bon|date:"d/m/Y" }}</em></strong>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:14%;">Réf.</th>
+            <th rowspan="2" style="width:{% if est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
+            <th rowspan="2" style="width:10%;">Unité</th>
+            <th colspan="{% if est_livraison_partielle and not est_cloture %}3{% else %}2{% endif %}" style="width:{% if est_livraison_partielle and not est_cloture %}26{% else %}21{% endif %}%;">Quantité</th>
+          </tr>
+          <tr>
+            <th style="width:{% if est_livraison_partielle and not est_cloture %}8{% else %}10{% endif %}%;">Demandée</th>
+            <th style="width:{% if est_livraison_partielle and not est_cloture %}8{% else %}10{% endif %}%;">Servie</th>
+            {% if est_livraison_partielle and not est_cloture %}<th style="width:8%;">Reste</th>{% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for ligne in pages.0.lignes %}
+          <tr>
+            <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+            <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
+            <td style="text-align:center;">{{ ligne.unite }}</td>
+            <td style="text-align:center;">{{ ligne.quantite }}</td>
+            <td style="text-align:center;">{{ ligne.quantite_servie|default:"&mdash;" }}</td>
+            {% if est_livraison_partielle and not est_cloture %}<td style="text-align:center;">{{ ligne.reste }}</td>{% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="bloc-bas">
+    {% if pdf_config.sondage.afficher %}
+    <div class="sondage-box">
+      <div class="sondage-title"><span>SONDAGE</span>  (satisfaction de l'utilisateur)</div>
+
+      {% if sondage_data %}
+        <div>Satisfait :
+          &nbsp;&nbsp; Oui {% if sondage_data.satisfaction == 'satisfait' %}&#9745;{% else %}&#9744;{% endif %}
+          &nbsp;&nbsp; Non {% if sondage_data.satisfaction == 'insatisfait' %}&#9745;{% else %}&#9744;{% endif %}
+        </div>
+        {% if sondage_data.observations %}
+        <div style="margin-top:0;"><strong>Observations :</strong> {{ sondage_data.observations }}</div>
+        {% endif %}
+      {% else %}
+        <table style="width:100%; border-collapse:collapse; font-size:8pt;">
+          <tr>
+            <td style="white-space:nowrap; padding:0;">Satisfait : &nbsp;&nbsp; Oui &#9744; &nbsp;&nbsp; Non &#9744; <em>(Si non, observations)</em> :</td>
+            <td style="width:100%; border-bottom:1px dotted #000; padding:0;">&nbsp;</td>
+          </tr>
+        </table>
+        <table style="width:100%; border-collapse:collapse; font-size:8pt; margin-top:1mm;">
+          <tr>
+            <td style="width:100%; border-bottom:1px dotted #000; padding:0;">&nbsp;</td>
+          </tr>
+        </table>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    {% if pdf_config.sondage.trait_separation %}<hr class="pied-trait" style="border-top:3px solid #000;">{% endif %}
+
+    {% if signature_cases %}
+    <table class="signatures-table">
+      <tr>
+        {% for case in signature_cases %}
+        <td>
+          <div class="sig-case-title">{{ case.label }}</div>
+          <div class="sig-case-content">
+            {% if case.has_signature %}
+              <div class="sig-name-top">{{ case.user_name }}</div>
+              <div class="sig-image-center">
+                <img src="{{ case.signature_path }}">
+              </div>
+              <div class="sig-fonction-bottom">{{ case.fonction }}</div>
+            {% else %}
+              {% if case.user_name %}
+                <div class="sig-name-top">{{ case.user_name }}</div>
+              {% endif %}
+              <div class="sig-empty-space"></div>
+              {% if case.fonction %}
+                <div class="sig-fonction-bottom">{{ case.fonction }}</div>
+              {% endif %}
+              {% if case.default_text %}
+                <div class="sig-default-bottom">{{ case.default_text|safe }}</div>
+              {% endif %}
+            {% endif %}
+          </div>
+          {% if case.date %}
+          <div class="sig-date">{{ case.date|date:"d/m/Y" }}</div>
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+    </table>
+    {% endif %}
+
+    <div class="pied-texte">ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 2722496400 * CC N° : 1821717-Q * INFO@CHUANGRE.CI<br>Direction des Affaires Financières * Sous-Direction de la Logistique<br>Postes : 110 et 200</div>
+    <div class="pagination">{{ pages.0.numero }} / {{ pages|length }}</div>
+
+  </div>
+
+</div>
+
+{% else %}
+
+{% for page in pages %}
+
+  {% if forloop.first %}
+  <div class="page">
+
+    <div>
+      {% if pdf_config.cartouche.afficher_republique or pdf_config.cartouche.afficher_devise %}
+      <table class="en-tete-etatique">
+        <tr>
+          <td style="width:50%; vertical-align:middle; text-align:left;">
+            {% if pdf_config.cartouche.afficher_republique %}
+              <div style="display:inline-block; text-align:center;">
+                <strong>Ministere de la Sante, de l'Hygiene Publique<br>et de la Couverture Maladie Universelle</strong>
+              </div>
+            {% endif %}
+          </td>
+          <td style="width:50%; vertical-align:middle; text-align:right;">
+            {% if pdf_config.cartouche.afficher_republique %}
+              <div style="display:inline-block; text-align:center;">
+                <strong>Republique de Cote d'Ivoire</strong><br>
+                <em>Union - Discipline - Travail</em>
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+      </table>
+      {% endif %}
+
+      <table class="cartouche">
+        <tr>
+          <td style="width:25%; text-align:center; vertical-align:middle;">
+            {% if pdf_config.cartouche.afficher_logo and logo_url %}
+              <img src="{{ logo_url }}" style="max-height:18mm;">
+            {% endif %}
+          </td>
+          <td style="width:50%; text-align:center; vertical-align:middle; border-left:none; padding:0;">
+    {% if pdf_config.metadonnees.ps2_label %}
+      <div style="font-size:10pt; font-weight:bold; padding:1mm 1mm 0 1mm;">{{ pdf_config.metadonnees.ps2_label }}</div>
+      <div style="border-top:1px solid #000; margin:0;"></div>
+    {% endif %}
+    <div style="font-size:15pt; font-weight:bold; text-transform:uppercase; padding:1mm 1mm 0 1mm;">BON DE SORTIE</div>
+    <div style="font-size:13pt; font-weight:bold; text-transform:uppercase; padding:0 1mm 1mm 1mm;">DE MATERIELS ET FOURNITURES</div>
+</td>
+          <td style="width:25%; vertical-align:top; text-align:left; border-left:none; font-size:10pt; font-weight:bold;">
+            {% if pdf_config.metadonnees.code_document %}Code : {{ pdf_config.metadonnees.code_document }}<br>{% endif %}
+            {% if pdf_config.metadonnees.date_creation_doc %}Cree le : {{ pdf_config.metadonnees.date_creation_doc }}<br>{% endif %}
+            {% if pdf_config.metadonnees.date_revision_doc %}Revise le : {{ pdf_config.metadonnees.date_revision_doc }}<br>{% endif %}
+            {% if pdf_config.metadonnees.version_doc %}Version : {{ pdf_config.metadonnees.version_doc }}{% endif %}
+          </td>
+        </tr>
+      </table>
+
+      <table class="service-infos">
+        <tr>
+          <td style="width:50%; vertical-align:top;">
+            {% if service %}
+              <div style="border:2px solid #000; padding:2mm; display:inline-block; min-width:60%;">
+                <div style="font-size:10pt; font-weight:bold; text-align:center; text-transform:uppercase;">{{ service.nom }}</div>
+                <div style="font-size:9pt; font-weight:bold; text-align:center; margin-top:1mm;">
+                  {% if service_code %}<em>CODE :</em> {{ service_code }}&nbsp;&nbsp;&nbsp;{% endif %}
+                  {% if service_poste %}<em>POSTE :</em> {{ service_poste }}{% endif %}
+                </div>
+              </div>
+            {% endif %}
+          </td>
+          <td style="width:50%; vertical-align:top; text-align:right; font-size:10pt;">
+            {% if demande and demande.numero_demande %}
+              <strong><em>Demande N&deg; : {{ demande.numero_demande }}</em></strong><br>
+              {% if est_livraison_partielle and numero_livraison %}
+              <strong><em>Livraison N&deg; : <span style="font-size:11pt;">{{ numero_livraison }}</span></em></strong><br>
+              {% endif %}
+            {% elif bon.demande_origine and bon.demande_origine.numero_demande %}
+              <strong><em>Demande N&deg; : {{ bon.demande_origine.numero_demande }}</em></strong><br>
+            {% elif bon.reference_externe %}
+              <strong><em>Demande N&deg; : {{ bon.reference_externe }}</em></strong><br>
+            {% endif %}
+            <strong><em>BON N&deg; : <span style="font-size:11pt;">{{ bon.numero_bon }}</span></em></strong><br>
+            <strong><em>Date : {{ bon.date_bon|date:"d/m/Y" }}</em></strong>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div>
+      <table class="data-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width:14%;">Réf.</th>
+              <th rowspan="2" style="width:{% if est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
+              <th rowspan="2" style="width:10%;">Unité</th>
+              <th colspan="{% if est_livraison_partielle and not est_cloture %}3{% else %}2{% endif %}" style="width:{% if est_livraison_partielle and not est_cloture %}26{% else %}21{% endif %}%;">Quantité</th>
+            </tr>
+            <tr>
+              <th style="width:{% if est_livraison_partielle and not est_cloture %}8{% else %}10{% endif %}%;">Demandée</th>
+              <th style="width:{% if est_livraison_partielle and not est_cloture %}8{% else %}10{% endif %}%;">Servie</th>
+              {% if est_livraison_partielle and not est_cloture %}<th style="width:8%;">Reste</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for ligne in page.lignes %}
+            <tr>
+              <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+              <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
+              <td style="text-align:center;">{{ ligne.unite }}</td>
+              <td style="text-align:center;">{{ ligne.quantite }}</td>
+              <td style="text-align:center;">{{ ligne.quantite_servie|default:"&mdash;" }}</td>
+              {% if est_livraison_partielle and not est_cloture %}<td style="text-align:center;">{{ ligne.reste }}</td>{% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+
+  </div>
+
+
+  {% elif page.est_derniere_page %}
+  {% with nb_lignes=page.lignes|length %}
+  {% if nb_lignes >= 15 %}
+  <div class="page page-break page-flex">
+  {% else %}
+  <div class="page page-break">
+  {% endif %}
+
+    <div class="content-main">
+      <div>
+        <table class="data-table">
+            <thead>
+              <tr>
+                <th rowspan="2" style="width:14%;">Réf.</th>
+                <th rowspan="2" style="width:{% if est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
+                <th rowspan="2" style="width:10%;">Unité</th>
+                <th colspan="{% if est_livraison_partielle and not est_cloture %}3{% else %}2{% endif %}" style="width:{% if est_livraison_partielle and not est_cloture %}26{% else %}21{% endif %}%;">Quantité</th>
+              </tr>
+              <tr>
+                <th style="width:{% if est_livraison_partielle and not est_cloture %}8{% else %}10{% endif %}%;">Demandée</th>
+                <th style="width:{% if est_livraison_partielle and not est_cloture %}8{% else %}10{% endif %}%;">Servie</th>
+                {% if est_livraison_partielle and not est_cloture %}<th style="width:8%;">Reste</th>{% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for ligne in page.lignes %}
+              <tr>
+                <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+                <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
+                <td style="text-align:center;">{{ ligne.unite }}</td>
+                <td style="text-align:center;">{{ ligne.quantite }}</td>
+                <td style="text-align:center;">{{ ligne.quantite_servie|default:"&mdash;" }}</td>
+                {% if est_livraison_partielle and not est_cloture %}<td style="text-align:center;">{{ ligne.reste }}</td>{% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+      </div>
+    </div>
+
+    <div class="bloc-bas">
+      {% if pdf_config.sondage.afficher %}
+      <div class="sondage-box">
+        <div class="sondage-title"><span>SONDAGE</span>  (satisfaction de l'utilisateur)</div>
+        {% if sondage_data %}
+          <div>Satisfait :
+            &nbsp;&nbsp; Oui {% if sondage_data.satisfaction == 'satisfait' %}&#9745;{% else %}&#9744;{% endif %}
+            &nbsp;&nbsp; Non {% if sondage_data.satisfaction == 'insatisfait' %}&#9745;{% else %}&#9744;{% endif %}
+          </div>
+          {% if sondage_data.observations %}
+          <div style="margin-top:0;"><strong>Observations :</strong> {{ sondage_data.observations }}</div>
+          {% endif %}
+        {% else %}
+          <table style="width:100%; border-collapse:collapse; font-size:8pt;">
+            <tr>
+              <td style="white-space:nowrap; padding:0;">Satisfait : &nbsp;&nbsp; Oui &#9744; &nbsp;&nbsp; Non &#9744; <em>(Si non, observations)</em> :</td>
+              <td style="width:100%; border-bottom:1px dotted #000; padding:0;">&nbsp;</td>
+            </tr>
+          </table>
+          <table style="width:100%; border-collapse:collapse; font-size:8pt; margin-top:1mm;">
+            <tr>
+              <td style="width:100%; border-bottom:1px dotted #000; padding:0;">&nbsp;</td>
+            </tr>
+          </table>
+        {% endif %}
+      </div>
+      {% endif %}
+
+      {% if pdf_config.sondage.trait_separation %}<hr class="pied-trait" style="border-top:3px solid #000;">{% endif %}
+
+      {% if signature_cases %}
+      <table class="signatures-table">
+        <tr>
+          {% for case in signature_cases %}
+          <td>
+            <div class="sig-case-title">{{ case.label }}</div>
+            <div class="sig-case-content">
+              {% if case.has_signature %}
+                <div class="sig-name-top">{{ case.user_name }}</div>
+                <div class="sig-image-center">
+                  <img src="{{ case.signature_path }}">
+                </div>
+                <div class="sig-fonction-bottom">{{ case.fonction }}</div>
+              {% else %}
+                {% if case.user_name %}
+                  <div class="sig-name-top">{{ case.user_name }}</div>
+                {% endif %}
+                <div class="sig-empty-space"></div>
+                {% if case.fonction %}
+                  <div class="sig-fonction-bottom">{{ case.fonction }}</div>
+                {% endif %}
+                {% if case.default_text %}
+                  <div class="sig-default-bottom">{{ case.default_text|safe }}</div>
+                {% endif %}
+              {% endif %}
+            </div>
+            {% if case.date %}
+            <div class="sig-date">{{ case.date|date:"d/m/Y" }}</div>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+      </table>
+      {% endif %}
+
+      <div class="pied-texte">ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 2722496400 * CC N° : 1821717-Q * INFO@CHUANGRE.CI<br>Direction des Affaires Financières * Sous-Direction de la Logistique<br>Postes : 110 et 200</div>
+      <div class="pagination">{{ page.numero }} / {{ pages|length }}</div>
+
+    </div>
+
+  </div>
+  {% endwith %}
+
+
+  {% else %}
+  <div class="page page-break">
+    <div>
+      <table class="data-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width:14%;">Réf.</th>
+              <th rowspan="2" style="width:{% if est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
+              <th rowspan="2" style="width:10%;">Unité</th>
+              <th colspan="{% if est_livraison_partielle and not est_cloture %}3{% else %}2{% endif %}" style="width:{% if est_livraison_partielle and not est_cloture %}26{% else %}21{% endif %}%;">Quantité</th>
+            </tr>
+            <tr>
+              <th style="width:{% if est_livraison_partielle and not est_cloture %}8{% else %}10{% endif %}%;">Demandée</th>
+              <th style="width:{% if est_livraison_partielle and not est_cloture %}8{% else %}10{% endif %}%;">Servie</th>
+              {% if est_livraison_partielle and not est_cloture %}<th style="width:8%;">Reste</th>{% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for ligne in page.lignes %}
+            <tr>
+              <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+              <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
+              <td style="text-align:center;">{{ ligne.unite }}</td>
+              <td style="text-align:center;">{{ ligne.quantite }}</td>
+              <td style="text-align:center;">{{ ligne.quantite_servie|default:"&mdash;" }}</td>
+              {% if est_livraison_partielle and not est_cloture %}<td style="text-align:center;">{{ ligne.reste }}</td>{% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+  </div>
+
+  {% endif %}
+
+{% endfor %}
+{% endif %}
+
+</body>
+</html>

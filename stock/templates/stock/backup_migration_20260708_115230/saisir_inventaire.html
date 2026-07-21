@@ -1,0 +1,730 @@
+{% extends "base_ui.html" %}
+{% block title %}Saisie Inventaire — {{ campagne.titre }}{% endblock %}
+
+{% block contenu %}
+<style>
+  .inv-saisie-header {
+    background: linear-gradient(135deg, #1e7e34, #28a745);
+    color: white; border-radius: 12px; padding: 20px 25px;
+    margin-bottom: 22px; display: flex; align-items: center;
+    justify-content: space-between; gap: 14px;
+    box-shadow: 0 4px 15px rgba(40,167,69,.3); flex-wrap: wrap;
+  }
+  .inv-saisie-header h4 { margin: 0; font-size: 20px; font-weight: 700; }
+  .inv-saisie-header small { opacity: .85; font-size: 12px; }
+  .btn-retour {
+    background: rgba(255,255,255,.18); color: white; border: none;
+    padding: 8px 16px; border-radius: 8px; text-decoration: none;
+    font-weight: 700; font-size: 13px; display: inline-flex;
+    align-items: center; gap: 6px; transition: .2s;
+  }
+  .btn-retour:hover { background: rgba(255,255,255,.3); }
+
+  .alert-band {
+    padding: 12px 20px; border-radius: 8px; margin-bottom: 20px;
+    font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 10px;
+  }
+  .alert-valide  { background: rgba(40,167,69,0.12); color: #155724; border-left: 4px solid #28a745; }
+  .alert-a-valider{ background: rgba(23,162,184,0.12); color: #0c5460; border-left: 4px solid #17a2b8; }
+  .alert-annule  { background: rgba(220,53,69,0.12); color: #721c24; border-left: 4px solid #dc3545; }
+  .alert-en-cours{ background: rgba(255,193,7,0.12); color: #856404; border-left: 4px solid #ffc107; }
+
+  body.dark-mode .alert-valide  { background: rgba(129,199,132,0.15); color: #a5d6a7; }
+  body.dark-mode .alert-a-valider{ background: rgba(128,222,234,0.15); color: #80deea; }
+  body.dark-mode .alert-annule  { background: rgba(239,154,154,0.15); color: #f5a9b1; }
+  body.dark-mode .alert-en-cours{ background: rgba(255,213,79,0.15); color: #ffe082; }
+
+  .search-bar-saisie {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 18px; flex-wrap: wrap;
+  }
+  .search-wrap-saisie {
+    position: relative; flex: 1; min-width: 260px; max-width: 500px;
+  }
+  .search-wrap-saisie i.ico-search {
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    color: var(--text-light); font-size: 13px; pointer-events: none;
+  }
+  .search-input-saisie {
+    width: 100%; padding: 10px 36px 10px 36px;
+    border: 1px solid var(--border-color); border-radius: 8px;
+    font-size: 13px; outline: none; background: var(--bg-input);
+    color: var(--text-dark); box-sizing: border-box;
+    transition: .2s;
+  }
+  .search-input-saisie:focus {
+    border-color: #28a745; box-shadow: 0 0 0 3px rgba(40,167,69,0.12);
+  }
+  .btn-clear-search {
+    position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text-light);
+    cursor: pointer; font-size: 14px; width: 26px; height: 26px;
+    border-radius: 50%; display: none; align-items: center; justify-content: center;
+    transition: .2s;
+  }
+  .btn-clear-search:hover { background: var(--bg-hover); color: #dc3545; }
+  .btn-clear-search.visible { display: inline-flex; }
+  .search-info {
+    font-size: 12px; color: var(--text-light); font-weight: 600;
+    margin-left: auto;
+  }
+
+  .inv-table {
+    width: 100%; border-collapse: collapse; font-size: 13px;
+    table-layout: fixed;
+  }
+  .inv-table thead tr { background: var(--bg-hover); }
+  .inv-table thead th {
+    padding: 11px 13px; font-weight: 700; font-size: 11px;
+    text-transform: uppercase; letter-spacing: .3px;
+    color: var(--text-light); border-bottom: 2px solid var(--border-color);
+    text-align: left;
+  }
+  .inv-table thead th.c { text-align: center; }
+  .inv-table tbody tr {
+    border-bottom: 1px solid var(--border-light);
+    transition: background .12s;
+  }
+  .inv-table tbody tr:hover { background: var(--bg-hover); }
+  .inv-table tbody td {
+    padding: 10px 13px; vertical-align: middle;
+    color: var(--text-dark);
+  }
+
+  .qte-input {
+    width: 90px; padding: 8px; text-align: center;
+    border: 2px solid var(--border-color); border-radius: 6px;
+    font-weight: 700; font-size: 15px; background: var(--bg-input);
+    color: var(--text-dark); outline: none; transition: .2s;
+  }
+  .qte-input:focus { border-color: #28a745; box-shadow: 0 0 0 3px rgba(40,167,69,0.12); }
+  .qte-input:read-only { background: var(--bg-stripe); cursor: not-allowed; }
+
+  .ecart-zero { color: var(--text-light); font-weight: 700; }
+  .ecart-pos { color: #28a745; font-weight: 700; background: rgba(40,167,69,0.1); padding: 3px 8px; border-radius: 4px; }
+  .ecart-neg { color: #dc3545; font-weight: 700; background: rgba(220,53,69,0.1); padding: 3px 8px; border-radius: 4px; }
+
+  body.dark-mode .ecart-pos { background: rgba(129,199,132,0.15); color: #81c784; }
+  body.dark-mode .ecart-neg { background: rgba(239,154,154,0.15); color: #f5a9b1; }
+
+  .btn-brouillon {
+    background: var(--bg-hover); color: var(--text-medium);
+    border: 1px solid var(--border-color); padding: 10px 20px;
+    border-radius: 8px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; transition: .2s;
+  }
+  .btn-brouillon:hover { background: var(--bg-stripe); color: var(--text-dark); }
+  .btn-soumettre {
+    background: #007bff; color: white; border: none;
+    padding: 10px 24px; border-radius: 8px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: .2s; box-shadow: 0 2px 8px rgba(0,123,255,0.3);
+  }
+  .btn-soumettre:hover { background: #0056b3; transform: translateY(-1px); }
+  .btn-valider {
+    background: #28a745; color: white; border: none;
+    padding: 10px 24px; border-radius: 8px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: .2s; box-shadow: 0 2px 8px rgba(40,167,69,0.3);
+  }
+  .btn-valider:hover { background: #1e7e34; transform: translateY(-1px); }
+  .btn-rejeter {
+    background: #ffc107; color: #333; border: none;
+    padding: 10px 20px; border-radius: 8px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: .2s;
+  }
+  .btn-rejeter:hover { background: #e0a800; }
+  .btn-print {
+    background: #17a2b8; color: white; border: none;
+    padding: 10px 24px; border-radius: 8px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+    transition: .2s;
+  }
+  .btn-print:hover { background: #117a8b; }
+
+  .actions-bar {
+    display: flex; justify-content: flex-end; gap: 10px;
+    margin-top: 20px; padding-top: 20px;
+    border-top: 1px solid var(--border-light); flex-wrap: wrap;
+  }
+
+  .pagination-saisie {
+    display: flex; justify-content: center; align-items: center;
+    gap: 8px; margin: 16px 0; font-size: 13px;
+  }
+  .pagination-saisie a, .pagination-saisie span {
+    padding: 6px 12px; border-radius: 6px;
+    text-decoration: none; font-weight: 700;
+    border: 1px solid var(--border-color);
+    color: var(--text-medium); background: var(--bg-card);
+    transition: .2s;
+  }
+  .pagination-saisie a:hover {
+    background: var(--bg-hover); color: #28a745; border-color: #28a745;
+  }
+  .pagination-saisie .current-page {
+    background: #28a745; color: white; border-color: #28a745;
+  }
+  .pagination-saisie .disabled {
+    opacity: 0.4; pointer-events: none;
+  }
+
+  .save-indicator {
+    position: fixed; bottom: 20px; right: 20px;
+    background: #28a745; color: white;
+    padding: 8px 16px; border-radius: 8px;
+    font-size: 12px; font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    display: none; align-items: center; gap: 8px;
+    z-index: 9999;
+  }
+  .save-indicator.show { display: inline-flex; }
+  .save-indicator.error { background: #dc3545; }
+
+  .mo-pdf {
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 99999;
+    align-items: flex-start; justify-content: center;
+    backdrop-filter: blur(3px); padding-top: 4vh; overflow-y: auto;
+  }
+  .mo-pdf.open { display: flex; }
+  .mb-pdf {
+    background: var(--bg-card); border-radius: 12px;
+    width: 90%; max-width: 900px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: si .2s ease; margin-bottom: 4vh;
+    display: flex; flex-direction: column; max-height: 92vh;
+  }
+  @keyframes si { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .mh-pdf {
+    background: linear-gradient(135deg, #17a2b8, #117a8b);
+    color: white; padding: 16px 22px;
+    border-radius: 12px 12px 0 0;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .mh-pdf h5 { margin: 0; font-size: 16px; font-weight: 600; }
+  .mc-pdf {
+    background: rgba(255,255,255,0.2); border: none; color: white;
+    width: 32px; height: 32px; border-radius: 50%;
+    font-size: 16px; cursor: pointer; transition: .2s;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+  .mc-pdf:hover { background: rgba(255,255,255,0.4); }
+  .mbody-pdf {
+    padding: 0; background: #525659;
+    flex: 1; min-height: 300px; position: relative;
+  }
+  .pdf-loader {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 60px; gap: 14px; min-height: 300px;
+  }
+  .pdf-spinner {
+    width: 44px; height: 44px;
+    border: 4px solid rgba(255,255,255,0.2);
+    border-top-color: #17a2b8; border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+  .pdf-loader span { color: white; font-size: 13px; }
+  .pdf-iframe {
+    display: none; width: 100%; height: 68vh;
+    border: none; background: #525659;
+  }
+  .mfoot-pdf {
+    padding: 14px 22px; border-top: 1px solid var(--border-light);
+    display: flex; justify-content: flex-end; gap: 10px;
+    background: var(--bg-stripe); border-radius: 0 0 12px 12px;
+    flex-shrink: 0;
+  }
+  .btn-ok-pdf {
+    background: linear-gradient(135deg, #17a2b8, #117a8b);
+    color: white; border: none; padding: 10px 24px;
+    border-radius: 8px; font-weight: 700; font-size: 14px;
+    cursor: pointer; transition: .2s;
+  }
+  .btn-ok-pdf:hover { opacity: 0.9; }
+  .btn-nok-pdf {
+    background: var(--bg-hover); color: var(--text-medium); border: none;
+    padding: 10px 20px; border-radius: 8px; font-size: 14px;
+    cursor: pointer; transition: .2s;
+  }
+  .btn-nok-pdf:hover { background: var(--border-color); }
+
+  body.dark-mode .mb-pdf { background: var(--bg-card, #1e293b); }
+  body.dark-mode .mfoot-pdf { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+  body.dark-mode .btn-nok-pdf { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); }
+  body.dark-mode .search-input-saisie { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+  body.dark-mode .search-input-saisie:focus { border-color: #28a745; box-shadow: 0 0 0 3px rgba(40,167,69,0.2); }
+  body.dark-mode .btn-clear-search { color: var(--text-light, #94a3b8); }
+  body.dark-mode .btn-clear-search:hover { background: var(--bg-stripe, #1e293b); color: #f5a9b1; }
+
+  .ajax-loading {
+    opacity: 0.5; pointer-events: none;
+    transition: opacity .2s;
+  }
+</style>
+
+<div class="inv-saisie-header">
+  <div>
+    <h4><i class="fas fa-edit me-2"></i> Saisie de l'Inventaire : {{ campagne.titre }}</h4>
+    <small><i class="fas fa-warehouse me-1"></i> Magasin : {{ campagne.magasin.nom }} &nbsp;|&nbsp;
+      <i class="fas fa-list-ol me-1"></i> {{ page_obj.paginator.count }} article(s) total &nbsp;|&nbsp;
+      Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+    </small>
+  </div>
+  <a href="javascript:history.back()" class="btn-retour" rel="noopener noreferrer">
+    <i class="fas fa-arrow-left"></i> Retour
+  </a>
+</div>
+
+<form method="POST" id="form-saisie">
+  {% csrf_token %}
+  <input type="hidden" name="q" id="hidden-q" value="{{ q|default:'' }}">
+  <input type="hidden" name="action" id="action-input" value="brouillon">
+
+  {% if campagne.statut == 'VALIDE' %}
+  <div class="alert-band alert-valide">
+    <i class="fas fa-lock"></i> Cette campagne est <strong>clôturée et validée</strong>. Données en lecture seule.
+  </div>
+  {% elif campagne.statut == 'A_VALIDER' %}
+  <div class="alert-band alert-a-valider">
+    <i class="fas fa-user-clock"></i> Inventaire en attente d'approbation. Modifications bloquées.
+  </div>
+  {% elif campagne.statut == 'ANNULE' %}
+  <div class="alert-band alert-annule">
+    <i class="fas fa-ban"></i> Cette campagne a été <strong>annulée</strong>.
+  </div>
+  {% else %}
+  <div class="alert-band alert-en-cours">
+    <i class="fas fa-exclamation-triangle"></i> Saisissez vos quantités physiques. Les données se sauvegardent automatiquement.
+  </div>
+  {% endif %}
+
+  <!-- Barre de recherche auto -->
+  <div class="search-bar-saisie">
+    <div class="search-wrap-saisie">
+      <i class="fas fa-search ico-search"></i>
+      <input type="text" id="input-q" class="search-input-saisie"
+             value="{{ q|default:'' }}" placeholder="Rechercher un article (désignation, famille, référence…)"
+             aria-label="Rechercher un article">
+      <button type="button" class="btn-clear-search" id="btn-clear-q" onclick="clearSearch()" aria-label="Effacer la recherche">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    {% if q %}
+    <span class="search-info" id="search-info">
+      <i class="fas fa-filter"></i> {{ page_obj.paginator.count }} résultat(s) pour « {{ q_inventaire }} »
+    </span>
+    {% endif %}
+  </div>
+
+  <!-- Contenu AJAX (tableau + pagination) -->
+  <div id="ajax-table-wrapper">
+    {% include 'stock/saisir_inventaire_table.html' %}
+  </div>
+
+  <div class="actions-bar">
+    {% if campagne.statut == 'EN_COURS' %}
+      <button type="button" class="btn-brouillon" onclick="soumettreFormulaire('brouillon')" aria-label="Enregistrer le brouillon">
+        <i class="fas fa-save"></i> Enregistrer Brouillon
+      </button>
+      {% if circuit_actif %}
+        <button type="button" class="btn-soumettre" onclick="soumettreFormulaire('soumettre')" aria-label="Soumettre pour validation">
+          <i class="fas fa-paper-plane"></i> Soumettre pour validation
+        </button>
+      {% else %}
+        <button type="button" class="btn-valider" onclick="confirmerApprobation()" aria-label="Valider et mettre à jour les stocks">
+          <i class="fas fa-check-double"></i> Valider & Mettre à jour Stocks
+        </button>
+      {% endif %}
+
+    {% elif campagne.statut == 'A_VALIDER' %}
+      {% if user_est_valideur %}
+        <button type="button" class="btn-rejeter" onclick="soumettreFormulaire('rejeter')" aria-label="Rejeter l'inventaire">
+          <i class="fas fa-undo"></i> Rejeter
+        </button>
+        <button type="button" class="btn-valider" onclick="confirmerApprobation()" aria-label="Approuver et mettre à jour les stocks">
+          <i class="fas fa-check-double"></i> Approuver & MàJ Stocks
+        </button>
+      {% else %}
+        <span style="color: var(--text-medium); background: var(--bg-hover); padding: 10px 20px; border-radius: 8px; font-weight: 700;">
+          <i class="fas fa-hourglass-half"></i> En attente de validation hiérarchique
+        </span>
+      {% endif %}
+
+    {% elif campagne.statut == 'VALIDE' %}
+      <button type="button" class="btn-print" onclick="ouvrirModalPdf('{% url 'imprimer_resultat_inventaire' campagne.id %}')" aria-label="Imprimer les résultats">
+        <i class="fas fa-print"></i> Imprimer les résultats
+      </button>
+      <span style="color: var(--text-light); font-style: italic; font-size: 13px; display: flex; align-items: center; gap: 6px;">
+        <i class="fas fa-lock"></i> Mode Consultation
+      </span>
+
+    {% elif campagne.statut == 'ANNULE' %}
+      <span style="color: #dc3545; font-style: italic; font-size: 14px;">
+        <i class="fas fa-ban"></i> Inventaire annulé
+      </span>
+    {% endif %}
+  </div>
+</form>
+
+<!-- Indicateur de sauvegarde auto -->
+<div class="save-indicator" id="save-indicator">
+  <i class="fas fa-check-circle"></i> <span id="save-text">Sauvegardé</span>
+</div>
+
+<!-- MODALE PDF RÉSULTAT -->
+<div class="mo-pdf" id="modal-pdf-resultat" onclick="if(event.target===this)fermerModalPdf()">
+  <div class="mb-pdf" onclick="event.stopPropagation()">
+    <div class="mh-pdf">
+      <h5 id="pdf-titre"><i class="fas fa-file-invoice me-2"></i> Résultat de l'inventaire</h5>
+      <button class="mc-pdf" onclick="fermerModalPdf()" aria-label="Fermer"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="mbody-pdf">
+      <div class="pdf-loader" id="pdf-loader">
+        <div class="pdf-spinner"></div>
+        <span>Génération du document en cours…</span>
+      </div>
+      <iframe class="pdf-iframe" id="pdf-iframe" title="Résultat de l'inventaire"></iframe>
+    </div>
+    <div class="mfoot-pdf">
+      <button class="btn-nok-pdf" onclick="fermerModalPdf()">Fermer</button>
+      <button class="btn-ok-pdf" onclick="document.getElementById('pdf-iframe').contentWindow.print()">
+        <i class="fas fa-print me-1"></i> Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function() {
+  'use strict';
+
+  /* Calcul d'écart en temps réel */
+  function calculerEcart(id) {
+      let input = document.querySelector('input[data-ligne-id="' + id + '"]');
+      let theoEl = document.getElementById('theo_' + id);
+      let cell = document.getElementById('ecart_' + id);
+      if (!theoEl || !cell) return;
+
+      let theo = parseInt(theoEl.innerText) || 0;
+
+      if (!input || input.value === '') {
+          cell.innerHTML = '<span class="ecart-zero">-</span>';
+          if (input) input.style.borderColor = 'var(--border-color)';
+          return;
+      }
+      let reel = parseInt(input.value) || 0;
+      let ecart = reel - theo;
+
+      if (ecart === 0) {
+          cell.innerHTML = '<span class="ecart-zero">0</span>';
+          input.style.borderColor = 'var(--border-color)';
+      } else if (ecart > 0) {
+          cell.innerHTML = '<span class="ecart-pos">+' + ecart + '</span>';
+          input.style.borderColor = '#28a745';
+      } else {
+          cell.innerHTML = '<span class="ecart-neg">' + ecart + '</span>';
+          input.style.borderColor = '#dc3545';
+      }
+  }
+
+  /* Initialisation du tableau */
+  function initSaisieTable() {
+      document.querySelectorAll('#table-body input[data-ligne-id]').forEach(function(input) {
+          var id = input.getAttribute('data-ligne-id');
+          if (document.getElementById('theo_' + id)) {
+              calculerEcart(id);
+          }
+      });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+      initSaisieTable();
+  });
+
+  function soumettreFormulaire(action) {
+      document.getElementById('action-input').value = action;
+      document.getElementById('form-saisie').submit();
+  }
+
+  function confirmerApprobation() {
+      if (typeof Swal !== 'undefined') {
+          Swal.fire({
+              title: 'Approuver l'inventaire ?',
+              text: "Cette action est irréversible. Les stocks physiques seront écrasés et mis à jour.",
+              icon: 'warning',
+              showCancelButton: true,
+              confirmButtonColor: '#28a745',
+              cancelButtonColor: '#6c757d',
+              confirmButtonText: 'Oui, Valider',
+              cancelButtonText: 'Annuler'
+          }).then(function(result) {
+              if (result.isConfirmed) {
+                  soumettreFormulaire('approuver');
+              }
+          });
+      } else {
+          if (confirm("Cette action est irréversible. Les stocks physiques seront écrasés et mis à jour. Confirmer ?")) {
+              soumettreFormulaire('approuver');
+          }
+      }
+  }
+
+  /* MODALE PDF */
+  function ouvrirModalPdf(url) {
+      var modal = document.getElementById('modal-pdf-resultat');
+      var loader = document.getElementById('pdf-loader');
+      var iframe = document.getElementById('pdf-iframe');
+      loader.style.display = 'flex';
+      iframe.style.display = 'none';
+      iframe.src = '';
+      modal.classList.add('open');
+      iframe.onload = function() {
+          loader.style.display = 'none';
+          iframe.style.display = 'block';
+      };
+      iframe.src = url;
+  }
+
+  function fermerModalPdf() {
+      var modal = document.getElementById('modal-pdf-resultat');
+      modal.classList.remove('open');
+      document.getElementById('pdf-iframe').src = '';
+  }
+
+  document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') fermerModalPdf();
+  });
+
+  /* SAUVEGARDE AUTO AJAX */
+  (function() {
+      var indicator = document.getElementById('save-indicator');
+      var saveText = document.getElementById('save-text');
+      var pending = {};
+
+      function showIndicator(msg, isError) {
+          saveText.textContent = msg;
+          indicator.classList.remove('error');
+          if (isError) indicator.classList.add('error');
+          indicator.classList.add('show');
+          setTimeout(function() {
+              indicator.classList.remove('show');
+          }, 2000);
+      }
+
+      function doSave(input) {
+          var ligneId = input.getAttribute('data-ligne-id');
+          var val = input.value.trim();
+          var csrfEl = document.querySelector('input[name="csrfmiddlewaretoken"]');
+          if (!csrfEl) return;
+          var csrf = csrfEl.value;
+
+          if (pending[ligneId]) clearTimeout(pending[ligneId]);
+
+          pending[ligneId] = setTimeout(function() {
+              var formData = new FormData();
+              formData.append('ligne_id', ligneId);
+              formData.append('quantite', val);
+              formData.append('csrfmiddlewaretoken', csrf);
+
+              fetch('{% url "api_sauvegarder_ligne_inventaire" campagne.id %}', {
+                  method: 'POST',
+                  body: formData,
+                  headers: { 'X-Requested-With': 'XMLHttpRequest' }
+              })
+              .then(function(r) { return r.json(); })
+              .then(function(data) {
+                  if (data.success) {
+                      showIndicator('Sauvegardé', false);
+                  } else {
+                      showIndicator('Erreur : ' + (data.error || 'inconnue'), true);
+                  }
+              })
+              .catch(function() {
+                  showIndicator('Erreur réseau', true);
+              });
+          }, 600);
+      }
+
+      function doSaveImmediate(input) {
+          var ligneId = input.getAttribute('data-ligne-id');
+          if (pending[ligneId]) clearTimeout(pending[ligneId]);
+          var val = input.value.trim();
+          var csrfEl = document.querySelector('input[name="csrfmiddlewaretoken"]');
+          if (!csrfEl) return;
+          var csrf = csrfEl.value;
+          var formData = new FormData();
+          formData.append('ligne_id', ligneId);
+          formData.append('quantite', val);
+          formData.append('csrfmiddlewaretoken', csrf);
+
+          fetch('{% url "api_sauvegarder_ligne_inventaire" campagne.id %}', {
+              method: 'POST',
+              body: formData,
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
+          .then(function(r) { return r.json(); })
+          .then(function(data) {
+              if (data.success) showIndicator('Sauvegardé', false);
+          })
+          .catch(function() {
+              showIndicator('Erreur réseau', true);
+          });
+      }
+
+      var form = document.getElementById('form-saisie');
+      if (form) {
+          form.addEventListener('input', function(e) {
+              if (e.target.classList.contains('qte-input')) {
+                  calculerEcart(e.target.getAttribute('data-ligne-id'));
+                  doSave(e.target);
+              }
+          });
+          form.addEventListener('focusout', function(e) {
+              if (e.target.classList.contains('qte-input')) {
+                  doSaveImmediate(e.target);
+              }
+          });
+      }
+  })();
+
+  /* RECHERCHE & PAGINATION AJAX */
+  (function() {
+      var input = document.getElementById('input-q');
+      var clearBtn = document.getElementById('btn-clear-q');
+      var hiddenQ = document.getElementById('hidden-q');
+      var wrapper = document.getElementById('ajax-table-wrapper');
+      var searchInfo = document.getElementById('search-info');
+      var baseUrl = '{% url "saisir_inventaire" campagne.id %}';
+      var timer = null;
+
+      function updateClearBtn() {
+          if (input && input.value.trim().length > 0) {
+              clearBtn.classList.add('visible');
+          } else if (clearBtn) {
+              clearBtn.classList.remove('visible');
+          }
+      }
+
+      function updateSearchInfo(count, q) {
+          if (!searchInfo) return;
+          if (q) {
+              searchInfo.innerHTML = '<i class="fas fa-filter"></i> ' + count + ' résultat(s) pour « ' + e(q) + ' »';
+              searchInfo.style.display = '';
+          } else {
+              searchInfo.style.display = 'none';
+          }
+      }
+
+      function e(str) {
+          if (str === null || str === undefined) return '';
+          return String(str)
+              .replace(/&/g, '&amp;')
+              .replace(/</g, '&lt;')
+              .replace(/>/g, '&gt;')
+              .replace(/"/g, '&quot;')
+              .replace(/'/g, '&#x27;');
+      }
+
+      function loadTable(url, pushState) {
+          if (!wrapper) return;
+          wrapper.classList.add('ajax-loading');
+          fetch(url, {
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          })
+          .then(function(r) { return r.text(); })
+          .then(function(html) {
+              wrapper.innerHTML = html;
+              wrapper.classList.remove('ajax-loading');
+              initSaisieTable();
+              bindPagination();
+              if (pushState) {
+                  window.history.pushState({ajaxUrl: url}, '', url);
+              }
+              // Scroll en haut du tableau
+              wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          })
+          .catch(function(err) {
+              wrapper.classList.remove('ajax-loading');
+              wrapper.innerHTML = '<div class="alert-band alert-annule"><i class="fas fa-exclamation-circle"></i> Erreur de chargement. Veuillez réessayer.</div>';
+              console.error('Erreur AJAX:', err);
+          });
+      }
+
+      function doSearch() {
+          if (!input) return;
+          var q = input.value.trim();
+          if (hiddenQ) hiddenQ.value = q;
+          var url = baseUrl;
+          if (q) {
+              url += '?q=' + encodeURIComponent(q);
+          }
+          loadTable(url, true);
+      }
+
+      function bindPagination() {
+          if (!wrapper) return;
+          wrapper.querySelectorAll('.pagination-saisie a').forEach(function(link) {
+              link.addEventListener('click', function(e) {
+                  e.preventDefault();
+                  var href = this.getAttribute('href');
+                  if (href) {
+                      loadTable(baseUrl + href, true);
+                  }
+              });
+          });
+      }
+
+      if (input) {
+          input.addEventListener('input', function() {
+              updateClearBtn();
+              if (timer) clearTimeout(timer);
+              timer = setTimeout(doSearch, 300); // Debounce réduit à 300ms
+          });
+
+          input.addEventListener('keydown', function(e) {
+              if (e.key === 'Enter') {
+                  if (timer) clearTimeout(timer);
+                  doSearch();
+              }
+          });
+      }
+
+      window.clearSearch = function() {
+          if (input) input.value = '';
+          if (hiddenQ) hiddenQ.value = '';
+          updateClearBtn();
+          loadTable(baseUrl, true);
+      };
+
+      window.addEventListener('popstate', function(e) {
+          if (e.state && e.state.ajaxUrl) {
+              loadTable(e.state.ajaxUrl, false);
+              var url = new URL(e.state.ajaxUrl, window.location.origin);
+              var q = url.searchParams.get('q') || '';
+              if (input) {
+                  input.value = q;
+                  updateClearBtn();
+              }
+              if (hiddenQ) hiddenQ.value = q;
+          }
+      });
+
+      updateClearBtn();
+      bindPagination();
+  })();
+
+  // Exposer les fonctions globalement
+  window.calculerEcart = calculerEcart;
+  window.initSaisieTable = initSaisieTable;
+  window.soumettreFormulaire = soumettreFormulaire;
+  window.confirmerApprobation = confirmerApprobation;
+  window.ouvrirModalPdf = ouvrirModalPdf;
+  window.fermerModalPdf = fermerModalPdf;
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,1662 @@
+{% extends "base_ui.html" %}
+{% block title %}Paramètres — Patrimoine{% endblock %}
+
+{% block contenu %}
+<style>
+  :root {
+    --pm-bg: #f0f2f5;
+    --card-bg: #ffffff;
+    --card-border: #e2e8f0;
+    --text-main: #1e293b;
+    --text-secondary: #64748b;
+    --input-bg: #ffffff;
+    --input-border: #dde3ea;
+    --head-bg: #f8f9fa;
+    --hover-bg: #faf8ff;
+    --shadow: rgba(0,0,0,0.04);
+    --accent: #6f42c1;
+    --accent-light: #f8f5ff;
+  }
+  .dark, [data-theme="dark"] {
+    --pm-bg: #0b1121;
+    --card-bg: #151e32;
+    --card-border: #2a3650;
+    --text-main: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --input-bg: #0f172a;
+    --input-border: #334155;
+    --head-bg: #1e293b;
+    --hover-bg: #1e293b;
+    --shadow: rgba(0,0,0,0.25);
+    --accent-light: rgba(111,66,193,0.15);
+  }
+  body { background: var(--pm-bg); color: var(--text-main); transition: background 0.3s, color 0.3s; }
+
+  .search-magic { position: relative; margin-left: auto; margin-right: 15px; width: 220px; transition: all 0.3s ease; }
+  .search-magic:focus-within { width: 300px; }
+  .search-magic i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-secondary); font-size: 13px; transition: 0.3s; }
+  .search-magic:focus-within i { color: var(--accent); }
+  .search-magic input { width: 100%; padding: 8px 12px 8px 32px; border: 1px solid var(--input-border); border-radius: 20px; font-size: 13px; outline: none; background: var(--input-bg); color: var(--text-main); transition: all 0.3s ease; }
+  .search-magic input:focus { background: var(--input-bg); border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+
+  .radio-card { display: flex; align-items: center; gap: 20px; padding: 18px 24px; border: 2px solid var(--card-border); border-radius: 12px; margin-bottom: 15px; cursor: pointer; transition: all 0.3s ease; background: var(--card-bg); box-shadow: 0 2px 5px var(--shadow); color: var(--text-main); }
+  .radio-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 15px var(--shadow); }
+  .radio-card input[type="radio"] { width: 20px; height: 20px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
+  .radio-card.active { border-color: var(--accent); background: var(--accent-light); box-shadow: 0 4px 15px var(--accent-light); }
+  .rc-icon { display: flex; align-items: center; justify-content: center; width: 50px; height: 50px; background: var(--head-bg); border-radius: 12px; color: var(--text-secondary); font-size: 22px; transition: 0.3s; flex-shrink: 0; }
+  .radio-card.active .rc-icon { background: var(--accent); color: white; transform: scale(1.05); }
+  .rc-content { flex: 1; }
+  .rc-title { font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 5px; }
+  .rc-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin: 0; }
+
+  .pm-tabs { display: flex; gap: 4px; background: var(--card-bg); border-radius: 10px; padding: 8px; box-shadow: 0 2px 8px var(--shadow); margin-bottom: 18px; flex-wrap: wrap; border: 1px solid var(--card-border); }
+  .pm-tab { padding: 9px 18px; border-radius: 7px; font-size: 13px; font-weight: 600; cursor: pointer; transition: .2s; border: none; background: none; color: var(--text-secondary); display: flex; align-items: center; gap: 7px; }
+  .pm-tab:hover { background: var(--head-bg); color: var(--text-main); }
+  .pm-tab.active { background: var(--accent); color: white; }
+  .pm-tab .count { background: rgba(255,255,255,.25); padding: 1px 7px; border-radius: 10px; font-size: 11px; }
+  .pm-tab:not(.active) .count { background: var(--head-bg); color: var(--text-secondary); }
+
+  .pm-panel { display: none; animation: fadeIn 0.3s ease; }
+  .pm-panel.active { display: block; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+  .card-section { background: var(--card-bg); border-radius: 10px; box-shadow: 0 2px 8px var(--shadow); margin-bottom: 16px; overflow: hidden; border: 1px solid var(--card-border); color: var(--text-main); }
+  .cs-head { padding: 14px 18px; border-bottom: 1px solid var(--card-border); display: flex; align-items: center; justify-content: space-between; background: var(--card-bg); }
+  .cs-head h6 { margin: 0; font-size: 13px; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 7px; }
+  .cs-body { padding: 16px 18px; background: var(--card-bg); }
+  .cs-table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--text-main); }
+  .cs-table thead th { padding: 9px 12px; background: var(--head-bg); font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; color: var(--text-secondary); border-bottom: 1px solid var(--card-border); }
+  .cs-table tbody tr { border-bottom: 1px solid var(--card-border); transition: background .12s; }
+  .cs-table tbody tr:hover { background: var(--hover-bg); }
+  .cs-table tbody td { padding: 10px 12px; vertical-align: middle; }
+  .empty-pm { text-align: center; padding: 30px; color: var(--text-secondary); font-size: 13px; }
+
+  .cat-badge { padding: 2px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .schema-preview { font-size: 11px; color: var(--text-secondary); font-style: italic; }
+
+  .btn-add { background: var(--accent); color: white; border: none; padding: 8px 16px; border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: .2s; }
+  .btn-add:hover { filter: brightness(1.1); }
+  .btn-add.green { background: #28a745; }
+  .btn-add.blue { background: #1c5b96; }
+  .btn-edit { background: var(--head-bg); color: var(--text-secondary); border: 1px solid var(--input-border); padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; }
+  .btn-edit:hover { background: var(--hover-bg); }
+  .btn-del { background: #fff0f0; color: #dc3545; border: 1px solid #f5c6cb; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; }
+  .btn-del:hover { background: #f8d7da; }
+  .btn-schema { background: #e8f0fe; color: #1c5b96; border: 1px solid #c5d8f5; padding: 5px 10px; border-radius: 5px; font-size: 12px; cursor: pointer; }
+  .btn-schema:hover { background: #d0e4ff; }
+
+  .mo { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+  .mo.open { display: flex; }
+  .mb { background: var(--card-bg); border-radius: 10px; width: 90%; max-width: 560px; box-shadow: 0 20px 60px rgba(0,0,0,.25); animation: si .2s ease; color: var(--text-main); border: 1px solid var(--card-border); }
+  .mb.wide { max-width: 720px; }
+  @keyframes si { from { transform: translateY(-14px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+  .mh { background: linear-gradient(135deg, var(--accent), #563d7c); color: white; padding: 16px 20px; border-radius: 10px 10px 0 0; display: flex; align-items: center; justify-content: space-between; }
+  .mh h5 { margin: 0; font-size: 15px; font-weight: 700; }
+  .mc { background: rgba(255,255,255,.2); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 13px; }
+  .mc:hover { background: rgba(255,255,255,.35); }
+  .mbody { padding: 20px; max-height: 75vh; overflow-y: auto; background: var(--card-bg); }
+  .mfoot { padding: 12px 20px; border-top: 1px solid var(--card-border); display: flex; justify-content: flex-end; gap: 8px; background: var(--head-bg); border-radius: 0 0 10px 10px; }
+  .fg { margin-bottom: 14px; }
+  .fg label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-secondary); margin-bottom: 5px; }
+  .form-control, .fg input, .fg select, .fg textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--input-border); border-radius: 7px; font-size: 13px; outline: none; box-sizing: border-box; transition: 0.2s; background: var(--input-bg); color: var(--text-main); }
+  .form-control:focus, .fg input:focus, .fg select:focus, .fg textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+  .btn-ok { background: var(--accent); color: white; border: none; padding: 9px 20px; border-radius: 7px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .btn-nok { background: var(--head-bg); color: var(--text-secondary); border: none; padding: 9px 16px; border-radius: 7px; font-size: 13px; cursor: pointer; }
+
+  .schema-item { border: 1px solid var(--input-border); border-radius: 7px; padding: 12px; margin-bottom: 8px; background: var(--head-bg); display: flex; gap: 8px; align-items: flex-end; color: var(--text-main); }
+  .schema-item input, .schema-item select { flex: 1; padding: 7px 10px; border: 1px solid var(--input-border); border-radius: 5px; font-size: 12px; outline: none; background: var(--input-bg); color: var(--text-main); }
+  .schema-item select { background: var(--input-bg); }
+  .schema-item .drag-handle { cursor: grab; color: var(--text-secondary); font-size: 16px; padding: 4px; }
+  .btn-rm-spec { background: #f8d7da; color: #dc3545; border: none; padding: 6px 9px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+  .btn-rm-spec:hover { background: #f5c6cb; }
+  .btn-add-spec { width: 100%; background: var(--head-bg); color: var(--text-secondary); border: 2px dashed var(--input-border); padding: 10px; border-radius: 7px; font-size: 12px; cursor: pointer; transition: .2s; margin-top: 4px; }
+  .btn-add-spec:hover { background: var(--hover-bg); border-color: var(--accent); color: var(--accent); }
+
+  .color-row { display: flex; gap: 8px; align-items: center; }
+  .color-row input[type=color] { width: 44px; height: 36px; border: 1px solid var(--input-border); border-radius: 5px; cursor: pointer; padding: 2px; background: var(--input-bg); }
+  .color-row input[type=text] { flex: 1; }
+
+  .pagination-container { display: flex; justify-content: space-between; align-items: center; padding: 15px 18px; border-top: 1px solid var(--card-border); background: var(--card-bg); }
+  .pagination-info { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .pagination-buttons { display: flex; gap: 5px; }
+  .page-btn { padding: 5px 10px; border: 1px solid var(--input-border); background: var(--card-bg); color: var(--text-main); border-radius: 5px; cursor: pointer; font-size: 12px; transition: 0.2s; display: flex; align-items: center; justify-content: center; min-width: 28px; font-weight: 600; }
+  .page-btn:hover:not(:disabled) { background: var(--head-bg); }
+  .page-btn.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .page-btn:disabled { color: var(--text-secondary); cursor: not-allowed; background: var(--head-bg); }
+  .search-hidden { display: none !important; }
+
+  .accordion-item { border: 1px solid var(--card-border); border-radius: 10px; margin-bottom: 15px; background: var(--card-bg); overflow: hidden; box-shadow: 0 2px 8px var(--shadow); color: var(--text-main); }
+  .accordion-header { padding: 18px 25px; background: var(--head-bg); cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 800; font-size: 15px; color: var(--text-main); transition: 0.3s; user-select: none; }
+  .accordion-header:hover { background: var(--hover-bg); }
+  .accordion-body { padding: 20px 25px; display: none; border-top: 1px solid var(--card-border); background: var(--card-bg); }
+  .accordion-item.active .accordion-body { display: block; animation: slideDown 0.3s ease; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .accordion-item.active .accordion-header { background: var(--card-bg); color: var(--accent); border-bottom: 1px solid var(--card-border); }
+  .accordion-icon { transition: transform 0.3s ease; color: var(--text-secondary); }
+  .accordion-item.active .accordion-icon { transform: rotate(180deg); color: var(--accent); }
+  .acc-count { background: var(--head-bg); color: var(--text-secondary); padding: 2px 10px; border-radius: 12px; font-size: 12px; margin-left: 10px; }
+  .accordion-item.active .acc-count { background: var(--accent-light); color: var(--accent); }
+
+  .pm-header { margin-bottom: 20px; color: var(--text-main); }
+</style>
+
+<div class="pm-header">
+  <div style="display:flex;align-items:center;gap:14px;">
+    <i class="fas fa-sliders-h" style="font-size:26px;opacity:.9;color:var(--accent);"></i>
+    <div><h4 style="margin:0;">Paramètres du Patrimoine</h4><small style="color:var(--text-secondary);">Configuration des types, bâtiments et nomenclatures</small></div>
+  </div>
+</div>
+
+<div class="pm-tabs">
+  <button class="pm-tab active" data-target="tab-categories" onclick="showTab('tab-categories')">
+    <i class="fas fa-layer-group"></i> Catégories <span class="count">{{ categories|length }}</span>
+  </button>
+  <button class="pm-tab" data-target="tab-types" onclick="showTab('tab-types')">
+    <i class="fas fa-boxes"></i> Types d'équipements <span class="count">{{ types|length }}</span>
+  </button>
+  <button class="pm-tab" data-target="tab-batiments" onclick="showTab('tab-batiments')">
+    <i class="fas fa-building"></i> Bâtiments <span class="count">{{ batiments|length }}</span>
+  </button>
+  <button class="pm-tab" data-target="tab-marques" onclick="showTab('tab-marques')">
+    <i class="fas fa-trademark"></i> Marques <span class="count">{{ marques|length }}</span>
+  </button>
+  <button class="pm-tab" data-target="tab-interventions" onclick="showTab('tab-interventions')">
+    <i class="fas fa-tools"></i> Interventions
+  </button>
+  <button class="pm-tab" data-target="tab-equipe" onclick="showTab('tab-equipe')">
+    <i class="fas fa-users-cog"></i> Équipe Technique
+  </button>
+  <button class="pm-tab" data-target="tab-affectations" onclick="showTab('tab-affectations')">
+    <i class="fas fa-user-tie"></i> Affectation Bureaux
+  </button>
+  <button class="pm-tab" data-target="tab-contrats" onclick="showTab('tab-contrats')">
+    <i class="fas fa-file-signature"></i> Sous-traitance
+  </button>
+</div>
+
+
+<div class="pm-panel active" id="tab-categories">
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-layer-group" style="color:var(--accent);"></i> Catégories de patrimoine</h6>
+      <div class="search-magic">
+          <i class="fas fa-search"></i>
+          <input type="text" class="live-search" data-target="tbody-categories" placeholder="Rechercher une catégorie...">
+      </div>
+      <button class="btn-add" onclick="ouvrirModalCategorie()">
+        <i class="fas fa-plus"></i> Nouvelle catégorie
+      </button>
+    </div>
+    <div class="cs-body">
+      <table class="cs-table">
+        <thead><tr><th>Code</th><th>Nom</th><th>Icône</th><th>Couleur</th><th>Types</th><th style="text-align:right;">Actions</th></tr></thead>
+        <tbody id="tbody-categories">
+          {% for cat in categories %}
+          <tr>
+            <td><code style="background:var(--head-bg);padding:2px 7px;border-radius:4px;font-size:12px;color:var(--text-main);">{{ cat.code }}</code></td>
+            <td style="font-weight:700;">{{ cat.nom }}</td>
+            <td><i class="{{ cat.icone }}" style="color:{{ cat.couleur }};font-size:16px;"></i> <span style="font-size:11px;color:var(--text-secondary);">{{ cat.icone }}</span></td>
+            <td>
+              <span style="display:inline-flex;align-items:center;gap:6px;">
+                <span style="width:16px;height:16px;border-radius:50%;background:{{ cat.couleur }};display:inline-block;border:1px solid rgba(0,0,0,.1);"></span>
+                <code style="font-size:11px;color:var(--text-secondary);">{{ cat.couleur }}</code>
+              </span>
+            </td>
+            <td><span style="background:var(--accent-light);color:var(--accent);padding:2px 9px;border-radius:12px;font-size:11px;font-weight:700;">{{ cat.types_equipements.count }} type{% if cat.types_equipements.count > 1 %}s{% endif %}</span></td>
+            <td style="text-align:right;">
+              <button class="btn-edit" onclick="editerCategorie({{ cat.id }},'{{ cat.code|escapejs }}','{{ cat.nom|escapejs }}','{{ cat.icone|escapejs }}','{{ cat.couleur|escapejs }}')">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-del" onclick="confirmerSuppression('delete_categorie','{{ cat.id }}','{{ cat.nom|escapejs }}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="empty-pm">Aucune catégorie. Commencez par en créer une.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="pm-panel" id="tab-types">
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-boxes" style="color:var(--accent);"></i> Types d'équipements</h6>
+      <div class="search-magic">
+          <i class="fas fa-search"></i>
+          <input type="text" class="live-search" data-target="tbody-types" placeholder="Chercher un type...">
+      </div>
+      <button class="btn-add" onclick="ouvrirModalType()">
+        <i class="fas fa-plus"></i> Nouveau type
+      </button>
+    </div>
+    <div class="cs-body">
+      <table class="cs-table">
+        <thead><tr><th>Code</th><th>Nom</th><th>Catégorie</th><th>Amort. (ans)</th><th>Specs techniques</th><th style="text-align:right;">Actions</th></tr></thead>
+        <tbody id="tbody-types">
+          {% for t in types %}
+          <tr>
+            <td><code style="background:var(--head-bg);padding:2px 7px;border-radius:4px;font-size:12px;">{{ t.code }}</code></td>
+            <td style="font-weight:700;">{{ t.nom }}</td>
+            <td>
+              <span class="cat-badge" style="background:{{ t.categorie.couleur|default:'#e9ecef' }}22;color:{{ t.categorie.couleur|default:'#6c757d' }};">
+                <i class="{{ t.categorie.icone|default:'fas fa-box' }}" style="margin-right:3px;font-size:10px;"></i>{{ t.categorie.nom }}
+              </span>
+            </td>
+            <td style="font-weight:700;color:var(--accent);">{{ t.duree_amortissement_defaut }} ans</td>
+            <td>
+              {% if t.specs_schema %}
+              <span class="schema-preview">
+                {% for s in t.specs_schema %}{{ s.label }}{% if not forloop.last %}, {% endif %}{% endfor %}
+              </span>
+              <span style="font-size:11px;color:var(--accent);font-weight:600;margin-left:6px;">({{ t.specs_schema|length }} champ{% if t.specs_schema|length > 1 %}s{% endif %})</span>
+              {% else %}
+              <span style="color:var(--text-secondary);font-size:12px;">Aucun champ</span>
+              {% endif %}
+            </td>
+            <td style="text-align:right;white-space:nowrap;">
+              <button class="btn-schema" onclick="ouvrirSchema({{ t.id }},'{{ t.nom|escapejs }}')" title="Éditer les specs techniques">
+                <i class="fas fa-microchip"></i> Specs
+              </button>
+              <button class="btn-edit" onclick="editerType({{ t.id }},'{{ t.code|escapejs }}','{{ t.nom|escapejs }}',{{ t.categorie_id }},'{{ t.duree_amortissement_defaut }}','{{ t.mode_amortissement }}')">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-del" onclick="confirmerSuppression('delete_type','{{ t.id }}','{{ t.nom|escapejs }}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="6" class="empty-pm">Aucun type. Créez d'abord une catégorie, puis ajoutez des types.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="pm-panel" id="tab-batiments">
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-building" style="color:var(--accent);"></i> Bâtiments, Étages et Bureaux</h6>
+      <div class="search-magic">
+          <i class="fas fa-search"></i>
+          <input type="text" class="live-search" data-target="liste-batiments" placeholder="Chercher un bâtiment ou bureau...">
+      </div>
+      <button class="btn-add blue" onclick="ouvrirModalBatiment()">
+        <i class="fas fa-plus"></i> Nouveau bâtiment
+      </button>
+    </div>
+    <div class="cs-body" style="padding: 0;" id="liste-batiments">
+      {% for b in batiments %}
+      <div class="batiment-item" style="border-bottom: 1px solid var(--card-border);">
+        <div style="display:flex; align-items:center; justify-content:space-between; padding:15px 20px; background:var(--card-bg); cursor:pointer;" onclick="toggleBatiment({{ b.id }})">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <i class="fas fa-chevron-down" style="color:var(--text-secondary); font-size:12px;"></i>
+                <strong style="font-size:15px; color:var(--text-main);">{{ b.nom }}</strong>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;" onclick="event.stopPropagation()">
+                <button class="btn-add green" style="padding:5px 12px; font-size:11px;" onclick="ouvrirModalEtage({{ b.id }}, '{{ b.nom|escapejs }}')"><i class="fas fa-plus"></i> Étage</button>
+                <button class="btn-edit" onclick="editerBatiment({{ b.id }}, '{{ b.code|escapejs }}', '{{ b.nom|escapejs }}', [{% for s in b.services.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn-del" onclick="confirmerSuppression('delete_batiment','{{ b.id }}','{{ b.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
+            </div>
+        </div>
+        <div id="bat-detail-{{ b.id }}" style="display:none; padding: 0 20px 20px 40px; background: var(--card-bg);">
+            {% for e in b.etages.all %}
+            <div style="border-left: 2px solid var(--card-border); margin-top:15px; padding-left:15px;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
+                    <div style="font-size:14px; font-weight:700; color:var(--text-main);"><i class="fas fa-layer-group" style="color:#28a745; margin-right:5px;"></i> {{ e.nom }}</div>
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <button class="btn-add blue" style="padding:4px 10px; font-size:11px;" onclick="ouvrirModalBureau({{ e.id }})"><i class="fas fa-plus"></i> Bureau</button>
+                        <button class="btn-edit" onclick="editerEtage({{ e.id }}, '{{ e.nom|escapejs }}', {{ b.id }}, '{{ b.nom|escapejs }}', [{% for s in e.services.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-del" onclick="confirmerSuppression('delete_etage','{{ e.id }}','{{ e.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
+                    </div>
+                </div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; padding-left:20px;">
+                    {% for bur in e.bureaux.all %}
+                    <div style="background:var(--head-bg); border:1px solid var(--input-border); padding:4px 10px; border-radius:20px; font-size:12px; display:flex; align-items:center; gap:8px; color:var(--text-main);">
+                        <i class="fas fa-door-open" style="color:var(--accent);"></i> <strong>{{ bur.nom }}</strong>
+                        <i class="fas fa-pen" style="color:var(--text-secondary); cursor:pointer;" onclick="editerBureau({{ bur.id }}, '{{ bur.nom|escapejs }}', {{ e.id }}, [{% for s in bur.services.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}])"></i>
+                        <i class="fas fa-times" style="color:#dc3545; cursor:pointer;" onclick="confirmerSuppression('delete_bureau','{{ bur.id }}','{{ bur.nom|escapejs }}')"></i>
+                    </div>
+                    {% empty %}
+                    <span style="font-size:11px; color:var(--text-secondary); font-style:italic;">Aucun bureau sur cet étage</span>
+                    {% endfor %}
+                </div>
+            </div>
+            {% empty %}
+            <div style="padding-top:15px; font-size:12px; color:var(--text-secondary); font-style:italic;">Aucun étage configuré pour ce bâtiment. Cliquez sur "+ Étage".</div>
+            {% endfor %}
+        </div>
+      </div>
+      {% empty %}
+      <div class="empty-pm">Aucun bâtiment configuré.</div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<div class="pm-panel" id="tab-affectations">
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-user-tie" style="color:var(--accent);"></i> Affectation du Personnel aux Bureaux</h6>
+      <div class="search-magic">
+          <i class="fas fa-search"></i>
+          <input type="text" class="live-search" data-target="tbody-affectations" placeholder="Chercher une personne...">
+      </div>
+    </div>
+    <div class="cs-body">
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 15px;">Associez chaque membre du personnel à son bureau physique (Indispensable si le périmètre de déclaration est "Limité au Bureau").</p>
+      <table class="cs-table">
+        <thead><tr><th>Utilisateur / Fonction</th><th>Service</th><th>Localisation (Bâtiment / Étage / Bureau)</th><th style="text-align:right;">Actions</th></tr></thead>
+        <tbody id="tbody-affectations">
+          {% for u in utilisateurs %}
+          <tr>
+            <td>
+                <div style="font-weight:700;">{{ u.get_full_name|default:u.username }}</div>
+                <div style="font-size:11px;color:var(--text-secondary);">{{ u.profil.fonction|default:"Fonction non définie" }}</div>
+            </td>
+            <td><span style="background:#e8f5e9;color:#2e7d32;padding:3px 8px;border-radius:6px;font-size:11px;font-weight:700;">{{ u.profil.service.nom|default:"Aucun service" }}</span></td>
+            <td>
+                {% if u.profil.bureau %}
+                    <div style="font-weight:700; color:#1c5b96;"><i class="fas fa-door-open"></i> {{ u.profil.bureau.nom }}</div>
+                    <div style="font-size:11px; color:var(--text-secondary);">{{ u.profil.bureau.etage.batiment.nom }} — {{ u.profil.bureau.etage.nom }}</div>
+                {% else %}
+                    <span style="color:#dc3545;font-size:11px;font-weight:bold;"><i class="fas fa-exclamation-circle"></i> Bureau non défini</span>
+                {% endif %}
+            </td>
+            <td style="text-align:right;">
+              <button class="btn-edit" onclick="ouvrirModalAffectation({{ u.id }}, '{{ u.get_full_name|default:u.username|escapejs }}', '{{ u.profil.bureau.id|default:"" }}')">
+                <i class="fas fa-map-marker-alt"></i> Assigner un bureau
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="pm-panel" id="tab-marques">
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-trademark" style="color:var(--accent);"></i> Marques</h6>
+      <div class="search-magic">
+          <i class="fas fa-search"></i>
+          <input type="text" class="live-search" data-target="tbody-marques" placeholder="Chercher une marque...">
+      </div>
+      <button class="btn-add green" onclick="ouvrirModalMarque()">
+        <i class="fas fa-plus"></i> Nouvelle marque
+      </button>
+    </div>
+    <div class="cs-body">
+      <table class="cs-table">
+        <thead><tr><th>Nom</th><th>Modèles</th><th style="text-align:right;">Actions</th></tr></thead>
+        <tbody id="tbody-marques">
+          {% for m in marques %}
+          <tr>
+            <td style="font-weight:700;">{{ m.nom }}</td>
+            <td><span style="background:#e8f5e9;color:#2e7d32;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:700;">{{ m.modeles.count }} modèle{% if m.modeles.count > 1 %}s{% endif %}</span></td>
+            <td style="text-align:right;">
+              <button class="btn-edit" onclick="editerMarque({{ m.id }},'{{ m.nom|escapejs }}')">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-del" onclick="confirmerSuppression('delete_marque','{{ m.id }}','{{ m.nom|escapejs }}')">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="3" class="empty-pm">Aucune marque configurée.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="pm-panel" id="tab-interventions">
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-cog" style="color:var(--accent);"></i> Configuration des Workflows (Pannes & Inventaires)</h6>
+    </div>
+    <div class="cs-body">
+      <form method="POST">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="save_visibilite">
+        
+        <div style="background:var(--card-bg); padding:20px; border-radius:10px; box-shadow:0 2px 8px var(--shadow); margin-bottom:30px; border-left:4px solid #17a2b8;">
+            <h5 style="color:#17a2b8; font-weight:700; margin-top:0; margin-bottom:15px;">
+                <i class="fas fa-warehouse"></i> Magasin des Pièces Détachées
+            </h5>
+            <p style="font-size:13px; color:var(--text-secondary); margin-bottom:15px;">
+                Sélectionnez le magasin qui recevra automatiquement les demandes de matériel générées par les techniciens.
+            </p>
+            <div class="form-group">
+                <label style="font-size:12px; font-weight:bold; color:var(--text-main); display:block; margin-bottom:8px;">Magasin par défaut</label>
+                <select name="magasin_pieces" class="form-control" style="width:100%; max-width:400px; padding:10px; border-radius:6px; border:1px solid var(--input-border);">
+                    <option value="">-- Aucun magasin sélectionné --</option>
+                    {% for mag in magasins %}
+                        <option value="{{ mag.id }}" {% if params.magasin_pieces.id == mag.id %}selected{% endif %}>
+                            {{ mag.nom }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <h5 style="font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 10px;">
+          <i class="fas fa-check-double" style="color:var(--accent); margin-right:6px;"></i> Validation des Inventaires (Principe des 4 yeux)
+        </h5>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Exige la validation d'un superviseur avant d'appliquer définitivement les écarts constatés sur le terrain (Mises au rebut, Déplacements, Manquants).</p>
+
+        <div style="background:var(--head-bg); border:1px solid var(--card-border); border-radius:12px; padding:20px; margin-bottom:30px;">
+            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 14px; font-weight: bold; color: var(--text-main); margin-bottom: 15px;">
+                <input type="checkbox" name="validation_inventaire" id="chk-val-inv" style="width: 20px; height: 20px; accent-color: #10b981;" onchange="toggleValidateurs()" {% if params.validation_inventaire_active %}checked{% endif %}>
+                Activer le circuit de validation pour les inventaires du parc
+            </label>
+            <div id="div-validateurs" style="display: {% if params.validation_inventaire_active %}block{% else %}none{% endif %}; padding-left: 30px; border-left: 2px solid var(--card-border); margin-left: 10px; animation: fadeIn 0.3s ease;">
+                <label style="font-size: 12px; font-weight: 700; color: var(--text-secondary); display: block; margin-bottom: 8px; text-transform: uppercase;">Sélectionnez les Superviseurs autorisés à valider :</label>
+                <select name="validateurs_inventaire" class="select2-init" multiple="multiple" style="width: 100%;">
+                    {% for u in utilisateurs %}
+                        <option value="{{ u.id }}" {% if u in params.validateurs_inventaire.all %}selected{% endif %}>
+                            {{ u.get_full_name|default:u.username }} ({{ u.profil.fonction|default:"-" }})
+                        </option>
+                    {% endfor %}
+                </select>
+                <small style="color:var(--text-secondary); font-size:11px; display:block; margin-top:8px;"><i class="fas fa-info-circle"></i> Note : Les administrateurs globaux (Superusers) ont toujours le droit de valider.</small>
+            </div>
+        </div>
+        <hr style="border:0; border-top:1px dashed var(--card-border); margin:30px 0;">
+
+        <h5 style="font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 10px;">
+          <i class="fas fa-eye" style="color:var(--accent); margin-right:6px;"></i> Visibilité des Pannes (Techniciens)
+        </h5>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Choisissez la méthode de distribution des demandes de dépannage.</p>
+        
+        <label class="radio-card {% if params.mode_visibilite_interventions == 'GLOBAL' %}active{% endif %}">
+            <input type="radio" name="mode_visibilite" value="GLOBAL" {% if params.mode_visibilite_interventions == 'GLOBAL' %}checked{% endif %} onchange="updateRadioUI(this)">
+            <div class="rc-icon"><i class="fas fa-globe"></i></div>
+            <div class="rc-content">
+                <div class="rc-title">1. Mode Global (Transparence totale)</div>
+                <p class="rc-desc">Tout le monde voit toutes les demandes d'intervention, sans aucun filtre métier.</p>
+            </div>
+        </label>
+
+        <label class="radio-card {% if params.mode_visibilite_interventions == 'DIRECT' %}active{% endif %}">
+            <input type="radio" name="mode_visibilite" value="DIRECT" {% if params.mode_visibilite_interventions == 'DIRECT' %}checked{% endif %} onchange="updateRadioUI(this)">
+            <div class="rc-icon"><i class="fas fa-route"></i></div>
+            <div class="rc-content">
+                <div class="rc-title">2. Mode Direct (Routage par spécialité)</div>
+                <p class="rc-desc">La panne est vue uniquement par les techniciens compétents (ex: informatique pour un PC).</p>
+            </div>
+        </label>
+
+        <label class="radio-card {% if params.mode_visibilite_interventions == 'DISPATCH' %}active{% endif %}">
+            <input type="radio" name="mode_visibilite" value="DISPATCH" {% if params.mode_visibilite_interventions == 'DISPATCH' %}checked{% endif %} onchange="updateRadioUI(this)">
+            <div class="rc-icon"><i class="fas fa-user-tie"></i></div>
+            <div class="rc-content">
+                <div class="rc-title">3. Mode Dispatch (Contrôle par le Chef)</div>
+                <p class="rc-desc">Les nouvelles pannes sont invisibles. Le superviseur doit les attribuer manuellement à son équipe.</p>
+            </div>
+        </label>
+
+        <hr style="border:0; border-top:1px dashed var(--card-border); margin:30px 0;">
+
+        <h5 style="font-size: 15px; font-weight: 700; color: var(--text-main); margin-bottom: 10px;">
+          <i class="fas fa-desktop" style="color:var(--accent); margin-right:6px;"></i> Périmètre de Déclaration (Agents)
+        </h5>
+        <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 20px;">Quand un agent normal veut signaler une panne, quelles machines peut-il voir dans sa liste ?</p>
+        
+        <label class="radio-card {% if params.perimetre_declaration == 'LIBRE' %}active{% endif %}">
+            <input type="radio" name="perimetre_declaration" value="LIBRE" {% if params.perimetre_declaration == 'LIBRE' %}checked{% endif %} onchange="updateRadioUI(this)">
+            <div class="rc-icon"><i class="fas fa-hospital"></i></div>
+            <div class="rc-content">
+                <div class="rc-title">1. Libre (Tout le parc)</div>
+                <p class="rc-desc">L'utilisateur peut chercher et déclarer une panne sur n'importe quelle machine de l'établissement.</p>
+            </div>
+        </label>
+
+        <label class="radio-card {% if params.perimetre_declaration == 'SERVICE' %}active{% endif %}">
+            <input type="radio" name="perimetre_declaration" value="SERVICE" {% if params.perimetre_declaration == 'SERVICE' %}checked{% endif %} onchange="updateRadioUI(this)">
+            <div class="rc-icon"><i class="fas fa-users"></i></div>
+            <div class="rc-content">
+                <div class="rc-title">2. Limité au Service (Recommandé)</div>
+                <p class="rc-desc">L'utilisateur ne voit QUE les machines affectées à son propre service de travail.</p>
+            </div>
+        </label>
+
+        <label class="radio-card {% if params.perimetre_declaration == 'BUREAU' %}active{% endif %}">
+            <input type="radio" name="perimetre_declaration" value="BUREAU" {% if params.perimetre_declaration == 'BUREAU' %}checked{% endif %} onchange="updateRadioUI(this)">
+            <div class="rc-icon"><i class="fas fa-door-open"></i></div>
+            <div class="rc-content">
+                <div class="rc-title">3. Limité au Bureau (Le plus strict)</div>
+                <p class="rc-desc">L'utilisateur ne voit QUE les machines physiquement présentes dans le bureau qui lui est assigné.</p>
+            </div>
+        </label>
+
+        <button type="submit" class="btn-add" style="margin-top: 15px; width: 100%; justify-content: center; padding: 12px; font-size: 15px;">
+          <i class="fas fa-save"></i> Enregistrer la configuration globale
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="pm-panel" id="tab-equipe">
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-users-cog" style="color:var(--accent);"></i> Équipe Technique & Chefs de Service</h6>
+      <div class="search-magic">
+          <i class="fas fa-search"></i>
+          <input type="text" class="live-search" data-target="tbody-equipe" placeholder="Rechercher un technicien...">
+      </div>
+    </div>
+    <div class="cs-body">
+      <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 15px;">Attribuez des domaines de patrimoine et promouvez les chefs de service. Seuls les chefs peuvent dispatcher les pannes en mode Dispatch.</p>
+      <table class="cs-table">
+        <thead><tr><th>Technicien / Utilisateur</th><th>Domaines d'intervention</th><th style="text-align:center;">Rôle</th><th style="text-align:right;">Actions</th></tr></thead>
+        <tbody id="tbody-equipe">
+          {% for u in utilisateurs %}
+          <tr>
+            <td>
+                <div style="font-weight:700;">{{ u.get_full_name|default:u.username }}</div>
+                <div style="font-size:11px;color:var(--text-secondary);">{{ u.profil.fonction|default:"Fonction non définie" }}</div>
+                <div style="font-size:11px;color:var(--text-secondary);"><i class="fas fa-building"></i> {{ u.profil.service.nom|default:"Aucun service" }}</div>
+            </td>
+            <td>
+                {% for dom in u.profil.domaines_intervention.all %}
+                    <span class="cat-badge" style="background:{{ dom.couleur }}22; color:{{ dom.couleur }};">
+                        <i class="{{ dom.icone }}" style="margin-right:3px;"></i> {{ dom.nom }}
+                    </span>
+                {% empty %}
+                    <span style="color:var(--text-secondary);font-size:11px;font-style:italic;">Aucun domaine assigné</span>
+                {% endfor %}
+            </td>
+            <td style="text-align:center;">
+                {% if u.profil.est_chef_service %}
+                    <span style="background:#fff3cd; color:#856404; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:700;">
+                        <i class="fas fa-crown"></i> Chef de service
+                    </span>
+                {% else %}
+                    <span style="color:var(--text-secondary); font-size:11px;">—</span>
+                {% endif %}
+            </td>
+            <td style="text-align:right;">
+              <form method="POST" style="display:inline;">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="toggle_chef">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <button type="submit" class="btn-edit" style="{% if u.profil.est_chef_service %}background:#fff3cd;color:#856404;{% endif %}" title="Promouvoir / Rétrograder chef de service">
+                    <i class="fas fa-crown"></i> {% if u.profil.est_chef_service %}Retirer chef{% else %}Promouvoir chef{% endif %}
+                </button>
+              </form>
+              <button class="btn-edit" onclick="ouvrirModalTech({{ u.id }}, '{{ u.get_full_name|default:u.username|escapejs }}', [{% for d in u.profil.domaines_intervention.all %}{{ d.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
+                <i class="fas fa-cogs"></i> Domaines
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="pm-panel" id="tab-contrats">
+    <div class="accordion-item active" id="acc-types-contrat">
+        <div class="accordion-header" onclick="toggleAccordion('acc-types-contrat')">
+            <div><i class="fas fa-file-signature" style="margin-right:8px;"></i> Types de Contrats <span class="acc-count">{{ types_contrat|length }}</span></div>
+            <i class="fas fa-chevron-down accordion-icon"></i>
+        </div>
+        <div class="accordion-body">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+                <div class="search-magic" style="margin:0;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="live-search" data-target="tbody-types-contrats" placeholder="Chercher un type...">
+                </div>
+                <button class="btn-add" style="background:#8b5cf6;" onclick="ouvrirModalTypeContrat()"><i class="fas fa-plus"></i> Ajouter un Type</button>
+            </div>
+            <table class="cs-table">
+                <thead><tr><th>Nom du Type de contrat</th><th>Description</th><th style="text-align:right;">Actions</th></tr></thead>
+                <tbody id="tbody-types-contrats">
+                    {% for tc in types_contrat %}
+                    <tr>
+                        <td style="font-weight:800; color:#4c1d95;">{{ tc.nom }}</td>
+                        <td style="color:var(--text-secondary); font-size:12px;">{{ tc.description|default:"-" }}</td>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <button class="btn-edit" onclick="editerTypeContrat({{ tc.id }}, '{{ tc.nom|escapejs }}', '{{ tc.description|escapejs }}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-del" onclick="confirmerSuppression('delete_type_contrat', '{{ tc.id }}', '{{ tc.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="empty-pm"><td colspan="3">Aucun type de contrat défini.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div id="pag-tbody-types-contrats"></div>
+        </div>
+    </div>
+
+    <div class="accordion-item" id="acc-fournisseurs">
+        <div class="accordion-header" onclick="toggleAccordion('acc-fournisseurs')">
+            <div><i class="fas fa-building" style="margin-right:8px;"></i> Fournisseurs & Prestataires Agréés <span class="acc-count">{{ fournisseurs|length }}</span></div>
+            <i class="fas fa-chevron-down accordion-icon"></i>
+        </div>
+        <div class="accordion-body">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+                <div class="search-magic" style="margin:0;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="live-search" data-target="tbody-fournisseurs" placeholder="Chercher une entreprise...">
+                </div>
+                <button class="btn-add" style="background:#0ea5e9;" onclick="ouvrirModalFournisseur()"><i class="fas fa-plus"></i> Ajouter Prestataire</button>
+            </div>
+            <table class="cs-table">
+                <thead><tr><th>Raison Sociale</th><th>Contacts</th><th style="text-align:right;">Actions</th></tr></thead>
+                <tbody id="tbody-fournisseurs">
+                    {% for f in fournisseurs %}
+                    <tr>
+                        <td style="font-weight:800; color:#0369a1; font-size:14px;">{{ f.raison_sociale }}</td>
+                        <td style="color:var(--text-secondary);"><i class="fas fa-phone"></i> {{ f.telephone|default:"Non renseigné" }}</td>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <button class="btn-edit" onclick="editerFournisseur({{ f.id }}, '{{ f.raison_sociale|escapejs }}', '{{ f.telephone|escapejs }}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-del" onclick="confirmerSuppression('delete_fournisseur', '{{ f.id }}', '{{ f.raison_sociale|escapejs }}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="empty-pm"><td colspan="3">Aucun fournisseur enregistré.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div id="pag-tbody-fournisseurs"></div>
+        </div>
+    </div>
+
+    <div class="accordion-item" id="acc-techs">
+        <div class="accordion-header" onclick="toggleAccordion('acc-techs')">
+            <div><i class="fas fa-hard-hat" style="margin-right:8px;"></i> Répertoire des Techniciens Externes <span class="acc-count">{{ techniciens|length }}</span></div>
+            <i class="fas fa-chevron-down accordion-icon"></i>
+        </div>
+        <div class="accordion-body">
+            <div style="display:flex; justify-content:space-between; margin-bottom:15px; align-items:center;">
+                <div class="search-magic" style="margin:0;">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="live-search" data-target="tbody-techs" placeholder="Chercher un technicien...">
+                </div>
+                <button class="btn-add" style="background:#f59e0b;" onclick="ouvrirModalTechExterne()"><i class="fas fa-plus"></i> Ajouter au répertoire</button>
+            </div>
+            <table class="cs-table">
+                <thead><tr><th>Nom & Spécialité</th><th>Employeur</th><th>Téléphone</th><th style="text-align:right;">Actions</th></tr></thead>
+                <tbody id="tbody-techs">
+                    {% for t in techniciens %}
+                    <tr>
+                        <td>
+                            <strong style="color:#b45309; font-size:14px;">{{ t.nom }}</strong>
+                            {% if t.specialite %}<span style="background:#fef3c7; color:#b45309; padding:2px 8px; border-radius:4px; font-size:10px; margin-left:8px;"><i class="fas fa-wrench"></i> {{ t.specialite }}</span>{% endif %}
+                        </td>
+                        <td style="font-weight:700; color:var(--text-main);"><i class="fas fa-building" style="color:var(--text-secondary); margin-right:5px;"></i> {{ t.fournisseur.raison_sociale }}</td>
+                        <td style="color:var(--text-secondary);"><i class="fas fa-phone"></i> {{ t.telephone }}</td>
+                        <td style="text-align:right; white-space:nowrap;">
+                            <button class="btn-edit" onclick="editerTechExterne({{ t.id }}, {{ t.fournisseur.id }}, '{{ t.nom|escapejs }}', '{{ t.telephone|escapejs }}', '{{ t.specialite|escapejs }}')"><i class="fas fa-edit"></i></button>
+                            <button class="btn-del" onclick="confirmerSuppression('delete_tech_externe', '{{ t.id }}', '{{ t.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr class="empty-pm"><td colspan="4">Aucun technicien enregistré.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <div id="pag-tbody-techs"></div>
+        </div>
+    </div>
+</div>
+
+<div class="mo" id="mo-tech" onclick="if(event.target===this)fermer('mo-tech')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh"><h5 id="mo-tech-titre"><i class="fas fa-user-cog me-2"></i> Compétences</h5>
+      <button class="mc" onclick="fermer('mo-tech')"><i class="fas fa-times"></i></button></div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="save_technicien">
+      <input type="hidden" name="user_id" id="tech-user-id">
+      <div class="mbody">
+        <p style="font-size:13px; margin-bottom:15px; color:var(--text-secondary);">Cochez les domaines que gère : <strong id="tech-nom-user" style="color:var(--text-main);"></strong></p>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+            {% for cat in categories %}
+            <label style="display:flex; align-items:center; gap:8px; padding:10px; background:var(--head-bg); border:1px solid var(--input-border); border-radius:8px; cursor:pointer; color:var(--text-main);">
+                <input type="checkbox" name="categories" value="{{ cat.id }}" class="tech-cat-checkbox" style="accent-color:var(--accent); width:16px; height:16px;">
+                <span style="font-size:13px; font-weight:600;"><i class="{{ cat.icone }}" style="color:{{ cat.couleur }}; width:16px; text-align:center; margin-right:4px;"></i> {{ cat.nom }}</span>
+            </label>
+            {% endfor %}
+        </div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-tech')">Annuler</button>
+        <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-etage" onclick="if(event.target===this)fermer('mo-etage')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh">
+      <h5><i class="fas fa-layer-group me-2"></i> Étage — <span id="titre-batiment-etage" style="color:#ffdf7e;"></span></h5>
+      <button class="mc" onclick="fermer('mo-etage')"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="save_etage">
+      <input type="hidden" name="item_id" id="etage-id">
+      <input type="hidden" name="batiment_id" id="etage-bat-id">
+      <input type="hidden" name="nom" id="vrai_nom_etage">
+      <div class="mbody">
+        <label style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-secondary); display: block; margin-bottom: 8px;">Nom de l'étage *</label>
+        <div id="zone-select-etage" style="display: flex; gap: 10px;">
+            <select id="select-nom-etage" class="form-control" style="flex: 1;" onchange="majVraiNomEtage()">
+                <option value="">-- Choisir un étage courant --</option>
+                <option value="RDC">RDC</option>
+                <option value="1ER ÉTAGE">1ER ÉTAGE</option>
+                <option value="2ÈME ÉTAGE">2ÈME ÉTAGE</option>
+                <option value="3ÈME ÉTAGE">3ÈME ÉTAGE</option>
+                <option value="4ÈME ÉTAGE">4ÈME ÉTAGE</option>
+                <option value="SOUS-SOL">SOUS-SOL</option>
+            </select>
+            <button type="button" onclick="basculerSaisieEtage()" title="Créer un nouveau nom d'étage" style="background: #28a745; color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer;">
+                <i class="fas fa-plus"></i>
+            </button>
+        </div>
+        <div id="zone-saisie-etage" style="display: none; gap: 10px;">
+            <input type="text" id="input-nom-etage" class="form-control" style="flex: 1;" placeholder="Ex: TOIT TERRASSE..." onkeyup="majVraiNomEtage()">
+            <button type="button" onclick="basculerSelectEtage()" title="Retour à la liste" style="background: #6c757d; color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer;">
+                <i class="fas fa-list"></i>
+            </button>
+        </div>
+        <div class="fg" style="margin-top: 15px; padding: 15px; background: #e8f5e9; border: 1px solid #c3e6cb; border-radius: 8px;">
+            <label style="color: #155724;"><i class="fas fa-magic"></i> Affectation en masse (Optionnel)</label>
+            <select name="services" id="etage-services" class="select2-init" multiple="multiple" style="width:100%;">
+                {% for s in services %}
+                    <option value="{{ s.id }}">{{ s.nom }}</option>
+                {% endfor %}
+            </select>
+            <small style="color:#155724; font-size:10px; display:block; margin-top:5px;">
+                Appliquera automatiquement ces services à <b>TOUS</b> les bureaux de cet étage.
+            </small>
+        </div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-etage')">Annuler</button>
+        <button type="submit" class="btn-ok" onclick="return validerEtage()"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-bureau" onclick="if(event.target===this)fermer('mo-bureau')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh"><h5 id="mo-bureau-titre"><i class="fas fa-door-open me-2"></i> Bureau</h5>
+      <button class="mc" onclick="fermer('mo-bureau')"><i class="fas fa-times"></i></button></div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="save_bureau">
+      <input type="hidden" name="item_id" id="bureau-id">
+      <input type="hidden" name="etage_id" id="bureau-etage-id">
+      <div class="mbody">
+        <div class="fg">
+            <label>Nom / Numéro du bureau *</label>
+            <input type="text" name="nom" id="bureau-nom" placeholder="Ex: Bureau 102, Salle de réunion..." required style="text-transform:uppercase;">
+        </div>
+        <div class="fg">
+            <label>Services occupant ce bureau</label>
+            <select name="services" id="bureau-services" class="select2-init" multiple="multiple" style="width:100%;">
+                {% for s in services %}
+                    <option value="{{ s.id }}">{{ s.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-bureau')">Annuler</button>
+        <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-affectation" onclick="if(event.target===this)fermer('mo-affectation')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh"><h5 id="mo-affectation-titre"><i class="fas fa-map-marker-alt me-2"></i> Assigner Bureau</h5>
+      <button class="mc" onclick="fermer('mo-affectation')"><i class="fas fa-times"></i></button></div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="assigner_bureau">
+      <input type="hidden" name="user_id" id="affectation-user-id">
+      <div class="mbody">
+        <p style="font-size:13px; margin-bottom:15px; color:var(--text-secondary);">Sélectionnez le bureau physique de : <strong id="affectation-nom-user" style="color:var(--text-main);"></strong></p>
+        <div class="fg">
+            <select name="bureau_id" id="affectation-bureau-id" class="form-control" style="width:100%;">
+                <option value="">-- Retirer du bureau actuel --</option>
+                {% for b in batiments %}
+                    <optgroup label="🏢 {{ b.nom }}">
+                        {% for e in b.etages.all %}
+                            {% for bur in e.bureaux.all %}
+                                <option value="{{ bur.id }}">↳ {{ e.nom }} - {{ bur.nom }}</option>
+                            {% endfor %}
+                        {% endfor %}
+                    </optgroup>
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-affectation')">Annuler</button>
+        <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-cat" onclick="if(event.target===this)fermer('mo-cat')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh"><h5 id="mo-cat-titre"><i class="fas fa-layer-group me-2"></i> Catégorie</h5>
+      <button class="mc" onclick="fermer('mo-cat')"><i class="fas fa-times"></i></button></div>
+    <form method="POST" id="form-cat">{% csrf_token %}
+      <input type="hidden" name="action" id="cat-action" value="save_categorie">
+      <input type="hidden" name="item_id" id="cat-id">
+      <div class="mbody">
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;">
+          <div class="fg"><label>Code *</label><input type="text" name="code" id="cat-code" placeholder="INFO" required style="text-transform:uppercase;"></div>
+          <div class="fg"><label>Nom *</label><input type="text" name="nom" id="cat-nom" placeholder="Informatique" required></div>
+        </div>
+        <div class="fg">
+          <label>Icône FontAwesome</label>
+          <input type="text" name="icone" id="cat-icone" placeholder="fas fa-desktop" value="fas fa-box">
+          <small style="color:var(--text-secondary);font-size:11px;">Exemples: fas fa-desktop, fas fa-snowflake, fas fa-camera, fas fa-tools</small>
+        </div>
+        <div class="fg">
+          <label>Couleur</label>
+          <div class="color-row">
+            <input type="color" id="cat-color-picker" value="#1c5b96" onchange="document.getElementById('cat-couleur').value=this.value">
+            <input type="text" name="couleur" id="cat-couleur" value="#1c5b96" placeholder="#1c5b96" onchange="try{document.getElementById('cat-color-picker').value=this.value}catch(e){}">
+          </div>
+        </div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-cat')">Annuler</button>
+        <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-type" onclick="if(event.target===this)fermer('mo-type')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh"><h5 id="mo-type-titre"><i class="fas fa-boxes me-2"></i> Type d'équipement</h5>
+      <button class="mc" onclick="fermer('mo-type')"><i class="fas fa-times"></i></button></div>
+    <form method="POST" id="form-type">{% csrf_token %}
+      <input type="hidden" name="action" value="save_type">
+      <input type="hidden" name="item_id" id="type-id">
+      <div class="mbody">
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;">
+          <div class="fg"><label>Code *</label><input type="text" name="code" id="type-code" placeholder="UC" required style="text-transform:uppercase;"></div>
+          <div class="fg"><label>Nom *</label><input type="text" name="nom" id="type-nom" placeholder="Unité Centrale (PC)" required></div>
+        </div>
+        <div class="fg">
+          <label>Catégorie *</label>
+          <select name="categorie" id="type-cat" class="form-control" required>
+            <option value="">-- Choisir --</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}">{{ cat.nom }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="fg">
+            <label>Durée amortissement (ans)</label>
+            <input type="number" name="duree" id="type-duree" value="5" min="1" max="50">
+          </div>
+          <div class="fg">
+            <label>Mode amortissement</label>
+            <select name="mode" id="type-mode" class="form-control">
+              <option value="LINEAIRE">Linéaire</option>
+              <option value="DEGRESSIF">Dégressif</option>
+            </select>
+          </div>
+        </div>
+        <div style="background:var(--accent-light);border-radius:7px;padding:10px 14px;font-size:12px;color:var(--accent);">
+          <i class="fas fa-info-circle" style="margin-right:6px;"></i>
+          Les <strong>specs techniques</strong> (CPU, RAM, BTU…) se configurent après la création, via le bouton <strong>"Specs"</strong>.
+        </div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-type')">Annuler</button>
+        <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-bat" onclick="if(event.target===this)fermer('mo-bat')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh"><h5><i class="fas fa-building me-2"></i> Bâtiment</h5>
+      <button class="mc" onclick="fermer('mo-bat')"><i class="fas fa-times"></i></button></div>
+    <form method="POST" id="form-bat">{% csrf_token %}
+      <input type="hidden" name="action" value="save_batiment">
+      <input type="hidden" name="item_id" id="bat-id">
+      <div class="mbody">
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;">
+          <div class="fg"><label>Code (Vide = Auto)</label><input type="text" name="code" id="bat-code" placeholder="A, B, N, F…" style="text-transform:uppercase;"></div>
+          <div class="fg"><label>Nom *</label><input type="text" name="nom" id="bat-nom" placeholder="Bloc Administratif" required></div>
+        </div>
+        <div class="fg" style="margin-top: 15px; padding: 15px; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px;">
+            <label style="color: #856404;"><i class="fas fa-magic"></i> Affectation en masse (Optionnel)</label>
+            <select name="services" id="bat-services" class="select2-init" multiple="multiple" style="width:100%;">
+                {% for s in services %}
+                    <option value="{{ s.id }}">{{ s.nom }}</option>
+                {% endfor %}
+            </select>
+            <small style="color:#856404; font-size:10px; display:block; margin-top:5px;">
+                <b>Attention :</b> Si vous sélectionnez des services ici, ils seront appliqués à <b>TOUS</b> les bureaux existants de ce bâtiment.
+            </small>
+        </div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-bat')">Annuler</button>
+        <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-marque" onclick="if(event.target===this)fermer('mo-marque')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh"><h5><i class="fas fa-trademark me-2"></i> Marque</h5>
+      <button class="mc" onclick="fermer('mo-marque')"><i class="fas fa-times"></i></button></div>
+    <form method="POST" id="form-marque">{% csrf_token %}
+      <input type="hidden" name="action" value="save_marque">
+      <input type="hidden" name="item_id" id="marque-id">
+      <div class="mbody">
+        <div class="fg"><label>Nom de la marque *</label>
+          <input type="text" name="nom" id="marque-nom" placeholder="HP, CANON, DAIKIN…" required style="text-transform:uppercase;"></div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-marque')">Annuler</button>
+        <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-schema" onclick="if(event.target===this)fermerSchema()">
+  <div class="mb wide" onclick="event.stopPropagation()">
+    <div class="mh"><h5 id="mo-schema-titre"><i class="fas fa-microchip me-2"></i> Specs techniques</h5>
+      <button class="mc" onclick="fermerSchema()"><i class="fas fa-times"></i></button></div>
+    <form method="POST" id="form-schema" action="{% url 'patrimoine_editer_schema' 0 %}" onsubmit="soumettreSchema(event)">
+      {% csrf_token %}
+      <div class="mbody">
+        <div style="background:var(--head-bg);border-radius:7px;padding:10px 14px;font-size:12px;color:var(--text-secondary);margin-bottom:14px;">
+          <i class="fas fa-grip-lines" style="margin-right:6px;color:var(--text-secondary);"></i>
+          Glissez les lignes pour réordonner. Chaque champ sera une colonne dans le formulaire et le template Excel.
+        </div>
+        <div id="schema-list"></div>
+        <button type="button" class="btn-add-spec" onclick="ajouterChamp()">
+          <i class="fas fa-plus" style="margin-right:5px;"></i> Ajouter un champ technique
+        </button>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermerSchema()">Annuler</button>
+        <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer les specs</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<form method="POST" id="form-suppr" style="display:none;">
+  {% csrf_token %}
+  <input type="hidden" name="action" id="suppr-action">
+  <input type="hidden" name="item_id" id="suppr-id">
+</form>
+
+<div class="mo" id="mo-type-contrat" onclick="if(event.target===this)fermer('mo-type-contrat')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);">
+      <h5 id="mo-tc-titre"><i class="fas fa-file-signature me-2"></i> Type de Contrat</h5>
+      <button class="mc" onclick="fermer('mo-type-contrat')"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="save_type_contrat">
+      <input type="hidden" name="item_id" id="tc-id">
+      <div class="mbody">
+        <div class="fg"><label>Nom du type *</label><input type="text" name="nom" id="tc-nom" placeholder="Ex: Pièces & Main d'œuvre" required></div>
+        <div class="fg"><label>Description</label><input type="text" name="description" id="tc-desc" placeholder="Optionnel"></div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-type-contrat')">Annuler</button>
+        <button type="submit" class="btn-ok" style="background:#8b5cf6;"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-fournisseur" onclick="if(event.target===this)fermer('mo-fournisseur')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh" style="background: linear-gradient(135deg, #0ea5e9, #0369a1);">
+      <h5 id="mo-fourn-titre"><i class="fas fa-building me-2"></i> Prestataire / Fournisseur</h5>
+      <button class="mc" onclick="fermer('mo-fournisseur')"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="save_fournisseur">
+      <input type="hidden" name="item_id" id="fourn-id">
+      <div class="mbody">
+        <div class="fg"><label>Raison Sociale *</label><input type="text" name="raison_sociale" id="fourn-nom" placeholder="Ex: CFAO Technology" required></div>
+        <div class="fg"><label>Téléphone</label><input type="text" name="telephone" id="fourn-tel" placeholder="Ex: 0102030405"></div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-fournisseur')">Annuler</button>
+        <button type="submit" class="btn-ok" style="background:#0ea5e9;"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-tech-externe" onclick="if(event.target===this)fermer('mo-tech-externe')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+      <h5 id="mo-tech-ext-titre"><i class="fas fa-hard-hat me-2"></i> Technicien Externe</h5>
+      <button class="mc" onclick="fermer('mo-tech-externe')"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="save_tech_externe">
+      <input type="hidden" name="item_id" id="tech-ext-id">
+      <div class="mbody">
+        <div class="fg">
+            <label>Employeur (Prestataire) *</label>
+            <select name="fournisseur_id" id="tech-ext-fourn" class="form-control" required>
+                <option value="">-- Choisir un prestataire --</option>
+                {% for f in fournisseurs %}
+                <option value="{{ f.id }}">{{ f.raison_sociale }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="fg"><label>Nom complet *</label><input type="text" name="nom" id="tech-ext-nom" required></div>
+        <div class="fg"><label>Téléphone</label><input type="text" name="telephone" id="tech-ext-tel" required></div>
+        <div class="fg">
+            <label>Spécialité (Domaine d'intervention)</label>
+            <select name="specialite" id="tech-ext-spe" class="form-control select2-init" style="width:100%;">
+                <option value="">-- Aucune / Polyvalent --</option>
+                {% for cat in categories %}
+                <option value="{{ cat.nom }}">{{ cat.nom }}</option>
+                {% endfor %}
+            </select>
+        </div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-tech-externe')">Annuler</button>
+        <button type="submit" class="btn-ok" style="background:#f59e0b;"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+
+function toggleValidateurs() {
+    let chk = document.getElementById('chk-val-inv');
+    let div = document.getElementById('div-validateurs');
+    div.style.display = chk.checked ? 'block' : 'none';
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    
+    let activeTab = localStorage.getItem('activePatrimoineTab');
+    if (activeTab && document.getElementById(activeTab)) {
+        let alreadyActive = document.querySelector('.pm-panel.active');
+        if (!alreadyActive || alreadyActive.id !== activeTab) {
+            showTab(activeTab);
+        }
+    } else {
+        showTab('tab-categories');
+    }
+
+    document.querySelectorAll('.accordion-item').forEach(acc => {
+        let etat = localStorage.getItem('acc_open_' + acc.id);
+        if (etat === 'true') {
+            acc.classList.add('active');
+        } else if (etat === 'false') {
+            acc.classList.remove('active');
+        }
+    });
+
+    document.querySelectorAll('[id^="bat-detail-"]').forEach(function(el) {
+        let id = el.id.replace('bat-detail-', '');
+        if (localStorage.getItem('bat_open_' + id) === 'true') {
+            el.style.display = 'block';
+        }
+    });
+
+    const ELEMENTS_PAR_PAGE = 8;
+
+    function majPagination(targetId) {
+        let container = document.getElementById(targetId);
+        if (!container) return;
+        
+        let items = container.tagName === 'TBODY' 
+            ? Array.from(container.querySelectorAll('tr:not(.empty-pm)')) 
+            : Array.from(container.querySelectorAll('.batiment-item'));
+            
+        let itemsVisibles = items.filter(item => !item.classList.contains('search-hidden'));
+        
+        let totalPages = Math.ceil(itemsVisibles.length / ELEMENTS_PAR_PAGE);
+        let currentPage = parseInt(container.getAttribute('data-current-page') || 1);
+        if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
+        container.setAttribute('data-current-page', currentPage);
+        
+        itemsVisibles.forEach((item, index) => {
+            let start = (currentPage - 1) * ELEMENTS_PAR_PAGE;
+            let end = start + ELEMENTS_PAR_PAGE;
+            item.style.display = (index >= start && index < end) ? '' : 'none';
+        });
+        
+        let pagWrapper = document.getElementById('pag-' + targetId);
+        if (!pagWrapper) {
+            pagWrapper = document.createElement('div');
+            pagWrapper.id = 'pag-' + targetId;
+            pagWrapper.className = 'pagination-container';
+            let parentBody = container.closest('.cs-body') || container.closest('.accordion-body');
+            if (parentBody) parentBody.appendChild(pagWrapper);
+        }
+        
+        if (totalPages <= 1) {
+            pagWrapper.style.display = 'none';
+        } else {
+            pagWrapper.style.display = 'flex';
+            let debut = (currentPage - 1) * ELEMENTS_PAR_PAGE + 1;
+            let fin = Math.min(itemsVisibles.length, currentPage * ELEMENTS_PAR_PAGE);
+            let html = `<div class="pagination-info">Affichage ${debut} à ${fin} sur ${itemsVisibles.length}</div>`;
+            html += `<div class="pagination-buttons">
+                <button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="changerPage('${targetId}', ${currentPage - 1})"><i class="fas fa-chevron-left"></i></button>`;
+            
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
+                    html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changerPage('${targetId}', ${i})">${i}</button>`;
+                } else if (i === currentPage - 2 || i === currentPage + 2) {
+                    if (!html.endsWith('...</span>')) {
+                        html += `<span style="padding: 5px 2px; color: var(--text-secondary); font-size:10px;">...</span>`;
+                    }
+                }
+            }
+            html += `<button class="page-btn" ${currentPage === totalPages ? 'disabled' : ''} onclick="changerPage('${targetId}', ${currentPage + 1})"><i class="fas fa-chevron-right"></i></button></div>`;
+            pagWrapper.innerHTML = html;
+        }
+    }
+
+    window.changerPage = function(targetId, page) {
+        let container = document.getElementById(targetId);
+        if(container) {
+            container.setAttribute('data-current-page', page);
+            majPagination(targetId);
+        }
+    };
+
+    document.querySelectorAll('.live-search').forEach(input => {
+        input.addEventListener('keyup', function() {
+            let filtre = this.value.toLowerCase().trim();
+            let targetId = this.getAttribute('data-target');
+            let targetContainer = document.getElementById(targetId);
+            if (!targetContainer) return;
+
+            let items = targetContainer.tagName === 'TBODY' 
+                ? targetContainer.querySelectorAll('tr:not(.empty-pm)') 
+                : targetContainer.querySelectorAll('.batiment-item');
+                
+            items.forEach(item => {
+                let texteItem = item.textContent.toLowerCase();
+                if (texteItem.includes(filtre)) {
+                    item.classList.remove('search-hidden'); 
+                    if (targetId === 'liste-batiments' && filtre.length > 2) {
+                        let contenuBat = item.querySelector('[id^="bat-detail-"]');
+                        if (contenuBat) contenuBat.style.display = 'block';
+                    }
+                } else {
+                    item.classList.add('search-hidden'); 
+                }
+            });
+            
+            targetContainer.setAttribute('data-current-page', 1);
+            majPagination(targetId);
+        });
+    });
+
+    [
+        'tbody-categories', 'tbody-types', 'liste-batiments', 'tbody-affectations', 
+        'tbody-marques', 'tbody-equipe', 
+        'tbody-types-contrats', 'tbody-fournisseurs', 'tbody-techs'
+    ].forEach(id => majPagination(id));
+
+    if (typeof $ !== 'undefined') {
+        $('.select2-init').select2({ width: '100%' });
+    }
+
+});
+
+function toggleBatiment(id) {
+    let el = document.getElementById('bat-detail-' + id);
+    if (el.style.display === 'none' || el.style.display === '') {
+        el.style.display = 'block';
+        localStorage.setItem('bat_open_' + id, 'true');
+    } else {
+        el.style.display = 'none';
+        localStorage.removeItem('bat_open_' + id);
+    }
+}
+
+function showTab(id) {
+    document.querySelectorAll('.pm-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.pm-tab').forEach(t => t.classList.remove('active'));
+    
+    let panel = document.getElementById(id);
+    if (panel) panel.classList.add('active');
+    
+    let btn = document.querySelector(`button[data-target="${id}"]`) || document.querySelector(`button[onclick*="${id}"]`);
+    if (btn) btn.classList.add('active');
+    
+    localStorage.setItem('activePatrimoineTab', id);
+}
+
+function fermer(id) {
+    let el = document.getElementById(id);
+    if(el) el.classList.remove('open');
+}
+
+document.addEventListener('keydown', function(e) {
+    if(e.key === 'Escape') {
+        document.querySelectorAll('.mo.open').forEach(function(m) {
+            m.classList.remove('open');
+        });
+    }
+});
+
+function confirmerSuppression(action, id, nom) {
+  Swal.fire({
+    title: 'Supprimer "' + nom + '" ?',
+    text: 'Cette action est irréversible.',
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#dc3545',
+    cancelButtonColor: '#6c757d',
+    confirmButtonText: '<i class="fas fa-trash"></i> Supprimer',
+    cancelButtonText: 'Annuler'
+  }).then(function(r) {
+    if (r.isConfirmed) {
+      document.getElementById('suppr-action').value = action;
+      document.getElementById('suppr-id').value = id;
+      document.getElementById('form-suppr').submit();
+    }
+  });
+}
+
+function ouvrirModalCategorie() {
+  document.getElementById('cat-id').value = '';
+  document.getElementById('cat-code').value = '';
+  document.getElementById('cat-nom').value = '';
+  document.getElementById('cat-icone').value = 'fas fa-box';
+  document.getElementById('cat-couleur').value = '#1c5b96';
+  document.getElementById('cat-color-picker').value = '#1c5b96';
+  document.getElementById('mo-cat-titre').innerHTML = '<i class="fas fa-plus me-2"></i> Nouvelle catégorie';
+  document.getElementById('mo-cat').classList.add('open');
+}
+function editerCategorie(id, code, nom, icone, couleur) {
+  document.getElementById('cat-id').value = id;
+  document.getElementById('cat-code').value = code;
+  document.getElementById('cat-nom').value = nom;
+  document.getElementById('cat-icone').value = icone;
+  document.getElementById('cat-couleur').value = couleur;
+  try { document.getElementById('cat-color-picker').value = couleur; } catch(e) {}
+  document.getElementById('mo-cat-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier la catégorie';
+  document.getElementById('mo-cat').classList.add('open');
+}
+
+function ouvrirModalType() {
+  document.getElementById('type-id').value = '';
+  document.getElementById('type-code').value = '';
+  document.getElementById('type-nom').value = '';
+  document.getElementById('type-cat').value = '';
+  document.getElementById('type-duree').value = '5';
+  document.getElementById('type-mode').value = 'LINEAIRE';
+  document.getElementById('mo-type-titre').innerHTML = '<i class="fas fa-plus me-2"></i> Nouveau type';
+  document.getElementById('mo-type').classList.add('open');
+}
+function editerType(id, code, nom, catId, duree, mode) {
+  document.getElementById('type-id').value = id;
+  document.getElementById('type-code').value = code;
+  document.getElementById('type-nom').value = nom;
+  document.getElementById('type-cat').value = catId;
+  document.getElementById('type-duree').value = duree;
+  document.getElementById('type-mode').value = mode;
+  document.getElementById('mo-type-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier le type';
+  document.getElementById('mo-type').classList.add('open');
+}
+
+function ouvrirModalBatiment() {
+  document.getElementById('bat-id').value = '';
+  document.getElementById('bat-code').value = '';
+  document.getElementById('bat-nom').value = '';
+  if (typeof $ !== 'undefined') { $('#bat-services').val(null).trigger('change'); }
+  document.getElementById('mo-bat').classList.add('open');
+}
+function editerBatiment(id, code, nom, servicesIds) {
+  document.getElementById('bat-id').value = id;
+  document.getElementById('bat-code').value = code;
+  document.getElementById('bat-nom').value = nom;
+  if (typeof $ !== 'undefined') { $('#bat-services').val(servicesIds).trigger('change'); }
+  document.getElementById('mo-bat').classList.add('open');
+}
+
+function ouvrirModalEtage(batimentId, batimentNom) {
+    document.getElementById('etage-id').value = '';
+    document.getElementById('etage-bat-id').value = batimentId;
+    document.getElementById('titre-batiment-etage').innerText = batimentNom;
+    if (typeof $ !== 'undefined') { $('#etage-services').val(null).trigger('change'); }
+    basculerSelectEtage(); 
+    document.getElementById('mo-etage').classList.add('open');
+}
+function editerEtage(id, nom, batimentId, batimentNom, servicesIds) {
+    document.getElementById('etage-id').value = id;
+    document.getElementById('etage-bat-id').value = batimentId;
+    document.getElementById('titre-batiment-etage').innerText = batimentNom;
+    if (typeof $ !== 'undefined') { $('#etage-services').val(servicesIds).trigger('change'); }
+    let select = document.getElementById('select-nom-etage');
+    let options = Array.from(select.options).map(o => o.value);
+    if (options.includes(nom)) {
+        basculerSelectEtage();
+        select.value = nom;
+    } else {
+        basculerSaisieEtage();
+        document.getElementById('input-nom-etage').value = nom;
+    }
+    majVraiNomEtage();
+    document.getElementById('mo-etage').classList.add('open');
+}
+
+function basculerSaisieEtage() {
+    document.getElementById('zone-select-etage').style.display = 'none';
+    document.getElementById('zone-saisie-etage').style.display = 'flex';
+    document.getElementById('select-nom-etage').value = '';
+    majVraiNomEtage();
+}
+function basculerSelectEtage() {
+    document.getElementById('zone-saisie-etage').style.display = 'none';
+    document.getElementById('zone-select-etage').style.display = 'flex';
+    document.getElementById('input-nom-etage').value = '';
+    majVraiNomEtage();
+}
+function majVraiNomEtage() {
+    if (document.getElementById('zone-saisie-etage').style.display === 'flex') {
+        document.getElementById('vrai_nom_etage').value = document.getElementById('input-nom-etage').value.toUpperCase();
+    } else {
+        document.getElementById('vrai_nom_etage').value = document.getElementById('select-nom-etage').value;
+    }
+}
+function validerEtage() {
+    majVraiNomEtage(); 
+    let nom = document.getElementById('vrai_nom_etage').value.trim();
+    if (!nom) {
+        Swal.fire('', 'Veuillez choisir ou taper un nom d\'étage.', 'warning');
+        return false;
+    }
+    return true;
+}
+
+function ouvrirModalBureau(etageId) {
+    document.getElementById('bureau-id').value = '';
+    document.getElementById('bureau-etage-id').value = etageId;
+    document.getElementById('bureau-nom').value = '';
+    if (typeof $ !== 'undefined' && $('#bureau-services').length) {
+        $('#bureau-services').val(null).trigger('change');
+    }
+    document.getElementById('mo-bureau-titre').innerHTML = '<i class="fas fa-plus me-2"></i> Ajouter un Bureau';
+    document.getElementById('mo-bureau').classList.add('open');
+}
+function editerBureau(id, nom, etageId, servicesIds) {
+    document.getElementById('bureau-id').value = id;
+    document.getElementById('bureau-etage-id').value = etageId;
+    document.getElementById('bureau-nom').value = nom;
+    if (typeof $ !== 'undefined' && $('#bureau-services').length) {
+        $('#bureau-services').val(servicesIds).trigger('change');
+    }
+    document.getElementById('mo-bureau-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier le Bureau';
+    document.getElementById('mo-bureau').classList.add('open');
+}
+
+function ouvrirModalMarque() {
+  document.getElementById('marque-id').value = '';
+  document.getElementById('marque-nom').value = '';
+  document.getElementById('mo-marque').classList.add('open');
+}
+function editerMarque(id, nom) {
+  document.getElementById('marque-id').value = id;
+  document.getElementById('marque-nom').value = nom;
+  document.getElementById('mo-marque').classList.add('open');
+}
+
+function ouvrirModalAffectation(userId, nomUser, bureauId) {
+    document.getElementById('affectation-user-id').value = userId;
+    document.getElementById('affectation-nom-user').textContent = nomUser;
+    let sel = document.getElementById('affectation-bureau-id');
+    sel.value = bureauId;
+    if (typeof $ !== 'undefined' && $(sel).data('select2')) {
+        $(sel).trigger('change');
+    }
+    document.getElementById('mo-affectation').classList.add('open');
+}
+
+function ouvrirModalTech(userId, nomUser, domainesActuels) {
+    document.getElementById('tech-user-id').value = userId;
+    document.getElementById('tech-nom-user').textContent = nomUser;
+    document.querySelectorAll('.tech-cat-checkbox').forEach(cb => cb.checked = false);
+    domainesActuels.forEach(id => {
+        let cb = document.querySelector(`.tech-cat-checkbox[value="${id}"]`);
+        if(cb) cb.checked = true;
+    });
+    document.getElementById('mo-tech').classList.add('open');
+}
+
+function updateRadioUI(input) {
+    document.querySelectorAll('.radio-card').forEach(card => card.classList.remove('active'));
+    if(input.checked) input.closest('.radio-card').classList.add('active');
+}
+
+function ouvrirModalTypeContrat() {
+    document.getElementById('tc-id').value = '';
+    document.getElementById('tc-nom').value = '';
+    document.getElementById('tc-desc').value = '';
+    document.getElementById('mo-tc-titre').innerHTML = '<i class="fas fa-plus me-2"></i> Nouveau Type de Contrat';
+    document.getElementById('mo-type-contrat').classList.add('open');
+}
+function editerTypeContrat(id, nom, desc) {
+    document.getElementById('tc-id').value = id;
+    document.getElementById('tc-nom').value = nom;
+    document.getElementById('tc-desc').value = desc;
+    document.getElementById('mo-tc-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier le Type';
+    document.getElementById('mo-type-contrat').classList.add('open');
+}
+
+function ouvrirModalFournisseur() {
+    document.getElementById('fourn-id').value = '';
+    document.getElementById('fourn-nom').value = '';
+    document.getElementById('fourn-tel').value = '';
+    document.getElementById('mo-fourn-titre').innerHTML = '<i class="fas fa-plus me-2"></i> Nouveau Prestataire';
+    document.getElementById('mo-fournisseur').classList.add('open');
+}
+function editerFournisseur(id, nom, tel) {
+    document.getElementById('fourn-id').value = id;
+    document.getElementById('fourn-nom').value = nom;
+    document.getElementById('fourn-tel').value = tel;
+    document.getElementById('mo-fourn-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier Prestataire';
+    document.getElementById('mo-fournisseur').classList.add('open');
+}
+
+function ouvrirModalTechExterne() {
+    document.getElementById('tech-ext-id').value = '';
+    document.getElementById('tech-ext-nom').value = '';
+    document.getElementById('tech-ext-tel').value = '';
+    if(typeof $ !== 'undefined') $('#tech-ext-spe').val(null).trigger('change');
+    document.getElementById('mo-tech-ext-titre').innerHTML = '<i class="fas fa-plus me-2"></i> Nouveau Technicien Externe';
+    document.getElementById('mo-tech-externe').classList.add('open');
+}
+function editerTechExterne(id, fournId, nom, tel, spe) {
+    document.getElementById('tech-ext-id').value = id;
+    document.getElementById('tech-ext-fourn').value = fournId;
+    document.getElementById('tech-ext-nom').value = nom;
+    document.getElementById('tech-ext-tel').value = tel;
+    if(typeof $ !== 'undefined') $('#tech-ext-spe').val(spe).trigger('change');
+    document.getElementById('mo-tech-ext-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier Technicien';
+    document.getElementById('mo-tech-externe').classList.add('open');
+}
+
+function toggleAccordion(id) {
+    let item = document.getElementById(id);
+    item.classList.toggle('active');
+    localStorage.setItem('acc_open_' + id, item.classList.contains('active'));
+}
+
+var schemaItems = [];
+var SCHEMA_TYPE_ID = null;
+
+function ouvrirSchema(typeId, typeNom) {
+  SCHEMA_TYPE_ID = typeId;
+  document.getElementById('mo-schema-titre').innerHTML = '<i class="fas fa-microchip me-2"></i> Specs — ' + typeNom;
+  document.getElementById('form-schema').action = '/patrimoine/parametres/type/' + typeId + '/schema/';
+
+  fetch('/patrimoine/ajax/specs-schema/?type=' + typeId)
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      schemaItems = data.schema || [];
+      renderSchema();
+      document.getElementById('mo-schema').classList.add('open');
+    })
+    .catch(function() {
+      schemaItems = [];
+      renderSchema();
+      document.getElementById('mo-schema').classList.add('open');
+    });
+}
+
+function fermerSchema() {
+  document.getElementById('mo-schema').classList.remove('open');
+  SCHEMA_TYPE_ID = null;
+}
+
+function renderSchema() {
+  var list = document.getElementById('schema-list');
+  list.innerHTML = '';
+  
+  schemaItems.forEach(function(item, idx) {
+    var div = document.createElement('div');
+    div.className = 'schema-item';
+    div.style.flexWrap = 'wrap'; 
+    div.draggable = true;
+    div.dataset.idx = idx;
+
+    var isSelect = (item.type === 'select');
+    var displayOptions = isSelect ? 'block' : 'none';
+    var optionsStr = item.options ? item.options.join(', ') : '';
+
+    div.innerHTML =
+      '<div style="display:flex; width:100%; gap:8px; align-items:center;">' +
+          '<span class="drag-handle" title="Glisser pour réordonner">⠿</span>' +
+          '<input type="text" placeholder="Clé (ex: cpu)" value="' + escHtml(item.key||'') + '" onchange="schemaItems['+idx+'].key=this.value">' +
+          '<input type="text" placeholder="Label affiché (ex: Processeur CPU)" value="' + escHtml(item.label||'') + '" style="flex:2;" onchange="schemaItems['+idx+'].label=this.value">' +
+          '<select onchange="schemaItems['+idx+'].type=this.value; renderSchema();">' +
+            '<option value="text"' + (item.type==='text'?' selected':'') + '>Texte</option>' +
+            '<option value="number"' + (item.type==='number'?' selected':'') + '>Nombre</option>' +
+            '<option value="date"' + (item.type==='date'?' selected':'') + '>Date</option>' +
+            '<option value="select"' + (item.type==='select'?' selected':'') + '>Liste de choix</option>' +
+          '</select>' +
+          '<button type="button" class="btn-rm-spec" onclick="retirerChamp('+idx+')"><i class="fas fa-times"></i></button>' +
+      '</div>' +
+      '<div style="width:100%; padding-left:28px; margin-top:5px; display:'+displayOptions+';">' +
+          '<input type="text" class="input-options" placeholder="Saisir les choix séparés par des virgules (ex: Core i3, Core i5, Core i7)" value="'+escHtml(optionsStr)+'" style="width:100%; font-size:11px; background:#e8f0fe; border-color:#c5d8f5; color:#1c5b96;">' +
+      '</div>';
+
+    div.addEventListener('dragstart', function(e){ e.dataTransfer.setData('text', idx); });
+    div.addEventListener('dragover', function(e){ e.preventDefault(); this.style.background='var(--accent-light)'; });
+    div.addEventListener('dragleave', function(){ this.style.background=''; });
+    div.addEventListener('drop', function(e){
+      e.preventDefault();
+      this.style.background='';
+      var from = parseInt(e.dataTransfer.getData('text'));
+      var to   = parseInt(this.dataset.idx);
+      if (from !== to) {
+        var item = schemaItems.splice(from, 1)[0];
+        schemaItems.splice(to, 0, item);
+        renderSchema();
+      }
+    });
+    list.appendChild(div);
+  });
+}
+
+function ajouterChamp() {
+  schemaItems.push({ key: '', label: '', type: 'text', required: false });
+  renderSchema();
+  var inputs = document.querySelectorAll('#schema-list .schema-item input');
+  if (inputs.length) inputs[inputs.length - 2].focus();
+}
+
+function retirerChamp(idx) {
+  schemaItems.splice(idx, 1);
+  renderSchema();
+}
+
+function escHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function soumettreSchema(e) {
+  e.preventDefault();
+  
+  document.querySelectorAll('#schema-list .schema-item').forEach(function(div, idx) {
+    var inputs = div.querySelectorAll('input');
+    var sel    = div.querySelector('select');
+    if (schemaItems[idx]) {
+      schemaItems[idx].key   = inputs[0].value.trim().replace(/\s+/g,'_').toLowerCase();
+      schemaItems[idx].label = inputs[1].value.trim();
+      schemaItems[idx].type  = sel ? sel.value : 'text';
+      if (schemaItems[idx].type === 'select' && inputs[2]) {
+         var optText = inputs[2].value;
+         schemaItems[idx].options = optText.split(',').map(function(s){ return s.trim(); }).filter(Boolean);
+      } else {
+         schemaItems[idx].options = [];
+      }
+    }
+  });
+
+  var valids = schemaItems.filter(function(s){ return s.key && s.label; });
+  if (!valids.length && schemaItems.length) {
+    Swal.fire('','Renseignez au moins une clé et un label par champ.','warning');
+    return;
+  }
+
+  var fd = new FormData();
+  fd.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+  fd.append('specs_schema', JSON.stringify(valids));
+
+  fetch(document.getElementById('form-schema').action, { method: 'POST', body: fd })
+    .then(function(r){ return r.text(); })
+    .then(function() {
+      Swal.fire({ icon:'success', title:'Specs enregistrées !', timer:1500, showConfirmButton:false });
+      fermerSchema();
+      setTimeout(function(){ window.location.reload(); }, 1600);
+    })
+    .catch(function() {
+      Swal.fire('Erreur réseau','','error');
+    });
+}
+</script>
+{% endblock %}

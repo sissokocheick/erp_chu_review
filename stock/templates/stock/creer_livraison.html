@@ -1,0 +1,410 @@
+{% extends "base_ui.html" %}
+{% block contenu %}
+
+<style>
+  .livraison-container {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  }
+  body.dark-mode .livraison-container {
+    background: var(--bg-card);
+    box-shadow: 0 4px 15px var(--shadow);
+  }
+
+  .livraison-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #eee;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  body.dark-mode .livraison-header { border-color: var(--border-light); }
+
+  .livraison-title {
+    color: #1c5b96;
+    margin: 0;
+  }
+  body.dark-mode .livraison-title { color: #5bc0de; }
+
+  .livraison-meta {
+    font-size: 13px;
+    color: #6c757d;
+    margin-top: 4px;
+  }
+  body.dark-mode .livraison-meta { color: var(--text-light); }
+
+  .btn-retour-liv {
+    background: #6c757d;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: .2s;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-retour-liv:hover { background: #5a6268; }
+
+  .kpi-livraison-grid {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .kpi-livraison-card {
+    padding: 12px 18px;
+    border-radius: 6px;
+    flex: 1;
+    min-width: 160px;
+  }
+  .kpi-livraison-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+  .kpi-livraison-value {
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .kpi-total { background: #e3f2fd; }
+  .kpi-total .kpi-livraison-label { color: #1c5b96; }
+  .kpi-total .kpi-livraison-value { color: #1c5b96; }
+  .kpi-livre { background: #e8f5e9; }
+  .kpi-livre .kpi-livraison-label { color: #2e7d32; }
+  .kpi-livre .kpi-livraison-value { color: #2e7d32; }
+  .kpi-reste { background: #fff3e0; }
+  .kpi-reste .kpi-livraison-label { color: #e65100; }
+  .kpi-reste .kpi-livraison-value { color: #e65100; }
+  .kpi-effectuees { background: #f3e5f5; }
+  .kpi-effectuees .kpi-livraison-label { color: #6a1b9a; }
+  .kpi-effectuees .kpi-livraison-value { color: #6a1b9a; }
+
+  body.dark-mode .kpi-total { background: rgba(28,91,150,0.15); }
+  body.dark-mode .kpi-livre { background: rgba(39,174,96,0.15); }
+  body.dark-mode .kpi-reste { background: rgba(253,126,20,0.15); }
+  body.dark-mode .kpi-effectuees { background: rgba(142,68,173,0.15); }
+
+  .livraison-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+  .livraison-table thead tr {
+    background: #343a40;
+    color: white;
+  }
+  .livraison-table th {
+    padding: 12px;
+    text-align: left;
+  }
+  .livraison-table th:first-child { border-top-left-radius: 5px; }
+  .livraison-table th:last-child { border-top-right-radius: 5px; text-align: center; }
+  .livraison-table tbody tr {
+    border-bottom: 1px solid #eee;
+    transition: background .15s;
+  }
+  .livraison-table tbody tr:hover { background: #f8f9fa; }
+  body.dark-mode .livraison-table tbody tr { border-color: var(--border-light); }
+  body.dark-mode .livraison-table tbody tr:hover { background: var(--bg-hover); }
+  .livraison-table td {
+    padding: 12px;
+  }
+  .livraison-table td.center { text-align: center; }
+
+  .article-ref {
+    color: #6c757d;
+    font-size: 12px;
+  }
+  body.dark-mode .article-ref { color: var(--text-light); }
+
+  .qte-livree-input {
+    width: 80px;
+    padding: 6px;
+    border: 2px solid #1c5b96;
+    border-radius: 4px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 15px;
+  }
+  body.dark-mode .qte-livree-input {
+    background: var(--bg-hover);
+    color: var(--text-dark);
+    border-color: #5bc0de;
+  }
+
+  .dispo-ok { background: #e8f5e9; color: #2e7d32; padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+  .dispo-partial { background: #fff3e0; color: #e65100; padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+  .dispo-rupture { background: #ffebee; color: #c62828; padding: 3px 10px; border-radius: 12px; font-weight: 600; }
+
+  .observations-box {
+    margin-bottom: 20px;
+  }
+  .observations-box label {
+    font-weight: 600;
+    font-size: 13px;
+    color: #343a40;
+    display: block;
+    margin-bottom: 6px;
+  }
+  body.dark-mode .observations-box label { color: var(--text-dark); }
+  .observations-box textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 14px;
+    resize: vertical;
+    box-sizing: border-box;
+  }
+  body.dark-mode .observations-box textarea {
+    background: var(--bg-hover);
+    color: var(--text-dark);
+    border-color: var(--border-light);
+  }
+
+  .livraison-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  body.dark-mode .livraison-footer {
+    background: var(--bg-hover);
+    border-color: var(--border-light);
+  }
+  .livraison-total {
+    font-size: 15px;
+  }
+  .livraison-total strong {
+    font-size: 20px;
+    color: #1c5b96;
+  }
+  body.dark-mode .livraison-total strong { color: #5bc0de; }
+
+  .btn-valider-liv {
+    background: #28a745;
+    color: white;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: .2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-valider-liv:hover { background: #218838; }
+  .btn-valider-liv:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+  }
+</style>
+
+<div class="livraison-container">
+
+    <div class="livraison-header">
+        <div>
+            <h2 class="livraison-title">
+                <i class="fas fa-truck"></i> Nouvelle livraison
+            </h2>
+            <div class="livraison-meta">
+                Demande <strong>{{ demande.numero_demande }}</strong> —
+                {{ demande.service_demandeur.nom }} —
+                Livraison <strong>#{{ nb_livraison }}</strong>
+            </div>
+        </div>
+        <a href="{% url 'detail_livraisons_demande' demande.id %}" class="btn-retour-liv">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+
+    <div class="kpi-livraison-grid">
+        <div class="kpi-livraison-card kpi-total">
+            <div class="kpi-livraison-label">Demande total</div>
+            <div class="kpi-livraison-value">{{ demande.quantite_demandee_totale }}</div>
+        </div>
+        <div class="kpi-livraison-card kpi-livre">
+            <div class="kpi-livraison-label">Deja livre</div>
+            <div class="kpi-livraison-value">{{ demande.quantite_servie_totale }}</div>
+        </div>
+        <div class="kpi-livraison-card kpi-reste">
+            <div class="kpi-livraison-label">Reste a livrer</div>
+            <div class="kpi-livraison-value">{{ demande.reste }}</div>
+        </div>
+        <div class="kpi-livraison-card kpi-effectuees">
+            <div class="kpi-livraison-label">Livraisons effectuees</div>
+            <div class="kpi-livraison-value">{{ demande.livraisons.count }}</div>
+        </div>
+    </div>
+
+    <form method="POST" id="formLivraison">
+        {% csrf_token %}
+
+        <table class="livraison-table">
+            <thead>
+                <tr>
+                    <th>Article</th>
+                    <th class="center">Demande</th>
+                    <th class="center">Deja livre</th>
+                    <th class="center">Reste</th>
+                    <th class="center">Dispo magasin</th>
+                    <th class="center">Qte a livrer</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for info in lignes_avec_reste %}
+                <tr>
+                    <td>
+                        <strong>{{ info.ligne.article.designation }}</strong>
+                        {% if info.ligne.article.reference %}
+                            <br><span class="article-ref">Ref. {{ info.ligne.article.reference }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="center">{{ info.ligne.quantite_demandee }}</td>
+                    <td class="center" style="color: #2e7d32; font-weight: 600;">
+                        {{ info.ligne.quantite_livree }}
+                    </td>
+                    <td class="center" style="color: #e65100; font-weight: 600;">
+                        {{ info.reste }}
+                    </td>
+                    <td class="center">
+                        {% if info.dispo >= info.reste %}
+                            <span class="dispo-ok">{{ info.dispo }}</span>
+                        {% elif info.dispo > 0 %}
+                            <span class="dispo-partial">{{ info.dispo }}</span>
+                        {% else %}
+                            <span class="dispo-rupture">Rupture</span>
+                        {% endif %}
+                    </td>
+                    <td class="center">
+                        {% if info.max_livrable > 0 %}
+                        <input type="number"
+                               name="qte_livree_{{ info.ligne.id }}"
+                               min="0"
+                               max="{{ info.max_livrable }}"
+                               value="{{ info.max_livrable }}"
+                               class="qte-livree-input qte-livraison-input"
+                               data-max="{{ info.max_livrable }}"
+                               oninput="calculerTotal()"
+                               aria-label="Quantite a livrer pour {{ info.ligne.article.designation|escapejs }}">
+                        {% else %}
+                        <span style="color: #aaa; font-size: 13px;">Non disponible</span>
+                        <input type="hidden" name="qte_livree_{{ info.ligne.id }}" value="0" class="qte-livraison-input" data-max="0">
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="observations-box">
+            <label for="observations">
+                <i class="fas fa-comment-alt"></i> Observations du magasinier (facultatif)
+            </label>
+            <textarea name="observations_magasinier"
+                      id="observations"
+                      rows="2"
+                      placeholder="Ex : Livraison partielle — article X en attente de reapprovisionnement..."></textarea>
+        </div>
+
+        <div class="livraison-footer">
+            <div class="livraison-total">
+                Total a livrer cette fois : <strong id="totalLivraison">—</strong> unites
+            </div>
+            <button type="button" id="btnValider"
+                    onclick="confirmerLivraison()"
+                    class="btn-valider-liv">
+                <i class="fas fa-check-circle"></i> Valider la livraison
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function calculerTotal() {
+    let total = 0;
+    document.querySelectorAll('.qte-livraison-input').forEach(function(inp) {
+        if (inp.type === 'number') {
+            total += parseInt(inp.value) || 0;
+        }
+    });
+    document.getElementById('totalLivraison').textContent = total;
+}
+
+function confirmerLivraison() {
+    if (typeof Swal === 'undefined') {
+        alert('SweetAlert non charge. Veuillez recharger la page.');
+        return;
+    }
+
+    let total = 0;
+    let erreurs = [];
+
+    document.querySelectorAll('.qte-livraison-input').forEach(function(inp) {
+        if (inp.type === 'number') {
+            var val = parseInt(inp.value) || 0;
+            var max = parseInt(inp.dataset.max) || 0;
+            total += val;
+
+            if (val < 0) {
+                erreurs.push('Quantite negative detectee.');
+            }
+            if (val > max) {
+                erreurs.push('Quantite superieure au maximum autorise (' + max + ').');
+            }
+        }
+    });
+
+    if (erreurs.length > 0) {
+        Swal.fire({ icon: 'error', title: 'Erreur de saisie', html: erreurs.join('<br>'), confirmButtonColor: '#dc3545' });
+        return;
+    }
+
+    if (total === 0) {
+        Swal.fire({ icon: 'warning', title: 'Aucune quantite', text: 'Veuillez saisir au moins une quantite a livrer.', confirmButtonColor: '#1c5b96' });
+        return;
+    }
+
+    Swal.fire({
+        icon: 'question',
+        title: 'Confirmer la livraison ?',
+        html: '<p>Vous allez livrer <strong>' + total + ' unite(s)</strong> pour la demande <strong>{{ demande.numero_demande }}</strong>.</p>' +
+               '<p style="color: #6c757d; font-size: 13px;">Un accuse de reception sera immediatement cree pour signature.</p>',
+        showCancelButton: true,
+        confirmButtonText: '<i class="fas fa-truck"></i> Livrer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+    }).then(function(result) {
+        if (result.isConfirmed) {
+            var btn = document.getElementById('btnValider');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Traitement...';
+            }
+            document.getElementById('formLivraison').submit();
+        }
+    });
+}
+
+calculerTotal();
+</script>
+{% endblock %}

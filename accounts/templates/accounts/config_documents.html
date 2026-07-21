@@ -1,0 +1,266 @@
+{% extends "base_ui.html" %}
+{% block title %}Configuration Documents PDF — {{ entreprise.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="nx-container">
+    <div class="nx-between" style="margin-bottom: 20px;">
+        <div>
+            <h2 style="margin:0; font-size: 22px; color: var(--text-dark);">
+                <i class="fas fa-file-contract" style="color: var(--primary-blue);"></i> Configuration Globale des Documents PDF
+            </h2>
+            <p style="margin:4px 0 0; font-size: 13px; color: var(--text-medium);">
+                Niveau Entreprise — Ces valeurs servent de base à tous les magasins. Chaque magasin peut les surcharger.
+            </p>
+        </div>
+        <a href="{% url 'accounts:parametres_entreprise' %}" class="nx-btn nx-btn-light">
+            <i class="fas fa-building"></i> Config. Entreprise (Logo & Cachet)
+        </a>
+    </div>
+
+    <form method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             SECTION 1 — IDENTITÉ VISUELLE & HIÉRARCHIE
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="nx-card" style="margin-bottom: 20px;">
+            <div class="nx-card-header">
+                <h4><i class="fas fa-landmark" style="color: var(--primary-blue);"></i> Identité & Hiérarchie Institutionnelle</h4>
+            </div>
+            <div class="nx-card-body">
+                <div class="nx-row">
+                    <div class="nx-col" style="flex: 2;">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Direction</label>
+                            <input type="text" name="direction_label" class="nx-input" value="{{ direction_label }}" maxlength="200">
+                        </div>
+                        <div class="nx-form-group">
+                            <label class="nx-label">Sous-Direction</label>
+                            <input type="text" name="sous_direction_label" class="nx-input" value="{{ sous_direction_label }}" maxlength="200">
+                        </div>
+                        <div class="nx-form-group">
+                            <label class="nx-label">Service</label>
+                            <input type="text" name="service_label" class="nx-input" value="{{ service_label }}" maxlength="200">
+                        </div>
+                    </div>
+                    <div class="nx-col" style="flex: 1;">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Couleur principale (hex)</label>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <input type="text" name="couleur_principale" class="nx-input" value="{{ couleur_principale }}" maxlength="7" style="flex:1; font-family: monospace;" id="color-hex">
+                                <input type="color" value="{{ couleur_principale }}" oninput="document.getElementById('color-hex').value=this.value" style="width:40px; height:36px; border:none; cursor:pointer; padding:0; background:none;">
+                            </div>
+                        </div>
+                        <div class="nx-form-group">
+                            <label class="nx-label">Pied de page PDF</label>
+                            <textarea name="pied_page_pdf" class="nx-textarea" rows="3" maxlength="500">{{ pied_page_pdf }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             SECTION 2 — PRÉFIXES DE NUMÉROTATION
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="nx-card" style="margin-bottom: 20px;">
+            <div class="nx-card-header">
+                <h4><i class="fas fa-hashtag" style="color: #fd7e14;"></i> Préfixes de Numérotation</h4>
+            </div>
+            <div class="nx-card-body">
+                <div class="nx-row">
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Bon de Sortie</label>
+                            <input type="text" name="prefixe_bon_sortie" class="nx-input" value="{{ prefixe_bon_sortie }}" maxlength="10">
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Bon d'Entrée</label>
+                            <input type="text" name="prefixe_bon_entree" class="nx-input" value="{{ prefixe_bon_entree }}" maxlength="10">
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Bon de Retour</label>
+                            <input type="text" name="prefixe_bon_retour" class="nx-input" value="{{ prefixe_bon_retour }}" maxlength="10">
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Bon Hors Stock</label>
+                            <input type="text" name="prefixe_bon_hors_stock" class="nx-input" value="{{ prefixe_bon_hors_stock }}" maxlength="10">
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Commande</label>
+                            <input type="text" name="prefixe_commande" class="nx-input" value="{{ prefixe_commande }}" maxlength="10">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             SECTION 3 — LABELS DES SIGNATAIRES
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="nx-card" style="margin-bottom: 20px;">
+            <div class="nx-card-header">
+                <h4><i class="fas fa-signature" style="color: #28a745;"></i> Labels des 6 Emplacements de Signature</h4>
+            </div>
+            <div class="nx-card-body">
+                <div class="nx-row">
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Signataire 1</label>
+                            <input type="text" name="label_signataire_1" class="nx-input" value="{{ label_signataire_1 }}" maxlength="100">
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Signataire 2</label>
+                            <input type="text" name="label_signataire_2" class="nx-input" value="{{ label_signataire_2 }}" maxlength="100">
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Signataire 3</label>
+                            <input type="text" name="label_signataire_3" class="nx-input" value="{{ label_signataire_3 }}" maxlength="100">
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Signataire 4</label>
+                            <input type="text" name="label_signataire_4" class="nx-input" value="{{ label_signataire_4 }}" maxlength="100">
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Signataire 5</label>
+                            <input type="text" name="label_signataire_5" class="nx-input" value="{{ label_signataire_5 }}" maxlength="100">
+                        </div>
+                    </div>
+                    <div class="nx-col">
+                        <div class="nx-form-group">
+                            <label class="nx-label">Signataire 6</label>
+                            <input type="text" name="label_signataire_6" class="nx-input" value="{{ label_signataire_6 }}" maxlength="100">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════════════════════
+             SECTION 4 — MÉTADONNÉES ISO PAR TYPE DE DOCUMENT
+             ═══════════════════════════════════════════════════════════════ -->
+        <div class="nx-card" style="margin-bottom: 20px;">
+            <div class="nx-card-header">
+                <h4><i class="fas fa-certificate" style="color: #6f42c1;"></i> Métadonnées ISO par Type de Document</h4>
+            </div>
+            <div class="nx-card-body" style="padding: 0;">
+                <!-- Onglets -->
+                <div class="nx-tabs" style="padding: 16px 24px 0; border-bottom: 2px solid var(--border-light);">
+                    {% for item in configs_list %}
+                    <button type="button" class="nx-tab {% if forloop.first %}active{% endif %}" onclick="switchTab(this, 'tab-{{ item.code }}')">
+                        <i class="fas fa-file-alt"></i> {{ item.label }}
+                    </button>
+                    {% endfor %}
+                </div>
+
+                <!-- Contenu onglets -->
+                {% for item in configs_list %}
+                <div id="tab-{{ item.code }}" class="tab-panel" style="{% if not forloop.first %}display:none;{% endif %} padding: 20px 24px;">
+                    <div class="nx-row">
+                        <div class="nx-col" style="flex: 2;">
+                            <div class="nx-row">
+                                <div class="nx-col">
+                                    <div class="nx-form-group">
+                                        <label class="nx-label">Code Document</label>
+                                        <input type="text" name="config_{{ item.code }}_code_document" class="nx-input" value="{{ item.code_document }}" maxlength="50">
+                                    </div>
+                                </div>
+                                <div class="nx-col">
+                                    <div class="nx-form-group">
+                                        <label class="nx-label">Date Création</label>
+                                        <input type="text" name="config_{{ item.code }}_date_creation_doc" class="nx-input" value="{{ item.date_creation_doc }}" maxlength="20" placeholder="JJ/MM/AAAA">
+                                    </div>
+                                </div>
+                                <div class="nx-col">
+                                    <div class="nx-form-group">
+                                        <label class="nx-label">Date Révision</label>
+                                        <input type="text" name="config_{{ item.code }}_date_revision_doc" class="nx-input" value="{{ item.date_revision_doc }}" maxlength="20" placeholder="JJ/MM/AAAA">
+                                    </div>
+                                </div>
+                                <div class="nx-col">
+                                    <div class="nx-form-group">
+                                        <label class="nx-label">Version</label>
+                                        <input type="text" name="config_{{ item.code }}_version_doc" class="nx-input" value="{{ item.version_doc }}" maxlength="10">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="nx-form-group">
+                                <label class="nx-label">Label PS2</label>
+                                <input type="text" name="config_{{ item.code }}_ps2_label" class="nx-input" value="{{ item.ps2_label }}" maxlength="100">
+                            </div>
+                        </div>
+                        <div class="nx-col" style="flex: 1; background: var(--bg-hover); border-radius: var(--radius); padding: 16px;">
+                            <p style="margin: 0 0 12px; font-size: 12px; font-weight: 700; color: var(--text-medium); text-transform: uppercase;">Éléments affichés</p>
+
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
+                                <input type="checkbox" name="config_{{ item.code }}_afficher_logo" {% if item.afficher_logo %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                                <i class="fas fa-image" style="color: var(--text-light); width: 18px; text-align: center;"></i> Logo
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
+                                <input type="checkbox" name="config_{{ item.code }}_afficher_cachet" {% if item.afficher_cachet %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                                <i class="fas fa-stamp" style="color: var(--text-light); width: 18px; text-align: center;"></i> Cachet / Tampon
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
+                                <input type="checkbox" name="config_{{ item.code }}_afficher_cc" {% if item.afficher_cc %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                                <i class="fas fa-file-invoice" style="color: var(--text-light); width: 18px; text-align: center;"></i> Compte Contribuable (CC)
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
+                                <input type="checkbox" name="config_{{ item.code }}_afficher_ifu" {% if item.afficher_ifu %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                                <i class="fas fa-id-card" style="color: var(--text-light); width: 18px; text-align: center;"></i> IFU
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
+                                <input type="checkbox" name="config_{{ item.code }}_afficher_rccm" {% if item.afficher_rccm %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                                <i class="fas fa-landmark" style="color: var(--text-light); width: 18px; text-align: center;"></i> RCCM
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
+                                <input type="checkbox" name="config_{{ item.code }}_afficher_telephone" {% if item.afficher_telephone %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                                <i class="fas fa-phone" style="color: var(--text-light); width: 18px; text-align: center;"></i> Téléphone
+                            </label>
+                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
+                                <input type="checkbox" name="config_{{ item.code }}_afficher_signatures" {% if item.afficher_signatures %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                                <i class="fas fa-signature" style="color: var(--text-light); width: 18px; text-align: center;"></i> Bloc Signatures
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Bouton sauvegarde -->
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <a href="{% url 'accounts:parametres_entreprise' %}" class="nx-btn nx-btn-light">Annuler</a>
+            <button type="submit" class="nx-btn nx-btn-primary">
+                <i class="fas fa-save"></i> Enregistrer la configuration globale
+            </button>
+        </div>
+    </form>
+</div>
+
+<script>
+function switchTab(btn, panelId) {
+    // Désactive tous les onglets
+    document.querySelectorAll('.nx-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
+    // Active l'onglet cliqué
+    btn.classList.add('active');
+    document.getElementById(panelId).style.display = 'block';
+}
+</script>
+{% endblock %}

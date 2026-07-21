@@ -1,0 +1,267 @@
+{% extends "base_ui.html" %}
+{% block title %}Dispatch des Interventions{% endblock %}
+
+{% block contenu %}
+<style>
+    /* ── EN-TÊTE ── */
+    .dispatch-header { background: linear-gradient(135deg, #fd7e14, #d35400); color: white; border-radius: 12px; padding: 25px 30px; margin-bottom: 25px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 8px 20px rgba(253, 126, 20, 0.25); }
+    .header-icon-box { background: rgba(255,255,255,0.2); width: 65px; height: 65px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; backdrop-filter: blur(5px); }
+    
+    /* ── BARRE DE RECHERCHE ── */
+    .search-bar-container { margin-bottom: 25px; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 15px; border: 1px solid #eef0f3; transition: all 0.3s; }
+    .search-bar-container:focus-within { border-color: #fd7e14; box-shadow: 0 4px 15px rgba(253,126,20,0.15); }
+    .search-bar-container input { border: none; outline: none; width: 100%; font-size: 15px; color: #2d3748; background: transparent; font-weight: 500; }
+    .search-bar-container input::placeholder { color: #a0aec0; font-weight: 400; }
+
+    /* ── CARTES DE DISPATCH (Nouveau Design) ── */
+    .dispatch-list { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; }
+    .dispatch-card { background: white; border-radius: 12px; padding: 20px; display: grid; grid-template-columns: 1.5fr 2fr 1.2fr; gap: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); border: 1px solid #eef0f3; transition: all 0.3s ease; position: relative; overflow: hidden; }
+    .dispatch-card:hover { box-shadow: 0 10px 25px rgba(253, 126, 20, 0.08); border-color: #fbd38d; transform: translateY(-3px); }
+    
+    /* Ligne de couleur sur la gauche */
+    .dispatch-card::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: #fd7e14; border-radius: 12px 0 0 12px; }
+
+    /* Colonne 1 : Info Matériel */
+    .col-info { display: flex; gap: 15px; }
+    .ticket-badge { background: #fff5f0; color: #fd7e14; padding: 10px 15px; border-radius: 10px; font-weight: 800; font-size: 15px; border: 1px dashed #fbd38d; height: fit-content; text-align: center; }
+    .equip-name { font-weight: 800; color: #2d3748; font-size: 15px; line-height: 1.3; }
+    .equip-code { font-family: monospace; font-size: 12px; color: #718096; background: #edf2f7; padding: 3px 8px; border-radius: 5px; display: inline-block; margin-top: 5px; }
+    .ticket-date { font-size: 12px; color: #a0aec0; margin-top: 8px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+
+    /* Colonne 2 : Contexte & Urgence */
+    .context-header { font-size: 13px; font-weight: 700; color: #4a5568; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .desc-box { background: #f8fafc; padding: 12px 15px; border-radius: 8px; font-size: 12px; color: #4a5568; margin-top: 10px; border-left: 3px solid #cbd5e0; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    
+    /* Pastilles d'urgence */
+    .urg-badge { font-size: 11px; padding: 4px 10px; border-radius: 20px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; }
+    .ub-faible { background: #f0fff4; color: #2f855a; border: 1px solid #c6f6d5; }
+    .ub-moyenne { background: #fffff0; color: #b7791f; border: 1px solid #fefcbf; }
+    .ub-haute { background: #fffaf0; color: #c05621; border: 1px solid #feebc8; }
+    .ub-critique { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; animation: pulseRed 2s infinite; }
+    @keyframes pulseRed { 0% { box-shadow: 0 0 0 0 rgba(220,53,69,0.4); } 70% { box-shadow: 0 0 0 4px rgba(220,53,69,0); } 100% { box-shadow: 0 0 0 0 rgba(220,53,69,0); } }
+
+    /* Colonne 3 : Action / Formulaire */
+    .col-action { display: flex; flex-direction: column; justify-content: center; background: #fffaf0; padding: 15px; border-radius: 10px; border: 1px solid #feebc8; }
+    .assign-label { font-size: 11px; font-weight: 800; color: #dd6b20; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .assign-select { width: 100%; padding: 10px 12px; border: 1px solid #fbd38d; border-radius: 8px; font-size: 13px; font-weight: 600; color: #4a5568; outline: none; cursor: pointer; transition: 0.2s; background: white; margin-bottom: 10px; }
+    .assign-select:focus { border-color: #fd7e14; box-shadow: 0 0 0 3px rgba(253,126,20,0.15); }
+    .assign-btn { width: 100%; background: #fd7e14; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; }
+    .assign-btn:hover { background: #dd6b20; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(253,126,20,0.3); }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 1024px) {
+        .dispatch-card { grid-template-columns: 1fr; gap: 15px; }
+        .col-action { margin-top: 10px; }
+    }
+</style>
+
+<div class="dispatch-header">
+  <div style="display:flex;align-items:center;gap:20px;">
+    <div class="header-icon-box">
+        <i class="fas fa-satellite-dish"></i>
+    </div>
+    <div>
+        <h4 style="margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Tour de Contrôle — Dispatch</h4>
+        <small style="font-size: 15px; opacity: 0.9; font-weight: 500;">Distribuez les pannes en attente à votre équipe technique.</small>
+    </div>
+  </div>
+</div>
+
+{% if mode_actuel != 'DISPATCH' %}
+    <div style="background: #fff3cd; color: #856404; padding: 40px; border-radius: 12px; border-left: 6px solid #ffc107; box-shadow: 0 4px 15px rgba(0,0,0,0.05); text-align: center; margin-top: 20px;">
+        <i class="fas fa-exclamation-triangle" style="font-size: 55px; margin-bottom: 20px; color: #ffc107;"></i>
+        <h3 style="margin: 0 0 15px 0; font-weight: 800; font-size: 24px;">Le Mode Dispatch est inactif</h3>
+        <p style="font-size: 16px; margin: 0;">Le système est actuellement réglé sur le mode : <strong style="background: #ffc107; color: white; padding: 5px 15px; border-radius: 20px; font-size: 13px;"><i class="fas fa-filter"></i> {{ mode_actuel }}</strong>.</p>
+        <p style="font-size: 15px; margin-top: 15px; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+            Dans ce mode, les techniciens reçoivent les pannes automatiquement dans leur espace et les prennent en charge eux-mêmes ("Pannes Libres"). Vous n'avez pas besoin de distribuer les tickets manuellement.
+        </p>
+        <br>
+        <a href="{% url 'patrimoine_parametres' %}" style="display: inline-block; background: #856404; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; margin-top: 15px; transition: 0.2s; box-shadow: 0 4px 10px rgba(133,100,4,0.2);">
+            <i class="fas fa-cog me-2"></i> Changer le mode dans les paramètres
+        </a>
+    </div>
+{% else %}
+
+    <div class="search-bar-container">
+        <i class="fas fa-search" style="color: #adb5bd; font-size: 20px;"></i>
+        <input type="text" id="magic-search" placeholder="Rechercher une machine, un code, un service ou un demandeur...">
+    </div>
+
+    <div class="dispatch-list">
+        {% for panne in pannes_en_attente %}
+        <div class="dispatch-card">
+            
+            <div class="col-info">
+                <div class="ticket-badge">#{{ panne.id|stringformat:"04d" }}</div>
+                <div>
+                    <div class="equip-name">{{ panne.immobilisation.nom_affichage }}</div>
+<div class="equip-code"><i class="fas fa-barcode"></i> {{ panne.immobilisation.code_patrimoine }}</div>
+
+{% if panne.immobilisation.contrat_maintenance and panne.immobilisation.contrat_maintenance.statut == 'ACTIF' %}
+<div style="margin-top: 8px; display: inline-block; background: #fee2e2; color: #b91c1c; padding: 4px 10px; border-radius: 6px; font-size: 10px; font-weight: 800; border: 1px solid #fca5a5; animation: pulseRed 2s infinite;">
+    <i class="fas fa-exclamation-triangle"></i> SOUS CONTRAT : {{ panne.immobilisation.contrat_maintenance.prestataire.raison_sociale|upper }}
+</div>
+{% endif %}
+                    <div class="ticket-date">
+                        <i class="far fa-clock"></i> Signalé le {{ panne.date_signalement|date:"d/m/Y à H:i" }}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-context">
+                <div class="context-header">
+                    <span style="color: #1c5b96;"><i class="fas fa-user-circle"></i> {{ panne.cree_par.get_full_name|default:panne.cree_par.username|title }}</span>
+                    <span style="color: #cbd5e0;">|</span>
+                    <span style="color: #fd7e14;"><i class="fas fa-map-marker-alt"></i> {{ panne.immobilisation.service_affectation.nom|default:"Service non précisé" }}</span>
+                </div>
+                
+                <div>
+                    {% if panne.degre_urgence == 'FAIBLE' %}<span class="urg-badge ub-faible"><i class="fas fa-thermometer-empty"></i> Urgence Faible</span>
+                    {% elif panne.degre_urgence == 'MOYENNE' %}<span class="urg-badge ub-moyenne"><i class="fas fa-thermometer-half"></i> Urgence Moyenne</span>
+                    {% elif panne.degre_urgence == 'HAUTE' %}<span class="urg-badge ub-haute"><i class="fas fa-thermometer-three-quarters"></i> Urgence Haute</span>
+                    {% elif panne.degre_urgence == 'CRITIQUE' %}<span class="urg-badge ub-critique"><i class="fas fa-fire-alt"></i> Urgence Critique</span>
+                    {% endif %}
+                </div>
+
+                <div class="desc-box">
+                    <strong>Symptômes :</strong> {{ panne.description_probleme|default:"Aucun symptôme renseigné par l'utilisateur." }}
+                </div>
+            </div>
+
+            <div class="col-action">
+                <form method="POST" style="margin: 0; width: 100%;">
+                    {% csrf_token %}
+                    <input type="hidden" name="intervention_id" value="{{ panne.id }}">
+                    
+                    <div class="assign-label"><i class="fas fa-user-hard-hat"></i> Technicien en charge</div>
+                    
+                    <select name="technicien_id" class="assign-select" required>
+                        <option value="" disabled selected>Sélectionner...</option>
+                        {% for tech in techniciens %}
+                            <option value="{{ tech.id }}">{{ tech.get_full_name|default:tech.username }}</option>
+                        {% endfor %}
+                    </select>
+                    
+                    <button type="submit" class="assign-btn">
+                        Assigner la mission <i class="fas fa-paper-plane"></i>
+                    </button>
+                </form>
+            </div>
+
+        </div>
+        {% empty %}
+        <div style="background: white; border-radius: 12px; padding: 60px 20px; text-align: center; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eef0f3;">
+            <div style="background: #f0fff4; display: inline-flex; padding: 25px; border-radius: 50%; margin-bottom: 20px; border: 4px solid #c6f6d5;">
+                <i class="fas fa-glass-cheers" style="font-size: 45px; color: #28a745;"></i>
+            </div>
+            <h4 style="margin: 0 0 10px 0; color: #2d3748; font-size: 22px; font-weight: 800;">Aucune panne en souffrance !</h4>
+            <p style="font-size: 15px; color: #718096; margin: 0;">Tous les tickets ont été dispatchés avec succès. L'équipe est au travail.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div style="padding: 18px 25px; background: white; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eef0f3;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="font-size:13px; color:#4a5568; font-weight:700;">Éléments par page :</span>
+            <select id="dispatch-per-page" style="padding: 6px 12px; font-size: 14px; border: 1px solid #cbd5e0; border-radius: 8px; outline: none; cursor: pointer; background: #f8fafc; font-weight: 600;">
+                <option value="6" selected>6</option>
+                <option value="10">10</option>
+                <option value="30">30</option>
+                <option value="all">Toutes</option>
+            </select>
+            <span id="dispatch-total-count" style="font-size:13px; color:#a0aec0; margin-left: 10px; font-weight: 600;"></span>
+        </div>
+
+        <div id="dispatch-pagination-box"></div>
+    </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('magic-search');
+        const select = document.getElementById('dispatch-per-page');
+        const paginationBox = document.getElementById('dispatch-pagination-box');
+        const totalCountSpan = document.getElementById('dispatch-total-count');
+        const allCards = Array.from(document.querySelectorAll('.dispatch-card'));
+
+        let perPage = 6; // 6 cartes par défaut
+        let currentPage = 1;
+
+        function renderDispatch() {
+            const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+            
+            // 1. Recherche Magique : Filtrer les cartes
+            const matchingCards = allCards.filter(card => {
+                const text = card.innerText.toLowerCase();
+                const matches = text.includes(query);
+                if (!matches) card.style.display = 'none';
+                return matches;
+            });
+
+            // Mise à jour du compteur total
+            const totalItems = matchingCards.length;
+            totalCountSpan.innerHTML = `| Total : <strong>${totalItems}</strong> panne${totalItems > 1 ? 's' : ''}`;
+
+            // 2. Pagination : Calcul des pages
+            const totalPages = perPage === 'all' ? 1 : Math.ceil(totalItems / perPage);
+            if (currentPage > totalPages && totalPages > 0) currentPage = totalPages;
+
+            // Afficher uniquement les cartes de la page en cours
+            matchingCards.forEach((card, index) => {
+                if (perPage === 'all') {
+                    card.style.display = 'grid'; 
+                } else {
+                    const start = (currentPage - 1) * perPage;
+                    const end = start + perPage;
+                    card.style.display = (index >= start && index < end) ? 'grid' : 'none';
+                }
+            });
+
+            // 3. Génération des boutons Précédent/Suivant
+            if (totalPages <= 1) {
+                paginationBox.innerHTML = '';
+                return;
+            }
+
+            let html = '<div style="display:flex; gap:6px;">';
+            if (currentPage > 1) {
+                html += `<button onclick="changeDPage(${currentPage - 1})" style="padding:8px 15px; border:1px solid #cbd5e0; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; background:white; color:#4a5568; transition:0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">‹ Précédent</button>`;
+            }
+            
+            html += `<span style="padding:8px 18px; border-radius:8px; font-size:13px; font-weight:800; color:white; background:#fd7e14; box-shadow: 0 4px 10px rgba(253,126,20,0.3);">Page ${currentPage} sur ${totalPages}</span>`;
+            
+            if (currentPage < totalPages) {
+                html += `<button onclick="changeDPage(${currentPage + 1})" style="padding:8px 15px; border:1px solid #cbd5e0; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; background:white; color:#4a5568; transition:0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">Suivant ›</button>`;
+            }
+            html += '</div>';
+            paginationBox.innerHTML = html;
+        }
+
+        // Actions au clic sur les pages
+        window.changeDPage = function(page) {
+            currentPage = page;
+            renderDispatch();
+        };
+
+        // Actions lors du changement du nombre d'éléments
+        if (select) {
+            select.addEventListener('change', function(e) {
+                perPage = e.target.value === 'all' ? 'all' : parseInt(e.target.value);
+                currentPage = 1;
+                renderDispatch();
+            });
+        }
+
+        // Actions lors de la frappe dans la barre de recherche
+        if (searchInput) {
+            searchInput.addEventListener('input', function() {
+                currentPage = 1; // On revient à la première page
+                renderDispatch();
+            });
+        }
+
+        // On lance l'affichage au démarrage
+        renderDispatch();
+    });
+    </script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,468 @@
+{% extends "base_ui.html" %}
+{% load static %}
+
+{% block title %}Configurer le modèle PDF — {{ magasin.nom }}{% endblock %}
+
+{% block contenu %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    <div class="col-lg-10 offset-lg-1">
+
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h3 class="mb-1">🎨 Modèle de document PDF</h3>
+          <p class="text-muted mb-0">
+            <strong>{{ type_doc_label }}</strong> — Magasin : <strong>{{ magasin.nom }}</strong>
+            <span class="badge bg-secondary ms-2">{{ type_doc }}</span>
+          </p>
+          <!-- ══ SÉLECTEUR DE TYPE DE DOCUMENT ══ -->
+          <div class="mt-2">
+            <label class="text-muted small me-2">Configurer un autre type :</label>
+            <div class="btn-group" role="group">
+              <a href="{% url 'modele_pdf_config' magasin.id 'BS' %}" class="btn btn-sm {% if type_doc == 'BS' %}btn-primary{% else %}btn-outline-primary{% endif %}">BS</a>
+              <a href="{% url 'modele_pdf_config' magasin.id 'BDM' %}" class="btn btn-sm {% if type_doc == 'BDM' %}btn-primary{% else %}btn-outline-primary{% endif %}">BDM</a>
+              <a href="{% url 'modele_pdf_config' magasin.id 'BE' %}" class="btn btn-sm {% if type_doc == 'BE' %}btn-primary{% else %}btn-outline-primary{% endif %}">BE</a>
+              <a href="{% url 'modele_pdf_config' magasin.id 'BR' %}" class="btn btn-sm {% if type_doc == 'BR' %}btn-primary{% else %}btn-outline-primary{% endif %}">BR</a>
+              <a href="{% url 'modele_pdf_config' magasin.id 'BSHS' %}" class="btn btn-sm {% if type_doc == 'BSHS' %}btn-primary{% else %}btn-outline-primary{% endif %}">BSHS</a>
+              <a href="{% url 'modele_pdf_config' magasin.id 'BC' %}" class="btn btn-sm {% if type_doc == 'BC' %}btn-primary{% else %}btn-outline-primary{% endif %}">BC</a>
+            </div>
+          </div>
+        </div>
+        <div>
+          <button type="submit" form="configForm" name="action" value="apercu" class="btn btn-info me-2">
+            <i class="fa fa-eye"></i> Aperçu PDF
+          </button>
+          <button type="submit" form="configForm" class="btn btn-primary">
+            <i class="fa fa-save"></i> Sauvegarder
+          </button>
+        </div>
+      </div>
+
+      {% if messages %}
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+
+      <form id="configForm" method="post" action="{% url 'modele_pdf_config' magasin.id type_doc %}">
+        {% csrf_token %}
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- SECTION 1 : CARTOUCHE / EN-TÊTE                 -->
+        <!-- ═══════════════════════════════════════════════ -->
+        <div class="card mb-3">
+          <div class="card-header bg-light" data-bs-toggle="collapse" data-bs-target="#secCartouche" style="cursor:pointer;">
+            <h5 class="mb-0"><i class="fa fa-header"></i> 1. Cartouche & En-tête</h5>
+          </div>
+          <div class="collapse show" id="secCartouche">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <h6 class="text-muted">Éléments visuels</h6>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="clogo" name="cartouche_afficher_logo" {% if cartouche_afficher_logo %}checked{% endif %}><label class="form-check-label" for="clogo">Afficher le logo</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="crep" name="cartouche_afficher_republique" {% if cartouche_afficher_republique %}checked{% endif %}><label class="form-check-label" for="crep">Afficher "République"</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="cdev" name="cartouche_afficher_devise" {% if cartouche_afficher_devise %}checked{% endif %}><label class="form-check-label" for="cdev">Afficher la devise</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="cdir" name="cartouche_afficher_direction" {% if cartouche_afficher_direction %}checked{% endif %}><label class="form-check-label" for="cdir">Afficher direction</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="csdir" name="cartouche_afficher_sous_direction" {% if cartouche_afficher_sous_direction %}checked{% endif %}><label class="form-check-label" for="csdir">Afficher sous-direction</label></div>
+                  <div class="form-check"><input class="form-check-input" type="checkbox" id="cserv" name="cartouche_afficher_service" {% if cartouche_afficher_service %}checked{% endif %}><label class="form-check-label" for="cserv">Afficher service</label></div>
+                </div>
+                <div class="col-md-4">
+                  <h6 class="text-muted">Mise en forme</h6>
+                  <div class="mb-2">
+                    <label>Position logo</label>
+                    <select class="form-select form-select-sm" name="cartouche_position_logo">
+                      <option value="left" {% if cartouche_position_logo == 'left' %}selected{% endif %}>Gauche</option>
+                      <option value="center" {% if cartouche_position_logo == 'center' %}selected{% endif %}>Centre</option>
+                      <option value="right" {% if cartouche_position_logo == 'right' %}selected{% endif %}>Droite</option>
+                    </select>
+                  </div>
+                  <div class="mb-2">
+                    <label>Épaisseur trait séparation (px)</label>
+                    <input type="number" class="form-control form-control-sm" name="cartouche_trait_separation_epaisseur" value="{{ cartouche_trait_separation_epaisseur|default:1 }}" min="0" max="5">
+                  </div>
+                  <div class="mb-2">
+                    <label>Couleur trait</label>
+                    <input type="color" class="form-control form-control-sm" name="cartouche_trait_separation_couleur" value="{{ cartouche_trait_separation_couleur|default:'#000000' }}">
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <h6 class="text-muted">Labels direction (surcharge locale)</h6>
+                  <div class="alert alert-info py-1 px-2 small">
+                    <i class="fa fa-info-circle"></i> Laisser vide pour utiliser les valeurs globales définies dans <a href="{% url 'accounts:config_documents_globaux' %}">Config. Documents PDF</a>.
+                  </div>
+                  <div class="mb-2"><label>Label PS2</label><input type="text" class="form-control form-control-sm" name="metadonnees_ps2_label" value="{{ metadonnees_ps2_label|default:'' }}"></div>
+                  <div class="mb-2"><label>Label direction</label><input type="text" class="form-control form-control-sm" name="direction_label" value="{{ direction_label|default:'' }}"></div>
+                  <div class="mb-2"><label>Label sous-direction</label><input type="text" class="form-control form-control-sm" name="sous_direction_label" value="{{ sous_direction_label|default:'' }}"></div>
+                  <div class="mb-2"><label>Label service</label><input type="text" class="form-control form-control-sm" name="service_label" value="{{ service_label|default:'' }}"></div>
+                  <div class="mb-2"><label>Couleur principale</label><input type="color" class="form-control form-control-sm" name="couleur_principale" value="{{ couleur_principale|default:'#1c5b96' }}"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- SECTION 2 : MÉTADONNÉES ISO                       -->
+        <!-- ═══════════════════════════════════════════════ -->
+        <div class="card mb-3">
+          <div class="card-header bg-light" data-bs-toggle="collapse" data-bs-target="#secMeta" style="cursor:pointer;">
+            <h5 class="mb-0"><i class="fa fa-barcode"></i> 2. Métadonnées du document (ISO)</h5>
+          </div>
+          <div class="collapse" id="secMeta">
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-3 mb-2"><label>Code document</label><input type="text" class="form-control form-control-sm" name="metadonnees_code_document" value="{{ metadonnees_code_document|default:'' }}"></div>
+                <div class="col-md-3 mb-2"><label>Date création</label><input type="text" class="form-control form-control-sm" name="metadonnees_date_creation_doc" value="{{ metadonnees_date_creation_doc|default:'' }}"></div>
+                <div class="col-md-3 mb-2"><label>Date révision</label><input type="text" class="form-control form-control-sm" name="metadonnees_date_revision_doc" value="{{ metadonnees_date_revision_doc|default:'' }}"></div>
+                <div class="col-md-3 mb-2"><label>Version</label><input type="text" class="form-control form-control-sm" name="metadonnees_version_doc" value="{{ metadonnees_version_doc|default:'' }}"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- SECTION 3 : TABLEAU (colonnes dynamiques)       -->
+        <!-- ═══════════════════════════════════════════════ -->
+        <div class="card mb-3">
+          <div class="card-header bg-light" data-bs-toggle="collapse" data-bs-target="#secTableau" style="cursor:pointer;">
+            <h5 class="mb-0"><i class="fa fa-table"></i> 3. Tableau des articles</h5>
+          </div>
+          <div class="collapse" id="secTableau">
+            <div class="card-body">
+              <p class="text-muted small">
+                Cochez les colonnes à afficher. Les colonnes obligatoires ne peuvent pas être désactivées.
+              </p>
+              <div class="row">
+                <div class="col-md-8">
+                  <h6 class="text-muted">Colonnes disponibles</h6>
+                  <div class="row">
+                    <!-- Colonnes obligatoires (toujours cochées, disabled) -->
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" checked disabled>
+                        <label class="form-check-label text-muted">N° (fixe)</label>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" checked disabled>
+                        <label class="form-check-label text-muted">Référence (fixe)</label>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" checked disabled>
+                        <label class="form-check-label text-muted">Désignation (fixe)</label>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" checked disabled>
+                        <label class="form-check-label text-muted">Unité (fixe)</label>
+                      </div>
+                    </div>
+                    <!-- Colonnes optionnelles selon le type -->
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="col_qte" name="tableau_colonnes[]" value="quantite" {% if 'quantite' in tableau_colonnes %}checked{% endif %}>
+                        <label class="form-check-label" for="col_qte">Quantité</label>
+                      </div>
+                    </div>
+                    {% if type_doc == 'BS' %}
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="col_qte_servie" name="tableau_colonnes[]" value="quantite_servie" {% if 'quantite_servie' in tableau_colonnes %}checked{% endif %}>
+                        <label class="form-check-label" for="col_qte_servie">Qté servie</label>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="col_lot" name="tableau_colonnes[]" value="lot" {% if 'lot' in tableau_colonnes %}checked{% endif %}>
+                        <label class="form-check-label" for="col_lot">N° Lot</label>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="col_peremption" name="tableau_colonnes[]" value="peremption" {% if 'peremption' in tableau_colonnes %}checked{% endif %}>
+                        <label class="form-check-label" for="col_peremption">Péremption</label>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="col_pu" name="tableau_colonnes[]" value="prix_unitaire" {% if 'prix_unitaire' in tableau_colonnes %}checked{% endif %}>
+                        <label class="form-check-label" for="col_pu">Prix unitaire</label>
+                      </div>
+                    </div>
+                    <div class="col-6 col-md-4 mb-2">
+                      <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="col_montant" name="tableau_colonnes[]" value="montant" {% if 'montant' in tableau_colonnes %}checked{% endif %}>
+                        <label class="form-check-label" for="col_montant">Montant</label>
+                      </div>
+                    </div>
+                    {% endif %}
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <h6 class="text-muted">Mise en forme</h6>
+                  <div class="mb-2">
+                    <label>Lignes minimum</label>
+                    <input type="number" class="form-control form-control-sm" name="tableau_lignes_minimum" value="{{ tableau_lignes_minimum|default:10 }}" min="0" max="50">
+                  </div>
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="tbl_alt" name="tableau_alternance_couleurs" {% if tableau_alternance_couleurs %}checked{% endif %}>
+                    <label class="form-check-label" for="tbl_alt">Alternance de couleurs</label>
+                  </div>
+                  <div class="form-check mt-2">
+                    <input class="form-check-input" type="checkbox" id="tbl_dyn" name="tableau_lignes_dynamiques" {% if tableau_lignes_dynamiques %}checked{% endif %}>
+                    <label class="form-check-label" for="tbl_dyn">Lignes dynamiques</label>
+                  </div>
+                  <div class="mb-2 mt-2">
+                    <label>Style bordure</label>
+                    <select class="form-select form-select-sm" name="tableau_bordure_style">
+                      <option value="solid" {% if tableau_bordure_style == 'solid' %}selected{% endif %}>Pleine</option>
+                      <option value="dashed" {% if tableau_bordure_style == 'dashed' %}selected{% endif %}>Tirets</option>
+                      <option value="dotted" {% if tableau_bordure_style == 'dotted' %}selected{% endif %}>Pointillés</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- SECTION 4 : SIGNATURES (nombre adaptatif)       -->
+        <!-- ═══════════════════════════════════════════════ -->
+        <div class="card mb-3">
+          <div class="card-header bg-light" data-bs-toggle="collapse" data-bs-target="#secSignatures" style="cursor:pointer;">
+            <h5 class="mb-0"><i class="fa fa-pen-fancy"></i> 4. Zones de signature</h5>
+          </div>
+          <div class="collapse" id="secSignatures">
+            <div class="card-body">
+              <div class="alert alert-info small py-2">
+                <i class="fa fa-info-circle"></i> Les labels par défaut viennent de <a href="{% url 'accounts:config_documents_globaux' %}">Configuration Documents PDF</a> (Signataire 1 à 6). Ici tu choisis quelles cases afficher et leur style.
+              </div>
+<div class="form-check mt-3">
+  <input class="form-check-input" type="checkbox" id="afficher_fonction" name="afficher_fonction_signataire" {% if afficher_fonction_signataire %}checked{% endif %}>
+  <label class="form-check-label" for="afficher_fonction">
+    <i class="fas fa-id-badge"></i> Afficher la fonction/titre sous chaque signature
+    <small class="text-muted">(ex: "Chef de Service Informatique")</small>
+  </label>
+</div>
+
+
+
+              <p class="text-muted small">
+                Ce document accepte jusqu'à <strong>{{ nb_signatures_max }}</strong> signature(s).
+                {% if type_doc == 'BS' %}Le BS standard utilise 4 cases (Émission, Vu pour exécution, Sortie, Réception).{% endif %}
+                {% if type_doc == 'BDM' %}Le BDM utilise 2 cases (Demandeur, Vu pour exécution).{% endif %}
+              </p>
+              <div class="row">
+                <!-- CASE 1 -->
+                <div class="col-md-6 col-lg-3 mb-3">
+                  <div class="border rounded p-2">
+                    <h6 class="text-center">Case 1</h6>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="sig1_vis" name="signatures_1_visible" {% if signatures_1_visible %}checked{% endif %}><label class="form-check-label" for="sig1_vis">Visible</label></div>
+                    <div class="mb-1"><input type="text" class="form-control form-control-sm" name="signatures_1_label" value="{{ signatures_1_label|default:'' }}" placeholder="Label (vide = global)"></div>
+                    <div class="mb-1"><input type="text" class="form-control form-control-sm" name="signatures_1_role" value="{{ signatures_1_role|default:'' }}" placeholder="Rôle / Sous-label"></div>
+                    <div class="mb-1">
+                      <select class="form-select form-select-sm" name="signatures_1_position">
+                        <option value="left" {% if signatures_1_position == 'left' %}selected{% endif %}>Gauche</option>
+                        <option value="center" {% if signatures_1_position == 'center' %}selected{% endif %}>Centre</option>
+                        <option value="right" {% if signatures_1_position == 'right' %}selected{% endif %}>Droite</option>
+                      </select>
+                    </div>
+                    <div class="mb-1">
+                      <select class="form-select form-select-sm" name="signatures_1_style">
+                        <option value="ligne_pointillee" {% if signatures_1_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option>
+                        <option value="case_vide" {% if signatures_1_style == 'case_vide' %}selected{% endif %}>Case vide</option>
+                        <option value="encadre" {% if signatures_1_style == 'encadre' %}selected{% endif %}>Encadré</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <!-- CASE 2 -->
+                <div class="col-md-6 col-lg-3 mb-3">
+                  <div class="border rounded p-2">
+                    <h6 class="text-center">Case 2</h6>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="sig2_vis" name="signatures_2_visible" {% if signatures_2_visible %}checked{% endif %}><label class="form-check-label" for="sig2_vis">Visible</label></div>
+                    <div class="mb-1"><input type="text" class="form-control form-control-sm" name="signatures_2_label" value="{{ signatures_2_label|default:'' }}" placeholder="Label (vide = global)"></div>
+                    <div class="mb-1"><input type="text" class="form-control form-control-sm" name="signatures_2_role" value="{{ signatures_2_role|default:'' }}" placeholder="Rôle / Sous-label"></div>
+                    <div class="mb-1">
+                      <select class="form-select form-select-sm" name="signatures_2_position">
+                        <option value="left" {% if signatures_2_position == 'left' %}selected{% endif %}>Gauche</option>
+                        <option value="center" {% if signatures_2_position == 'center' %}selected{% endif %}>Centre</option>
+                        <option value="right" {% if signatures_2_position == 'right' %}selected{% endif %}>Droite</option>
+                      </select>
+                    </div>
+                    <div class="mb-1">
+                      <select class="form-select form-select-sm" name="signatures_2_style">
+                        <option value="ligne_pointillee" {% if signatures_2_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option>
+                        <option value="case_vide" {% if signatures_2_style == 'case_vide' %}selected{% endif %}>Case vide</option>
+                        <option value="encadre" {% if signatures_2_style == 'encadre' %}selected{% endif %}>Encadré</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                <!-- CASE 3 (caché si nb_signatures_max < 3) -->
+                {% if nb_signatures_max >= 3 %}
+                <div class="col-md-6 col-lg-3 mb-3">
+                  <div class="border rounded p-2">
+                    <h6 class="text-center">Case 3</h6>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="sig3_vis" name="signatures_3_visible" {% if signatures_3_visible %}checked{% endif %}><label class="form-check-label" for="sig3_vis">Visible</label></div>
+                    <div class="mb-1"><input type="text" class="form-control form-control-sm" name="signatures_3_label" value="{{ signatures_3_label|default:'' }}" placeholder="Label (vide = global)"></div>
+                    <div class="mb-1"><input type="text" class="form-control form-control-sm" name="signatures_3_role" value="{{ signatures_3_role|default:'' }}" placeholder="Rôle / Sous-label"></div>
+                    <div class="mb-1">
+                      <select class="form-select form-select-sm" name="signatures_3_position">
+                        <option value="left" {% if signatures_3_position == 'left' %}selected{% endif %}>Gauche</option>
+                        <option value="center" {% if signatures_3_position == 'center' %}selected{% endif %}>Centre</option>
+                        <option value="right" {% if signatures_3_position == 'right' %}selected{% endif %}>Droite</option>
+                      </select>
+                    </div>
+                    <div class="mb-1">
+                      <select class="form-select form-select-sm" name="signatures_3_style">
+                        <option value="ligne_pointillee" {% if signatures_3_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option>
+                        <option value="case_vide" {% if signatures_3_style == 'case_vide' %}selected{% endif %}>Case vide</option>
+                        <option value="encadre" {% if signatures_3_style == 'encadre' %}selected{% endif %}>Encadré</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+                <!-- CASE 4 (caché si nb_signatures_max < 4) -->
+                {% if nb_signatures_max >= 4 %}
+                <div class="col-md-6 col-lg-3 mb-3">
+                  <div class="border rounded p-2">
+                    <h6 class="text-center">Case 4</h6>
+                    <div class="form-check mb-2"><input class="form-check-input" type="checkbox" id="sig4_vis" name="signatures_4_visible" {% if signatures_4_visible %}checked{% endif %}><label class="form-check-label" for="sig4_vis">Visible</label></div>
+                    <div class="mb-1"><input type="text" class="form-control form-control-sm" name="signatures_4_label" value="{{ signatures_4_label|default:'' }}" placeholder="Label (vide = global)"></div>
+                    <div class="mb-1"><input type="text" class="form-control form-control-sm" name="signatures_4_role" value="{{ signatures_4_role|default:'' }}" placeholder="Rôle / Sous-label"></div>
+                    <div class="mb-1">
+                      <select class="form-select form-select-sm" name="signatures_4_position">
+                        <option value="left" {% if signatures_4_position == 'left' %}selected{% endif %}>Gauche</option>
+                        <option value="center" {% if signatures_4_position == 'center' %}selected{% endif %}>Centre</option>
+                        <option value="right" {% if signatures_4_position == 'right' %}selected{% endif %}>Droite</option>
+                      </select>
+                    </div>
+                    <div class="mb-1">
+                      <select class="form-select form-select-sm" name="signatures_4_style">
+                        <option value="ligne_pointillee" {% if signatures_4_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option>
+                        <option value="case_vide" {% if signatures_4_style == 'case_vide' %}selected{% endif %}>Case vide</option>
+                        <option value="encadre" {% if signatures_4_style == 'encadre' %}selected{% endif %}>Encadré</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- SECTION 5 : SONDAGE (uniquement pour BS)          -->
+        <!-- ═══════════════════════════════════════════════ -->
+        {% if type_doc == 'BS' %}
+        <div class="card mb-3">
+          <div class="card-header bg-light" data-bs-toggle="collapse" data-bs-target="#secSondage" style="cursor:pointer;">
+            <h5 class="mb-0"><i class="fa fa-clipboard-check"></i> 5. Sondage de satisfaction</h5>
+          </div>
+          <div class="collapse" id="secSondage">
+            <div class="card-body">
+              <div class="form-check form-switch mb-2">
+                <input class="form-check-input" type="checkbox" id="sondage" name="sondage_afficher" {% if sondage_afficher %}checked{% endif %}>
+                <label class="form-check-label" for="sondage">Afficher le bloc sondage</label>
+              </div>
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="sondage_trait" name="sondage_trait_separation" {% if sondage_trait_separation %}checked{% endif %}>
+                <label class="form-check-label" for="sondage_trait">Trait épais de séparation sous le sondage</label>
+              </div>
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="sondage_style" name="sondage_style_cases" {% if sondage_style_cases %}checked{% endif %}>
+                <label class="form-check-label" for="sondage_style">Cases à cocher stylisées</label>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- SECTION 6 : SERVICE DEMANDEUR                     -->
+        <!-- ═══════════════════════════════════════════════ -->
+        {% if type_doc in 'BS,BR,BSHS,BDM' %}
+        <div class="card mb-3">
+          <div class="card-header bg-light" data-bs-toggle="collapse" data-bs-target="#secService" style="cursor:pointer;">
+            <h5 class="mb-0"><i class="fa fa-hospital"></i> 6. Service demandeur</h5>
+          </div>
+          <div class="collapse" id="secService">
+            <div class="card-body">
+              <div class="form-check mb-2">
+                <input class="form-check-input" type="checkbox" id="svc_enc" name="service_demandeur_encadrer" {% if service_demandeur_encadrer %}checked{% endif %}>
+                <label class="form-check-label" for="svc_enc">Encadrer le nom du service</label>
+              </div>
+              <div class="mb-2">
+                <label>Position</label>
+                <select class="form-select form-select-sm" name="service_demandeur_position">
+                  <option value="left" {% if service_demandeur_position == 'left' %}selected{% endif %}>Gauche</option>
+                  <option value="center" {% if service_demandeur_position == 'center' %}selected{% endif %}>Centre</option>
+                  <option value="right" {% if service_demandeur_position == 'right' %}selected{% endif %}>Droite</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- ═══════════════════════════════════════════════ -->
+        <!-- SECTION 7 : PIED DE PAGE                            -->
+        <!-- ═══════════════════════════════════════════════ -->
+        <div class="card mb-3">
+          <div class="card-header bg-light" data-bs-toggle="collapse" data-bs-target="#secPied" style="cursor:pointer;">
+            <h5 class="mb-0"><i class="fa fa-shoe-prints"></i> 7. Pied de page</h5>
+          </div>
+          <div class="collapse" id="secPied">
+            <div class="card-body">
+              <div class="mb-2">
+                <label>Texte personnalisé</label>
+                <textarea class="form-control form-control-sm" name="pied_de_page_texte_personnalise" rows="2">{{ pied_de_page_texte_personnalise|default:'' }}</textarea>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="pp_num" name="pied_de_page_afficher_numero_page" {% if pied_de_page_afficher_numero_page %}checked{% endif %}>
+                <label class="form-check-label" for="pp_num">Numéro de page</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="pp_date" name="pied_de_page_afficher_date_generation" {% if pied_de_page_afficher_date_generation %}checked{% endif %}>
+                <label class="form-check-label" for="pp_date">Date de génération</label>
+              </div>
+              <div class="form-check form-check-inline">
+                <input class="form-check-input" type="checkbox" id="pp_trait" name="pied_de_page_afficher_trait_couleur" {% if pied_de_page_afficher_trait_couleur %}checked{% endif %}>
+                <label class="form-check-label" for="pp_trait">Trait coloré de séparation</label>
+              </div>
+              <div class="mt-2">
+                <label>Couleur du trait</label>
+                <input type="color" class="form-control form-control-sm" style="width:60px; display:inline-block;" name="pied_de_page_trait_couleur" value="{{ pied_de_page_trait_couleur|default:'#17a2b8' }}">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between mt-4 mb-5">
+          <a href="{% url 'accounts:accueil_personnalise' %}" class="btn btn-outline-secondary">← Retour</a>
+          <div>
+            <button type="submit" name="action" value="apercu" class="btn btn-info me-2">
+              <i class="fa fa-eye"></i> Aperçu PDF
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fa fa-save"></i> Sauvegarder le modèle
+            </button>
+          </div>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1382 @@
+{% extends "base_ui.html" %}
+{% block title %}Réceptions de Commandes{% endblock %}
+
+{% block contenu %}
+<style>
+  :root {
+    --rec-accent: #28a745;
+    --rec-accent-dark: #218838;
+    --rec-bg: #ffffff;
+    --rec-bg-alt: #f8fafc;
+    --rec-text: #0f172a;
+    --rec-text-secondary: #64748b;
+    --rec-border: #e2e8f0;
+    --rec-border-light: #f1f5f9;
+    --rec-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    --rec-shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+    --rec-radius: 12px;
+    --rec-radius-sm: 8px;
+    --rec-transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  body.dark-mode {
+    --rec-bg: #1e293b;
+    --rec-bg-alt: #0f172a;
+    --rec-text: #f1f5f9;
+    --rec-text-secondary: #94a3b8;
+    --rec-border: #334155;
+    --rec-border-light: #1e293b;
+    --rec-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    --rec-shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+  }
+
+  .rec-header {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border-radius: var(--rec-radius);
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: var(--rec-shadow);
+    position: relative;
+    overflow: hidden;
+  }
+  .rec-header::before {
+    content: '';
+    position: absolute;
+    top: -50%; right: -10%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .rec-header h4 { margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; position: relative; }
+  .rec-header small { opacity: 0.85; font-size: 13px; display: block; margin-top: 4px; font-weight: 500; }
+
+  .rec-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 20px;
+    background: var(--rec-bg-alt);
+    padding: 6px;
+    border-radius: var(--rec-radius-sm);
+    border: 1px solid var(--rec-border);
+    width: fit-content;
+  }
+  .rec-tab {
+    padding: 10px 20px;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    color: var(--rec-text-secondary);
+    border-radius: 6px;
+    transition: var(--rec-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  .rec-tab:hover { color: var(--rec-text); background: var(--rec-bg); }
+  .rec-tab.active { color: white; background: var(--rec-accent); box-shadow: 0 2px 8px rgba(40,167,69,0.3); }
+  .rec-tab .tab-badge {
+    background: rgba(0,0,0,0.15);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .rec-tab:not(.active) .tab-badge {
+    background: var(--rec-border);
+    color: var(--rec-text-secondary);
+  }
+
+  .rec-card {
+    background: var(--rec-bg);
+    border-radius: var(--rec-radius);
+    box-shadow: var(--rec-shadow-sm);
+    border: 1px solid var(--rec-border);
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+
+  .rec-filtres {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--rec-border-light);
+  }
+  .rec-filtres input, .rec-filtres select {
+    border: 1.5px solid var(--rec-border);
+    border-radius: var(--rec-radius-sm);
+    padding: 9px 14px;
+    font-size: 13px;
+    outline: none;
+    transition: var(--rec-transition);
+    background: var(--rec-bg-alt);
+    color: var(--rec-text);
+    font-family: inherit;
+  }
+  .rec-filtres input:focus, .rec-filtres select:focus {
+    border-color: var(--rec-accent);
+    box-shadow: 0 0 0 4px rgba(40,167,69,0.15);
+  }
+  .rec-filtres input[name="q"] { width: 260px; }
+  .rec-btn-reset {
+    background: var(--rec-bg-alt);
+    color: var(--rec-text-secondary);
+    border: 1.5px solid var(--rec-border);
+    padding: 9px 16px;
+    border-radius: var(--rec-radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    transition: var(--rec-transition);
+  }
+  .rec-btn-reset:hover { background: var(--rec-border); color: var(--rec-text); }
+
+  .rec-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 13px;
+  }
+  .rec-table thead th {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 14px 16px;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border: none;
+    white-space: nowrap;
+    text-align: left;
+  }
+  .rec-table thead th:first-child { border-radius: var(--rec-radius) 0 0 0; width: 48px; text-align: center; }
+  .rec-table thead th:last-child { border-radius: 0 var(--rec-radius) 0 0; text-align: center; }
+  .rec-table tbody tr {
+    transition: background 0.2s ease;
+    border-bottom: 1px solid var(--rec-border-light);
+  }
+  .rec-table tbody tr:hover { background: rgba(40,167,69,0.08); }
+  .rec-table tbody td {
+    padding: 14px 16px;
+    color: var(--rec-text);
+    vertical-align: middle;
+  }
+  .rec-table tbody tr:last-child td:first-child { border-radius: 0 0 0 var(--rec-radius); }
+  .rec-table tbody tr:last-child td:last-child { border-radius: 0 0 var(--rec-radius) 0; }
+
+  .rec-cmd-num { font-family: monospace; font-weight: 700; font-size: 14px; color: var(--rec-accent); }
+  .rec-fourn { font-weight: 600; font-size: 13px; }
+  .rec-date { font-size: 12px; color: var(--rec-text-secondary); }
+
+  .rec-progress-wrap {
+    background: var(--rec-border);
+    border-radius: 10px;
+    height: 6px;
+    overflow: hidden;
+    margin-top: 6px;
+    width: 120px;
+  }
+  .rec-progress-bar {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #28a745, #20c997);
+    transition: width 0.4s ease;
+  }
+  .rec-progress-bar.warning { background: linear-gradient(90deg, #f59e0b, #d97706); }
+  .rec-progress-bar.danger { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+  .rec-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .rec-badge-attente { background: #fef3c7; color: #92400e; }
+  .rec-badge-partiel { background: #ffedd5; color: #9a3412; }
+  .rec-badge-livre   { background: #dcfce7; color: #166534; }
+  .rec-badge-solde   { background: #e2e8f0; color: #475569; }
+  .rec-badge-annule  { background: #fee2e2; color: #991b1b; }
+  body.dark-mode .rec-badge-attente { background: rgba(251,191,36,0.15); color: #fbbf24; }
+  body.dark-mode .rec-badge-partiel { background: rgba(249,115,22,0.15); color: #fb923c; }
+  body.dark-mode .rec-badge-livre   { background: rgba(34,197,94,0.15); color: #4ade80; }
+  body.dark-mode .rec-badge-solde   { background: rgba(148,163,184,0.15); color: #94a3b8; }
+  body.dark-mode .rec-badge-annule  { background: rgba(239,68,68,0.15); color: #f87171; }
+
+  /* ── Boutons compacts ── */
+  .rec-actions { display: flex; gap: 4px; justify-content: center; flex-wrap: nowrap; }
+  .rec-btn-recept {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: var(--rec-radius-sm);
+    font-weight: 600;
+    font-size: 11px;
+    cursor: pointer;
+    transition: var(--rec-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .rec-btn-recept:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(40,167,69,0.35); }
+
+  .rec-btn-view {
+    background: var(--rec-bg-alt);
+    color: var(--rec-text-secondary);
+    border: 1.5px solid var(--rec-border);
+    padding: 6px 10px;
+    border-radius: var(--rec-radius-sm);
+    font-weight: 600;
+    font-size: 11px;
+    cursor: pointer;
+    transition: var(--rec-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .rec-btn-view:hover { background: var(--rec-border); color: var(--rec-text); }
+
+  .rec-btn-cmd {
+    background: linear-gradient(135deg, #1c5b96, #2563eb);
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: var(--rec-radius-sm);
+    font-weight: 600;
+    font-size: 11px;
+    cursor: pointer;
+    transition: var(--rec-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .rec-btn-cmd:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(28,91,150,0.35); }
+
+  .rec-btn-attach {
+    background: linear-gradient(135deg, #1c5b96, #2563eb);
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: var(--rec-radius-sm);
+    font-weight: 600;
+    font-size: 11px;
+    cursor: pointer;
+    transition: var(--rec-transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .rec-btn-attach:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(28,91,150,0.35); }
+
+  .rec-summary-bar {
+    display: flex;
+    gap: 24px;
+    padding: 16px 20px;
+    background: var(--rec-bg-alt);
+    border-top: 1px solid var(--rec-border);
+    flex-wrap: wrap;
+  }
+  .rec-summary-item { display: flex; align-items: baseline; gap: 6px; }
+  .rec-summary-label { font-size: 12px; color: var(--rec-text-secondary); font-weight: 600; }
+  .rec-summary-value { font-size: 16px; font-weight: 800; color: var(--rec-accent); }
+
+  .rec-pag {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  .rec-pag a, .rec-pag span {
+    padding: 8px 14px;
+    border-radius: var(--rec-radius-sm);
+    font-size: 13px;
+    text-decoration: none;
+    border: 1.5px solid var(--rec-border);
+    color: var(--rec-accent);
+    background: var(--rec-bg);
+    font-weight: 600;
+    transition: var(--rec-transition);
+  }
+  .rec-pag a:hover { background: var(--rec-accent); color: white; border-color: var(--rec-accent); }
+  .rec-pag .cur { background: var(--rec-accent); color: white; border-color: var(--rec-accent); }
+
+  .rec-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--rec-text-secondary);
+    padding: 8px;
+    border-radius: 8px;
+    transition: var(--rec-transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px; height: 36px;
+  }
+  .rec-toggle:hover { background: rgba(40,167,69,0.1); color: var(--rec-accent); }
+  .rec-toggle i { transition: transform 0.3s ease; }
+  .rec-toggle.open i { transform: rotate(90deg); }
+
+  .rec-detail-row {
+    display: none;
+    background: var(--rec-bg-alt);
+  }
+  .rec-detail-row.show {
+    display: table-row;
+    animation: slideDown 0.3s ease;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .rec-detail-box {
+    background: var(--rec-bg);
+    padding: 20px;
+    border-radius: var(--rec-radius-sm);
+    box-shadow: var(--rec-shadow-sm);
+    border: 1px solid var(--rec-border);
+    margin: 8px 16px 16px 48px;
+  }
+  .rec-detail-title {
+    margin: 0 0 16px 0;
+    color: var(--rec-accent);
+    font-size: 13px;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .rec-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .rec-detail-table thead th {
+    background: var(--rec-bg-alt);
+    color: var(--rec-text-secondary);
+    padding: 10px 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    text-align: left;
+    border-bottom: 2px solid var(--rec-border);
+    white-space: nowrap;
+  }
+  .rec-detail-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--rec-border-light);
+    color: var(--rec-text);
+    white-space: nowrap;
+  }
+  .rec-detail-table tbody tr:last-child td { border-bottom: none; }
+  .be-num {
+    font-family: monospace;
+    font-weight: 700;
+    color: var(--rec-accent);
+    white-space: nowrap;
+  }
+
+  .be-chip {
+    background: linear-gradient(135deg, #1c5b96, #2563eb);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    transition: var(--rec-transition);
+    border: none;
+    text-decoration: none;
+  }
+  .be-chip:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(28,91,150,0.3); }
+  .be-chip i { font-size: 11px; }
+
+  .be-chip-sm {
+    background: linear-gradient(135deg, #f59e0b, #d97706);
+    color: white;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+    transition: var(--rec-transition);
+    border: none;
+    text-decoration: none;
+  }
+  .be-chip-sm:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(245,158,11,0.3); }
+  .be-chip-sm.disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  /* ── Modals ── */
+  .up-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000000;
+    align-items: flex-start;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    padding-top: 10vh;
+    overflow-y: auto;
+  }
+  .up-modal.open { display: flex; }
+  .up-modal-box {
+    background: var(--rec-bg);
+    border-radius: var(--rec-radius);
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+    animation: upSlideIn 0.3s ease;
+    margin-bottom: 5vh;
+    border: 1px solid var(--rec-border);
+    overflow: hidden;
+  }
+  .up-modal-box.wide { max-width: 700px; }
+  @keyframes upSlideIn {
+    from { transform: translateY(-30px) scale(0.97); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  .up-modal-head {
+    background: linear-gradient(135deg, #1c5b96, #2563eb);
+    color: white;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .up-modal-head h5 { margin: 0; font-size: 15px; font-weight: 700; }
+  .up-modal-close {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: var(--rec-transition);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .up-modal-close:hover { background: rgba(255,255,255,0.35); transform: rotate(90deg); }
+  .up-modal-body { padding: 24px; }
+  .up-modal-foot {
+    padding: 14px 24px;
+    border-top: 1px solid var(--rec-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: var(--rec-bg-alt);
+  }
+
+  .up-zone {
+    border: 2px dashed var(--rec-border);
+    border-radius: 10px;
+    padding: 30px 20px;
+    text-align: center;
+    transition: all .2s ease;
+    background: var(--rec-bg-alt);
+    cursor: pointer;
+    position: relative;
+  }
+  .up-zone:hover, .up-zone.dragover {
+    border-color: #1c5b96;
+    background: rgba(28,91,150,0.05);
+  }
+  .up-zone i { font-size: 36px; color: #1c5b96; margin-bottom: 10px; display:block; }
+  .up-zone .up-text { font-size: 13px; color: var(--rec-text-secondary); font-weight: 600; }
+  .up-zone .up-hint { font-size: 11px; color: var(--rec-text-light); margin-top: 4px; }
+  /* PAS de onclick sur la div .up-zone — l'input couvre tout */
+  .up-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width:100%; height:100%;
+  }
+  .up-zone.has-file {
+    border-color: #28a745;
+    background: rgba(40,167,69,0.08);
+  }
+  .up-zone.has-file i { color: #28a745; }
+  .up-file-name {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(40,167,69,0.12); color: #155724;
+    padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; margin-top: 10px;
+  }
+  body.dark-mode .up-file-name { background: rgba(74,222,128,0.15); color: #a5d6a7; }
+
+  .up-btn-ok {
+    background: linear-gradient(135deg, #1c5b96, #2563eb);
+    color: white; border: none; padding: 10px 20px;
+    border-radius: var(--rec-radius-sm); font-weight: 700; font-size: 13px;
+    cursor: pointer; transition: var(--rec-transition);
+  }
+  .up-btn-ok:hover { transform: translateY(-2px); }
+  .up-btn-nok {
+    background: var(--rec-bg); color: var(--rec-text-secondary);
+    border: 1.5px solid var(--rec-border); padding: 10px 18px;
+    border-radius: var(--rec-radius-sm); font-size: 13px;
+    cursor: pointer; font-weight: 600;
+  }
+
+  .fg { margin-bottom: 14px; }
+  .fg label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--rec-text-secondary); margin-bottom: 5px; }
+  .fg input, .fg select, .fg textarea { width: 100%; padding: 9px 12px; border: 1px solid var(--rec-border); border-radius: 7px; font-size: 13px; outline: none; transition: .2s; box-sizing: border-box; background: var(--rec-bg-input); color: var(--rec-text-dark); }
+  .fg input:focus, .fg select:focus { border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(28,91,150,0.12); }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  @media (max-width: 768px) {
+    .rec-header { flex-direction: column; gap: 16px; text-align: center; }
+    .rec-filtres { flex-direction: column; align-items: stretch; }
+    .rec-filtres input[name="q"] { width: 100%; }
+    .rec-table thead { display: none; }
+    .rec-table tbody tr {
+      display: block;
+      margin-bottom: 12px;
+      border: 1px solid var(--rec-border);
+      border-radius: var(--rec-radius-sm);
+    }
+    .rec-table tbody td {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--rec-border-light);
+    }
+    .rec-table tbody td::before {
+      content: attr(data-label);
+      font-weight: 700;
+      color: var(--rec-text-secondary);
+      font-size: 11px;
+      text-transform: uppercase;
+    }
+    .rec-table tbody td:first-child { justify-content: center; }
+    .rec-table tbody td:last-child { border-bottom: none; justify-content: center; }
+    .rec-actions { justify-content: flex-end; flex-wrap: wrap; }
+    .rec-detail-box { margin: 8px; }
+    .rec-detail-row { display: none !important; }
+  }
+</style>
+
+<!-- HEADER -->
+<div class="rec-header">
+  <div>
+    <h4><i class="fas fa-box-open me-2"></i>Réceptions de Commandes</h4>
+    <small>Suivi des commandes fournisseurs — réceptions et clôtures</small>
+  </div>
+  <div style="position:relative;z-index:1;">
+    <span style="background:rgba(255,255,255,0.2);padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700;backdrop-filter:blur(4px);">
+      <i class="fas fa-warehouse"></i>
+      {% if magasin_actif %}{{ magasin_actif.nom|upper }}{% else %}Tous magasins{% endif %}
+    </span>
+  </div>
+</div>
+
+<!-- ONGLETS -->
+<div class="rec-tabs">
+  <a href="javascript:void(0)" onclick="switchOnglet('en_cours')" class="rec-tab {% if onglet != 'terminees' %}active{% endif %}">
+    <i class="fas fa-clock"></i> En cours
+    <span class="tab-badge">{{ counts.en_cours|default:0 }}</span>
+  </a>
+  <a href="javascript:void(0)" onclick="switchOnglet('terminees')" class="rec-tab {% if onglet == 'terminees' %}active{% endif %}">
+    <i class="fas fa-archive"></i> Terminées
+    <span class="tab-badge">{{ counts.terminees|default:0 }}</span>
+  </a>
+</div>
+
+<!-- FILTRES -->
+<form method="GET" id="form-filtres" class="rec-filtres">
+  <input type="hidden" name="onglet" value="{{ onglet|default:'en_cours' }}">
+  <i class="fas fa-search" style="color:var(--rec-text-secondary);"></i>
+  <input type="text" name="q" id="input-q" value="{{ q|default:'' }}" placeholder="N° commande, fournisseur, article…">
+  <select name="fournisseur" id="select-fournisseur">
+    <option value="">— Tous fournisseurs —</option>
+    {% for f in fournisseurs %}
+    <option value="{{ f.id }}" {% if request.GET.fournisseur == f.id|stringformat:"s" %}selected{% endif %}>{{ f.raison_sociale }}</option>
+    {% endfor %}
+  </select>
+  <a href="?onglet={{ onglet|default:'en_cours' }}" class="rec-btn-reset" onclick="event.preventDefault(); resetFiltresReceptions();"><i class="fas fa-sync-alt"></i> Réinit.</a>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:8px;font-size:13px;color:var(--rec-text-secondary);font-weight:500;">
+    Afficher
+    <select name="per_page" id="select-per-page" style="padding:6px 10px;border-radius:6px;border:1.5px solid var(--rec-border);background:var(--rec-bg-alt);color:var(--rec-text);cursor:pointer;">
+      <option value="15" {% if per_page == '15' %}selected{% endif %}>15</option>
+      <option value="50" {% if per_page == '50' %}selected{% endif %}>50</option>
+      <option value="100" {% if per_page == '100' %}selected{% endif %}>100</option>
+    </select>
+  </div>
+</form>
+
+<!-- TABLEAU -->
+<div id="ajax-table"><div class="rec-card" style="margin-bottom:0;">
+  <table class="rec-table">
+    <thead>
+      <tr>
+        <th style="width:48px;text-align:center;"></th>
+        <th>N° Commande</th>
+        <th>Date</th>
+        <th>Fournisseur</th>
+        <th>Statut</th>
+        <th style="text-align:center;">Progression</th>
+        <th style="text-align:center;">Reliquat</th>
+        <th style="text-align:center;">Lignes</th>
+        <th style="text-align:center;">BL</th>
+        <th style="text-align:center;">Action</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in commandes_data %}
+      <tr>
+        <td style="text-align:center;" data-label="">
+          {% if item.commande.bons_reception.all or item.commande.bons_livraison.all %}
+          <button type="button" class="rec-toggle" id="btn-toggle-{{ item.commande.id }}" onclick="toggleLignes({{ item.commande.id }})">
+            <i class="fas fa-chevron-right"></i>
+          </button>
+          {% endif %}
+        </td>
+        <td data-label="N° Commande">
+          <div class="rec-cmd-num">{{ item.commande.numero_commande }}</div>
+        </td>
+        <td data-label="Date">
+          <div class="rec-date">{{ item.commande.date_commande|date:"d/m/Y" }}</div>
+          <div class="rec-date">{{ item.commande.date_commande|date:"H:i" }}</div>
+        </td>
+        <td data-label="Fournisseur">
+          <div class="rec-fourn">{{ item.commande.fournisseur.raison_sociale }}</div>
+        </td>
+        <td data-label="Statut">
+          {% if item.commande.statut == 'EN_ATTENTE' %}
+            <span class="rec-badge rec-badge-attente"><i class="fas fa-clock"></i> Attente</span>
+          {% elif item.commande.statut == 'LIVRE_PARTIEL' %}
+            <span class="rec-badge rec-badge-partiel"><i class="fas fa-box-open"></i> Partielle</span>
+          {% elif item.commande.statut == 'LIVRE_TOTAL' %}
+            <span class="rec-badge rec-badge-livre"><i class="fas fa-check-double"></i> Totale</span>
+          {% elif item.commande.statut == 'SOLDE' %}
+            <span class="rec-badge rec-badge-solde"><i class="fas fa-lock"></i> Soldée</span>
+          {% elif item.commande.statut == 'ANNULE' %}
+            <span class="rec-badge rec-badge-annule"><i class="fas fa-times-circle"></i> Annulée</span>
+          {% else %}
+            <span class="rec-badge rec-badge-solde">{{ item.commande.get_statut_display }}</span>
+          {% endif %}
+        </td>
+        <td data-label="Progression" style="text-align:center;">
+          <div style="font-size:12px;font-weight:700;color:var(--rec-text-secondary);margin-bottom:4px;">{{ item.pourcentage }}%</div>
+          <div class="rec-progress-wrap" style="margin:0 auto;">
+            <div class="rec-progress-bar {% if item.pourcentage < 30 %}danger{% elif item.pourcentage < 70 %}warning{% endif %}" style="width:{{ item.pourcentage }}%;"></div>
+          </div>
+          <div style="font-size:10px;color:var(--rec-text-secondary);margin-top:4px;">
+            {{ item.qte_recue_total }} / {{ item.qte_demandee_total }}
+          </div>
+        </td>
+        <td style="text-align:center;" data-label="Reliquat">
+          <span style="font-weight:800;font-size:16px;color:{% if item.reliquat_total > 0 %}#ef4444{% else %}#28a745{% endif %};">
+            {{ item.reliquat_total }}
+          </span>
+          <div style="font-size:10px;color:var(--rec-text-secondary);">unité(s)</div>
+        </td>
+        <td style="text-align:center;" data-label="Lignes">
+          <span style="font-weight:700;font-size:14px;">{{ item.nb_lignes_reliquat }}</span>
+          <div style="font-size:10px;color:var(--rec-text-secondary);">article(s)</div>
+        </td>
+        <td style="text-align:center;" data-label="BL">
+          {% if item.has_doc %}
+            <span class="rec-badge rec-badge-livre" style="cursor:pointer;" onclick="ouvrirModalBLs({{ item.commande.id }})">
+              <i class="fas fa-file-alt"></i> {{ item.nb_bl }}
+            </span>
+          {% else %}
+            <span class="rec-badge rec-badge-solde" style="opacity:0.6;">
+              <i class="fas fa-times"></i> 0
+            </span>
+          {% endif %}
+        </td>
+        <td style="text-align:center;" data-label="Action">
+          <div class="rec-actions">
+            <button type="button" class="rec-btn-cmd" onclick="imprimerModal('{% url 'imprimer_commande' item.commande.id %}', 'Commande — {{ item.commande.numero_commande|escapejs }}')">
+              <i class="fas fa-file-invoice"></i> Cmd
+            </button>
+
+            {# BLs visible dès qu'il y a au moins 1 réception #}
+            {% if item.commande.bons_reception.all %}
+              <button type="button" class="rec-btn-view" onclick="ouvrirModalBLs({{ item.commande.id }})">
+                <i class="fas fa-eye"></i> BLs
+              </button>
+            {% endif %}
+
+            {% if onglet != 'terminees' and peut_creer %}
+            <a href="{% url 'receptionner_commande' item.commande.id %}" class="rec-btn-recept">
+              <i class="fas fa-box-open"></i> Récept.
+            </a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+
+      {# ── Ligne dépliable : Bons d'entrée + BLs ── #}
+      {% if item.commande.bons_reception.all or item.commande.bons_livraison.all %}
+      <tr class="rec-detail-row" id="lignes-{{ item.commande.id }}">
+        <td colspan="10">
+          <div class="rec-detail-box">
+            {# Bons d'entrée avec leur BL respectif #}
+            {% if item.bons_entree_data %}
+            <div style="margin-bottom:24px;">
+              <div class="rec-detail-title">
+                <i class="fas fa-file-invoice"></i> Bons d'entrée générés ({{ item.commande.bons_reception.count }})
+              </div>
+              <table class="rec-detail-table">
+                <thead>
+                  <tr>
+                    <th style="width:22%;">N° Bon</th>
+                    <th style="width:18%;">Magasin</th>
+                    <th style="width:20%;">Date</th>
+                    <th style="width:22%;">BL / Référence</th>
+                    <th style="text-align:center;width:18%;">BL Fournisseur</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for be in item.bons_entree_data %}
+                  <tr>
+                    <td style="text-align:center;">
+    <button type="button" 
+            onclick="imprimerModal('{% url 'imprimer_bon_multi_lignes' be.bon.id %}', 'Bon d Entree — {{ be.bon.numero_bon|escapejs }}')"
+            style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: .2s; box-shadow: 0 2px 5px rgba(16,185,129,0.3);"
+            onmouseover="this.style.transform='translateY(-1px)'" 
+            onmouseout="this.style.transform='translateY(0)'">
+        <i class="fas fa-file-invoice"></i> {{ be.bon.numero_bon }}
+    </button>
+</td>
+                    <td>{{ be.bon.magasin.nom|default:"—" }}</td>
+                    <td>{{ be.bon.date_creation|date:"d/m/Y H:i" }}</td>
+                    <td>{{ be.bon.reference_externe|default:"—" }}</td>
+                    <td style="text-align:center;">
+                      {% if be.has_bl %}
+                        <span class="rec-badge rec-badge-livre" style="cursor:pointer;" onclick="imprimerModal('{% url 'voir_bon_livraison' be.bl.id %}', 'BL — {{ be.bl.reference_bl|default:be.bl.id|escapejs }}')">
+                          <i class="fas fa-file-alt"></i> Oui
+                        </span>
+                      {% else %}
+                        <button type="button" class="rec-btn-attach" style="padding:5px 10px;font-size:11px;" onclick="ouvrirModalUpload({{ item.commande.id }}, {{ be.bon.id }})">
+                          <i class="fas fa-paperclip"></i> Joindre
+                        </button>
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endif %}
+
+            {# Bons de livraison (historique) #}
+            {% if item.bls_data %}
+            <div>
+              <div class="rec-detail-title" style="color:#1c5b96;">
+                <i class="fas fa-paperclip"></i> Bons de livraison joints ({{ item.nb_bl }})
+              </div>
+              <table class="rec-detail-table">
+                <thead>
+                  <tr>
+                    <th style="width:22%;">Date upload</th>
+                    <th style="width:18%;">Par</th>
+                    <th style="width:20%;">Référence</th>
+                    <th style="width:22%;">Réception liée</th>
+                    <th style="text-align:center;width:18%;">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for bl_data in item.bls_data %}
+                  <tr>
+                    <td>{{ bl_data.bl.date_upload|date:"d/m/Y H:i" }}</td>
+                    <td>{{ bl_data.bl.upload_par.username|default:"—" }}</td>
+                    <td>{{ bl_data.bl.reference_bl|default:"—" }}</td>
+                    <td>
+                      {% if bl_data.bl.bon_entree %}
+                        <span style="font-family:monospace;font-weight:700;color:var(--rec-accent);">{{ bl_data.bl.bon_entree.numero_bon }}</span>
+                      {% else %}
+                        <span style="color:var(--rec-text-secondary);font-size:12px;">—</span>
+                      {% endif %}
+                    </td>
+                    <td style="text-align:center;">
+                      <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                        <button type="button" class="be-chip" onclick="imprimerModal('{% url 'voir_bon_livraison' bl_data.bl.id %}', 'BL #{{ bl_data.bl.id|escapejs }}')">
+                          <i class="fas fa-eye"></i> Voir
+                        </button>
+                        {% if bl_data.peut_remplacer %}
+                        <button type="button" class="be-chip-sm" onclick="ouvrirModalRemplacer({{ bl_data.bl.id }}, '{{ item.commande.numero_commande|escapejs }}')">
+                          <i class="fas fa-sync-alt"></i> Rempl.
+                        </button>
+                        {% else %}
+                        <button type="button" class="be-chip-sm disabled" disabled title="Délai de {{ delai_jours }} jours dépassé">
+                          <i class="fas fa-lock"></i> Verrou
+                        </button>
+                        {% endif %}
+                      </div>
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% endif %}
+      {% empty %}
+      <tr>
+        <td colspan="10" style="padding: 48px; text-align: center; color: var(--rec-text-secondary);">
+          {% if onglet == 'terminees' %}
+            <i class="fas fa-archive" style="font-size: 48px; color: var(--rec-border); display: block; margin-bottom: 16px;"></i>
+            <p style="font-size: 15px; font-weight: 500;">Aucune commande terminée.</p>
+          {% else %}
+            <i class="fas fa-check-circle" style="font-size: 48px; color: #28a745; display: block; margin-bottom: 16px;"></i>
+            <p style="font-size: 15px; font-weight: 500;">Aucune commande en attente de réception.</p>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <!-- BARRE DE RÉSUMÉ -->
+  <div class="rec-summary-bar">
+    <div class="rec-summary-item">
+      <span class="rec-summary-label">Commandes :</span>
+      <span class="rec-summary-value">{{ commandes.paginator.count|default:0 }}</span>
+    </div>
+    <div class="rec-summary-item">
+      <span class="rec-summary-label">Articles :</span>
+      <span class="rec-summary-value">{{ total_lignes|default:0 }}</span>
+    </div>
+    {% if onglet != 'terminees' %}
+    <div class="rec-summary-item">
+      <span class="rec-summary-label">Reliquat global :</span>
+      <span class="rec-summary-value" style="color:#ef4444;">{{ total_reliquat|default:0 }}</span>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div id="ajax-pagination">
+<!-- PAGINATION -->
+{% if commandes.has_other_pages %}
+<div class="rec-pag">
+  {% if commandes.has_previous %}
+    <a href="?page={{ commandes.previous_page_number }}&onglet={{ onglet|default:'en_cours' }}&q={{ q|default:'' }}&fournisseur={{ fournisseur_filter|default:'' }}&per_page={{ per_page|default:'15' }}"><i class="fas fa-chevron-left"></i> Préc.</a>
+  {% endif %}
+  <span class="cur">Page {{ commandes.number }} / {{ commandes.paginator.num_pages }}</span>
+  {% if commandes.has_next %}
+    <a href="?page={{ commandes.next_page_number }}&onglet={{ onglet|default:'en_cours' }}&q={{ q|default:'' }}&fournisseur={{ fournisseur_filter|default:'' }}&per_page={{ per_page|default:'15' }}">Suiv. <i class="fas fa-chevron-right"></i></a>
+  {% endif %}
+</div>
+{% endif %}
+</div>
+
+<!-- MODALS LISTE BLs (une par commande avec réception) -->
+{% for item in commandes_data %}
+{% if item.commande.bons_reception.all %}
+<div class="up-modal" id="modal-bls-{{ item.commande.id }}">
+  <div class="up-modal-box wide">
+    <div class="up-modal-head">
+      <h5><i class="fas fa-file-invoice me-2"></i>Bons de livraison — {{ item.commande.numero_commande }}</h5>
+      <button type="button" class="up-modal-close" onclick="fermerModalBLs({{ item.commande.id }})"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="up-modal-body">
+      {% if item.bls_data %}
+      <table class="rec-detail-table">
+        <thead>
+          <tr>
+            <th>Date upload</th>
+            <th>Par</th>
+            <th>Référence</th>
+            <th>Réception liée</th>
+            <th style="text-align:center;">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for bl_data in item.bls_data %}
+          <tr>
+            <td>{{ bl_data.bl.date_upload|date:"d/m/Y H:i" }}</td>
+            <td>{{ bl_data.bl.upload_par.username|default:"—" }}</td>
+            <td>{{ bl_data.bl.reference_bl|default:"—" }}</td>
+            <td>
+              {% if bl_data.bl.bon_entree %}
+                <span style="font-family:monospace;font-weight:700;color:var(--rec-accent);">{{ bl_data.bl.bon_entree.numero_bon }}</span>
+              {% else %}
+                <span style="color:var(--rec-text-secondary);font-size:12px;">—</span>
+              {% endif %}
+            </td>
+            <td style="text-align:center;">
+              <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap;">
+                <button type="button" class="be-chip" onclick="imprimerModal('{% url 'voir_bon_livraison' bl_data.bl.id %}', 'BL #{{ bl_data.bl.id|escapejs }}')">
+                  <i class="fas fa-eye"></i> Voir
+                </button>
+                {% if bl_data.peut_remplacer %}
+                <button type="button" class="be-chip-sm" onclick="ouvrirModalRemplacer({{ bl_data.bl.id }}, '{{ item.commande.numero_commande|escapejs }}');fermerModalBLs({{ item.commande.id }});">
+                  <i class="fas fa-sync-alt"></i> Rempl.
+                </button>
+                {% else %}
+                <button type="button" class="be-chip-sm disabled" disabled title="Délai de {{ delai_jours }} jours dépassé">
+                  <i class="fas fa-lock"></i> Verrou
+                </button>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div style="text-align:center;padding:30px;color:var(--rec-text-secondary);">
+        <i class="fas fa-paperclip" style="font-size:32px;color:var(--rec-border);display:block;margin-bottom:12px;"></i>
+        <p style="font-size:14px;font-weight:600;">Aucun bon de livraison joint.</p>
+        <p style="font-size:12px;">Cliquez sur "Ajouter un BL" pour en joindre un.</p>
+      </div>
+      {% endif %}
+    </div>
+        <div class="up-modal-foot">
+      <button type="button" class="up-btn-nok" onclick="fermerModalBLs({{ item.commande.id }})">Fermer</button>
+      {% if item.nb_bl < item.nb_receptions and item.premier_bon_sans_bl_id %}
+      <button type="button" class="up-btn-ok" onclick="ouvrirModalUpload({{ item.commande.id }}, {{ item.premier_bon_sans_bl_id }});fermerModalBLs({{ item.commande.id }});">
+        <i class="fas fa-plus me-1"></i>Ajouter un BL
+      </button>
+      {% else %}
+      <span style="font-size:12px;color:var(--rec-text-secondary);font-weight:600;">
+        <i class="fas fa-check-circle" style="color:#28a745;"></i> Tous les BL sont joints ({{ item.nb_receptions }} réception{{ item.nb_receptions|pluralize:"s" }})
+      </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endfor %}
+
+</div>
+
+<!-- MODALS UPLOAD (une par commande) -->
+{% for item in commandes_data %}
+<div class="up-modal" id="modal-upload-{{ item.commande.id }}">
+  <div class="up-modal-box">
+    <div class="up-modal-head">
+      <h5><i class="fas fa-paperclip me-2"></i>Joindre un BL — {{ item.commande.numero_commande }}</h5>
+      <button type="button" class="up-modal-close" onclick="fermerModalUpload({{ item.commande.id }})"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST" action="{% url 'joindre_bon_livraison' item.commande.id %}" enctype="multipart/form-data" id="form-upload-{{ item.commande.id }}">
+      {% csrf_token %}
+      <input type="hidden" name="bon_entree_id" id="bon-entree-id-{{ item.commande.id }}" value="">
+      <div class="up-modal-body">
+        <div style="text-align:center;margin-bottom:16px;">
+          <div style="font-family:monospace;font-weight:700;color:#1c5b96;font-size:18px;">{{ item.commande.numero_commande }}</div>
+          <div style="font-size:12px;color:var(--rec-text-secondary);">{{ item.commande.fournisseur.raison_sociale }}</div>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rec-text-secondary);margin-bottom:5px;">Référence BL (optionnel)</label>
+          <input type="text" name="reference_bl" maxlength="100" placeholder="Ex: BL-2026-001" style="width:100%;padding:9px 12px;border:1px solid var(--rec-border);border-radius:7px;font-size:13px;background:var(--rec-bg-alt);color:var(--rec-text);">
+        </div>
+        <div class="up-zone" id="up-zone-{{ item.commande.id }}">
+          <input type="file" name="document_livraison" id="file-up-{{ item.commande.id }}"
+                 accept=".pdf,.jpg,.jpeg,.png" required
+                 onchange="handleFileUpload(this, {{ item.commande.id }})">
+          <i class="fas fa-cloud-upload-alt" id="up-icon-{{ item.commande.id }}"></i>
+          <div class="up-text" id="up-text-{{ item.commande.id }}">Cliquez ou glissez le bon ici</div>
+          <div class="up-hint" id="up-hint-{{ item.commande.id }}">PDF, JPG, PNG — Max 1 Mo</div>
+          <div id="up-display-{{ item.commande.id }}" style="display:none;">
+            <span class="up-file-name"><i class="fas fa-file"></i> <span id="up-filename-{{ item.commande.id }}"></span></span>
+          </div>
+        </div>
+      </div>
+      <div class="up-modal-foot">
+        <button type="button" class="up-btn-nok" onclick="fermerModalUpload({{ item.commande.id }})">Annuler</button>
+        <button type="submit" class="up-btn-ok"><i class="fas fa-paper-plane me-1"></i>Joindre</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
+
+<!-- MODAL REMPLACER BL (globale) -->
+<div class="up-modal" id="modal-remplacer-bl">
+  <div class="up-modal-box">
+    <div class="up-modal-head" style="background:linear-gradient(135deg,#f59e0b,#d97706);">
+      <h5><i class="fas fa-sync-alt me-2"></i>Remplacer le bon de livraison</h5>
+      <button type="button" class="up-modal-close" onclick="fermerModalRemplacer()"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST" action="" enctype="multipart/form-data" id="form-remplacer-bl">
+      {% csrf_token %}
+      <div class="up-modal-body">
+        <div style="text-align:center;margin-bottom:16px;">
+          <div id="remplacer-cmd-info" style="font-family:monospace;font-weight:700;color:#d97706;font-size:18px;"></div>
+        </div>
+        <div class="fg" style="margin-bottom:14px;">
+          <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rec-text-secondary);margin-bottom:5px;">Référence BL (optionnel)</label>
+          <input type="text" name="reference_bl" maxlength="100" placeholder="Ex: BL-2026-001" style="width:100%;padding:9px 12px;border:1px solid var(--rec-border);border-radius:7px;font-size:13px;background:var(--rec-bg-alt);color:var(--rec-text);">
+        </div>
+        <div class="up-zone" id="up-zone-remplacer">
+          <input type="file" name="document_livraison" id="file-up-remplacer" accept=".pdf,.jpg,.jpeg,.png" required onchange="handleFileUploadRemplacer(this)">
+          <i class="fas fa-cloud-upload-alt" id="up-icon-remplacer"></i>
+          <div class="up-text" id="up-text-remplacer">Cliquez ou glissez le nouveau bon ici</div>
+          <div class="up-hint" id="up-hint-remplacer">PDF, JPG, PNG — Max 1 Mo</div>
+          <div id="up-display-remplacer" style="display:none;">
+            <span class="up-file-name"><i class="fas fa-file"></i> <span id="up-filename-remplacer"></span></span>
+          </div>
+        </div>
+      </div>
+      <div class="up-modal-foot">
+        <button type="button" class="up-btn-nok" onclick="fermerModalRemplacer()">Annuler</button>
+        <button type="submit" class="up-btn-ok" style="background:linear-gradient(135deg,#f59e0b,#d97706);"><i class="fas fa-sync-alt me-1"></i>Remplacer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODAL IMPRESSION PDF -->
+<div class="up-modal" id="modal-pdf">
+  <div class="up-modal-box" style="max-width:960px;">
+    <div class="up-modal-head">
+      <h5 id="pdf-titre"><i class="fas fa-print me-2"></i>Impression</h5>
+      <button type="button" class="up-modal-close" onclick="document.getElementById('modal-pdf').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:12px;min-height:300px;background:var(--rec-bg-alt);">
+      <div id="pdf-loader" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;gap:14px;">
+        <div style="width:40px;height:40px;border:4px solid var(--rec-border);border-top-color:var(--rec-accent);border-radius:50%;animation:spin .8s linear infinite;"></div>
+        <span style="color:var(--rec-text-secondary);font-size:13px;">Chargement du document…</span>
+      </div>
+      <iframe id="pdf-iframe" style="display:none;width:100%;height:72vh;border:none;border-radius:0 0 8px 8px;"></iframe>
+    </div>
+    <div class="up-modal-foot">
+      <button type="button" class="up-btn-nok" onclick="document.getElementById('modal-pdf').classList.remove('open')">Fermer</button>
+      <button type="button" class="up-btn-ok" onclick="document.getElementById('pdf-iframe').contentWindow.print()">
+        <i class="fas fa-print me-1"></i>Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+//  AJAX : Recherche, filtres et pagination SANS rechargement
+// ═══════════════════════════════════════════════════════════════
+(function() {
+    const formFiltres = document.getElementById('form-filtres');
+    const tableCard   = document.getElementById('ajax-table');
+    const pagWrapper  = document.getElementById('ajax-pagination');
+
+    function parseHTML(html) {
+        const parser = new DOMParser();
+        return parser.parseFromString(html, 'text/html');
+    }
+
+    window.chargerReceptions = async function(url, pushState) {
+        if (pushState === undefined) pushState = true;
+        if (!url) {
+            const params = new URLSearchParams(new FormData(formFiltres));
+            url = window.location.pathname + '?' + params.toString();
+        }
+
+        if (tableCard) { tableCard.style.opacity = '0.45'; tableCard.style.pointerEvents = 'none'; }
+
+        try {
+            const response = await fetch(url, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin'
+            });
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const htmlText = await response.text();
+            const doc  = parseHTML(htmlText);
+
+            const newTable = doc.getElementById('ajax-table');
+            if (newTable && tableCard) tableCard.innerHTML = newTable.innerHTML;
+
+            const newPag = doc.getElementById('ajax-pagination');
+            if (newPag && pagWrapper) {
+                pagWrapper.innerHTML = newPag.innerHTML;
+            } else if (pagWrapper) {
+                pagWrapper.innerHTML = '';
+            }
+
+            if (pushState) history.pushState({ajaxUrl: url}, '', url);
+
+            attacherPaginationAjax();
+
+            document.querySelectorAll('.rec-detail-row.show').forEach(function(r) {
+                r.classList.remove('show');
+                r.style.display = 'none';
+            });
+            document.querySelectorAll('.rec-toggle.open').forEach(function(b) { b.classList.remove('open'); });
+
+        } catch (err) {
+            console.error('[AJAX Receptions]', err);
+            window.location.href = url;
+        } finally {
+            if (tableCard) { tableCard.style.opacity = '1'; tableCard.style.pointerEvents = 'auto'; }
+        }
+    };
+
+    function attacherPaginationAjax() {
+        if (!pagWrapper) return;
+        pagWrapper.querySelectorAll('a').forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                window.chargerReceptions(this.href);
+            });
+        });
+    }
+
+    if (formFiltres) {
+        formFiltres.addEventListener('submit', function(e) {
+            e.preventDefault();
+            window.chargerReceptions();
+        });
+    }
+
+    let typingTimer;
+    const searchInput = document.getElementById('input-q');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            clearTimeout(typingTimer);
+            typingTimer = setTimeout(function() { window.chargerReceptions(); }, 400);
+        });
+    }
+
+    ['select-fournisseur', 'select-per-page'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('change', function() { window.chargerReceptions(); });
+    });
+
+    window.resetFiltresReceptions = function() {
+        document.getElementById('input-q').value = '';
+        document.getElementById('select-fournisseur').value = '';
+        window.chargerReceptions();
+    };
+
+    window.switchOnglet = function(onglet) {
+        var inputOnglet = document.querySelector('input[name="onglet"]');
+        if (inputOnglet) inputOnglet.value = onglet;
+        document.querySelectorAll('.rec-tab').forEach(function(t) { t.classList.remove('active'); });
+        var activeTab = document.querySelector('a[onclick*="' + onglet + '"]');
+        if (activeTab) activeTab.classList.add('active');
+        window.chargerReceptions();
+    };
+
+    attacherPaginationAjax();
+
+    window.addEventListener('popstate', function(e) {
+        const url = (e.state && e.state.ajaxUrl) ? e.state.ajaxUrl : window.location.href;
+        window.chargerReceptions(url, false);
+    });
+})();
+// ═══════════════════════════════════════════════════════════════
+
+// ── Toggle ──
+function toggleLignes(id) {
+    var row = document.getElementById('lignes-' + id);
+    var iconBtn = document.getElementById('btn-toggle-' + id);
+    if (!row) return;
+    if (row.classList.contains('show')) {
+        row.classList.remove('show');
+        if (iconBtn) iconBtn.classList.remove('open');
+        setTimeout(function() { row.style.display = 'none'; }, 300);
+    } else {
+        row.style.display = 'table-row';
+        void row.offsetWidth;
+        row.classList.add('show');
+        if (iconBtn) iconBtn.classList.add('open');
+    }
+}
+
+// ── Modal impression PDF ──
+function imprimerModal(url, titre) {
+    var modal = document.getElementById('modal-pdf');
+    var titreEl = document.getElementById('pdf-titre');
+    var loader = document.getElementById('pdf-loader');
+    var iframe = document.getElementById('pdf-iframe');
+    
+    if(titreEl) titreEl.innerHTML = '<i class="fas fa-print me-2"></i>' + (titre||'');
+    if(loader) loader.style.display = 'flex';
+    if(iframe) { iframe.style.display = 'none'; iframe.src = ''; }
+    if(modal) modal.classList.add('open');
+    
+    if(iframe) {
+        iframe.onload = function(){
+            if(loader) loader.style.display = 'none';
+            iframe.style.display = 'block';
+        };
+        iframe.src = url;
+    }
+}
+
+// ── Auto-open bon après réception ──
+(function(){
+    var urlParams = new URLSearchParams(window.location.search);
+    var printBonId = urlParams.get('print_bon');
+    if (printBonId) {
+        var cleanUrl = window.location.pathname + window.location.search.replace(/[?&]print_bon=\d+/, '').replace(/^&/, '?');
+        window.history.replaceState({}, document.title, cleanUrl);
+        imprimerModal('/stock/bon/' + printBonId + '/imprimer/', 'Bon d entrée générée');
+    }
+})();
+
+// ── Modal upload ──
+function ouvrirModalUpload(id, bonEntreeId) {
+    var modal = document.getElementById('modal-upload-' + id);
+    var hiddenInput = document.getElementById('bon-entree-id-' + id);
+    if (hiddenInput) hiddenInput.value = bonEntreeId || '';
+    if(modal) modal.classList.add('open');
+}
+function fermerModalUpload(id) {
+    var modal = document.getElementById('modal-upload-' + id);
+    if(modal) modal.classList.remove('open');
+}
+
+// ── Modal BLs ──
+function ouvrirModalBLs(id) {
+    var modal = document.getElementById('modal-bls-' + id);
+    if(modal) modal.classList.add('open');
+}
+function fermerModalBLs(id) {
+    var modal = document.getElementById('modal-bls-' + id);
+    if(modal) modal.classList.remove('open');
+}
+
+// ── Modal remplacer BL ──
+function ouvrirModalRemplacer(bonId, cmdNumero) {
+    var modal = document.getElementById('modal-remplacer-bl');
+    var form = document.getElementById('form-remplacer-bl');
+    var info = document.getElementById('remplacer-cmd-info');
+    if(info) info.textContent = cmdNumero;
+    if(form) form.action = '/stock/receptions/remplacer-bl/' + bonId + '/';
+    
+    var input = document.getElementById('file-up-remplacer');
+    if(input) input.value = '';
+    var zone = document.getElementById('up-zone-remplacer');
+    if(zone) zone.classList.remove('has-file');
+    var icon = document.getElementById('up-icon-remplacer');
+    if(icon) icon.className = 'fas fa-cloud-upload-alt';
+    var text = document.getElementById('up-text-remplacer');
+    if(text) text.textContent = 'Cliquez ou glissez le nouveau bon ici';
+    var hint = document.getElementById('up-hint-remplacer');
+    if(hint) hint.textContent = 'PDF, JPG, PNG — Max 1 Mo';
+    var display = document.getElementById('up-display-remplacer');
+    if(display) display.style.display = 'none';
+    
+    if(modal) modal.classList.add('open');
+}
+function fermerModalRemplacer() {
+    var modal = document.getElementById('modal-remplacer-bl');
+    if(modal) modal.classList.remove('open');
+}
+
+// ── Gestion fichier upload ──
+function handleFileUpload(input, id) {
+    var zone = document.getElementById('up-zone-' + id);
+    var icon = document.getElementById('up-icon-' + id);
+    var text = document.getElementById('up-text-' + id);
+    var hint = document.getElementById('up-hint-' + id);
+    var display = document.getElementById('up-display-' + id);
+    var nameText = document.getElementById('up-filename-' + id);
+
+    if (input.files && input.files[0]) {
+        var file = input.files[0];
+        var maxSize = 1024 * 1024;
+        if (file.size > maxSize) {
+            Swal.fire({ icon: 'error', title: 'Fichier trop lourd',
+                text: 'Maximum 1 Mo. Votre fichier fait ' + (file.size/1024).toFixed(0) + ' Ko.',
+                confirmButtonColor: '#dc3545' });
+            input.value = ''; return;
+        }
+        if(zone) zone.classList.add('has-file');
+        if(icon) icon.className = 'fas fa-file-alt';
+        if(text) text.textContent = 'Document sélectionné';
+        if(hint) hint.textContent = 'Cliquez pour changer';
+        if(nameText) nameText.textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' Ko)';
+        if(display) display.style.display = 'block';
+    }
+}
+
+// ── Gestion fichier remplacer ──
+function handleFileUploadRemplacer(input) {
+    var zone = document.getElementById('up-zone-remplacer');
+    var icon = document.getElementById('up-icon-remplacer');
+    var text = document.getElementById('up-text-remplacer');
+    var hint = document.getElementById('up-hint-remplacer');
+    var display = document.getElementById('up-display-remplacer');
+    var nameText = document.getElementById('up-filename-remplacer');
+
+    if (input.files && input.files[0]) {
+        var file = input.files[0];
+        var maxSize = 1024 * 1024;
+        if (file.size > maxSize) {
+            Swal.fire({ icon: 'error', title: 'Fichier trop lourd',
+                text: 'Maximum 1 Mo. Votre fichier fait ' + (file.size/1024).toFixed(0) + ' Ko.',
+                confirmButtonColor: '#dc3545' });
+            input.value = ''; return;
+        }
+        if(zone) zone.classList.add('has-file');
+        if(icon) icon.className = 'fas fa-file-alt';
+        if(text) text.textContent = 'Document sélectionné';
+        if(hint) hint.textContent = 'Cliquez pour changer';
+        if(nameText) nameText.textContent = file.name + ' (' + (file.size/1024).toFixed(0) + ' Ko)';
+        if(display) display.style.display = 'block';
+    }
+}
+
+// ── Drag & drop ──
+document.querySelectorAll('.up-zone').forEach(function(zone) {
+    zone.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
+    zone.addEventListener('dragleave', function(e) { e.preventDefault(); this.classList.remove('dragover'); });
+    zone.addEventListener('drop', function(e) {
+        e.preventDefault(); this.classList.remove('dragover');
+        var input = this.querySelector('input[type="file"]');
+        if(input) {
+            input.files = e.dataTransfer.files;
+            var id = input.id.replace('file-up-', '');
+            if (id === 'remplacer') {
+                handleFileUploadRemplacer(input);
+            } else {
+                handleFileUpload(input, id);
+            }
+        }
+    });
+});
+
+// ── Fermer modals ──
+document.querySelectorAll('.up-modal').forEach(function(m) {
+    m.addEventListener('click', function(e) { if(e.target === this) this.classList.remove('open'); });
+});
+document.addEventListener('keydown', function(e) {
+    if(e.key === 'Escape') document.querySelectorAll('.up-modal').forEach(function(m){m.classList.remove('open');});
+});
+</script>
+{% endblock %}

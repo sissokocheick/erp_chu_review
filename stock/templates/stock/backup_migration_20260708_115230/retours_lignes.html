@@ -1,0 +1,59 @@
+{% for bon in retours_bons %}
+<tr class="bon-row {% if bon.est_annule %}annule{% endif %}" onclick="toggleDetail({{ bon.id }})">
+    <td class="c"><i class="fas fa-chevron-right chev" id="chev-{{ bon.id }}"></i></td>
+    <td>
+        <span class="num-bon {% if bon.est_annule %}annule{% endif %}">{{ bon.numero_bon }}</span>
+        {% if bon.est_annule %}<span class="badge-annule">Annulé</span>{% endif %}
+    </td>
+    <td>{{ bon.date_bon|date:"d/m/Y H:i" }}</td>
+    <td><span class="svc-tag">{{ bon.service_demandeur.nom|default:"—" }}</span></td>
+    <td><span class="mag-tag">{{ bon.magasin.nom|default:"—" }}</span></td>
+    <td class="c"><span class="count-tag">{{ bon.lignes_bon.count }}</span></td>
+    <td>{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}</td>
+    <td class="c">
+        {% if not bon.est_annule %}
+        <button type="button" class="btn-pdf" onclick="event.stopPropagation(); imprimerModal('/stock/retours-services/imprimer/{{ bon.id }}/', 'Bon de Retour — {{ bon.numero_bon }}')" title="Aperçu / Imprimer" aria-label="Imprimer le bon {{ bon.numero_bon }}">
+            <i class="fas fa-print"></i>
+        </button>
+        {% endif %}
+    </td>
+</tr>
+<tr class="detail-row" id="detail-{{ bon.id }}">
+    <td colspan="8">
+        <div class="detail-inner">
+            <h6><i class="fas fa-boxes me-1"></i> Articles réintégrés</h6>
+            <table class="detail-table">
+                <thead>
+                    <tr>
+                        <th>Article</th>
+                        <th>Référence</th>
+                        <th class="r">Qté</th>
+                        <th>N° Lot</th>
+                        <th>Péremption</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in bon.lignes_bon.all %}
+                    <tr>
+                        <td><strong>{{ ligne.article.designation }}</strong></td>
+                        <td>{{ ligne.article.reference|default:"—" }}</td>
+                        <td class="r">{{ ligne.quantite }}</td>
+                        <td>{{ ligne.numero_lot|default:"—" }}</td>
+                        <td>{{ ligne.date_peremption|date:"d/m/Y"|default:"—" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" style="text-align:center;color:var(--text-light);padding:12px;">Aucune ligne</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </td>
+</tr>
+{% empty %}
+<tr class="empty-row">
+    <td colspan="8">
+        <i class="fas fa-inbox" style="font-size:28px;margin-bottom:10px;display:block;opacity:.6;"></i>
+        Aucun bon de retour trouvé.
+    </td>
+</tr>
+{% endfor %}

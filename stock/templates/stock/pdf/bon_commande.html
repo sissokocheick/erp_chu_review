@@ -1,0 +1,434 @@
+{% load static custom_filters %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Bon de Commande {{ commande.numero_commande }}</title>
+<style>
+@page {
+    size: A4;
+    margin: 10mm 7mm 1mm 7mm; }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9pt;
+    line-height: 1.35;
+    color: #000;
+}
+.page { width: 100%; }
+.page-flex {
+    display: flex;
+    flex-direction: column;
+    min-height: 277mm;
+}
+.content-main { flex: 1 1 auto; }
+.bloc-bas {
+    width: 100%;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.page-flex .bloc-bas { margin-top: auto; }
+
+/* ── EN-TETE ETATIQUE ── */
+.en-tete-etatique {
+    width: 100%;
+    font-size: 8pt;
+    margin-bottom: 2mm;
+    border-collapse: collapse;
+}
+.en-tete-etatique td {
+    vertical-align: top;
+    font-weight: bold;
+    line-height: 1.4;
+    padding: 0;
+}
+.en-tete-etatique .left-cell {
+    text-align: left;
+}
+.en-tete-etatique .right-cell {
+    text-align: right;
+}
+.en-tete-etatique .line1 {
+    display: block;
+}
+.en-tete-etatique .line2 {
+    display: block;
+}
+
+/* ── CARTOUCHE PRINCIPAL ── */
+.cartouche {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1.5px solid #000;
+    margin-bottom: 3mm;
+}
+.cartouche td {
+    border: 1px solid #000;
+    padding: 2mm;
+    vertical-align: middle;
+}
+.cartouche tr {
+    height: 28mm;
+}
+.logo-cell {
+    width: 25%;
+    text-align: center;
+    font-size: 9pt;
+}
+.logo-cell img { max-height: 18mm; }
+.logo-cell .institution {
+    font-size: 8pt;
+    margin-top: 1mm;
+}
+.title-cell {
+    width: 50%;
+    text-align: center;
+    border-left: 1.5px solid #000 !important;
+    padding: 0;
+    vertical-align: middle;
+}
+
+.code-cell {
+    width: 25%;
+    text-align: left;
+    font-size: 9pt;
+    font-weight: bold;
+    line-height: 1.8;
+    border-left: 1.5px solid #000 !important;
+}
+
+/* ── INFOS COMMANDE ── */
+.infos-commande {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 3mm;
+    font-size: 10pt;
+}
+.infos-commande td {
+    padding: 1.5mm 0;
+    vertical-align: top;
+}
+.label-bc {
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.val-bc {
+    font-weight: bold;
+    color: #1c5b96;
+}
+.objet-val {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #1c5b96;
+    white-space: nowrap;
+}
+
+/* ── MODALITES ── */
+.modalites {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 2mm;
+    font-size: 9pt;
+}
+.modalites td {
+    width: 33.33%;
+    border: 1.5px solid #000;
+    padding: 2mm;
+    text-align: center;
+    vertical-align: top;
+}
+.modalites .mod-title {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 8pt;
+    margin-bottom: 1mm;
+}
+.modalites .mod-val {
+    font-weight: bold;
+    font-size: 10pt;
+}
+
+/* ── TABLEAU ARTICLES ── */
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin-bottom: 2mm;
+}
+.data-table thead {
+    display: table-header-group;
+}
+.data-table thead tr,
+.data-table tbody tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.data-table th,
+.data-table td {
+    border: 1px solid #000;
+    padding: 1.5mm 2mm;
+    vertical-align: middle;
+    text-align: center;
+}
+.data-table th {
+    font-weight: bold;
+    background-color: #f0f0f0;
+    text-transform: uppercase;
+    font-size: 8pt;
+}
+.data-table td.desig {
+    text-align: left;
+}
+.data-table td.qt-bold {
+    font-weight: bold;
+}
+.data-table .col-n { width: 8%; }
+.data-table .col-ref { width: 15%; }
+.data-table .col-des { width: 52%; }
+.data-table .col-un { width: 12%; }
+.data-table .col-qt { width: 13%; }
+
+/* ── TEXTE LEGAL ── */
+.texte-legal {
+    font-size: 9pt;
+    font-style: italic;
+    text-align: center;
+    margin: 4mm 0;
+    padding: 2mm;
+    border: 1px solid #000;
+}
+
+/* ── SIGNATURES ── */
+.signatures-block {
+    width: 100%;
+    margin-bottom: 2mm;
+    font-size: 9pt;
+}
+.sig-row {
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    gap: 5mm;
+}
+.sig-item {
+    text-align: center;
+    min-width: 60mm;
+}
+.sig-fonction {
+    font-weight: bold;
+    text-transform: uppercase;
+    font-size: 9pt;
+    text-decoration: underline;
+    margin-bottom: 2mm;
+}
+.sig-name {
+    font-size: 10pt;
+    font-weight: bold;
+    margin-bottom: 1mm;
+}
+.sig-img {
+    display: block;
+    margin: 1mm auto;
+    max-height: 12mm;
+    max-width: 80%;
+    object-fit: contain;
+}
+.sig-date {
+    font-size: 8pt;
+    color: #555;
+    margin-top: 1mm;
+}
+
+/* ── FOOTER ── */
+.footer-bc {
+    text-align: center;
+    font-size: 7pt;
+    line-height: 1.5;
+    border-top: 2px solid #1c5b96;
+    padding-top: 1mm;
+    margin-top: 0;
+}
+.footer-bc .pied-texte {
+    font-weight: bold;
+    color: #1c5b96;
+}
+.footer-bc .pied-line {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+.footer-bc .pagination {
+    font-weight: bold;
+    color: #1c5b96;
+    margin-top: 1mm;
+    text-align: right;
+}
+
+img { max-width: 100%; height: auto; }
+</style>
+</head>
+<body>
+
+<div class="page page-flex">
+  <div class="content-main">
+
+    {% if pdf_config.cartouche.afficher_republique or pdf_config.cartouche.afficher_devise %}
+<table class="en-tete-etatique">
+  <tr>
+    <td style="width:50%; vertical-align:middle; text-align:left;">
+      <div style="display:inline-block; text-align:center;">
+        <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
+      </div>
+    </td>
+    
+    <td style="width:50%; vertical-align:middle; text-align:right;">
+      <div style="display:inline-block; text-align:center;">
+        
+        {% if pdf_config.cartouche.afficher_republique %}
+          <strong>République de Côte d'Ivoire</strong><br>
+        {% endif %}
+        
+        {% if pdf_config.cartouche.afficher_devise %}
+          <em>Union - Discipline - Travail</em>
+        {% endif %}
+        
+      </div>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+    <!-- CARTOUCHE -->
+    <table class="cartouche">
+      <tr>
+        <td class="logo-cell">
+          {% if pdf_config.cartouche.afficher_logo and logo_url %}
+            <img src="{{ logo_url }}" alt="Logo">
+          {% endif %}
+        </td>
+        <td class="title-cell" style="padding:0; vertical-align:top;">
+            <div style="height:11mm; line-height:11mm; width:100%; border-bottom:1.5px solid #000; box-sizing:border-box; text-align:center;">
+                <span style="font-size:10pt; font-weight:bold; text-transform:uppercase; display:inline-block; vertical-align:middle; line-height:normal;">
+                    {{ pdf_config.metadonnees.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
+                </span>
+            </div>
+            
+            <div style="height:17mm; line-height:17mm; width:100%; box-sizing:border-box; text-align:center;">
+                <span style="font-size:16pt; font-weight:bold; text-transform:uppercase; letter-spacing:1px; display:inline-block; vertical-align:middle; line-height:normal;">
+                    BON DE COMMANDE
+                </span>
+            </div>
+        </td>
+        <td class="code-cell">
+          Code : {{ pdf_config.metadonnees.code_document|default:"ENR-BDC/DAF-001" }}<br>
+          Créé le : {{ pdf_config.metadonnees.date_creation_doc|default:"10/06/2024" }}<br>
+          Révisé le : {{ pdf_config.metadonnees.date_revision_doc|default:"" }}<br>
+          Version : {{ pdf_config.metadonnees.version_doc|default:"001" }}
+        </td>
+      </tr>
+    </table>
+
+    <!-- INFOS COMMANDE -->
+    <table class="infos-commande">
+      <tr>
+        <td style="width:50%;">
+          <span class="label-bc">B.C.N° :</span> <span class="val-bc">{{ commande.numero_commande }}</span><br>
+          <span class="label-bc">Objet :</span> <span class="objet-val">{{ commande.objet|default:"" }}</span>
+        </td>
+        <td style="width:50%; text-align:right;">
+          <span class="label-bc">Fournisseur :</span> <span class="val-bc">{{ commande.fournisseur.raison_sociale|upper|default:"" }}</span><br>
+          <span class="label-bc">Interlocuteur :</span> {{ commande.fournisseur.contact|default:"" }}<br>
+          <span class="label-bc">Contact :</span> {{ commande.fournisseur.telephone|default:"" }}
+        </td>
+      </tr>
+    </table>
+
+    <!-- MODALITES -->
+    <table class="modalites">
+      <tr>
+        <td>
+          <div class="mod-title">DATE DE LA COMMANDE</div>
+          <div class="mod-val">{{ commande.date_commande|date:"d/m/Y" }}</div>
+        </td>
+        <td>
+          <div class="mod-title">DELAI DE LIVRAISON</div>
+          <div class="mod-val">{{ commande.delai_livraison|default:"" }}</div>
+        </td>
+        <td>
+          <div class="mod-title">LIVRAISON PREVUE LE</div>
+          <div class="mod-val">{{ commande.date_livraison_prevue|date:"d/m/Y"|default:"" }}</div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- TABLEAU ARTICLES -->
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th class="col-n">N°</th>
+          <th class="col-ref">Réf.</th>
+          <th class="col-des">DESCRIPTION</th>
+          <th class="col-un">UNITE</th>
+          <th class="col-qt">QUANTITE</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ligne in lignes_data %}
+        <tr>
+          <td>{{ ligne.idx }}</td>
+          <td>{{ ligne.reference|default:"" }}</td>
+          <td class="desig">{{ ligne.designation }}</td>
+          <td>{{ ligne.unite|default:"U" }}</td>
+          <td class="qt-bold">{{ ligne.quantite|intspace }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <!-- TEXTE LEGAL -->
+    <div class="texte-legal">
+      Exécuter la commande conformément aux modalités et spécifications précisées ci-dessus.
+    </div>
+
+  </div> <!-- /content-main -->
+
+  <!-- BLOC BAS : SIGNATURES + FOOTER -->
+  <div class="bloc-bas">
+
+    {% if signatures_config %}
+    <div class="signatures-block">
+      <div class="sig-row">
+        {% for sig in signatures_config %}
+        <div class="sig-item">
+          <div class="sig-fonction">{{ sig.label }}</div>
+          {% if sig.user_name %}
+            <div class="sig-name">{{ sig.user_name }}</div>
+            {% if sig.signature_path %}
+              <img src="{{ sig.signature_path }}" class="sig-img" alt="Signature">
+            {% endif %}
+          {% else %}
+            <div style="height:15mm;"></div>
+          {% endif %}
+          {% if sig.date %}
+            <div class="sig-date">{{ sig.date|date:"d/m/Y" }}</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="footer-bc">
+      <div class="pied-texte">
+        <div class="pied-line">ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 2722496400 * CC N° : 1821717-Q * INFO@CHUANGRE.CI</div>
+        <div class="pied-line">Direction des Affaires Financières * Sous-Direction de la Logistique</div>
+        <div class="pied-line">Postes : 110 et 200</div>
+      </div>
+      <div class="pagination">{{ page.numero|default:1 }} / {{ pages|length|default:1 }}</div>
+    </div>
+
+  </div> <!-- /bloc-bas -->
+</div>
+
+</body>
+</html>

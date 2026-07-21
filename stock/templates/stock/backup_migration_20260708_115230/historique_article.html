@@ -1,0 +1,273 @@
+{% extends "base_ui.html" %}
+{% block contenu %}
+
+<style>
+    .page-header-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+    }
+    .page-header-bar h2 { color: var(--text-dark); margin: 0; font-size: 20px; }
+
+    .btn-print {
+        background: #e2e8f0; color: #1c5b96; border: none;
+        padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 14px;
+        cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+        transition: .2s; border: 1px solid #cbd5e1;
+    }
+    .btn-print:hover { background: #1c5b96; color: white; }
+
+    .info-card {
+        display: flex; justify-content: space-between; align-items: center;
+        margin-bottom: 20px; background: var(--bg-hover);
+        padding: 15px; border-radius: 8px; border: 1px solid var(--border-light); flex-wrap: wrap; gap: 10px;
+    }
+    .info-card div { font-size: 14px; color: var(--text-medium); }
+    .info-card strong { color: var(--text-dark); }
+
+    .table-card {
+        background: var(--bg-card); border-radius: 10px;
+        box-shadow: 0 2px 10px var(--shadow); overflow: hidden;
+        border: 1px solid var(--border-light);
+    }
+    .table-card table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table-card thead tr { background: #1c5b96; }
+    .table-card thead th {
+        padding: 12px; color: white; font-weight: 600;
+        font-size: 11px; text-transform: uppercase; letter-spacing: .5px; text-align: left;
+    }
+    .table-card tbody tr { border-bottom: 1px solid var(--border-light); transition: background .2s; }
+    .table-card tbody tr:hover { background: var(--bg-hover); }
+    .table-card tbody td { padding: 12px; vertical-align: middle; color: var(--text-dark); }
+
+    .badge-mvt {
+        display: inline-flex; align-items: center; gap: 4px;
+        padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: bold;
+    }
+    .mvt-entree { background: rgba(40,167,69,0.15); color: #155724; }
+    .mvt-sortie { background: rgba(220,53,69,0.15); color: #721c24; }
+    .mvt-autre { background: rgba(23,162,184,0.15); color: #0c5460; }
+
+    /* ═══════════════════════════════════════════════
+       MODAL PDF
+       ═══════════════════════════════════════════════ */
+    .mo-pdf {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+        z-index: 99999; align-items: flex-start; justify-content: center;
+        backdrop-filter: blur(3px); padding-top: 4vh; overflow-y: auto;
+    }
+    .mo-pdf.open { display: flex; }
+    .mb-pdf {
+        background: var(--bg-card); border-radius: 12px; width: 90%; max-width: 900px;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: si .2s ease; margin-bottom: 4vh;
+    }
+    @keyframes si { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .mh-pdf {
+        background: linear-gradient(135deg, #17a2b8, #117a8b); color: white;
+        padding: 18px 24px; border-radius: 12px 12px 0 0;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .mc-pdf {
+        background: rgba(255,255,255,0.2); border: none; color: white;
+        width: 32px; height: 32px; border-radius: 50%; font-size: 16px;
+        cursor: pointer; transition: .2s; display: inline-flex;
+        align-items: center; justify-content: center;
+    }
+    .mc-pdf:hover { background: rgba(255,255,255,0.4); }
+    .mfoot-pdf {
+        padding: 14px 24px; border-top: 1px solid var(--border-light);
+        display: flex; justify-content: flex-end; gap: 10px;
+        background: var(--bg-stripe); border-radius: 0 0 12px 12px;
+    }
+    .btn-ok-pdf {
+        background: linear-gradient(135deg, #17a2b8, #117a8b); color: white;
+        border: none; padding: 10px 24px; border-radius: 8px;
+        font-weight: 700; font-size: 14px; cursor: pointer; transition: .2s;
+    }
+    .btn-ok-pdf:hover { opacity: 0.9; }
+    .btn-nok-pdf {
+        background: var(--bg-hover); color: var(--text-medium); border: none;
+        padding: 10px 20px; border-radius: 8px; font-size: 14px;
+        cursor: pointer; transition: .2s;
+    }
+    .btn-nok-pdf:hover { background: var(--border-color); }
+
+    /* DARK MODE */
+    body.dark-mode .page-header-bar { border-bottom-color: var(--border-light); }
+    body.dark-mode .page-header-bar h2 { color: var(--text-light, #f1f5f9); }
+    body.dark-mode .btn-print { background: #334155; color: #e2e8f0; border-color: #475569; }
+    body.dark-mode .btn-print:hover { background: #17a2b8; color: white; }
+    body.dark-mode .info-card { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+    body.dark-mode .table-card { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+    body.dark-mode .table-card thead tr { background: var(--bg-hover, #334155) !important; }
+    body.dark-mode .table-card thead th { color: var(--text-light, #f1f5f9) !important; }
+    body.dark-mode .table-card tbody tr { border-bottom-color: var(--border-light, #475569); }
+    body.dark-mode .table-card tbody tr:hover { background: var(--bg-hover, #334155); }
+    body.dark-mode .table-card tbody td { color: var(--text-dark, #cbd5e1); }
+    body.dark-mode .mb-pdf { background: var(--bg-card, #1e293b); }
+    body.dark-mode .mfoot-pdf { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+    body.dark-mode .btn-nok-pdf { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); }
+
+    .btn-retour {
+        background-color: #6c757d; color: white; text-decoration: none;
+        padding: 10px 15px; border-radius: 8px; font-weight: bold;
+        display: inline-flex; align-items: center; gap: 6px;
+        transition: .2s;
+    }
+    .btn-retour:hover { background-color: #495057; }
+    body.dark-mode .btn-retour { background-color: #495057; }
+    body.dark-mode .btn-retour:hover { background-color: #334155; }
+
+</style>
+
+<div class="page-header-bar">
+    <h2><i class="fas fa-history" style="color: #17a2b8;"></i> Traçabilité : <span style="color: #1c5b96;">{{ article.designation }}</span></h2>
+    <div style="display:flex; gap:10px;">
+        <button type="button" class="btn-print" onclick="imprimerModal('{% url 'imprimer_historique_article' article.id %}?tri={{ tri|default:'date_desc' }}', 'Historique des mouvements')">
+            <i class="fas fa-print"></i> Imprimer
+        </button>
+        <a href="{% url 'liste_articles' %}" class="btn-retour">
+            <i class="fas fa-arrow-left"></i> Retour
+        </a>
+    </div>
+</div>
+
+<div class="info-card">
+    <div>
+        <strong>Référence :</strong> {{ article.reference|default:"Non définie" }} <br>
+        <strong>Famille :</strong> {{ article.famille.intitule|default:"—" }}
+    </div>
+    <form method="GET" style="margin: 0;">
+        <label for="tri" style="font-weight: bold; color: var(--text-medium); margin-right: 10px;">Trier par :</label>
+        <select name="tri" id="tri" onchange="this.form.submit()" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-dark);">
+            <option value="date_desc" {% if tri == 'date_desc' %}selected{% endif %}>Date (Plus récent)</option>
+            <option value="date_asc" {% if tri == 'date_asc' %}selected{% endif %}>Date (Plus ancien)</option>
+            <option value="alpha" {% if tri == 'alpha' %}selected{% endif %}>Type de mouvement</option>
+        </select>
+    </form>
+</div>
+
+<div class="table-card">
+    <table>
+        <thead>
+            <tr>
+                <th>Date & Heure</th>
+                <th>Type</th>
+                <th style="text-align:center;">Quantité</th>
+                <th>Source</th>
+                <th>Destination</th>
+                <th>Opérateur</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for m in mouvements %}
+            <tr>
+                <td style="color: var(--text-medium); font-weight: bold;">
+                    <i class="far fa-clock"></i> {{ m.date_mouvement|date:"d/m/Y - H:i" }}
+                </td>
+                <td>
+                    {% if m.type_mouvement == 'ENTREE' %}
+                        <span class="badge-mvt mvt-entree"><i class="fas fa-arrow-down"></i> ENTRÉE</span>
+                    {% elif m.type_mouvement == 'SORTIE' %}
+                        <span class="badge-mvt mvt-sortie"><i class="fas fa-arrow-up"></i> SORTIE</span>
+                    {% else %}
+                        <span class="badge-mvt mvt-autre">{{ m.get_type_mouvement_display }}</span>
+                    {% endif %}
+                </td>
+                <td style="text-align: center; font-size: 16px; font-weight: bold; color: {% if m.type_mouvement == 'ENTREE' %}#28a745{% elif m.type_mouvement == 'SORTIE' %}#dc3545{% else %}var(--text-dark){% endif %};">
+                    {% if m.type_mouvement == 'ENTREE' %}+{% elif m.type_mouvement == 'SORTIE' %}-{% endif %}{{ m.quantite }}
+                </td>
+                <td>
+                    {% if m.type_mouvement == 'ENTREE' and m.fournisseur %}
+                        <i class="fas fa-truck" class="icon-muted"></i> {{ m.fournisseur.raison_sociale }}
+                    {% elif m.type_mouvement == 'SORTIE' %}
+                        <i class="fas fa-warehouse" class="icon-muted"></i> {{ m.magasin.nom|default:"—" }}
+                    {% elif m.type_mouvement == 'RETOUR_SERVICE' and m.service_demandeur %}
+                        <i class="fas fa-hospital-user" class="icon-muted"></i> {{ m.service_demandeur.nom }}
+                    {% elif m.type_mouvement == 'RETOUR_FOURNISSEUR' %}
+                        <i class="fas fa-warehouse" class="icon-muted"></i> {{ m.magasin.nom|default:"—" }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td>
+                    {% if m.type_mouvement == 'ENTREE' %}
+                        <i class="fas fa-warehouse" class="icon-muted"></i> {{ m.magasin.nom|default:"—" }}
+                    {% elif m.type_mouvement == 'SORTIE' and m.service_demandeur %}
+                        <i class="fas fa-hospital-user" class="icon-muted"></i> {{ m.service_demandeur.nom }}
+                    {% elif m.type_mouvement == 'RETOUR_SERVICE' %}
+                        <i class="fas fa-warehouse" class="icon-muted"></i> {{ m.magasin.nom|default:"—" }}
+                    {% elif m.type_mouvement == 'RETOUR_FOURNISSEUR' and m.fournisseur %}
+                        <i class="fas fa-truck" class="icon-muted"></i> {{ m.fournisseur.raison_sociale }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </td>
+                <td style="color: #1c5b96; font-weight: bold;">
+                    <i class="fas fa-user-circle"></i> {{ m.utilisateur.username }}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="6" style="padding: 50px; text-align: center; color: var(--text-light);">
+                    <i class="fas fa-box-open" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.4;"></i>
+                    Aucun mouvement n'a encore été enregistré pour cet article.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- ═════ MODAL IMPRESSION PDF ═════ -->
+<div class="mo-pdf" id="modal-pdf">
+  <div class="mb-pdf">
+    <div class="mh-pdf">
+      <h5 id="pdf-titre" style="margin:0; font-size:16px; font-weight:600;"><i class="fas fa-print me-2"></i> Impression</h5>
+      <button class="mc-pdf" onclick="document.getElementById('modal-pdf').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:10px; min-height:300px; background:#525659;">
+      <div id="pdf-loader" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px; gap:14px;">
+        <div style="width:40px; height:40px; border:4px solid #e0e0e0; border-top-color:#17a2b8; border-radius:50%; animation:spin .8s linear infinite;"></div>
+        <span style="color:white; font-size:13px;">Génération du document en cours…</span>
+      </div>
+      <iframe id="pdf-iframe" style="display:none; width:100%; height:72vh; border:none; border-radius:0 0 8px 8px;"></iframe>
+    </div>
+    <div class="mfoot-pdf">
+      <button class="btn-nok-pdf" onclick="document.getElementById('modal-pdf').classList.remove('open')">Fermer</button>
+      <button class="btn-ok-pdf" onclick="document.getElementById('pdf-iframe').contentWindow.print()">
+        <i class="fas fa-print me-1"></i> Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+function imprimerModal(url, titre) {
+    var modal = document.getElementById('modal-pdf');
+    document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-print me-2"></i> ' + (titre || 'Impression');
+    var loader = document.getElementById('pdf-loader');
+    var iframe = document.getElementById('pdf-iframe');
+    loader.style.display = 'flex';
+    iframe.style.display = 'none';
+    iframe.src = '';
+    modal.classList.add('open');
+    iframe.onload = function(){
+        loader.style.display='none';
+        iframe.style.display='block';
+    };
+    iframe.src = url;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('modal-pdf').addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('open');
+    });
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') document.getElementById('modal-pdf').classList.remove('open');
+    });
+});
+</script>
+
+{% endblock %}

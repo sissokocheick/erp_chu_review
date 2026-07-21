@@ -1,0 +1,300 @@
+{% extends "base_ui.html" %}
+{% block contenu %}
+
+<style>
+.reset-wrap { max-width: 520px; margin: 0 auto; padding: 30px 0 50px; }
+
+.reset-card {
+    background: var(--bg-card); border-radius: 12px;
+    border: 1px solid var(--border-light); box-shadow: 0 4px 20px var(--shadow);
+    overflow: hidden;
+}
+.reset-header {
+    background: linear-gradient(135deg, var(--primary-blue), #2980d4);
+    color: white; padding: 24px 28px; text-align: center;
+}
+.reset-header h2 { margin: 0 0 8px; font-size: 18px; font-weight: 700; }
+.reset-header p { margin: 0; font-size: 13px; opacity: 0.85; }
+
+.user-target {
+    display: flex; align-items: center; gap: 14px;
+    background: var(--bg-stripe); padding: 16px 24px;
+    border-bottom: 1px solid var(--border-light);
+}
+.user-target-avatar {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--bg-hover); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 20px; color: var(--text-light); flex-shrink: 0;
+    border: 2px solid var(--border-color); overflow: hidden;
+}
+.user-target-avatar img { width: 48px; height: 48px; object-fit: cover; }
+.user-target-info strong { color: var(--text-dark); font-size: 15px; }
+.user-target-info span { color: var(--text-medium); font-size: 12px; }
+
+.reset-body { padding: 28px; }
+
+.fgroup { margin-bottom: 20px; }
+.fgroup label {
+    display: block; font-size: 11px; font-weight: 700;
+    color: var(--text-light); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px;
+}
+.fgroup label span { color: #dc3545; }
+
+.pwd-wrap { position: relative; }
+.fc {
+    width: 100%; padding: 11px 42px 11px 14px;
+    border: 2px solid var(--border-light); border-radius: 8px;
+    font-size: 14px; color: var(--text-dark); background: var(--bg-input);
+    box-sizing: border-box; transition: 0.2s; font-family: monospace;
+}
+.fc:focus { outline: none; border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(28,91,150,0.1); }
+.pwd-toggle {
+    position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; cursor: pointer; color: var(--text-light);
+    font-size: 14px; padding: 4px;
+}
+.pwd-toggle:hover { color: var(--primary-blue); }
+
+.gen-row { display: flex; gap: 8px; }
+.btn-gen {
+    background: #6f42c1; color: white; border: none;
+    padding: 10px 16px; border-radius: 8px; font-size: 12px;
+    font-weight: 700; cursor: pointer; white-space: nowrap;
+    display: inline-flex; align-items: center; gap: 6px;
+    transition: 0.2s;
+}
+.btn-gen:hover { background: #5a32a3; }
+
+.pwd-rules {
+    background: var(--bg-stripe); border-left: 3px solid var(--primary-blue);
+    border-radius: 0 8px 8px 0; padding: 10px 14px; margin-top: 10px;
+}
+.prule { font-size: 12px; color: var(--text-light); padding: 3px 0; display: flex; align-items: center; gap: 7px; }
+.prule.ok { color: #28a745; }
+.prule i { font-size: 10px; width: 14px; }
+
+.btn-actions {
+    display: flex; gap: 10px; margin-top: 24px;
+}
+.btn-back {
+    background: var(--bg-hover); color: var(--text-dark); border: 1px solid var(--border-color);
+    padding: 11px 24px; border-radius: 8px; font-size: 13px; font-weight: 700;
+    cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 7px;
+    transition: 0.2s;
+}
+.btn-back:hover { background: var(--border-color); }
+.btn-save {
+    background: var(--primary-blue); color: white; border: none;
+    padding: 11px 28px; border-radius: 8px; font-size: 13px; font-weight: 700;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+    transition: 0.2s; box-shadow: 0 2px 8px rgba(28,91,150,0.3);
+}
+.btn-save:hover { background: #0d3b6e; transform: translateY(-1px); }
+.btn-save:disabled { background: #6c757d; cursor: not-allowed; transform: none; }
+
+.flash {
+    padding: 12px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; margin-bottom: 16px;
+}
+.flash.ok  { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+.flash.err { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+.warn-box {
+    background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;
+    padding: 12px 16px; font-size: 12px; color: #856404; margin-bottom: 20px;
+    display: flex; align-items: flex-start; gap: 10px;
+}
+body.dark-mode .warn-box { background: #2a2510; border-color: #ffc107; color: #d4a017; }
+</style>
+
+<div class="reset-wrap">
+
+    {% for msg in messages %}
+    <div class="flash {% if msg.tags == 'success' %}ok{% else %}err{% endif %}">
+        <i class="fas fa-{% if msg.tags == 'success' %}check-circle{% else %}exclamation-triangle{% endif %}"></i> {{ msg }}
+    </div>
+    {% endfor %}
+
+    <div class="reset-card">
+        <div class="reset-header">
+            <h2><i class="fas fa-key me-2"></i>Réinitialisation du mot de passe</h2>
+            <p>Administrateur — Modification directe du mot de passe utilisateur</p>
+        </div>
+
+        <div class="user-target">
+            <div class="user-target-avatar">
+                {% if utilisateur.profil.photo %}
+                    <img src="{{ utilisateur.profil.photo.url }}" alt="">
+                {% else %}
+                    <i class="fas fa-user"></i>
+                {% endif %}
+            </div>
+            <div class="user-target-info">
+                <strong>{{ utilisateur.get_full_name|default:utilisateur.username }}</strong><br>
+                <span><i class="fas fa-at" style="width:14px;"></i> {{ utilisateur.username }}</span>
+                {% if utilisateur.profil.service %} · <span><i class="fas fa-hospital" style="width:14px;"></i> {{ utilisateur.profil.service.nom }}</span>{% endif %}
+            </div>
+        </div>
+
+        <div class="warn-box">
+            <i class="fas fa-exclamation-triangle" style="font-size: 16px; margin-top: 2px; flex-shrink: 0;"></i>
+            <div>
+                <strong>Attention :</strong> L'utilisateur sera immédiatement déconnecté de toutes ses sessions actives.
+                Il devra utiliser le nouveau mot de passe à sa prochaine connexion.
+            </div>
+        </div>
+
+        <div class="reset-body">
+            <form method="post" id="form-reset">
+                {% csrf_token %}
+
+                <div class="fgroup">
+                    <label>Nouveau mot de passe <span>*</span></label>
+                    <div class="gen-row">
+                        <div class="pwd-wrap" style="flex: 1;">
+                            <input type="text" name="nouveau_mdp" id="newPwd" class="fc"
+                                   placeholder="Saisissez ou générez un mot de passe"
+                                   autocomplete="new-password" oninput="checkRules(this.value)">
+                            <button type="button" class="pwd-toggle" onclick="togglePwd('newPwd', this)">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                        <button type="button" class="btn-gen" onclick="genererMdp()">
+                            <i class="fas fa-magic"></i> Aléatoire
+                        </button>
+                    </div>
+                </div>
+
+                <div class="fgroup">
+                    <label>Confirmer le mot de passe <span>*</span></label>
+                    <div class="pwd-wrap">
+                        <input type="text" name="confirmer_mdp" id="confirmPwd" class="fc"
+                               placeholder="Répétez le mot de passe"
+                               autocomplete="new-password" oninput="checkMatch()">
+                        <button type="button" class="pwd-toggle" onclick="togglePwd('confirmPwd', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div id="matchMsg" style="font-size: 12px; margin-top: 5px; display: none;"></div>
+                </div>
+
+                <div class="pwd-rules" id="pwdRules">
+                    <div class="prule" id="rLen"><i class="fas fa-times"></i> Au moins 8 caractères</div>
+                    <div class="prule" id="rUp"><i class="fas fa-times"></i> Une lettre majuscule</div>
+                    <div class="prule" id="rNum"><i class="fas fa-times"></i> Un chiffre</div>
+                    <div class="prule" id="rSpe"><i class="fas fa-times"></i> Un caractère spécial (!@#$%&*)</div>
+                </div>
+
+                <div class="btn-actions">
+                    <a href="{% url 'accounts:page_utilisateurs' %}" class="btn-back">
+                        <i class="fas fa-arrow-left"></i> Retour
+                    </a>
+                    <button type="submit" class="btn-save" id="btnSubmit">
+                        <i class="fas fa-save"></i> Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePwd(id, btn) {
+    var input = document.getElementById(id);
+    var icon = btn.querySelector('i');
+    if (input.type === 'password') {
+        input.type = 'text'; icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password'; icon.className = 'fas fa-eye';
+    }
+}
+
+function genererMdp() {
+    var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*';
+    var mdp = '';
+    // S'assurer d'avoir au moins 1 majuscule, 1 minuscule, 1 chiffre, 1 spécial
+    mdp += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+    mdp += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+    mdp += '0123456789'[Math.floor(Math.random() * 10)];
+    mdp += '!@#$%&*'[Math.floor(Math.random() * 7)];
+    for (var i = 4; i < 14; i++) {
+        mdp += chars[Math.floor(Math.random() * chars.length)];
+    }
+    // Mélanger
+    mdp = mdp.split('').sort(function(){return 0.5 - Math.random()}).join('');
+
+    document.getElementById('newPwd').value = mdp;
+    document.getElementById('confirmPwd').value = mdp;
+    checkRules(mdp);
+    checkMatch();
+
+    Swal.fire({
+        toast: true, position: 'top-end', icon: 'success',
+        title: 'Mot de passe généré : ' + mdp,
+        showConfirmButton: false, timer: 4000
+    });
+}
+
+function checkRules(val) {
+    var rules = document.getElementById('pwdRules');
+    rules.style.display = val.length ? 'block' : 'none';
+    setRule('rLen', val.length >= 8);
+    setRule('rUp', /[A-Z]/.test(val));
+    setRule('rNum', /[0-9]/.test(val));
+    setRule('rSpe', /[!@#$%&*]/.test(val));
+    updateSubmit();
+}
+
+function setRule(id, ok) {
+    var el = document.getElementById(id);
+    el.className = 'prule' + (ok ? ' ok' : '');
+    el.querySelector('i').className = ok ? 'fas fa-check' : 'fas fa-times';
+}
+
+function checkMatch() {
+    var p1 = document.getElementById('newPwd').value;
+    var p2 = document.getElementById('confirmPwd').value;
+    var msg = document.getElementById('matchMsg');
+    if (!p2) { msg.style.display = 'none'; updateSubmit(); return; }
+    msg.style.display = 'block';
+    if (p1 === p2) {
+        msg.innerHTML = '<span style="color:#28a745;font-weight:600;"><i class="fas fa-check"></i> Les mots de passe correspondent</span>';
+    } else {
+        msg.innerHTML = '<span style="color:#dc3545;font-weight:600;"><i class="fas fa-times"></i> Les mots de passe ne correspondent pas</span>';
+    }
+    updateSubmit();
+}
+
+function updateSubmit() {
+    var val = document.getElementById('newPwd').value;
+    var p2 = document.getElementById('confirmPwd').value;
+    var ok = val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val) && /[!@#$%&*]/.test(val) && val === p2;
+    document.getElementById('btnSubmit').disabled = !ok;
+}
+
+document.getElementById('form-reset').addEventListener('submit', function(e) {
+    e.preventDefault();
+    var form = this;
+    var mdp = document.getElementById('newPwd').value;
+    Swal.fire({
+        title: 'Confirmer la réinitialisation ?',
+        text: 'Le mot de passe de {{ utilisateur.get_full_name|default:utilisateur.username|escapejs }} sera définitivement remplacé.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#1c5b96',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-key"></i> Oui, réinitialiser',
+        cancelButtonText: 'Annuler'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({ title: 'Enregistrement...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            form.submit();
+        }
+    });
+});
+
+// Init
+updateSubmit();
+</script>
+{% endblock %}

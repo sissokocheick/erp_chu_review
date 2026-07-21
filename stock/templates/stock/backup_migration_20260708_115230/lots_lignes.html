@@ -1,0 +1,37 @@
+{% for lot in lots_inventaire %}
+<tr>
+  <td>
+    <div style="font-weight:700;color:#1c5b96;">{{ lot.article.designation }}</div>
+    <div style="font-size:11px;color:var(--text-light);">Réf: {{ lot.article.reference|default:"—" }}</div>
+  </td>
+  <td>
+    <span style="font-family:monospace;font-size:13px;background:var(--bg-hover);padding:3px 8px;border-radius:4px;">{{ lot.batch_number|default:"—" }}</span>
+  </td>
+  <td style="text-align:center;">
+    <span style="font-weight:700;font-size:16px;">{{ lot.quantite_physique }}</span>
+  </td>
+  <td style="text-align:center;">
+    {% if lot.expiry_date %}
+      {% if lot.jours_restants < 0 %}
+        <span style="color:#dc3545;font-weight:700;">{{ lot.expiry_date|date:"d/m/Y" }} (PÉRIMÉ)</span>
+      {% elif lot.jours_restants <= 90 %}
+        <span style="color:#fd7e14;font-weight:700;">{{ lot.expiry_date|date:"d/m/Y" }} ({{ lot.jours_restants }}j)</span>
+      {% else %}
+        <span style="color:#28a745;">{{ lot.expiry_date|date:"d/m/Y" }}</span>
+      {% endif %}
+    {% else %}
+      <span style="color:var(--text-light);">—</span>
+    {% endif %}
+  </td>
+  <td style="text-align:right;">
+    {% if lot.valeur_cmup %}{{ lot.valeur_cmup|floatformat:2 }} FCFA{% else %}—{% endif %}
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="5" style="text-align:center;padding:50px;color:var(--text-light);">
+    <i class="fas fa-barcode" style="font-size:30px;display:block;margin-bottom:10px;opacity:.5;" aria-hidden="true"></i>
+    Aucun lot enregistré dans ce magasin.
+  </td>
+</tr>
+{% endfor %}

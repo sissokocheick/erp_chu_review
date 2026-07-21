@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Étiquette - {{ immo.code_patrimoine }}</title>
+    <style>
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 50px;
+        }
+        /* Style de la petite étiquette (format carte de visite/adhésive) */
+        .etiquette {
+            background-color: white;
+            width: 350px;
+            padding: 15px;
+            border: 2px solid #000;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
+        }
+        .qr-container {
+            flex: 0 0 100px;
+            margin-right: 15px;
+        }
+        .qr-container img {
+            width: 100%;
+            height: auto;
+        }
+        .info-container {
+            flex: 1;
+        }
+        .info-container h3 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            color: #1c5b96;
+        }
+        .info-container p {
+            margin: 3px 0;
+            font-size: 12px;
+            color: #333;
+        }
+        .code-asset {
+            font-weight: bold;
+            font-size: 14px;
+            background-color: #eee;
+            padding: 2px 5px;
+            display: inline-block;
+            margin-top: 5px;
+            border-radius: 3px;
+        }
+        /* Boutons d'action */
+        .actions { margin-top: 30px; }
+        .btn { padding: 10px 20px; font-size: 14px; cursor: pointer; border: none; border-radius: 4px; margin: 0 5px; color: white;}
+        .btn-print { background-color: #28a745; }
+        .btn-back { background-color: #6c757d; text-decoration: none;}
+        
+        /* Quand on lance l'impression, on cache le fond gris et les boutons ! */
+        @media print {
+            body { background-color: white; padding-top: 0; }
+            .etiquette { box-shadow: none; border: 1px solid #000; }
+            .actions { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="etiquette">
+        <div class="qr-container">
+            <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
+        </div>
+        <div class="info-container">
+            <h3>CHU ANGRÉ</h3>
+            <p><strong>{{ immo.nom_affichage }}</strong></p>
+            <p>Marque: {{ immo.marque.nom|default:"N/A" }}</p>
+            <p>S/N: {{ immo.numero_serie|default:"N/A" }}</p>
+            <div class="code-asset">{{ immo.code_patrimoine }}</div>
+        </div>
+    </div>
+
+    <div class="actions">
+        <button class="btn btn-print" onclick="window.print()">🖨️ Imprimer l'étiquette</button>
+        <a href="{% url 'patrimoine_detail' immo.pk %}" class="btn btn-back">Retour à la fiche</a>
+    </div>
+    <script>
+        // Ce script détecte si la page est chargée dans une modale (iframe)
+        if (window.self !== window.top) {
+            // Si oui, on cache les boutons internes et on remonte un peu l'étiquette
+            document.querySelector('.actions').style.display = 'none';
+            document.body.style.paddingTop = '10px';
+        }
+    </script>
+
+</body>
+</html>

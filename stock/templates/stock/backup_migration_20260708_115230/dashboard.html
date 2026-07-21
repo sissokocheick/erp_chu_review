@@ -1,0 +1,370 @@
+{% extends 'base_ui.html' %}
+{% block title %}Tableau de Bord — ERP CHU{% endblock %}
+
+{% block contenu %}
+<style>
+  /* ===== KPI CARDS ===== */
+  .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; margin-bottom: 22px; }
+  @media (max-width: 1200px) { .kpi-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 768px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+  .kpi-card {
+    background: var(--bg-card); border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 2px 10px var(--shadow);
+    display: flex; align-items: center; gap: 14px;
+    border-left: 4px solid transparent; transition: .2s;
+    cursor: default;
+  }
+  .kpi-card:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,0.11); }
+  body.dark-mode .kpi-card:hover { box-shadow: 0 6px 18px rgba(0,0,0,0.4); }
+  .kpi-icon { width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+  .kpi-val  { font-size: 26px; font-weight: 800; line-height: 1; }
+  .kpi-lbl  { font-size: 11px; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; margin-top: 3px; }
+
+  .kpi-blue   { border-color: #1c5b96; }
+  .kpi-blue   .kpi-icon { background: rgba(28,91,150,0.12); color: #1c5b96; }
+  body.dark-mode .kpi-blue   .kpi-icon { background: rgba(28,91,150,0.25); }
+  .kpi-blue   .kpi-val  { color: #5dade2; }
+  .kpi-green  { border-color: #27ae60; }
+  .kpi-green  .kpi-icon { background: rgba(39,174,96,0.12); color: #27ae60; }
+  body.dark-mode .kpi-green  .kpi-icon { background: rgba(39,174,96,0.25); }
+  .kpi-green  .kpi-val  { color: #2ecc71; }
+  .kpi-orange { border-color: #fd7e14; }
+  .kpi-orange .kpi-icon { background: rgba(253,126,20,0.12); color: #fd7e14; }
+  body.dark-mode .kpi-orange .kpi-icon { background: rgba(253,126,20,0.25); }
+  .kpi-orange .kpi-val  { color: #fd7e14; }
+  .kpi-red    { border-color: #e74c3c; }
+  .kpi-red    .kpi-icon { background: rgba(231,76,60,0.12); color: #e74c3c; }
+  body.dark-mode .kpi-red    .kpi-icon { background: rgba(231,76,60,0.25); }
+  .kpi-red    .kpi-val  { color: #e74c3c; }
+  .kpi-purple { border-color: #8e44ad; }
+  .kpi-purple .kpi-icon { background: rgba(142,68,173,0.12); color: #8e44ad; }
+  body.dark-mode .kpi-purple .kpi-icon { background: rgba(142,68,173,0.25); }
+  .kpi-purple .kpi-val  { color: #a569bd; }
+
+  .alert-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .atab {
+    padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700;
+    cursor: pointer; border: none; transition: .2s; display: flex; align-items: center; gap: 6px;
+  }
+  .atab.critique { background: rgba(231,76,60,0.15); color: #e74c3c; }
+  .atab.critique.active, .atab.critique:hover { background: #e74c3c; color: white; }
+  .atab.alerte   { background: rgba(253,126,20,0.15); color: #fd7e14; }
+  .atab.alerte.active, .atab.alerte:hover { background: #fd7e14; color: white; }
+  .atab.surstock { background: rgba(28,91,150,0.15); color: #5dade2; }
+  .atab.surstock.active, .atab.surstock:hover { background: #5dade2; color: white; }
+  .atab .badge-n { background: rgba(255,255,255,.35); padding: 1px 7px; border-radius: 10px; font-size: 11px; }
+
+  .alert-panel { display: none; }
+  .alert-panel.active { display: block; }
+
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 992px) { .row2, .row3 { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--bg-card); border-radius: 12px;
+    box-shadow: 0 2px 8px var(--shadow); overflow: hidden;
+  }
+  .card-head {
+    padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .card-head h6 { margin: 0; font-size: 13px; font-weight: 700; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
+  .card-body { padding: 14px 18px; }
+
+  .mtbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .mtbl thead th { background: var(--bg-hover); padding: 8px 10px; font-size: 10px; text-transform: uppercase; font-weight: 700; color: var(--text-light); border: none; }
+  .mtbl tbody tr { border-bottom: 1px solid var(--border-light); transition: .15s; }
+  .mtbl tbody tr:hover { background: var(--bg-hover); }
+  .mtbl tbody td { padding: 9px 10px; vertical-align: middle; color: var(--text-dark); }
+  .mtbl tbody tr:last-child { border-bottom: none; }
+
+  .stock-bar { width: 100%; height: 6px; background: var(--border-light); border-radius: 3px; overflow: hidden; }
+  .stock-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
+  .fill-red    { background: #e74c3c; }
+  .fill-orange { background: #fd7e14; }
+  .fill-blue   { background: #3498db; }
+
+  .bc { background:rgba(231,76,60,0.15); color:#e74c3c; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700; }
+  .ba { background:rgba(253,126,20,0.15); color:#fd7e14; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700; }
+  .bb { background:rgba(28,91,150,0.15); color:#5dade2; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700; }
+  .bg { background:rgba(39,174,96,0.15); color:#2ecc71; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700; }
+  .bo { background:rgba(253,126,20,0.15); color:#fd7e14; padding:2px 8px; border-radius:12px; font-size:10px; font-weight:700; }
+
+  .mv-e { color: #2ecc71; font-weight:700; font-size:11px; }
+  .mv-s { color: #e74c3c; font-weight:700; font-size:11px; }
+
+  canvas { max-height: 220px; }
+
+  .per-critical { background: rgba(231,76,60,0.1); border-left: 3px solid #e74c3c; padding: 8px 12px; border-radius: 0 6px 6px 0; margin-bottom: 6px; font-size: 12px; color: var(--text-dark); }
+  .per-warning  { background: rgba(253,126,20,0.1); border-left: 3px solid #fd7e14; padding: 8px 12px; border-radius: 0 6px 6px 0; margin-bottom: 6px; font-size: 12px; color: var(--text-dark); }
+
+  .perem-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .perem-mag { color: var(--text-light); white-space: nowrap; }
+
+  .jrn-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border-light); font-size: 12px; color: var(--text-dark); }
+  .jrn-row:last-child { border-bottom: none; }
+  .jrn-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .jrn-time { color: var(--text-light); font-size: 10px; white-space: nowrap; }
+
+  .empty-sm { text-align: center; padding: 30px 10px; color: var(--text-light); font-size: 12px; }
+  .empty-sm i { font-size: 28px; display: block; margin-bottom: 6px; color: var(--text-light); opacity: 0.6; }
+</style>
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;">
+  <div>
+    <h4 style="margin:0;font-size:20px;font-weight:800;color:var(--text-dark);">
+      <i class="fas fa-tachometer-alt me-2" style="color:#1c5b96;"></i>Tableau de Bord
+    </h4>
+    <small style="color:var(--text-light);">CHU Angré &nbsp;|&nbsp;
+      <span id="dateDash"></span>
+    </small>
+  </div>
+  <button onclick="location.reload()" style="background:var(--bg-hover);border:none;padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer;color:var(--text-medium);">
+    <i class="fas fa-sync-alt me-1"></i> Actualiser
+  </button>
+</div>
+
+<div class="kpi-grid">
+  <div class="kpi-card kpi-blue">
+    <div class="kpi-icon"><i class="fas fa-boxes"></i></div>
+    <div><div class="kpi-val">{{ total_articles }}</div><div class="kpi-lbl">Articles catalogués</div></div>
+  </div>
+  <div class="kpi-card kpi-green">
+    <div class="kpi-icon"><i class="fas fa-arrow-circle-down"></i></div>
+    <div><div class="kpi-val">{{ entrees_jour }}</div><div class="kpi-lbl">Entrees aujourd'hui</div></div>
+  </div>
+  <div class="kpi-card kpi-orange">
+    <div class="kpi-icon"><i class="fas fa-arrow-circle-up"></i></div>
+    <div><div class="kpi-val">{{ sorties_jour }}</div><div class="kpi-lbl">Sorties aujourd'hui</div></div>
+  </div>
+  <div class="kpi-card {% if nb_critiques > 0 %}kpi-red{% else %}kpi-green{% endif %}">
+    <div class="kpi-icon"><i class="fas {% if nb_critiques > 0 %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i></div>
+    <div><div class="kpi-val">{{ nb_critiques }}</div><div class="kpi-lbl">Stocks critiques</div></div>
+  </div>
+  <div class="kpi-card kpi-purple">
+    <div class="kpi-icon"><i class="fas fa-coins"></i></div>
+    <div>
+      <div class="kpi-val" style="font-size:18px;">{% if valeur_stock_total %}{{ valeur_stock_total|floatformat:0 }} F{% else %}—{% endif %}</div>
+      <div class="kpi-lbl">Valeur stock CMUP</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-head">
+    <h6><i class="fas fa-bell" style="color:#e74c3c;"></i> Alertes de Stock</h6>
+    <div style="font-size:11px;color:var(--text-light);">
+      {{ nb_critiques }} critique(s) &nbsp; {{ nb_alertes }} alerte(s) &nbsp; {{ nb_surstocks }} surstock(s)
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="alert-tabs">
+      <button class="atab critique {% if nb_critiques > 0 %}active{% endif %}" onclick="showAlert('critique', this)" aria-pressed="{% if nb_critiques > 0 %}true{% else %}false{% endif %}">
+        <i class="fas fa-exclamation-circle"></i> CRITIQUE <span class="badge-n">{{ nb_critiques }}</span>
+      </button>
+      <button class="atab alerte {% if nb_critiques == 0 and nb_alertes > 0 %}active{% endif %}" onclick="showAlert('alerte', this)" aria-pressed="{% if nb_critiques == 0 and nb_alertes > 0 %}true{% else %}false{% endif %}">
+        <i class="fas fa-exclamation-triangle"></i> ALERTE <span class="badge-n">{{ nb_alertes }}</span>
+      </button>
+      <button class="atab surstock {% if nb_critiques == 0 and nb_alertes == 0 %}active{% endif %}" onclick="showAlert('surstock', this)" aria-pressed="{% if nb_critiques == 0 and nb_alertes == 0 %}true{% else %}false{% endif %}">
+        <i class="fas fa-warehouse"></i> SURSTOCK <span class="badge-n">{{ nb_surstocks }}</span>
+      </button>
+    </div>
+
+    <div class="alert-panel {% if nb_critiques > 0 %}active{% endif %}" id="panel-critique" role="tabpanel" aria-labelledby="tab-critique">
+      {% if stocks_critiques %}
+      <table class="mtbl">
+        <thead><tr><th>Article</th><th>Famille</th><th>Magasin</th><th>Stock actuel</th><th>Seuil critique</th><th>Niveau</th></tr></thead>
+        <tbody>
+        {% for s in stocks_critiques|slice:":15" %}
+        <tr>
+          <td><strong>{{ s.article.designation }}</strong>{% if s.article.reference %}<br><small style="color:var(--text-light);">{{ s.article.reference }}</small>{% endif %}</td>
+          <td>{{ s.article.famille.intitule|truncatechars:25 }}</td>
+          <td>{{ s.magasin.nom }}</td>
+          <td><strong style="color:#e74c3c;font-size:15px;">{{ s.quantite_physique }}</strong> {{ s.article.unite_distribution }}</td>
+          <td>{{ s.article.seuil_critique }} {{ s.article.unite_distribution }}</td>
+          <td>
+            {% if s.article.seuil_minimum and s.article.seuil_minimum > 0 %}
+              {% widthratio s.quantite_physique s.article.seuil_minimum 100 as pct %}
+              <div class="stock-bar"><div class="stock-bar-fill fill-red" style="width:{{ pct|default:0 }}%"></div></div>
+              <small style="color:var(--text-light);">{{ pct|default:0 }}% du seuil min.</small>
+            {% else %}<small style="color:var(--text-light);">—</small>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<div class="empty-sm"><i class="fas fa-check-circle" style="color:#27ae60;"></i> Aucun stock en zone critique</div>{% endif %}
+    </div>
+
+    <div class="alert-panel {% if nb_critiques == 0 and nb_alertes > 0 %}active{% endif %}" id="panel-alerte" role="tabpanel" aria-labelledby="tab-alerte">
+      {% if stocks_alerte %}
+      <table class="mtbl">
+        <thead><tr><th>Article</th><th>Famille</th><th>Magasin</th><th>Stock actuel</th><th>Seuil min.</th><th>Niveau</th></tr></thead>
+        <tbody>
+        {% for s in stocks_alerte|slice:":15" %}
+        <tr>
+          <td><strong>{{ s.article.designation }}</strong></td>
+          <td>{{ s.article.famille.intitule|truncatechars:25 }}</td>
+          <td>{{ s.magasin.nom }}</td>
+          <td><strong style="color:#fd7e14;font-size:15px;">{{ s.quantite_physique }}</strong> {{ s.article.unite_distribution }}</td>
+          <td>{{ s.article.seuil_minimum }} {{ s.article.unite_distribution }}</td>
+          <td>
+            {% if s.article.seuil_minimum and s.article.seuil_minimum > 0 %}
+              {% widthratio s.quantite_physique s.article.seuil_minimum 100 as pct2 %}
+              <div class="stock-bar"><div class="stock-bar-fill fill-orange" style="width:{{ pct2|default:0 }}%"></div></div>
+              <small style="color:var(--text-light);">{{ pct2|default:0 }}%</small>
+            {% else %}<small style="color:var(--text-light);">—</small>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<div class="empty-sm"><i class="fas fa-check-circle" style="color:#27ae60;"></i> Aucun stock en alerte</div>{% endif %}
+    </div>
+
+    <div class="alert-panel {% if nb_critiques == 0 and nb_alertes == 0 %}active{% endif %}" id="panel-surstock" role="tabpanel" aria-labelledby="tab-surstock">
+      {% if stocks_surstock %}
+      <table class="mtbl">
+        <thead><tr><th>Article</th><th>Magasin</th><th>Stock actuel</th><th>Seuil maximum</th><th>Excedent</th></tr></thead>
+        <tbody>
+        {% for s in stocks_surstock|slice:":15" %}
+        <tr>
+          <td><strong>{{ s.article.designation }}</strong></td>
+          <td>{{ s.magasin.nom }}</td>
+          <td><strong style="color:#5dade2;font-size:15px;">{{ s.quantite_physique }}</strong> {{ s.article.unite_distribution }}</td>
+          <td>{{ s.article.seuil_maximum }} {{ s.article.unite_distribution }}</td>
+          <td>
+            {% if s.excedent is not None %}<span class="bb">+{{ s.excedent }} en exces</span>
+            {% else %}<span style="color:var(--text-light);">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<div class="empty-sm"><i class="fas fa-check-circle" style="color:#27ae60;"></i> Aucun surstock detecte</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row2">
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-chart-bar" style="color:#5dade2;"></i> Top 5 Articles consommes (30j)</h6></div>
+    <div class="card-body">
+      {% if chart_articles_labels %}<canvas id="chartArticles"></canvas>
+      {% else %}<div class="empty-sm"><i class="fas fa-chart-bar"></i> Pas encore de donnees de sortie</div>{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-chart-pie" style="color:#2ecc71;"></i> Top 5 Services demandeurs (30j)</h6></div>
+    <div class="card-body">
+      {% if chart_services_labels %}<canvas id="chartServices"></canvas>
+      {% else %}<div class="empty-sm"><i class="fas fa-chart-pie"></i> Pas encore de donnees</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row3">
+  <div class="card">
+    <div class="card-head">
+      <h6><i class="fas fa-clock" style="color:#e74c3c;"></i> Peremptions</h6>
+      {% if lots_perimes %}<span class="bc">{{ lots_perimes|length }} perime(s)</span>{% endif %}
+    </div>
+    <div class="card-body" style="max-height:280px;overflow-y:auto;">
+      {% for lot in lots_perimes %}
+      <div class="per-critical">
+        <div class="perem-item">
+          <div>
+            <strong>{{ lot.article.designation }}</strong><br>
+            <span style="color:#e74c3c;font-size:11px;"><i class="fas fa-exclamation-circle me-1"></i>Perime le {{ lot.date_peremption|date:"d/m/Y" }}</span>
+          </div>
+          <span class="perem-mag">{{ lot.magasin.nom }}</span>
+        </div>
+      </div>
+      {% endfor %}
+      {% for lot in lots_en_alerte %}
+      <div class="per-warning">
+        <div class="perem-item">
+          <div>
+            <strong>{{ lot.article.designation }}</strong><br>
+            <span style="color:#fd7e14;font-size:11px;"><i class="fas fa-exclamation-triangle me-1"></i>Expire le {{ lot.date_peremption|date:"d/m/Y" }}</span>
+          </div>
+          <span class="perem-mag">{{ lot.magasin.nom }}</span>
+        </div>
+      </div>
+      {% empty %}{% if not lots_perimes %}<div class="empty-sm"><i class="fas fa-calendar-check"></i> Aucune peremption imminente</div>{% endif %}{% endfor %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-exchange-alt" style="color:#a569bd;"></i> Derniers mouvements</h6></div>
+    <div class="card-body" style="padding:10px 14px;max-height:280px;overflow-y:auto;">
+      <table class="mtbl"><tbody>
+        {% for mv in mouvements_recents %}
+        <tr>
+          <td>{% if mv.type_mouvement == 'ENTREE' %}<span class="mv-e"><i class="fas fa-arrow-down me-1"></i>ENTREE</span>
+              {% else %}<span class="mv-s"><i class="fas fa-arrow-up me-1"></i>SORTIE</span>{% endif %}</td>
+          <td><strong>{{ mv.article.designation|truncatechars:22 }}</strong></td>
+          <td style="text-align:right;white-space:nowrap;"><strong>{{ mv.quantite }}</strong><br><small style="color:var(--text-light);">{{ mv.date_mouvement|date:"d/m H:i" }}</small></td>
+        </tr>
+        {% empty %}<tr><td colspan="3"><div class="empty-sm"><i class="fas fa-inbox"></i> Aucun mouvement</div></td></tr>
+        {% endfor %}
+      </tbody></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-history" style="color:#fd7e14;"></i> Journal d'activites</h6></div>
+    <div class="card-body" style="max-height:280px;overflow-y:auto;">
+      {% for j in journal_activites %}
+      <div class="jrn-row">
+        <div class="jrn-dot" style="background:{% if 'Creation' in j.action %}#27ae60{% elif 'Modification' in j.action %}#3498db{% else %}#e74c3c{% endif %};"></div>
+        <div style="flex:1;min-width:0;">
+          <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+            {{ j.action }} <strong>{{ j.modele }}</strong> — {{ j.element|truncatechars:20 }}
+          </div>
+          <div class="jrn-time">{{ j.date|date:"d/m/Y H:i" }} — {{ j.utilisateur }}</div>
+        </div>
+      </div>
+      {% empty %}<div class="empty-sm"><i class="fas fa-history"></i> Aucune activite recente</div>{% endfor %}
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+document.getElementById('dateDash').textContent = new Date().toLocaleDateString('fr-FR', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+function showAlert(type, btn) {
+  document.querySelectorAll('.alert-panel').forEach(function(p){p.classList.remove('active');});
+  document.querySelectorAll('.atab').forEach(function(b){b.classList.remove('active');b.setAttribute('aria-pressed','false');});
+  document.getElementById('panel-' + type).classList.add('active');
+  btn.classList.add('active');
+  btn.setAttribute('aria-pressed','true');
+}
+
+{% if chart_articles_labels %}
+new Chart(document.getElementById('chartArticles'), {
+  type: 'bar',
+  data: {
+    labels: {{ chart_articles_labels|safe }},
+    datasets: [{ label: 'Quantite sortie', data: {{ chart_articles_data|safe }}, backgroundColor: ['#1c5b96','#2980b9','#3498db','#5dade2','#85c1e9'], borderRadius: 6 }]
+  },
+  options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'var(--border-light)' } }, x: { grid: { display: false } } } }
+});
+{% endif %}
+
+{% if chart_services_labels %}
+new Chart(document.getElementById('chartServices'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ chart_services_labels|safe }},
+    datasets: [{ data: {{ chart_services_data|safe }}, backgroundColor: ['#27ae60','#2ecc71','#1abc9c','#16a085','#0e6655'], borderWidth: 2, borderColor: 'var(--bg-card)' }]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, color: 'var(--text-dark)' } } } }
+});
+{% endif %}
+</script>
+{% endblock %}

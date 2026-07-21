@@ -1,0 +1,1429 @@
+{% extends "base_ui.html" %}
+{% block title %}Mes Demandes de Matériel{% endblock %}
+
+{% block contenu %}
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+
+<style>
+  :root {
+    --primary: #0d6efd;
+    --primary-dark: #0b5ed7;
+    --success: #198754;
+    --warning: #ffc107;
+    --danger: #dc3545;
+    --info: #0dcaf0;
+    --secondary: #6c757d;
+    --light-bg: #f8f9fc;
+    --border-light: #e9ecef;
+    --text-muted: #6c757d;
+  }
+
+  .demandes-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .demandes-header h1 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0;
+    background: linear-gradient(135deg, var(--primary), #0099ff);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .demandes-header h1 i {
+    background: none;
+    -webkit-background-clip: unset;
+    background-clip: unset;
+    color: var(--primary);
+    margin-right: 10px;
+  }
+
+  .btn-create {
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 14px rgba(13,110,253,0.3);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .btn-create:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(13,110,253,0.4);
+    color: white;
+  }
+
+  .tabs-modern {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 24px;
+    border-bottom: 2px solid var(--border-light);
+    padding-bottom: 0;
+  }
+  .tab-modern {
+    padding: 12px 24px;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--text-muted);
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border-radius: 12px 12px 0 0;
+  }
+  .tab-modern i { margin-right: 8px; }
+  .tab-modern:hover {
+    color: var(--primary);
+    background: rgba(13,110,253,0.05);
+  }
+  .tab-modern.active {
+    color: var(--primary);
+    background: white;
+  }
+  .tab-modern.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: var(--primary);
+    border-radius: 3px;
+  }
+
+  .search-section {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    border: 1px solid var(--border-light);
+  }
+  .search-grid {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: flex-end;
+  }
+  .search-field { flex: 2; min-width: 240px; }
+  .date-field { flex: 1; min-width: 200px; }
+  .search-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+  .search-label {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    display: block;
+  }
+  .search-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1.5px solid var(--border-light);
+    border-radius: 12px;
+    font-size: 14px;
+    transition: all 0.2s;
+    background: white;
+  }
+  .search-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(13,110,253,0.1);
+  }
+  .btn-reset {
+    background: white;
+    border: 1.5px solid var(--border-light);
+    padding: 10px 20px;
+    border-radius: 12px;
+    color: var(--danger);
+    font-weight: 600;
+    font-size: 13px;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-reset:hover {
+    background: rgba(220,53,69,0.05);
+    border-color: var(--danger);
+  }
+
+  .per-page-control {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .per-page-select {
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 1.5px solid var(--border-light);
+    background: white;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  .demandes-table-container {
+    background: white;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    border: 1px solid var(--border-light);
+  }
+  .demandes-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .demandes-table th {
+    background: var(--light-bg);
+    padding: 16px 16px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--border-light);
+    text-align: left;
+  }
+  .demandes-table td {
+    padding: 18px 16px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: middle;
+  }
+  .demandes-table tbody tr:hover {
+    background: var(--light-bg);
+    transition: background 0.2s;
+  }
+
+  .badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-attente-hier { background: #fff3cd; color: #856404; }
+  .badge-attente-magasin { background: #d1ecf1; color: #0c5460; }
+  .badge-cours { background: #fff3e0; color: #e65100; }
+  .badge-partielle { background: #ffe0b2; color: #bf360c; }
+  .badge-livree { background: #d4edda; color: #155724; }
+  .badge-receptionnee { background: #c8e6e9; color: #00695c; }
+  .badge-cloturee { background: #e9ecef; color: #495057; }
+  .badge-refusee { background: #f8d7da; color: #721c24; }
+  .badge-annulee { background: #e2e3e5; color: #383d41; }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn-action {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 14px;
+  }
+  .btn-action:hover { transform: scale(1.05); }
+  .btn-toggle { color: var(--primary); }
+  .btn-toggle:hover { background: rgba(13,110,253,0.1); }
+  .btn-delete { color: var(--danger); }
+  .btn-delete:hover { background: rgba(220,53,69,0.1); }
+  .btn-sign { color: var(--success); }
+  .btn-sign:hover { background: rgba(25,135,84,0.1); }
+  .btn-bs { color: #fd7e14; font-weight: 600; }
+  .btn-bs:hover { background: rgba(253,126,20,0.1); }
+  .btn-cloture { color: var(--secondary); }
+  .btn-cloture:hover { background: rgba(108,117,125,0.1); }
+
+  .accordion-chevron {
+    transition: transform 0.3s ease;
+  }
+  .accordion-chevron.open {
+    transform: rotate(180deg);
+  }
+  .detail-accordion-row {
+    display: none;
+  }
+  .detail-accordion-row.open {
+    display: table-row;
+  }
+  .accordion-content-wrapper {
+    padding: 20px;
+    background: var(--light-bg);
+    border-left: 3px solid var(--primary);
+  }
+
+  .accordion-section {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid var(--border-light);
+    margin-bottom: 12px;
+  }
+  .accordion-section:last-child {
+    margin-bottom: 0;
+  }
+  .accordion-section h6 {
+    margin: 0 0 14px;
+    color: var(--primary);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .accordion-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .accordion-table th, .accordion-table td {
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-light);
+  }
+  .accordion-table thead th {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--text-muted);
+    font-weight: 700;
+    border-bottom: 2px solid var(--border-light);
+  }
+  .accordion-table tbody tr:last-child td {
+    border-bottom: none;
+  }
+  .accordion-table td.num {
+    text-align: center;
+    font-weight: 600;
+  }
+  .text-muted-xs {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .bons-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .bon-card {
+    background: white;
+    border: 1.5px solid var(--border-light);
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 200px;
+    flex: 0 0 auto;
+    max-width: 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: all 0.2s ease;
+  }
+  .bon-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 3px 10px rgba(13,110,253,0.08);
+  }
+  .bon-card-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .bon-card-header i {
+    font-size: 16px;
+    color: #fd7e14;
+  }
+  .bon-card-title {
+    color: var(--primary);
+    cursor: pointer;
+    transition: color 0.2s;
+    text-decoration: none;
+  }
+  .bon-card-title:hover {
+    color: var(--primary-dark);
+    text-decoration: underline;
+  }
+  .bon-card-meta {
+    font-size: 11px;
+    color: #495057;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .bon-card-meta i {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .bon-card-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 2px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border-light);
+  }
+  .btn-card-sign {
+    background: white;
+    border: 1.5px solid var(--success);
+    color: var(--success);
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .btn-card-sign:hover {
+    background: var(--success);
+    color: white;
+  }
+  .badge-sign-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #d4edda;
+    color: #155724;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+  }
+  .empty-state-icon {
+    font-size: 56px;
+    color: var(--border-light);
+    margin-bottom: 20px;
+  }
+  .empty-state-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 8px;
+  }
+  .empty-state-text {
+    font-size: 14px;
+    color: #adb5bd;
+  }
+
+  .pagination-modern {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 24px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-light);
+  }
+  .pagination-links {
+    display: flex;
+    gap: 8px;
+  }
+  .pagination-link {
+    padding: 8px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--border-light);
+    background: white;
+    color: var(--primary);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .pagination-link:hover {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+  }
+  .pagination-current {
+    padding: 8px 14px;
+    background: var(--primary);
+    color: white;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .alert-service-missing {
+    background: linear-gradient(135deg, #fff3cd, #ffe69e);
+    border-radius: 16px;
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+    border-left: 4px solid var(--warning);
+  }
+
+  .mo {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 999999;
+    align-items: flex-start;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+    padding-top: 4vh;
+    overflow-y: auto;
+  }
+  .mo.open { display: flex; }
+  .mb {
+    background: white;
+    border-radius: 12px;
+    width: 90%;
+    max-width: 900px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: si .2s ease;
+    margin-bottom: 4vh;
+    display: flex;
+    flex-direction: column;
+  }
+  @keyframes si {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .mh {
+    background: linear-gradient(135deg, #17a2b8, #117a8b);
+    color: white;
+    padding: 18px 24px;
+    border-radius: 12px 12px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .mh h5 { margin: 0; font-weight: 600; font-size: 16px; }
+  .mc {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: .2s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .mc:hover { background: rgba(255,255,255,0.4); }
+  .mfoot {
+    padding: 14px 24px;
+    border-top: 1px solid var(--border-light);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: #f8f9fa;
+    border-radius: 0 0 12px 12px;
+  }
+  .btn-ok {
+    background: linear-gradient(135deg, #17a2b8, #117a8b);
+    color: white;
+    border: none;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: .2s;
+  }
+  .btn-ok:hover { opacity: 0.9; }
+  .btn-nok {
+    background: #f8f9fa;
+    color: var(--text-muted);
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: .2s;
+  }
+  .btn-nok:hover { background: var(--border-light); }
+
+  @media (max-width: 768px) {
+    .demandes-table th:nth-child(4),
+    .demandes-table td:nth-child(4) { display: none; }
+    .search-grid { flex-direction: column; }
+    .bon-card { max-width: 100%; }
+  }
+
+  body.dark-mode .search-section,
+  body.dark-mode .demandes-table-container,
+  body.dark-mode .pagination-link,
+  body.dark-mode .pagination-current,
+  body.dark-mode .per-page-select,
+  body.dark-mode .btn-reset {
+    background: var(--bg-card, #1e293b);
+  }
+  body.dark-mode .search-input,
+  body.dark-mode .per-page-select {
+    background: var(--bg-hover, #334155);
+    color: var(--text-light, #f1f5f9);
+    border-color: var(--border-light, #475569);
+  }
+  body.dark-mode .search-input::placeholder { color: #94a3b8; }
+  body.dark-mode .demandes-table thead th {
+    background: var(--bg-hover, #334155) !important;
+    color: var(--text-light, #f1f5f9) !important;
+    border-bottom-color: var(--border-light, #475569);
+  }
+  body.dark-mode .demandes-table tbody td {
+    color: var(--text-dark, #cbd5e1);
+    border-bottom-color: var(--border-light, #475569);
+  }
+  body.dark-mode .demandes-table tbody tr { background: var(--bg-card, #1e293b); }
+  body.dark-mode .demandes-table tbody tr:hover { background: var(--bg-hover, #334155); }
+
+  body.dark-mode .badge-attente-hier { background: rgba(255,193,7,0.15); color: #ffda6a; }
+  body.dark-mode .badge-attente-magasin { background: rgba(23,162,184,0.15); color: #5bc0de; }
+  body.dark-mode .badge-cours { background: rgba(253,126,20,0.15); color: #fd7e14; }
+  body.dark-mode .badge-partielle { background: rgba(253,126,20,0.15); color: #fd7e14; }
+  body.dark-mode .badge-livree { background: rgba(25,135,84,0.15); color: #5dd879; }
+  body.dark-mode .badge-receptionnee { background: rgba(32,201,151,0.15); color: #5dd8a6; }
+  body.dark-mode .badge-cloturee { background: rgba(108,117,125,0.15); color: #a0a8b0; }
+  body.dark-mode .badge-refusee { background: rgba(220,53,69,0.15); color: #f5a9b1; }
+  body.dark-mode .badge-annulee { background: rgba(108,117,125,0.15); color: #a0a8b0; }
+
+  body.dark-mode .tabs-modern { border-bottom-color: var(--border-light, #475569); }
+  body.dark-mode .tab-modern { color: var(--text-light, #94a3b8); }
+  body.dark-mode .tab-modern:hover { background: rgba(13,110,253,0.1); color: var(--primary); }
+  body.dark-mode .tab-modern.active { background: var(--bg-card, #1e293b); color: var(--primary); }
+
+  body.dark-mode .pagination-link {
+    background: var(--bg-card, #1e293b);
+    border-color: var(--border-light, #475569);
+    color: var(--primary);
+  }
+  body.dark-mode .pagination-link:hover { background: var(--primary); color: white; }
+  body.dark-mode .pagination-current { background: var(--primary); color: white; }
+  body.dark-mode .pagination-modern { border-top-color: var(--border-light, #475569); }
+
+  body.dark-mode .btn-action { color: var(--text-light, #94a3b8); }
+  body.dark-mode .btn-action:hover { color: #5bc0de; background: var(--bg-hover, #334155); }
+  body.dark-mode .btn-toggle { color: #7abaff; }
+  body.dark-mode .btn-toggle:hover { background: rgba(13,110,253,0.15); }
+
+  body.dark-mode .accordion-content-wrapper {
+    background: var(--bg-hover, #334155);
+    border-left-color: var(--primary);
+  }
+  body.dark-mode .accordion-section {
+    background: var(--bg-card, #1e293b);
+    border-color: var(--border-light, #475569);
+  }
+  body.dark-mode .accordion-section h6 {
+    color: #5bc0de;
+  }
+  body.dark-mode .accordion-table thead th {
+    color: #94a3b8;
+    border-bottom-color: var(--border-light, #475569);
+  }
+  body.dark-mode .accordion-table td {
+    color: var(--text-dark, #cbd5e1);
+    border-bottom-color: var(--border-light, #475569);
+  }
+  body.dark-mode .text-muted-xs { color: #94a3b8; }
+
+  body.dark-mode .bon-card {
+    background: var(--bg-card, #1e293b);
+    border-color: var(--border-light, #475569);
+  }
+  body.dark-mode .bon-card:hover {
+    border-color: var(--primary);
+    box-shadow: 0 3px 10px rgba(13,110,253,0.15);
+  }
+  body.dark-mode .bon-card-title {
+    color: #7abaff;
+  }
+  body.dark-mode .bon-card-title:hover {
+    color: #5bc0de;
+  }
+  body.dark-mode .bon-card-meta {
+    color: #94a3b8;
+  }
+  body.dark-mode .bon-card-actions {
+    border-top-color: var(--border-light, #475569);
+  }
+  body.dark-mode .btn-card-sign {
+    background: transparent;
+    border-color: #5dd879;
+    color: #5dd879;
+  }
+  body.dark-mode .btn-card-sign:hover {
+    background: #5dd879;
+    color: #0f172a;
+  }
+  body.dark-mode .badge-sign-inline {
+    background: rgba(25,135,84,0.15);
+    color: #5dd879;
+  }
+
+  body.dark-mode .mb { background: var(--bg-card, #1e293b); }
+  body.dark-mode .mfoot { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
+  body.dark-mode .btn-nok { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); }
+</style>
+
+<div>
+  <div class="demandes-header">
+    <h1><i class="fas fa-boxes"></i> Mes Demandes</h1>
+    {% if a_un_service %}
+    <button type="button" onclick="ouvrirModalDemande()" class="btn-create">
+      <i class="fas fa-plus-circle"></i> Nouvelle demande
+    </button>
+    {% endif %}
+  </div>
+
+  {% if not a_un_service %}
+  <div class="alert-service-missing">
+    <i class="fas fa-exclamation-triangle" style="font-size: 24px; color: #856404;"></i>
+    <div>
+      <strong style="color: #856404;">Aucun service rattaché</strong><br>
+      <small>Vous ne pouvez pas faire de demande car vous n etes affecte a aucun service. Veuillez contacter votre administrateur.</small>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="tabs-modern">
+    <button class="tab-modern {% if statut_filtre != 'historique' %}active{% endif %}"
+            onclick="window.location.href='?statut_filtre=actives{% if q_demande %}&q={{ q_demande }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}'">
+      <i class="fas fa-inbox"></i> Demandes actives
+    </button>
+    <button class="tab-modern {% if statut_filtre == 'historique' %}active{% endif %}"
+            onclick="window.location.href='?statut_filtre=historique{% if q_demande %}&q={{ q_demande }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}'">
+      <i class="fas fa-archive"></i> Historique
+    </button>
+  </div>
+
+  <div class="search-section">
+    <form id="form-recherche" method="GET">
+      <input type="hidden" name="statut_filtre" value="{{ statut_filtre|default:'actives' }}">
+      <input type="hidden" name="page" id="input-page" value="1">
+      <div class="search-grid">
+        <div class="search-field">
+          <div class="search-label">&#128269; Recherche</div>
+          <input type="text" id="input-q" name="q" class="search-input"
+                 value="{{ q_demande|default:'' }}" placeholder="N deg; demande, article..." autocomplete="off">
+        </div>
+        <div class="date-field">
+          <div class="search-label">&#128197; Periode</div>
+          <input type="text" id="input-date" name="date_range" class="search-input"
+                 value="{{ date_range|default:'' }}" placeholder="Toutes les dates" autocomplete="off">
+        </div>
+        <div class="search-actions">
+          <a href="{% url 'mes_demandes' %}" class="btn-reset">
+            <i class="fas fa-sync-alt"></i> Reinitialiser
+          </a>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- CONTENU AJAX (tableau + pagination) -->
+  <div id="ajax-content">
+    {% include "stock/mes_demandes_lignes.html" %}
+  </div>
+</div>
+
+<div class="mo" id="modal-pdf" style="z-index:999999;">
+  <div class="mb" style="max-width:960px;">
+    <div class="mh">
+      <h5 id="pdf-titre"><i class="fas fa-file-pdf me-2"></i> Bon de sortie</h5>
+      <button class="mc" onclick="closePdfModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:10px;min-height:300px;background:#525659;">
+      <div id="pdf-loader" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px;gap:14px;">
+        <div style="width:40px;height:40px;border:4px solid #e0e0e0;border-top-color:#17a2b8;border-radius:50%;animation:spin .8s linear infinite;"></div>
+        <span style="color:white;font-size:13px;">Chargement du document...</span>
+      </div>
+      <iframe id="pdf-iframe" style="display:none;width:100%;height:72vh;border:none;border-radius:0 0 8px 8px;"></iframe>
+    </div>
+    <div class="mfoot">
+      <button class="btn-nok" onclick="closePdfModal()">Fermer</button>
+      <button class="btn-ok" onclick="document.getElementById('pdf-iframe').contentWindow.print()">
+        <i class="fas fa-print me-1"></i> Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="mo" id="modal-demande" style="z-index:999999;">
+  <div class="mb" style="max-width:1100px;">
+    <div class="mh">
+      <h5><i class="fas fa-plus-circle me-2"></i> Nouvelle demande</h5>
+      <button type="button" class="mc" onclick="fermerModalDemande()"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="form-demande" method="POST">
+      {% csrf_token %}
+      <div style="padding:24px;background:#f8f9fc;max-height:70vh;overflow-y:auto;">
+        <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; margin-bottom: 24px; width: 100%;">
+          <div>
+            <label class="search-label">&#127978; Magasin cible</label>
+            <input type="text" value="{{ magasin_actif.nom|upper }}" readonly style="width:100%;padding:12px;border:1.5px solid var(--border-light);border-radius:12px;font-size:14px;background:#e9ecef;color:#495057;">
+            <input type="hidden" name="magasin_cible" value="{{ magasin_actif.id }}">
+          </div>
+          <div>
+            <label class="search-label">&#128172; Commentaire (optionnel)</label>
+            <input type="text" name="commentaire" placeholder="Precisez votre besoin..." style="width:100%;padding:12px;border:1.5px solid var(--border-light);border-radius:12px;font-size:14px;" autocomplete="off">
+          </div>
+        </div>
+        <div style="margin-bottom: 20px; position: relative; min-width: 0; width: 100%;">
+          <label class="search-label" style="color: var(--primary); display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-search"></i> Rechercher un article
+          </label>
+          <div style="position: relative;">
+            <input type="text" id="search-article" placeholder="Tapez le nom, la reference..." style="width:100%;padding:12px;border:1.5px solid var(--primary);border-radius:12px;font-size:14px;padding-right:40px;" autocomplete="off">
+            <i class="fas fa-search" style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+          </div>
+          <div id="dropdown-articles" style="display:none;position:absolute;background:white;border:1px solid var(--border-light);border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.1);max-height:250px;overflow-y:auto;z-index:100;margin-top:5px;width:100%;">
+            <div style="padding:10px 15px;background:var(--light-bg);border-bottom:1px solid var(--border-light);font-size:12px;color:var(--text-muted);">
+              <i class="fas fa-box"></i> Resultats
+            </div>
+            <div id="dropdown-body">
+              {% for a in articles %}
+              <div class="article-option" data-id="{{ a.id }}" data-nom="{{ a.designation|escapejs }}" data-ref="{{ a.reference|default:''|escapejs }}" data-unite="{{ a.unite_distribution|default:'unite'|escapejs }}" data-famille="{{ a.famille.intitule|default:''|escapejs }}" onclick="ajouterArticle(this)" style="cursor:pointer;border-bottom:1px solid var(--border-light);">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;">
+                  <div style="flex:1;min-width:0;">
+                    <strong style="color:var(--primary);word-break:break-word;">{{ a.designation }}</strong>
+                    <div style="display:flex;gap:15px;margin-top:4px;flex-wrap:wrap;">
+                      {% if a.reference %}<small style="color:var(--text-muted);"><i class="fas fa-barcode"></i> {{ a.reference }}</small>{% endif %}
+                      {% if a.famille %}<small style="color:var(--text-muted);"><i class="fas fa-folder"></i> {{ a.famille.intitule }}</small>{% endif %}
+                      <small style="color:var(--text-muted);"><i class="fas fa-cube"></i> {{ a.unite_distribution|default:'unite' }}</small>
+                    </div>
+                  </div>
+                  <span style="background:var(--light-bg);padding:5px 12px;border-radius:20px;font-size:11px;color:var(--success);white-space:nowrap;">
+                    <i class="fas fa-plus-circle"></i> Ajouter
+                  </span>
+                </div>
+              </div>
+              {% empty %}
+              <div style="padding:30px;text-align:center;color:var(--text-muted);">
+                <i class="fas fa-database" style="font-size:32px;margin-bottom:10px;display:block;"></i>Aucun article dans le catalogue
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+        </div>
+        <div style="background:white;border-radius:16px;border:1px solid var(--border-light);overflow:hidden;">
+          <div style="background:var(--light-bg);padding:12px 16px;border-bottom:1px solid var(--border-light);">
+            <strong><i class="fas fa-shopping-cart"></i> Articles a demander</strong>
+            <span style="float:right;font-size:12px;" id="article-count">0 article(s)</span>
+          </div>
+          <table style="width:100%;table-layout:fixed;">
+            <thead style="background:white;">
+              <tr>
+                <th style="padding:12px 16px;font-size:12px;font-weight:600;">Article</th>
+                <th style="width:160px;text-align:center;font-size:12px;font-weight:600;">Quantite</th>
+                <th style="width:60px;"></th>
+              </tr>
+            </thead>
+            <tbody id="lignes-demande">
+              <tr id="ligne-vide">
+                <td colspan="3" style="text-align:center;padding:50px;color:#adb5bd;">
+                  <i class="fas fa-search" style="font-size:42px;display:block;margin-bottom:15px;opacity:0.5;"></i>
+                  Recherchez et selectionnez des articles ci-dessus
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermerModalDemande()">Annuler</button>
+        <button type="submit" class="btn-ok" id="submit-demande-btn" disabled>
+          <i class="fas fa-paper-plane me-1"></i> Envoyer la demande
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  let articlesCount = 0;
+  let currentPdfUrl = '';
+  const pdfCache = new Map();
+
+  function toggleAccordion(id) {
+    const row = document.getElementById('detail-row-' + id);
+    const chevron = document.getElementById('chevron-' + id);
+    const isOpen = row.classList.contains('open');
+
+    document.querySelectorAll('.detail-accordion-row.open').forEach(function(r) {
+      if (r.id !== 'detail-row-' + id) {
+        r.classList.remove('open');
+        const otherId = r.id.replace('detail-row-', '');
+        const otherChevron = document.getElementById('chevron-' + otherId);
+        if (otherChevron) otherChevron.classList.remove('open');
+      }
+    });
+
+    if (isOpen) {
+      row.classList.remove('open');
+      chevron.classList.remove('open');
+    } else {
+      row.classList.add('open');
+      chevron.classList.add('open');
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const printBonId = urlParams.get('print_bon');
+
+    if (printBonId) {
+      const currentTab = urlParams.get('statut_filtre');
+      if (currentTab !== 'historique') {
+        const newUrl = new URL(window.location.href);
+        newUrl.searchParams.set('statut_filtre', 'historique');
+        window.location.href = newUrl.toString();
+        return;
+      }
+      const printUrlTemplate = "{% url 'imprimer_bon_multi_lignes' 999999 %}";
+      const printUrl = printUrlTemplate.replace('999999', printBonId);
+      setTimeout(() => openPdfModal(printUrl, 'Bon de Sortie'), 500);
+
+      const cleanUrl = window.location.pathname + '?statut_filtre=historique';
+      window.history.replaceState({}, document.title, cleanUrl);
+    }
+  });
+
+  async function openPdfModal(url, titre) {
+    currentPdfUrl = url;
+    var modal = document.getElementById('modal-pdf');
+    document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-file-pdf me-2"></i> ' + (titre || 'Bon de sortie');
+    var loader = document.getElementById('pdf-loader');
+    var iframe = document.getElementById('pdf-iframe');
+
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    loader.style.display = 'flex';
+    iframe.style.display = 'none';
+    iframe.src = '';
+
+    if (pdfCache.has(url)) {
+      iframe.src = pdfCache.get(url);
+      iframe.onload = function() {
+        loader.style.display = 'none';
+        iframe.style.display = 'block';
+      };
+      return;
+    }
+
+    try {
+      const response = await fetch(url, {
+        cache: 'force-cache',
+        credentials: 'include'
+      });
+      if (!response.ok) throw new Error('Erreur ' + response.status);
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      if (pdfCache.size >= 10) {
+        const firstKey = pdfCache.keys().next().value;
+        URL.revokeObjectURL(pdfCache.get(firstKey));
+        pdfCache.delete(firstKey);
+      }
+      pdfCache.set(url, blobUrl);
+
+      iframe.src = blobUrl;
+      iframe.onload = function() {
+        loader.style.display = 'none';
+        iframe.style.display = 'block';
+      };
+    } catch (err) {
+      loader.innerHTML = '<div style="color:white;text-align:center;padding:40px;"><i class="fas fa-exclamation-triangle" style="font-size:40px;margin-bottom:15px;display:block;"></i>Impossible de charger le PDF<br><small style="opacity:.7;">' + escapeHtml(err.message) + '</small></div>';
+      console.error('PDF load error:', err);
+    }
+  }
+
+  function closePdfModal() {
+    document.getElementById('modal-pdf').classList.remove('open');
+    document.body.style.overflow = '';
+    var iframe = document.getElementById('pdf-iframe');
+    iframe.src = '';
+    iframe.style.display = 'none';
+  }
+
+  function ouvrirModalDemande() {
+    document.getElementById('modal-demande').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => {
+      const searchInput = document.getElementById('search-article');
+      if (searchInput) searchInput.focus();
+    }, 200);
+  }
+
+  function fermerModalDemande() {
+    document.getElementById('modal-demande').classList.remove('open');
+    document.body.style.overflow = '';
+    const form = document.getElementById('form-demande');
+    if (form) form.reset();
+    viderLignes();
+  }
+
+  function updateArticleCount() {
+    articlesCount = document.querySelectorAll('#lignes-demande tr:not(#ligne-vide)').length;
+    const countSpan = document.getElementById('article-count');
+    const submitBtn = document.getElementById('submit-demande-btn');
+    if (countSpan) countSpan.innerHTML = articlesCount + ' article' + (articlesCount > 1 ? 's' : '');
+    if (submitBtn) submitBtn.disabled = (articlesCount === 0);
+  }
+
+  let searchTimeout;
+  const searchInput = document.getElementById('search-article');
+  const dropdown = document.getElementById('dropdown-articles');
+  const dropdownBody = document.getElementById('dropdown-body');
+
+  let selectedIndex = -1;
+  let visibleRows = [];
+
+  function searchArticles(searchTerm) {
+    if (!dropdownBody) return;
+    const rows = dropdownBody.querySelectorAll('.article-option');
+    const term = searchTerm.toLowerCase().trim();
+    let hasResults = false;
+    visibleRows = [];
+    selectedIndex = -1;
+    if (term.length < 1) { dropdown.style.display = 'none'; return; }
+    rows.forEach(row => {
+      const nom = row.getAttribute('data-nom')?.toLowerCase() || '';
+      const ref = row.getAttribute('data-ref')?.toLowerCase() || '';
+      const famille = row.getAttribute('data-famille')?.toLowerCase() || '';
+      if (nom.includes(term) || ref.includes(term) || famille.includes(term)) {
+        row.style.display = ''; hasResults = true; visibleRows.push(row);
+      } else {
+        row.style.display = 'none';
+      }
+    });
+    if (hasResults) {
+      dropdown.style.display = 'block';
+      const noResultDiv = dropdownBody.querySelector('.no-result');
+      if (noResultDiv) noResultDiv.remove();
+    } else {
+      dropdown.style.display = 'block';
+      let noResultDiv = dropdownBody.querySelector('.no-result');
+      if (!noResultDiv) {
+        const div = document.createElement('div');
+        div.className = 'no-result';
+        div.style.cssText = 'padding:30px;text-align:center;color:var(--text-muted);';
+        div.innerHTML = '<i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;"></i>Aucun article trouve<br><small>Verifiez l orthographe</small>';
+        dropdownBody.appendChild(div);
+      }
+    }
+  }
+
+  function updateSelection() {
+    visibleRows.forEach((row, idx) => {
+      if (idx === selectedIndex) {
+        row.style.backgroundColor = '#e8f4f8';
+        row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      } else {
+        row.style.backgroundColor = '';
+      }
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', function(e) {
+      clearTimeout(searchTimeout);
+      searchTimeout = setTimeout(() => searchArticles(e.target.value), 300);
+    });
+    searchInput.addEventListener('focus', function() {
+      if (this.value.length > 0) searchArticles(this.value);
+    });
+    searchInput.addEventListener('keydown', function(e) {
+      if (!visibleRows.length) return;
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % visibleRows.length;
+        updateSelection();
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + visibleRows.length) % visibleRows.length;
+        updateSelection();
+      } else if (e.key === 'Enter') {
+        e.preventDefault();
+        if (selectedIndex >= 0 && selectedIndex < visibleRows.length) {
+          ajouterArticle(visibleRows[selectedIndex]);
+          selectedIndex = -1;
+          visibleRows = [];
+        }
+      } else if (e.key === 'Escape') {
+        dropdown.style.display = 'none';
+        selectedIndex = -1;
+      }
+    });
+  }
+
+  document.addEventListener('click', function(e) {
+    if (searchInput && dropdown && !searchInput.contains(e.target) && !dropdown.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  function ajouterArticle(element) {
+    const id = element.getAttribute('data-id');
+    const nom = element.getAttribute('data-nom');
+    const ref = element.getAttribute('data-ref');
+    const unite = element.getAttribute('data-unite');
+
+    if (document.getElementById('article-ligne-' + id)) {
+      const input = document.getElementById('qte-' + id);
+      if (input) input.value = parseInt(input.value) + 1;
+      const row = document.getElementById('article-ligne-' + id);
+      if (row) {
+        row.style.backgroundColor = '#e8f4f8';
+        setTimeout(() => row.style.backgroundColor = '', 300);
+      }
+      if (searchInput) { searchInput.value = ''; dropdown.style.display = 'none'; }
+      return;
+    }
+
+    const vide = document.getElementById('ligne-vide');
+    if (vide) vide.remove();
+
+    const tbody = document.getElementById('lignes-demande');
+    if (!tbody) return;
+
+    const tr = document.createElement('tr');
+    tr.id = 'article-ligne-' + id;
+    tr.style.transition = 'background 0.2s';
+    tr.innerHTML = '<td style="padding:12px 16px;"><strong style="color:var(--primary);">' + escapeHtml(nom) + '</strong>' +
+      (ref ? '<br><small style="color:var(--text-muted);"><i class="fas fa-tag"></i> ' + escapeHtml(ref) + '</small>' : '') +
+      '<small style="color:var(--text-muted);margin-left:8px;">(' + escapeHtml(unite) + ')</small>' +
+      '<input type="hidden" name="articles[]" value="' + id + '"></td>' +
+      '<td style="padding:12px 16px;text-align:center;">' +
+      '<div style="display:flex;align-items:center;justify-content:center;gap:8px;">' +
+      '<button type="button" onclick="decrementerQuantite(\' + id + \')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border-light);background:white;cursor:pointer;"><i class="fas fa-minus" style="font-size:10px;"></i></button>' +
+      '<input type="number" id="qte-' + id + '" name="quantites[]" value="1" min="1" style="width:70px;padding:8px;border:1.5px solid var(--border-light);border-radius:8px;text-align:center;" onchange="mettreAJourQuantite(\'" + id + "\')" autocomplete="off">' +
+      '<button type="button" onclick="incrementerQuantite(\' + id + \')" style="width:28px;height:28px;border-radius:6px;border:1px solid var(--border-light);background:white;cursor:pointer;"><i class="fas fa-plus" style="font-size:10px;"></i></button>' +
+      '</div></td>' +
+      '<td style="padding:12px 16px;text-align:center;">' +
+      '<button type="button" onclick="supprimerArticle(\' + id + \')" style="background:none;border:none;color:var(--danger);cursor:pointer;font-size:16px;"><i class="fas fa-trash-alt"></i></button>' +
+      '</td>';
+    tbody.appendChild(tr);
+    updateArticleCount();
+    if (searchInput) { 
+      searchInput.value = ''; 
+      searchInput.focus(); 
+      dropdown.style.display = 'none'; 
+    }
+  }
+
+  function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>"']/g, function(m) {
+      if (m === '&') return '&amp;';
+      if (m === '<') return '&lt;';
+      if (m === '>') return '&gt;';
+      if (m === '"') return '&quot;';
+      if (m === "'") return '&#39;';
+      return m;
+    });
+  }
+
+  function incrementerQuantite(id) {
+    const input = document.getElementById('qte-' + id);
+    if (input) input.value = parseInt(input.value) + 1;
+  }
+  function decrementerQuantite(id) {
+    const input = document.getElementById('qte-' + id);
+    if (input && parseInt(input.value) > 1) input.value = parseInt(input.value) - 1;
+  }
+  function mettreAJourQuantite(id) {
+    const input = document.getElementById('qte-' + id);
+    if (input && (parseInt(input.value) < 1 || isNaN(parseInt(input.value)))) input.value = 1;
+  }
+  function supprimerArticle(id) {
+    const row = document.getElementById('article-ligne-' + id);
+    if (row) row.remove();
+    const tbody = document.getElementById('lignes-demande');
+    if (tbody && tbody.children.length === 0) {
+      tbody.innerHTML = '<tr id="ligne-vide"><td colspan="3" style="text-align:center;padding:50px;color:#adb5bd;"><i class="fas fa-search" style="font-size:42px;display:block;margin-bottom:15px;opacity:0.5;"></i>Recherchez et selectionnez des articles ci-dessus</td></tr>';
+    }
+    updateArticleCount();
+  }
+  function viderLignes() {
+    const tbody = document.getElementById('lignes-demande');
+    if (tbody) tbody.innerHTML = '<tr id="ligne-vide"><td colspan="3" style="text-align:center;padding:50px;color:#adb5bd;"><i class="fas fa-search" style="font-size:42px;display:block;margin-bottom:15px;opacity:0.5;"></i>Recherchez et selectionnez des articles ci-dessus</td></tr>';
+    updateArticleCount();
+  }
+
+  /* ================================================================
+     AJAX : refresh du tableau sans rechargement complet
+     ================================================================ */
+  function refreshMesDemandes(customUrl, resetPage) {
+    const container = document.getElementById('ajax-content');
+    if (!container) { console.error('[AJAX] #ajax-content introuvable'); return; }
+
+    let url;
+    if (typeof customUrl === 'string' && customUrl) {
+      url = customUrl;
+    } else {
+      const params = new URLSearchParams();
+
+      const qVal = document.getElementById('input-q')?.value?.trim() || '';
+      if (qVal) params.set('q', qVal);
+
+      const dateVal = document.getElementById('input-date')?.value?.trim() || '';
+      if (dateVal) params.set('date_range', dateVal);
+
+      const statutVal = document.querySelector('input[name="statut_filtre"]')?.value || 'actives';
+      params.set('statut_filtre', statutVal);
+
+      // Cherche le select per_page dans le contenu AJAX ou le DOM principal
+      let perPageSelect = document.querySelector('#ajax-content .per-page-select');
+      if (!perPageSelect) {
+        perPageSelect = document.querySelector('select[name="per_page"]');
+      }
+      if (perPageSelect) {
+        params.set('per_page', perPageSelect.value);
+      }
+
+      if (!resetPage) {
+        const pageVal = document.getElementById('input-page')?.value || '1';
+        params.set('page', pageVal);
+      }
+
+      url = window.location.pathname + '?' + params.toString();
+    }
+
+    console.log('[AJAX] URL:', url);
+    container.style.opacity = '0.6';
+    container.style.pointerEvents = 'none';
+
+    fetch(url, {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      credentials: 'same-origin'
+    })
+    .then(function(response) {
+      console.log('[AJAX] Status:', response.status);
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      return response.text();
+    })
+    .then(function(html) {
+      container.innerHTML = html;
+      window.history.pushState({}, '', url);
+      console.log('[AJAX] OK — contenu remplace');
+    })
+    .catch(function(err) {
+      console.error('[AJAX] Erreur:', err);
+      window.location.href = url;
+    })
+    .finally(function() {
+      container.style.opacity = '1';
+      container.style.pointerEvents = '';
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    updateArticleCount();
+    document.querySelectorAll('input:not([type="hidden"]), textarea, select').forEach(function(el) {
+      el.setAttribute('autocomplete', 'off');
+    });
+
+    if (typeof jQuery !== 'undefined' && $.fn.daterangepicker) {
+      var $dateInput = $('#input-date');
+      var existingRange = $dateInput.val();
+      $dateInput.daterangepicker({
+        autoUpdateInput: false, autoApply: true, showDropdowns: true,
+        locale: { format: 'DD/MM/YYYY', firstDay: 1 }
+      });
+      if (existingRange && existingRange.includes(' - ')) {
+        var parts = existingRange.split(' - ');
+        var start = moment(parts[0], 'DD/MM/YYYY');
+        var end = moment(parts[1], 'DD/MM/YYYY');
+        if (start.isValid() && end.isValid()) {
+          $dateInput.data('daterangepicker').setStartDate(start);
+          $dateInput.data('daterangepicker').setEndDate(end);
+          $dateInput.val(existingRange);
+        }
+      }
+      $dateInput.on('apply.daterangepicker', function(ev, picker) {
+        $(this).val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
+        refreshMesDemandes(null, true);
+      });
+    }
+
+    let typingTimer;
+    const qInput = document.getElementById('input-q');
+    if (qInput) {
+      qInput.addEventListener('input', function() {
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(function() { refreshMesDemandes(null, true); }, 600);
+      });
+    }
+
+    document.getElementById('modal-pdf').addEventListener('click', function(e) {
+      if (e.target === this) closePdfModal();
+    });
+
+    const rechercheForm = document.getElementById('form-recherche');
+    if (rechercheForm) {
+      rechercheForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        refreshMesDemandes(null, true);
+      });
+    }
+
+    const ajaxContent = document.getElementById('ajax-content');
+    if (ajaxContent) {
+      ajaxContent.addEventListener('click', function(e) {
+        const link = e.target.closest('.pagination-link');
+        if (link) {
+          e.preventDefault();
+          refreshMesDemandes(link.href, false);
+        }
+      });
+      ajaxContent.addEventListener('change', function(e) {
+        if (e.target.matches('.per-page-select')) {
+          e.preventDefault();
+          refreshMesDemandes(null, true);
+        }
+      });
+    }
+
+    // Gestion du bouton "Tout marquer comme lu" (si présent dans la page)
+    const btnToutLu = document.getElementById('btn-tout-lu');
+    if (btnToutLu) {
+      btnToutLu.addEventListener('click', function(e) {
+        e.preventDefault();
+        const url = this.href;
+        if (typeof Swal !== 'undefined') {
+          Swal.fire({
+            title: 'Tout marquer comme lu ?',
+            text: 'Les notifications de cette page seront marquées comme lues.',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#1c5b96',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: '<i class="fas fa-check-double"></i> Confirmer',
+            cancelButtonText: 'Annuler',
+            reverseButtons: true
+          }).then((result) => {
+            if (result.isConfirmed) window.location.href = url;
+          });
+        } else {
+          if (confirm('Tout marquer comme lu ?')) {
+            window.location.href = url;
+          }
+        }
+      });
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', function() {
+    const demandeForm = document.getElementById('form-demande');
+    if (demandeForm) {
+      demandeForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const hasArticles = document.querySelectorAll('input[name="articles[]"]').length > 0;
+        if (!hasArticles) {
+          Swal.fire({ icon: 'warning', title: 'Panier vide', text: 'Ajoutez au moins un article avant d envoyer votre demande.', confirmButtonColor: '#0d6efd' });
+          return;
+        }
+        const totalArticles = document.querySelectorAll('input[name="articles[]"]').length;
+        Swal.fire({
+          title: 'Envoyer la demande ?',
+          html: 'Vous allez envoyer une demande de <strong>' + totalArticles + '</strong> article(s).',
+          icon: 'question', showCancelButton: true, confirmButtonColor: '#0d6efd', cancelButtonColor: '#6c757d',
+          confirmButtonText: '<i class="fas fa-paper-plane"></i> Oui, envoyer', cancelButtonText: 'Annuler'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            Swal.fire({ title: 'Envoi en cours...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+            demandeForm.submit();
+          }
+        });
+      });
+    }
+  });
+
+  function confirmerAnnulation(id, numero, nbLivraisons) {
+    let titre = nbLivraisons > 0 ? 'Cloturer la demande ?' : 'Annuler la demande ?';
+    let texte = nbLivraisons > 0
+      ? 'La demande ' + numero + ' sera cloturee. ' + nbLivraisons + ' livraison(s) partielle(s) ont deja ete effectuee(s). Le reliquat non livre sera abandonne.'
+      : 'La demande ' + numero + ' sera annulee definitivement.';
+    let btnText = nbLivraisons > 0 ? '<i class="fas fa-lock"></i> Oui, cloturer' : '<i class="fas fa-trash-alt"></i> Oui, annuler';
+    Swal.fire({
+      title: titre, text: texte, icon: 'warning', showCancelButton: true,
+      confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
+      confirmButtonText: btnText, cancelButtonText: 'Annuler'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const form = document.getElementById('form-annuler-' + id);
+        if (form) form.submit();
+      }
+    });
+  }
+
+  function confirmerCloture(id, numero, reste) {
+    Swal.fire({
+      title: 'Cloturer le reliquat ?',
+      html: 'Demande <b>' + numero + '</b><br>' + reste + ' article(s) restant(s) ne seront plus livres.',
+      icon: 'question', showCancelButton: true, confirmButtonColor: '#6c757d', cancelButtonColor: '#0d6efd',
+      confirmButtonText: '<i class="fas fa-lock"></i> Oui, cloturer'
+    }).then((result) => {
+      if (result.isConfirmed) {
+        const form = document.getElementById('form-cloture-' + id);
+        if (form) form.submit();
+      }
+    });
+  }
+
+  document.getElementById('modal-demande').addEventListener('click', function(e) {
+    if (e.target === this) fermerModalDemande();
+  });
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      document.querySelectorAll('.mo').forEach(function(m){ m.classList.remove('open'); });
+      document.body.style.overflow = '';
+      document.querySelectorAll('.detail-accordion-row.open').forEach(function(r) {
+        r.classList.remove('open');
+        const accId = r.id.replace('detail-row-', '');
+        const chev = document.getElementById('chevron-' + accId);
+        if (chev) chev.classList.remove('open');
+      });
+    }
+  });
+</script>
+{% endblock %}
