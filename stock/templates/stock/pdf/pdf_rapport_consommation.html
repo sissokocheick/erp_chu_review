@@ -7,11 +7,20 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 1.5cm;
+            margin: 1.5cm 1.5cm 1.8cm 1.5cm;
             @bottom-center {
-                content: "Page " counter(page) " / " counter(pages);
-                font-size: 9pt;
-                color: #666;
+                content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+                font-size: 7pt;
+                color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+                font-weight: bold;
+                text-align: center;
+                width: 100%;
+            }
+            @bottom-right {
+                content: counter(page) " / " counter(pages);
+                font-size: 7pt;
+                color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+                font-weight: bold;
             }
         }
         * { box-sizing: border-box; }
@@ -116,7 +125,10 @@
 </head>
 <body>
     <div class="header">
-        <div class="header-left">
+        <div class="header-left" style="display:flex;align-items:center;gap:15px;">
+            {% if pdf_config.cartouche.afficher_logo and logo_url %}
+            <img src="{{ logo_url }}" style="max-height:50px;max-width:120px;object-fit:contain;" alt="Logo">
+            {% endif %}
             <h1>Bilan des Consommations</h1>
             <p>
                 Période : <strong>{{ date_debut|date:"d/m/Y" }}</strong> au <strong>{{ date_fin|date:"d/m/Y" }}</strong>
@@ -130,7 +142,7 @@
         <div class="header-right">
             <div>Édité par : {{ edite_par.get_full_name|default:edite_par.username }}</div>
             <div>Imprimé le : {{ date_impression|date:"d/m/Y à H:i" }}</div>
-            <div>Entreprise : {{ edite_par.profil.entreprise.nom|default:"—" }}</div>
+            <div>Magasin : {{ magasin.nom|default:"—" }}</div>
         </div>
     </div>
 

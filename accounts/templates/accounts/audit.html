@@ -67,10 +67,10 @@
                 <div>
                     <label style="font-size: 11px; color: var(--text-light); display: block; margin-bottom: 4px;">Période</label>
                     <div style="display: flex; gap: 4px;">
-                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}periode=7" class="nx-periode-btn {% if periode == '7' %}active{% endif %}">7j</a>
-                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}periode=30" class="nx-periode-btn {% if periode == '30' or not periode %}active{% endif %}">30j</a>
-                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}periode=90" class="nx-periode-btn {% if periode == '90' %}active{% endif %}">90j</a>
-                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}periode=all" class="nx-periode-btn {% if periode == 'all' %}active{% endif %}">Tout</a>
+                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}periode=7" class="nx-periode-btn {% if periode == '7' %}active{% endif %}">7j</a>
+                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}periode=30" class="nx-periode-btn {% if periode == '30' or not periode %}active{% endif %}">30j</a>
+                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}periode=90" class="nx-periode-btn {% if periode == '90' %}active{% endif %}">90j</a>
+                        <a href="?{% if q %}q={{ q|urlencode }}&{% endif %}{% if type_filtre %}type_filtre={{ type_filtre|urlencode }}&{% endif %}{% if per_page %}per_page={{ per_page }}&{% endif %}periode=all" class="nx-periode-btn {% if periode == 'all' %}active{% endif %}">Tout</a>
                     </div>
                 </div>
                 <div>
@@ -83,8 +83,8 @@
                 </div>
                 <input type="hidden" name="periode" value="custom">
                 <button type="submit" class="nx-btn nx-btn-primary" style="height: 38px;"><i class="fas fa-filter"></i> Filtrer</button>
-                {% if q or type_filtre or periode != '30' or date_debut %}
-                <a href="{% url 'accounts:journal_audit' %}" class="nx-btn nx-btn-light" style="height: 38px;"><i class="fas fa-times"></i></a>
+                {% if q or type_filtre or periode != '30' or date_debut or date_fin %}
+                <a href="{% url 'accounts:journal_audit' %}" class="nx-btn nx-btn-light" style="height: 38px;" title="Réinitialiser les filtres" aria-label="Réinitialiser les filtres"><i class="fas fa-times"></i></a>
                 {% endif %}
             </form>
         </div>
@@ -131,7 +131,7 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for evt in page_obj %}
+                            {% for evt in evenements %}
                             <tr>
                                 <td style="white-space: nowrap; font-size: 12px; color: var(--text-light);">
                                     <i class="far fa-clock" style="margin-right: 4px;"></i>{{ evt.date_creation|date:'d/m/Y H:i:s' }}
@@ -139,11 +139,16 @@
                                 <td>
                                     <div style="display: flex; align-items: center; gap: 8px;">
                                         <div style="width: 28px; height: 28px; border-radius: 50%; background: var(--primary-blue); color: white; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: bold;">
-                                            {{ evt.utilisateur.username|first|upper }}
+                                            {% if evt.utilisateur %}{{ evt.utilisateur.username|first|upper }}{% else %}?{% endif %}
                                         </div>
                                         <div>
+                                            {% if evt.utilisateur %}
                                             <div style="font-weight: 600; font-size: 13px;">{{ evt.utilisateur.get_full_name|default:evt.utilisateur.username }}</div>
                                             <div style="font-size: 11px; color: var(--text-light);">{{ evt.utilisateur.email|default:"—" }}</div>
+                                            {% else %}
+                                            <div style="font-weight: 600; font-size: 13px; color: var(--text-medium);">Inconnu</div>
+                                            <div style="font-size: 11px; color: var(--text-light);">Tentative non authentifiée</div>
+                                            {% endif %}
                                         </div>
                                     </div>
                                 </td>
@@ -167,10 +172,10 @@
                                     {% if evt.adresse_ip %}{{ evt.adresse_ip }}{% else %}—{% endif %}
                                 </td>
                                 <td>
-                                    {% if evt.type_action == 'CONNEXION' %}
-                                        <span class="nx-duree-badge">en cours</span>
-                                    {% elif evt.type_action == 'DECONNEXION' %}
-                                        <span class="nx-duree-badge">—</span>
+                                    {% if evt.duree_en_cours %}
+                                        <span class="nx-duree-badge" style="background:#dbeafe;color:#1e40af;">en cours</span>
+                                    {% elif evt.duree_display and evt.duree_display != '—' %}
+                                        <span class="nx-duree-badge" style="background:#ecfdf5;color:#065f46;">{{ evt.duree_display }}</span>
                                     {% else %}
                                         <span class="nx-duree-badge">—</span>
                                     {% endif %}
@@ -180,7 +185,7 @@
                             <tr>
                                 <td colspan="6" class="nx-empty">
                                     <i class="fas fa-clipboard-check"></i>
-                                    Aucun événement d'audit trouvé pour cette période.
+                                    Aucun événement d'audit trouvé pour cette période.<br><small>Modifiez les filtres ou élargissez la période.</small>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -191,11 +196,11 @@
                 <div class="nx-card-footer">
                     <div class="nx-pag">
                         {% if page_obj.has_previous %}
-                            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if type_filtre %}&type_filtre={{ type_filtre|urlencode }}{% endif %}{% if periode %}&periode={{ periode }}{% endif %}{% if date_debut %}&date_debut={{ date_debut }}{% endif %}{% if date_fin %}&date_fin={{ date_fin }}{% endif %}"><i class="fas fa-chevron-left"></i></a>
+                            <a href="?page={{ page_obj.previous_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if type_filtre %}&type_filtre={{ type_filtre|urlencode }}{% endif %}{% if periode %}&periode={{ periode }}{% endif %}{% if date_debut %}&date_debut={{ date_debut }}{% endif %}{% if date_fin %}&date_fin={{ date_fin }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}"><i class="fas fa-chevron-left"></i></a>
                         {% endif %}
                         <span class="active">Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}</span>
                         {% if page_obj.has_next %}
-                            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if type_filtre %}&type_filtre={{ type_filtre|urlencode }}{% endif %}{% if periode %}&periode={{ periode }}{% endif %}{% if date_debut %}&date_debut={{ date_debut }}{% endif %}{% if date_fin %}&date_fin={{ date_fin }}{% endif %}"><i class="fas fa-chevron-right"></i></a>
+                            <a href="?page={{ page_obj.next_page_number }}{% if q %}&q={{ q|urlencode }}{% endif %}{% if type_filtre %}&type_filtre={{ type_filtre|urlencode }}{% endif %}{% if periode %}&periode={{ periode }}{% endif %}{% if date_debut %}&date_debut={{ date_debut }}{% endif %}{% if date_fin %}&date_fin={{ date_fin }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}"><i class="fas fa-chevron-right"></i></a>
                         {% endif %}
                     </div>
                 </div>

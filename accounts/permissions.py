@@ -44,12 +44,10 @@ def verifier_permission(*permissions_requises):
                 f"— permissions requises : {permissions_requises}"
             )
 
-            # Tentative de log d'audit (optionnel, ne pas bloquer si échoue)
             try:
                 from accounts.models import JournalAudit
                 JournalAudit.objects.create(
                     utilisateur=user if user.is_authenticated else None,
-                    entreprise=getattr(request, 'entreprise', None),
                     action=f"Accès refusé sur {request.path}",
                     type_action='PERMISSION',
                     details={'permissions_requises': list(permissions_requises)},
@@ -62,10 +60,11 @@ def verifier_permission(*permissions_requises):
                 request,
                 "⛔ Accès refusé : Vous n'avez pas l'autorisation pour cette action ou cette page."
             )
+            # CORRECTION : redirect sécurisé — jamais vers un hôte externe
+            from django.utils.http import url_has_allowed_host_and_scheme
             referer = request.META.get('HTTP_REFERER', '')
-            if referer and '/login' not in referer and '/logout' not in referer and referer != request.build_absolute_uri():
+            if referer and url_has_allowed_host_and_scheme(referer, allowed_hosts={request.get_host()}):
                 return redirect(referer)
-            # ✅ CORRECTION : utiliser '/' au lieu d'une URL nommée inexistante
             return redirect('/')
         return _wrapped_view
     return decorator

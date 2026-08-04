@@ -17,8 +17,6 @@ from ..models import Article
 # Constante : taille maximale de fichier upload (1 Mo)
 MAX_FILE_SIZE = 1024 * 1024  # 1 Mo en octets
 
-
-
 @login_required(login_url='/auth/login/')
 def api_notifications(request):
     notifs = Notification.objects.filter(
@@ -49,7 +47,6 @@ def api_notifications(request):
 
     return JsonResponse({'count': len(notifs), 'notifications': data})
 
-
 @login_required(login_url='/auth/login/')
 def liste_notifications(request):
     notifs = Notification.objects.filter(
@@ -69,7 +66,6 @@ def liste_notifications(request):
         'notifications': page_obj, 'per_page': per_page
     })
 
-
 @login_required(login_url='/auth/login/')
 @require_POST
 def marquer_notification_lue(request, notif_id):
@@ -80,7 +76,6 @@ def marquer_notification_lue(request, notif_id):
     notif.date_lecture = timezone.now()
     notif.save(update_fields=['est_lue', 'date_lecture'])
     return JsonResponse({'success': True})
-
 
 @login_required(login_url='/auth/login/')
 @catch_errors(redirect_url='/')
@@ -93,7 +88,7 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
     - Le check 'not in perm_map' inclut désormais 'bonmouvement'
     - Import messages factorisé (1 seul import en haut du fichier)
     """
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     model_name_lower = model_name.lower()
 
     perm_map = {
@@ -179,26 +174,12 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
         try:
             Model = apps.get_model(app_label, model_name)
             obj = get_object_or_404(Model, id=obj_id)
-            if hasattr(obj, 'entreprise') and obj.entreprise != entreprise:
-                messages.error(request, "⛔ Accès non autorisé.")
-                return redirect('/')
-            if hasattr(obj, 'magasin'):
-                magasin_entreprise = getattr(obj.magasin, 'entreprise', None)
-                if magasin_entreprise and magasin_entreprise != entreprise:
-                    messages.error(request, "⛔ Accès non autorisé.")
-                    return redirect('/')
-            if not (hasattr(obj, 'entreprise') or hasattr(obj, 'magasin')):
-                messages.error(
-                    request,
-                    "⛔ Upload non autorisé : document non rattaché à une entreprise."
-                )
-                return redirect('/')
+                # Mono-tenant : vérification entreprise supprimée
             setattr(obj, field_name, fichier)
             obj.save()
             messages.success(request, "Le document a été joint avec succès !")
         except Exception as e:
             logger.exception("[UPLOAD ERROR] %s", e)
-
 
             messages.error(
                 request,
@@ -207,7 +188,6 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
             )
     return redirect(request.META.get('HTTP_REFERER', '/'))
 
-
 # ═══════════════════════════════════════════════════════════════════════
 # API LISTE ARTICLES (pour inventaire personnalisé)
 # ═══════════════════════════════════════════════════════════════════════
@@ -215,8 +195,8 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
 @verifier_permission('accounts.menu_articles')
 def api_articles_json(request):
     """Retourne la liste des articles en JSON (pour sélection inventaire personnalisé)."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     articles = Article.objects.filter(
-        entreprise=entreprise, is_deleted=False
+        is_deleted=False
     ).values('id', 'reference', 'designation').order_by('designation')
     return JsonResponse({'articles': list(articles)})

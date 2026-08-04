@@ -15,13 +15,11 @@ from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 
 from accounts.permissions import verifier_permission
-from core.pdf_service import DocumentGenerator
 from ..decorators import magasin_requis, catch_errors
 from ..models import (
     Article, Magasin, StockItem, Ajustement,
     CampagneInventaire, LigneInventaire, CircuitValidation,
-    FamilleArticle,
-)
+    FamilleArticle)
 from ..services.inventaire_service import InventaireService
 from .catalogue import paginer, get_magasins_autorises
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
@@ -33,7 +31,6 @@ logger = logging.getLogger(__name__)
 # ═══════════════════════════════════════════════════════════
 LIGNES_PAR_PAGE = 400
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_inventaires')
 @magasin_requis
@@ -43,14 +40,13 @@ def liste_inventaires(request):
         return _creer_inventaire(request)
     return _afficher_inventaires(request)
 
-
 def _afficher_inventaires(request):
     """Branche GET : filtres, pagination, contexte."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_actif_id = request.session.get('magasin_actif_id')
 
     circuit = CircuitValidation.objects.filter(
-        type_document='INVENTAIRE', entreprise=entreprise
+        type_document='INVENTAIRE'
     ).first()
     circuit_actif = circuit.est_actif if circuit else False
     user_est_valideur = False
@@ -59,7 +55,7 @@ def _afficher_inventaires(request):
 
     qs = CampagneInventaire.objects.select_related(
         'magasin', 'cree_par'
-    ).filter(magasin__entreprise=entreprise)
+    ).filter()
     if magasin_actif_id:
         qs = qs.filter(magasin_id=magasin_actif_id)
 
@@ -71,14 +67,14 @@ def _afficher_inventaires(request):
     qs = qs.order_by('-date_creation')
 
     extra = {
-        'magasins': Magasin.objects.filter(entreprise=entreprise).order_by('nom'),
+        'magasins': Magasin.objects.all().order_by('nom'),
         'active_tab': active_tab,
         'circuit_actif': circuit_actif,
         'user_est_valideur': user_est_valideur,
         'peut_creer': request.user.has_perm('accounts.menu_inventaires') or request.user.is_superuser,
         'peut_modifier': request.user.has_perm('accounts.menu_inventaires') or request.user.is_superuser,
         # Pour le modal de création
-        'familles': FamilleArticle.objects.filter(entreprise=entreprise, is_deleted=False).order_by('intitule'),
+        'familles': FamilleArticle.objects.filter(is_deleted=False).order_by('intitule'),
     }
     return render_liste(
         request, qs,
@@ -90,10 +86,9 @@ def _afficher_inventaires(request):
         context_extra=extra
     )
 
-
 def _creer_inventaire(request):
     """Branche POST : création campagne via service, redirection."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasins_autorises = get_magasins_autorises(request)
     titre = request.POST.get('titre')
     magasin_id = request.POST.get('magasin_id')
@@ -105,11 +100,10 @@ def _creer_inventaire(request):
     articles_ids = request.POST.getlist('articles_ids')
 
     if titre and magasin_id:
-        magasin = get_object_or_404(Magasin, id=magasin_id, entreprise=entreprise)
+        magasin = get_object_or_404(Magasin, id=magasin_id)
         try:
             campagne = InventaireService.creer_campagne(
-                titre=titre, magasin=magasin, user=request.user, entreprise=entreprise,
-            )
+                titre=titre, magasin=magasin, user=request.user)
             # ═══ Post-traitement selon le type ═══
             campagne.type_campagne = type_campagne
             campagne.save(update_fields=['type_campagne'])
@@ -136,100 +130,17 @@ def _creer_inventaire(request):
             messages.error(request, "❌ Erreur lors de la création de la campagne.")
     return redirect('liste_inventaires')
 
-
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_inventaires')
-@magasin_requis
-@catch_errors(redirect_url='liste_inventaires')
-def imprimer_fiche_comptage(request, campagne_id):
-    entreprise = request.entreprise
-    campagne = get_object_or_404(
-        CampagneInventaire, id=campagne_id,
-        magasin__entreprise=entreprise
-    )
-    lignes = campagne.lignes_inventaire.select_related(
-        'article__famille'
-    ).order_by('article__famille__intitule', 'article__designation')
-
-    gen = DocumentGenerator(request=request, entreprise=entreprise)
-    pdf_bytes = gen.fiche_comptage(campagne, lignes, edite_par=request.user, date_impression=timezone.now())
-
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Fiche_Comptage_{campagne.titre}.pdf"'
-    return response
-
-
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_inventaires')
-@magasin_requis
-@catch_errors(redirect_url='liste_inventaires')
-def imprimer_resultat_inventaire(request, campagne_id):
-    entreprise = request.entreprise
-    campagne = get_object_or_404(
-        CampagneInventaire.objects.filter(
-            magasin__entreprise=entreprise
-        ).select_related('magasin', 'valide_par', 'cree_par'),
-        id=campagne_id
-    )
-
-    lignes = campagne.lignes_inventaire.select_related('article__famille').order_by(
-        'article__famille__intitule', 'article__designation'
-    )
-
-    lignes_data = []
-    total_ecarts = 0
-    valeur_totale_ecart = Decimal('0')
-
-    for ligne in lignes:
-        ecart = ligne.ecart()
-        abs_ecart = abs(ecart)
-        prix = ligne.article.prix_reference or Decimal('0')
-        valeur_ecart = abs(Decimal(str(ecart)) * prix) if prix else Decimal('0')
-
-        total_ecarts += abs_ecart
-        valeur_totale_ecart += valeur_ecart
-
-        if ligne.quantite_physique is None:
-            observation = "Non saisie"
-        elif ecart > 0:
-            observation = "Surplus détecté"
-        elif ecart < 0:
-            observation = "Manquant"
-        else:
-            observation = "Conforme"
-
-        lignes_data.append({
-            'ligne': ligne,
-            'ecart': ecart,
-            'abs_ecart': abs_ecart,
-            'valeur_ecart': valeur_ecart,
-            'observation': observation,
-        })
-
-    gen = DocumentGenerator(request=request, entreprise=entreprise)
-    pdf_bytes = gen.resultat_inventaire(
-        campagne, lignes_data, total_ecarts, valeur_totale_ecart,
-        date_impression=timezone.now(),
-    )
-
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Resultat_Inventaire_{campagne.titre}.pdf"'
-    return response
-
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_inventaires')
 @magasin_requis
 @catch_errors(redirect_url='liste_inventaires')
 def saisir_inventaire(request, campagne_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     campagne = get_object_or_404(
-        CampagneInventaire, id=campagne_id,
-        magasin__entreprise=entreprise
-    )
+        CampagneInventaire, id=campagne_id)
 
     circuit = CircuitValidation.objects.filter(
-        type_document='INVENTAIRE', entreprise=entreprise
+        type_document='INVENTAIRE'
     ).first()
     circuit_actif = circuit.est_actif if circuit else False
     user_est_valideur = False
@@ -356,7 +267,6 @@ def saisir_inventaire(request, campagne_id):
         'q_inventaire': q,
     })
 
-
 # ═══════════════════════════════════════════════════════════
 # API AJAX : sauvegarde auto d'une seule ligne (pas de limite)
 # ═══════════════════════════════════════════════════════════
@@ -368,11 +278,9 @@ def api_sauvegarder_ligne_inventaire(request, campagne_id):
     Sauvegarde la quantité physique d'une seule ligne.
     Appelée en AJAX à chaque blur/change d'input.
     """
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     campagne = get_object_or_404(
-        CampagneInventaire, id=campagne_id,
-        magasin__entreprise=entreprise
-    )
+        CampagneInventaire, id=campagne_id)
 
     if campagne.statut != 'EN_COURS':
         return JsonResponse({'success': False, 'error': 'Inventaire non modifiable.'}, status=403)

@@ -17,8 +17,7 @@ from ..decorators import magasin_requis, catch_errors
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, Mouvement,
-    Service, LivraisonPartielle, CircuitValidation,
-)
+    Service, LivraisonPartielle, CircuitValidation)
 from ..services import NumeroGenerator, PDFService, NotificationService
 from ..services.bon_service import BonService
 from .catalogue import paginer, get_magasins_autorises
@@ -29,7 +28,6 @@ from django.db.models import Q
 # Constante : taille maximale de fichier upload (1 Mo)
 MAX_FILE_SIZE = 1024 * 1024  # 1 Mo en octets
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -38,11 +36,10 @@ logger = logging.getLogger(__name__)
 @magasin_requis
 @catch_errors(redirect_url='liste_sorties')
 def liste_sorties(request):
-    entreprise = request.entreprise
     magasins_autorises = get_magasins_autorises(request)
 
     circuit_sortie = CircuitValidation.objects.filter(
-        type_document='SORTIE', entreprise=entreprise, est_actif=True
+        type_document='SORTIE', est_actif=True
     ).prefetch_related('valideurs').first()
     est_valideur = False
 
@@ -94,8 +91,7 @@ def liste_sorties(request):
         else:
             if ref_ext and BonMouvement.objects.filter(
                 type_bon='SORTIE', service_demandeur_id=service_id,
-                reference_externe__iexact=ref_ext,
-                magasin__entreprise=entreprise
+                reference_externe__iexact=ref_ext
             ).exists():
                 nom_service = Service.objects.get(id=service_id).nom
                 messages.error(
@@ -104,11 +100,10 @@ def liste_sorties(request):
                 )
                 return redirect('liste_sorties')
 
-            # CORRECTION : validation des articles contre l'entreprise + protection int(qte)
+            # Validation des articles
             articles_valides = set(
                 Article.objects.filter(
-                    id__in=[aid for aid in article_ids if aid],
-                    entreprise=entreprise
+                    id__in=[aid for aid in article_ids if aid]
                 ).values_list('id', flat=True)
             )
 
@@ -121,7 +116,7 @@ def liste_sorties(request):
                             if int(aid) not in articles_valides:
                                 messages.error(
                                     request,
-                                    "⛔ Un ou plusieurs articles sélectionnés n'appartiennent pas à votre entreprise."
+                                    "⛔ Un ou plusieurs articles sélectionnés ne sont pas valides."
                                 )
                                 return redirect('liste_sorties')
                             lignes.append({'article_id': aid, 'quantite': qte_int})
@@ -130,10 +125,10 @@ def liste_sorties(request):
                         return redirect('liste_sorties')
 
             # Conversion IDs → objets
-            magasin = get_object_or_404(Magasin, id=magasin_id, entreprise=entreprise)
+            magasin = get_object_or_404(Magasin, id=magasin_id)
             service_demandeur = None
             if service_id:
-                service_demandeur = get_object_or_404(Service, id=service_id, entreprise=entreprise)
+                service_demandeur = get_object_or_404(Service, id=service_id)
 
             try:
                 bon = BonService.creer_bon_sortie(
@@ -142,7 +137,7 @@ def liste_sorties(request):
                     magasin=magasin,
                     service_demandeur=service_demandeur,
                     reference_externe=ref_ext,
-                    circuit_validation=circuit_sortie,
+                    circuit_validation=circuit_sortie
                 )
             except IntegrityError as e:
                 logger.exception("[SORTIE] IntegrityError création bon : %s", e)
@@ -160,12 +155,12 @@ def liste_sorties(request):
                 return redirect(f"{reverse('liste_sorties')}?print_bon={bon.id}")
 
     magasins = magasins_autorises.order_by('nom')
-    services = Service.objects.filter(entreprise=entreprise).order_by('nom')
-    articles = Article.objects.filter(entreprise=entreprise).prefetch_related(
+    services = Service.objects.all().order_by('nom')
+    articles = Article.objects.all().prefetch_related(
         'stocks__magasin'
     ).order_by('designation')
     motifs_annulation = MotifAnnulation.objects.filter(
-        entreprise=entreprise, actif=True
+        actif=True
     ).order_by('libelle')
 
     context = {
@@ -192,7 +187,6 @@ def liste_sorties(request):
 @magasin_requis
 @catch_errors(redirect_url='liste_sorties')
 def annuler_sortie(request, bon_id):
-    entreprise = request.entreprise
     if request.method != 'POST':
         return redirect('liste_sorties')
 
@@ -233,13 +227,13 @@ def annuler_sortie(request, bon_id):
         messages.error(request, "Le motif d'annulation est obligatoire.")
         return redirect('liste_sorties')
 
-    motif = get_object_or_404(MotifAnnulation, id=motif_id, entreprise=entreprise)
+    motif = get_object_or_404(MotifAnnulation, id=motif_id)
 
     try:
         mouvements_existants = BonService.annuler_bon_sortie(bon, motif, request.user)
     except ValueError as e:
         logger.exception("[SORTIE] %s", e)
-        messages.error(request, "❌ Une erreur est survenue lors de la création du bon.")
+        messages.error(request, "❌ Une erreur est survenue lors de l'annulation.")
         return redirect('liste_sorties')
 
     # Invalidation cache PDF
@@ -270,15 +264,12 @@ def annuler_sortie(request, bon_id):
 @magasin_requis
 @catch_errors(redirect_url='liste_sorties')
 def valider_bon_sortie(request, bon_id):
-
-    entreprise = request.entreprise
     bon = get_object_or_404(
-        BonMouvement, id=bon_id, type_bon='SORTIE',
-        magasin__entreprise=entreprise
+        BonMouvement, id=bon_id, type_bon='SORTIE'
     )
 
     circuit = CircuitValidation.objects.filter(
-        type_document='SORTIE', entreprise=entreprise, est_actif=True
+        type_document='SORTIE', est_actif=True
     ).prefetch_related('valideurs').first()
 
     if not circuit:
@@ -293,7 +284,7 @@ def valider_bon_sortie(request, bon_id):
         stock_decompte = BonService.valider_bon_sortie(bon, request.user)
     except ValueError as e:
         logger.exception("[SORTIE] %s", e)
-        messages.error(request, "❌ Une erreur est survenue lors de l'annulation.")
+        messages.error(request, "❌ Une erreur est survenue lors de la validation.")
         return redirect('liste_sorties')
 
     # Invalidation cache PDF pour forcer régénération avec signature
@@ -303,7 +294,6 @@ def valider_bon_sortie(request, bon_id):
                 default_storage.delete(bon.fichier_pdf.name)
         except Exception as e:
             logger.warning("[Validation BS %s] Échec suppression cache : %s", bon.numero_bon, e)
-
 
         bon.fichier_pdf = None
         bon.save()
@@ -317,19 +307,14 @@ def valider_bon_sortie(request, bon_id):
     return redirect('liste_sorties')
 
 
-# ═══════════════════════════════════════════════════════════════════════
-# REMPLACEMENT DE SCAN SUR BON DE SORTIE
-# ═══════════════════════════════════════════════════════════════════════
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_sorties')
 @magasin_requis
 @catch_errors(redirect_url='liste_sorties')
 def remplacer_scan_sortie(request, bon_id):
     """Permet de remplacer le fichier scanné d'un bon de sortie."""
-    entreprise = request.entreprise
     bon = get_object_or_404(
-        BonMouvement, id=bon_id, type_bon='SORTIE',
-        magasin__entreprise=entreprise
+        BonMouvement, id=bon_id, type_bon='SORTIE'
     )
 
     if request.method == 'POST':
@@ -347,7 +332,6 @@ def remplacer_scan_sortie(request, bon_id):
                 "⚠️ Format invalide. Seuls PDF, JPG et PNG sont acceptés."
             )
         else:
-            # Supprimer l'ancien scan s'il existe
             if bon.document_scan and bon.document_scan.name and default_storage.exists(bon.document_scan.name):
                 default_storage.delete(bon.document_scan.name)
 

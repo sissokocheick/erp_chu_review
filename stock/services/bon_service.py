@@ -26,16 +26,12 @@ class BonService:
     """
 
     @staticmethod
-    def _verifier_entreprise(utilisateur, magasin):
-        """✅ CORRECTION : Vérifie que l'utilisateur appartient à la même entreprise que le magasin."""
-        try:
-            entreprise_user = utilisateur.profil.entreprise
-        except AttributeError:
-            raise PermissionDenied("Utilisateur sans profil entreprise.")
-        if magasin.entreprise != entreprise_user:
-            raise PermissionDenied(
-                f"Accès refusé : le magasin '{magasin.nom}' n'appartient pas à votre entreprise."
-            )
+    def _verifier_utilisateur_actif(utilisateur, magasin=None):
+        """✅ CORRECTION MONO-TENANT : vérifie que l'utilisateur est actif.
+        Le paramètre magasin est conservé pour compatibilité mais ignoré.
+        """
+        if not utilisateur or not utilisateur.is_active:
+            raise PermissionDenied("Utilisateur inactif ou non authentifié.")
 
     @staticmethod
     def _enregistrer_validation(bon, utilisateur, ordre_case, commentaire=""):
@@ -65,9 +61,12 @@ class BonService:
 
     @staticmethod
     def _get_articles_en_bulk(article_ids):
-        """✅ CORRECTION : Récupère les articles en une seule requête pour éviter N+1."""
+        """✅ CORRECTION : Récupère les articles en une seule requête pour éviter N+1.
+        Utilise _base_manager pour contourner tout filtre entreprise implicite.
+        Convertit les IDs en int car in_bulk() retourne des clés int."""
         from stock.models import Article
-        return Article.objects.filter(id__in=article_ids).in_bulk()
+        ids_int = [int(aid) for aid in article_ids if aid is not None]
+        return Article._base_manager.filter(id__in=ids_int).in_bulk()
 
     # ═══════════════════════════════════════════════════════════════════════
     # BON D'ENTRÉE
@@ -90,8 +89,8 @@ class BonService:
             fournisseur: Fournisseur instance|None
             reference_externe: str|None
         """
-        # ✅ CORRECTION : isolation entreprise
-        cls._verifier_entreprise(utilisateur, magasin)
+        # ✅ CORRECTION MONO-TENANT : vérification utilisateur
+        cls._verifier_utilisateur_actif(utilisateur, magasin)
 
         bon_kwargs = {
             'type_bon': 'ENTREE',
@@ -148,7 +147,7 @@ class BonService:
             if not quantite or quantite <= 0:
                 raise ValidationError(f"Quantité invalide pour article_id={article_id} : {quantite}")
 
-            article = articles_map.get(article_id)
+            article = articles_map.get(int(article_id))
             if not article:
                 raise ValidationError(f"Article ID {article_id} introuvable.")
 
@@ -206,8 +205,8 @@ class BonService:
             service_demandeur: Service instance|None
             reference_externe: str|None
         """
-        # ✅ CORRECTION : isolation entreprise
-        cls._verifier_entreprise(utilisateur, magasin)
+        # ✅ CORRECTION MONO-TENANT : vérification utilisateur
+        cls._verifier_utilisateur_actif(utilisateur, magasin)
 
         statut = 'ATTENTE' if circuit_validation and circuit_validation.est_actif else 'VALIDE'
 
@@ -225,7 +224,7 @@ class BonService:
                 quantite = ligne_data.get('quantite')
                 if not article_id or not quantite or quantite <= 0:
                     continue
-                article = articles_map.get(article_id)
+                article = articles_map.get(int(article_id))
                 if not article:
                     continue
                 stock_item = StockItem.objects.select_for_update().filter(
@@ -280,7 +279,7 @@ class BonService:
                 if not article_id or not quantite or quantite <= 0:
                     continue
 
-                article = articles_map.get(article_id)
+                article = articles_map.get(int(article_id))
                 if not article:
                     continue
 
@@ -304,7 +303,7 @@ class BonService:
                 quantite = ligne_data.get('quantite')
                 if not article_id or not quantite or quantite <= 0:
                     continue
-                article = articles_map.get(article_id)
+                article = articles_map.get(int(article_id))
                 if not article:
                     continue
                 LigneBon.objects.create(
@@ -353,8 +352,8 @@ class BonService:
             destinataire: Beneficiaire instance|None
             fournisseur: Fournisseur instance|None
         """
-        # ✅ CORRECTION : isolation entreprise
-        cls._verifier_entreprise(utilisateur, magasin)
+        # ✅ CORRECTION MONO-TENANT : vérification utilisateur
+        cls._verifier_utilisateur_actif(utilisateur, magasin)
 
         bon_kwargs = {
             'type_bon': 'SORTIE_HORS_STOCK',
@@ -388,7 +387,7 @@ class BonService:
             if not article_id or not quantite or quantite <= 0:
                 continue
 
-            article = articles_map.get(article_id)
+            article = articles_map.get(int(article_id))
             if not article:
                 continue
 
@@ -432,8 +431,8 @@ class BonService:
             service: Service instance|None
             reference_externe: str|None
         """
-        # ✅ CORRECTION : isolation entreprise
-        cls._verifier_entreprise(utilisateur, magasin)
+        # ✅ CORRECTION MONO-TENANT : vérification utilisateur
+        cls._verifier_utilisateur_actif(utilisateur, magasin)
 
         bon_kwargs = {
             'type_bon': 'RETOUR_SERVICE',
@@ -465,7 +464,7 @@ class BonService:
             if not article_id or not quantite or quantite <= 0:
                 continue
 
-            article = articles_map.get(article_id)
+            article = articles_map.get(int(article_id))
             if not article:
                 continue
 
@@ -511,7 +510,7 @@ class BonService:
             raise ValueError("Bon rejeté, impossible de valider.")
 
         # ✅ CORRECTION : vérifier entreprise
-        cls._verifier_entreprise(utilisateur, bon.magasin)
+        cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
 
         # ✅ CORRECTION : revérifier le stock AVANT validation (le stock a pu changer)
         from stock.models import StockItem
@@ -561,7 +560,7 @@ class BonService:
             raise ValueError("Bon déjà annulé.")
 
         # ✅ CORRECTION : vérifier entreprise
-        cls._verifier_entreprise(utilisateur, bon.magasin)
+        cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
 
         # ✅ CORRECTION : gérer motif comme string ou objet
         motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
@@ -607,7 +606,6 @@ class BonService:
                         from accounts.models import Notification
                         from django.contrib.auth.models import User
                         responsables = User.objects.filter(
-                            profil__entreprise=bon.magasin.entreprise,
                             profil__est_chef_service=True,
                             is_active=True
                         )
@@ -646,7 +644,7 @@ class BonService:
             raise ValueError("Bon déjà annulé.")
 
         # ✅ CORRECTION : vérifier entreprise
-        cls._verifier_entreprise(utilisateur, bon.magasin)
+        cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
 
         # ✅ CORRECTION : vérifier si une demande est liée et mettre à jour son statut
         motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
@@ -691,7 +689,7 @@ class BonService:
             raise ValueError("Bon déjà annulé.")
 
         # ✅ CORRECTION : vérifier entreprise
-        cls._verifier_entreprise(utilisateur, bon.magasin)
+        cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
 
         # ✅ CORRECTION : soft delete des mouvements hors stock (pas de hard delete)
         mouvements_hs = Mouvement.objects.filter(

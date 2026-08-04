@@ -13,14 +13,12 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.permissions import verifier_permission
-from core.pdf_service import DocumentGenerator
 from ..decorators import magasin_requis, catch_errors
 from ..forms import EntreeStockForm
 from ..models import (
     Mouvement, BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, StockItem,
-    Fournisseur,
-)
+    Fournisseur)
 from ..services import NumeroGenerator, PDFService, NotificationService
 from ..services.bon_service import BonService
 from .catalogue import paginer, get_magasins_autorises
@@ -30,7 +28,6 @@ from django.core.exceptions import PermissionDenied
 
 # Constante : taille maximale de fichier upload (1 Mo)
 MAX_FILE_SIZE = 1024 * 1024  # 1 Mo en octets
-
 
 logger = logging.getLogger(__name__)
 
@@ -48,9 +45,8 @@ def liste_entrees(request):
 
 def _afficher_entrees(request):
     """Branche GET : filtres, pagination, contexte."""
-    entreprise = request.entreprise
     qs = BonMouvement.objects.filter(
-        type_bon='ENTREE', magasin__entreprise=entreprise
+        type_bon='ENTREE'
     ).select_related('magasin', 'fournisseur', 'cree_par').prefetch_related(
         'lignes_bon__article'
     ).order_by('-date_bon')
@@ -61,11 +57,11 @@ def _afficher_entrees(request):
 
     extra = {
         'magasins': get_magasins_autorises(request).order_by('nom'),
-        'fournisseurs': Fournisseur.objects.filter(entreprise=entreprise).order_by('raison_sociale'),
-        'articles': Article.objects.filter(entreprise=entreprise).prefetch_related(
+        'fournisseurs': Fournisseur.objects.all().order_by('raison_sociale'),
+        'articles': Article.objects.all().prefetch_related(
             'stocks__magasin'
         ).order_by('designation'),
-        'motifs_annulation': MotifAnnulation.objects.filter(entreprise=entreprise, actif=True).order_by('libelle'),
+        'motifs_annulation': MotifAnnulation.objects.filter(actif=True).order_by('libelle'),
         'peut_creer': _has_perm_bon(request.user, 'add', 'ENTREE'),
         'peut_annuler': _has_perm_bon(request.user, 'change', 'ENTREE'),
     }
@@ -88,7 +84,6 @@ def _afficher_entrees(request):
 
 def _creer_entree(request):
     """Branche POST : validation, création via service, upload scan, redirection."""
-    entreprise = request.entreprise
     magasins_autorises = get_magasins_autorises(request)
 
     magasin_id = request.POST.get('magasin')
@@ -116,8 +111,7 @@ def _creer_entree(request):
 
     if ref_ext and BonMouvement.objects.filter(
         type_bon='ENTREE', fournisseur_id=fournisseur_id,
-        reference_externe__iexact=ref_ext,
-        magasin__entreprise=entreprise
+        reference_externe__iexact=ref_ext
     ).exists():
         messages.error(request, f"Le BL/Facture '{ref_ext}' a déjà été enregistré.")
         return redirect('liste_entrees')
@@ -127,43 +121,41 @@ def _creer_entree(request):
     # Récupération du fournisseur (objet)
     fournisseur = None
     if fournisseur_id:
-        fournisseur = get_object_or_404(Fournisseur, id=fournisseur_id, entreprise=entreprise)
+        fournisseur = get_object_or_404(Fournisseur, id=fournisseur_id)
 
-    # CORRECTION : validation des articles contre l'entreprise
+    # Validation des articles
     articles_valides = set(
         Article.objects.filter(
-            id__in=[aid for aid in article_ids if aid],
-            entreprise=entreprise
+            id__in=[aid for aid in article_ids if aid]
         ).values_list('id', flat=True)
     )
 
     lignes = []
     for aid, qte, lot, peremp, pu in zip(article_ids, quantites, lots, peremptions, prix_unitaires):
         if aid and qte and int(qte) > 0:
-            # Vérifier que l'article appartient à l'entreprise
             if int(aid) not in articles_valides:
                 messages.error(
                     request,
-                    f"⛔ L'article sélectionné n'appartient pas à votre entreprise."
+                    f"⛔ L'article sélectionné n'est pas valide."
                 )
                 return redirect('liste_entrees')
 
-            # ═══ VALIDATION LOT / PÉREMPTION (article OU famille) ═══
-            article = get_object_or_404(Article, id=aid, entreprise=entreprise)
+            # ═══ VALIDATION LOT / PÉREMPTION ═══
+            article = get_object_or_404(Article, id=aid)
             if article.requiert_lot_peremption:
                 if not lot or not lot.strip():
                     messages.error(
                         request,
-                        f"❌ L'article '{article.designation}' nécessite un N° de lot (coché dans l'article ou sa famille)."
+                        f"❌ L'article '{article.designation}' nécessite un N° de lot."
                     )
                     return redirect('liste_entrees')
                 if not peremp or not peremp.strip():
                     messages.error(
                         request,
-                        f"❌ L'article '{article.designation}' nécessite une date de péremption (coché dans l'article ou sa famille)."
+                        f"❌ L'article '{article.designation}' nécessite une date de péremption."
                     )
                     return redirect('liste_entrees')
-            # ═══════════════════════════════════════════════════════
+
             lignes.append({
                 'article_id': aid,
                 'quantite': int(qte),
@@ -178,7 +170,7 @@ def _creer_entree(request):
             utilisateur=request.user,
             magasin=magasin,
             fournisseur=fournisseur,
-            reference_externe=ref_ext,
+            reference_externe=ref_ext
         )
     except IntegrityError as e:
         logger.exception("[ENTREE] IntegrityError création bon : %s", e)
@@ -214,7 +206,6 @@ def _traiter_upload_scan(request, bon):
 @magasin_requis
 @catch_errors(redirect_url='liste_entrees')
 def annuler_entree(request, bon_id):
-    entreprise = request.entreprise
     if request.method != 'POST':
         return redirect('liste_entrees')
 
@@ -229,13 +220,13 @@ def annuler_entree(request, bon_id):
         messages.error(request, "Le motif d'annulation est obligatoire.")
         return redirect('liste_entrees')
 
-    motif = get_object_or_404(MotifAnnulation, id=motif_id, entreprise=entreprise)
+    motif = get_object_or_404(MotifAnnulation, id=motif_id)
 
     try:
         BonService.annuler_bon_entree(bon, motif, request.user)
     except ValueError as e:
         logger.exception("[ENTREE] %s", e)
-        messages.error(request, "⛔ Erreur lors de la création du bon. Veuillez réessayer.")
+        messages.error(request, "⛔ Erreur lors de l'annulation. Veuillez réessayer.")
         return redirect('liste_entrees')
 
     # Invalidation cache PDF
@@ -245,7 +236,6 @@ def annuler_entree(request, bon_id):
                 default_storage.delete(bon.fichier_pdf.name)
         except Exception as e:
             logger.warning("[Annulation BE %s] Échec suppression cache PDF : %s", bon.numero_bon, e)
-
 
         bon.fichier_pdf = None
         bon.save(update_fields=['fichier_pdf'])
@@ -268,24 +258,12 @@ def apercu_bon_entree(request, bon_id):
         ).prefetch_related('lignes_bon__article'),
         id=bon_id,
         type_bon='ENTREE',
-        magasin__entreprise=request.entreprise
     )
 
-    entreprise = request.entreprise
     pdf_config = {}
-    if entreprise and hasattr(entreprise, 'get_pdf_config'):
-        try:
-            pdf_config = entreprise.get_pdf_config() or {}
-        except Exception:
-            pdf_config = {}
-
     logo_url = None
-    if entreprise and entreprise.logo:
-        try:
-            logo_url = request.build_absolute_uri(entreprise.logo.url)
-        except Exception:
-            logo_url = None
 
+    # Signatures
     sig_magasinier_url = None
     if bon.cree_par:
         profil = getattr(bon.cree_par, 'profil', None)
@@ -308,7 +286,6 @@ def apercu_bon_entree(request, bon_id):
 
     context = {
         'is_apercu': True,
-        'entreprise': entreprise,
         'bon': bon,
         'lignes': list(bon.lignes_bon.all()),
         'total_qte': total_qte,
@@ -324,38 +301,10 @@ def apercu_bon_entree(request, bon_id):
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_entrees')
 @magasin_requis
-def bon_entree_pdf(request, bon_id):
-
-    entreprise = getattr(request, 'entreprise', None)
-    if not entreprise:
-        raise PermissionDenied("⛔ Aucune entreprise active.")
-
-    bon = get_object_or_404(BonMouvement, id=bon_id, type_bon='ENTREE')
-    bon_entreprise = (
-        getattr(bon, 'entreprise', None)
-        or getattr(getattr(bon, 'magasin', None), 'entreprise', None)
-    )
-    # CORRECTION : if not bon_entreprise OR bon_entreprise != entreprise
-    if not bon_entreprise or bon_entreprise != entreprise:
-        raise PermissionDenied("⛔ Accès interdit.")
-
-    gen = DocumentGenerator(request=request, entreprise=entreprise)
-    pdf_bytes = gen.bon_entree(bon)
-
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="BE_{bon.numero_bon}.pdf"'
-    return response
-
-
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_entrees')
-@magasin_requis
 @catch_errors(redirect_url='liste_entrees')
 def remplacer_scan_entree(request, bon_id):
-    entreprise = request.entreprise
     bon = get_object_or_404(
-        BonMouvement, id=bon_id, type_bon='ENTREE',
-        magasin__entreprise=entreprise
+        BonMouvement, id=bon_id, type_bon='ENTREE'
     )
 
     if request.method == 'POST':

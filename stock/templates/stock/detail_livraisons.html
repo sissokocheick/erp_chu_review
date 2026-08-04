@@ -178,7 +178,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for ligne_liv in liv.lignes.all %}
+                        {% for ligne_liv in liv.lignes_livraison.all %}
                         <tr>
                             <td><strong>{{ ligne_liv.article.designation }}</strong></td>
                             <td style="text-align: center; color: #117a8b; font-weight: bold;">{{ ligne_liv.quantite_demandee }}</td>

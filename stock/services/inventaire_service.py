@@ -13,18 +13,13 @@ class InventaireService:
 
     @staticmethod
     @transaction.atomic
-    def creer_campagne(titre, magasin, user, entreprise):
+    def creer_campagne(titre, magasin, user, entreprise=None):
         """
-        Crée une campagne d'inventaire avec une ligne par article de l'entreprise.
-        """
-        from django.core.exceptions import PermissionDenied
-        from ..models import CampagneInventaire, LigneInventaire, Article, StockItem
+        Crée une campagne d'inventaire avec une ligne par article.
 
-        # ✅ CORRECTION : vérifier que le magasin appartient à l'entreprise
-        if magasin.entreprise != entreprise:
-            raise PermissionDenied(
-                "Le magasin ne correspond pas à l'entreprise spécifiée."
-            )
+        ✅ CORRECTION MONO-TENANT : paramètre entreprise ignoré (compatibilité).
+        """
+        from ..models import CampagneInventaire, LigneInventaire, Article, StockItem
 
         campagne = CampagneInventaire.objects.create(
             titre=titre.upper(),
@@ -32,7 +27,7 @@ class InventaireService:
             cree_par=user,
         )
 
-        articles = Article.objects.filter(entreprise=entreprise)
+        articles = Article.objects.all()
         # ✅ CORRECTION : une seule requête pour éviter N+1
         stock_map = dict(StockItem.objects.filter(
             article__in=articles, magasin=magasin
@@ -113,13 +108,9 @@ class InventaireService:
         if campagne.statut == 'VALIDE':
             raise ValidationError("Cette campagne d'inventaire a déjà été validée.")
 
-        # ✅ CORRECTION : vérifier que l'utilisateur a le droit de valider cette campagne
-        try:
-            entreprise_user = user.profil.entreprise
-        except AttributeError:
-            raise PermissionDenied("Utilisateur sans profil entreprise.")
-        if campagne.magasin.entreprise != entreprise_user:
-            raise PermissionDenied("Vous ne pouvez pas valider une campagne d'une autre entreprise.")
+        # ✅ CORRECTION MONO-TENANT : vérifier que l'utilisateur est actif
+        if not user or not user.is_active:
+            raise PermissionDenied("Utilisateur inactif.")
 
         from ..models import Mouvement, StockItem
 
@@ -128,13 +119,10 @@ class InventaireService:
         from django.contrib.auth.models import User
         from accounts.models import Notification
 
-        config = ConfigurationHopital.objects.filter(
-            entreprise=campagne.magasin.entreprise
-        ).first()
+        config = ConfigurationHopital.get_instance()
         seuil_alert = config.seuil_ecart_inventaire if (config and hasattr(config, 'seuil_ecart_inventaire')) else 10
 
         responsables = list(User.objects.filter(
-            profil__entreprise=campagne.magasin.entreprise,
             profil__est_chef_service=True,
             is_active=True
         ))

@@ -15,17 +15,13 @@ class LivraisonService:
     """Traitement des demandes, livraisons partielles et destructions."""
 
     @staticmethod
-    def _verifier_entreprise(utilisateur, demande):
-        """✅ CORRECTION : Vérifie que l'utilisateur appartient à la même entreprise que la demande."""
+    def _verifier_utilisateur(utilisateur, demande=None):
+        """✅ CORRECTION MONO-TENANT : vérifie que l'utilisateur est actif.
+        Le paramètre demande est conservé pour compatibilité mais ignoré.
+        """
         from django.core.exceptions import PermissionDenied
-        try:
-            entreprise_user = utilisateur.profil.entreprise
-        except AttributeError:
-            raise PermissionDenied("Utilisateur sans profil entreprise.")
-        if demande.magasin_cible.entreprise != entreprise_user:
-            raise PermissionDenied(
-                f"Accès refusé : la demande n'appartient pas à votre entreprise."
-            )
+        if not utilisateur or not utilisateur.is_active:
+            raise PermissionDenied("Utilisateur inactif ou non authentifié.")
 
     @staticmethod
     @transaction.atomic
@@ -41,19 +37,18 @@ class LivraisonService:
             LigneDemande
         )
 
-        # ✅ CORRECTION : isolation entreprise
-        LivraisonService._verifier_entreprise(user, demande)
+        # ✅ CORRECTION MONO-TENANT : vérification utilisateur
+        LivraisonService._verifier_utilisateur(user, demande)
 
         circuit_sortie = CircuitValidation.objects.filter(
             type_document='SORTIE',
-            entreprise=demande.magasin_cible.entreprise,
             est_actif=True
         ).first()
 
         from ..services.compteur_service import CompteurDocumentService
 
         # ── Génération du numéro de bon ──
-        numero_bon = CompteurDocumentService.generer_numero_bon('SORTIE', demande.magasin_cible.entreprise)
+        numero_bon = CompteurDocumentService.generer_numero_bon('SORTIE')
 
         bon = BonMouvement.objects.create(
             type_bon='SORTIE',
@@ -193,8 +188,8 @@ class LivraisonService:
         """
         from ..models import LivraisonPartielle, MotifAnnulation, Mouvement, AccuseReception
 
-        # ✅ CORRECTION : isolation entreprise
-        LivraisonService._verifier_entreprise(user, demande)
+        # ✅ CORRECTION MONO-TENANT : vérification utilisateur
+        LivraisonService._verifier_utilisateur(user, demande)
 
         livraisons_en_attente = demande.livraisons.filter(
             bon_sortie__statut_validation='ATTENTE'
@@ -207,7 +202,6 @@ class LivraisonService:
         from ..models import MotifAnnulation
         motif_defaut, _ = MotifAnnulation.objects.get_or_create(
             libelle="ANNULATION AUTOMATIQUE",
-            entreprise=demande.magasin_cible.entreprise,
             defaults={'actif': True, 'cree_par': user, 'modifie_par': user}
         )
 
@@ -281,7 +275,6 @@ class LivraisonService:
 
         # ✅ CORRECTION : utiliser un code unique et constant avec flag explicite
         service_destruction, _ = Service.objects.get_or_create(
-            entreprise=entree.magasin.entreprise,
             code='REBUTS',
             defaults={
                 'nom': 'DESTRUCTION / PÉREMPTIONS',

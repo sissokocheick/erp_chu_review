@@ -215,7 +215,7 @@ body.dark-mode .sig-box.has { background:#1a3a2a; }
         {% endif %}
     </div>
     <div class="pcard-body">
-        <form method="post" action="{% url 'profil_utilisateur' %}" enctype="multipart/form-data" id="form-photo">
+        <form method="post" action="{% url 'accounts:profil_utilisateur' %}" enctype="multipart/form-data" id="form-photo">
             {% csrf_token %}
             <input type="hidden" name="action" value="photo">
             <div class="photo-upload-row">
@@ -400,7 +400,7 @@ body.dark-mode .sig-box.has { background:#1a3a2a; }
         <span class="tag-edit"><i class="fas fa-pencil-alt"></i> Modifiable</span>
     </div>
     <div class="pcard-body">
-        <form method="post" action="{% url 'profil_utilisateur' %}" id="form-password" style="max-width:460px;">
+        <form method="post" action="{% url 'accounts:profil_utilisateur' %}" id="form-password" style="max-width:460px;">
             {% csrf_token %}
             <input type="hidden" name="action" value="password">
 
@@ -410,13 +410,11 @@ body.dark-mode .sig-box.has { background:#1a3a2a; }
                     <input type="password" name="old_password" id="oldPwd"
                            class="fc" placeholder="Entrez votre mot de passe actuel"
                            autocomplete="current-password">
-                    <button type="button" class="pwd-toggle" onclick="togglePwd('oldPwd',this)">
+                    <button type="button" class="pwd-toggle" onclick="togglePwd('oldPwd',this)" title="Afficher/masquer" aria-label="Afficher ou masquer le mot de passe">
                         <i class="fas fa-eye"></i>
                     </button>
                 </div>
-                {% if pwd_form.old_password.errors %}
-                    <div class="ferr"><i class="fas fa-exclamation-circle"></i> {{ pwd_form.old_password.errors.0 }}</div>
-                {% endif %}
+
             </div>
 
             <div class="fgroup">
@@ -425,13 +423,11 @@ body.dark-mode .sig-box.has { background:#1a3a2a; }
                     <input type="password" name="new_password1" id="newPwd1"
                            class="fc" placeholder="Choisissez un mot de passe fort"
                            autocomplete="new-password" oninput="checkRules(this.value)">
-                    <button type="button" class="pwd-toggle" onclick="togglePwd('newPwd1',this)">
+                    <button type="button" class="pwd-toggle" onclick="togglePwd('newPwd1',this)" title="Afficher/masquer" aria-label="Afficher ou masquer le mot de passe">
                         <i class="fas fa-eye"></i>
                     </button>
                 </div>
-                {% if pwd_form.new_password1.errors %}
-                    <div class="ferr"><i class="fas fa-exclamation-circle"></i> {{ pwd_form.new_password1.errors.0 }}</div>
-                {% endif %}
+
                 <div class="pwd-rules" id="pwdRules">
                     <div class="prule" id="rLen"><i class="fas fa-times"></i> Au moins 8 caractères</div>
                     <div class="prule" id="rUp" ><i class="fas fa-times"></i> Une lettre majuscule</div>
@@ -445,13 +441,11 @@ body.dark-mode .sig-box.has { background:#1a3a2a; }
                     <input type="password" name="new_password2" id="newPwd2"
                            class="fc" placeholder="Répétez le nouveau mot de passe"
                            autocomplete="new-password" oninput="checkMatch()">
-                    <button type="button" class="pwd-toggle" onclick="togglePwd('newPwd2',this)">
+                    <button type="button" class="pwd-toggle" onclick="togglePwd('newPwd2',this)" title="Afficher/masquer" aria-label="Afficher ou masquer le mot de passe">
                         <i class="fas fa-eye"></i>
                     </button>
                 </div>
-                {% if pwd_form.new_password2.errors %}
-                    <div class="ferr"><i class="fas fa-exclamation-circle"></i> {{ pwd_form.new_password2.errors.0 }}</div>
-                {% endif %}
+
                 <div id="matchMsg" style="font-size:12px;margin-top:5px;display:none;"></div>
             </div>
 
@@ -517,28 +511,19 @@ function previewPhoto(input) {
     var maxHeight = 2000;
 
     if (!allowedTypes.includes(file.type)) {
-        Swal.fire({
-            icon: 'error', title: 'Format invalide',
-            text: 'Seuls les formats JPG et PNG sont acceptés.', confirmButtonColor: '#dc3545'
-        });
+NxUX.toast('error', 'Seuls les formats JPG et PNG sont acceptés.');
         input.value = ''; return;
     }
 
     if (file.size > maxSize) {
-        Swal.fire({
-            icon: 'error', title: 'Fichier trop lourd',
-            text: 'La photo ne doit pas dépasser 2 Mo.', confirmButtonColor: '#dc3545'
-        });
+NxUX.toast('error', 'La photo ne doit pas dépasser 2 Mo.');
         input.value = ''; return;
     }
 
     var img = new Image();
     img.onload = function() {
         if (this.width > maxWidth || this.height > maxHeight) {
-            Swal.fire({
-                icon: 'error', title: 'Dimensions trop grandes',
-                text: 'L\'image ne doit pas dépasser 2000×2000 pixels.', confirmButtonColor: '#dc3545'
-            });
+NxUX.toast('error', "L'image ne doit pas dépasser 2000×2000 pixels.");
             input.value = ''; return;
         }
         var reader = new FileReader();
@@ -560,17 +545,16 @@ document.getElementById('form-photo') && document.getElementById('form-photo').a
     var form = this;
     var fileInput = document.getElementById('photoFile');
     if (!fileInput.files || !fileInput.files[0]) {
-        Swal.fire({ icon: 'warning', title: 'Aucune photo', text: 'Veuillez sélectionner une image.', confirmButtonColor: '#1c5b96' });
+        NxUX.toast('warning', 'Veuillez sélectionner une image.');
         return;
     }
-    Swal.fire({
-        title: 'Enregistrer cette photo ?', text: 'Elle remplacera votre photo actuelle.',
-        icon: 'question', showCancelButton: true, confirmButtonColor: '#28a745',
-        cancelButtonColor: '#6c757d', confirmButtonText: '<i class="fas fa-save"></i> Confirmer',
-        cancelButtonText: 'Annuler', reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({ title: 'Envoi en cours...', allowOutsideClick: false, didOpen: function() { Swal.showLoading(); } });
+    NxUX.confirm({
+        title: 'Enregistrer cette photo ?',
+        text: 'Elle remplacera votre photo actuelle.',
+        icon: 'question',
+        confirmText: '<i class="fas fa-save"></i> Confirmer',
+        confirmColor: '#28a745',
+        onConfirm: function () {
             form.submit();
         }
     });
@@ -611,13 +595,12 @@ function checkMatch() {
 document.getElementById('form-password') && document.getElementById('form-password').addEventListener('submit', function(e) {
     e.preventDefault();
     var form = this;
-    Swal.fire({
-        title: 'Modifier le mot de passe ?', text: 'Vous devrez vous reconnecter avec votre nouveau mot de passe.',
-        icon: 'question', showCancelButton: true, confirmButtonColor: '#1c5b96',
-        cancelButtonColor: '#6c757d', confirmButtonText: '<i class="fas fa-save"></i> Confirmer',
-        cancelButtonText: 'Annuler', reverseButtons: true
-    }).then((result) => {
-        if (result.isConfirmed) { form.submit(); }
+    NxUX.confirm({
+        title: 'Modifier le mot de passe ?',
+        text: 'Vous devrez vous reconnecter avec votre nouveau mot de passe.',
+        icon: 'question',
+        confirmText: '<i class="fas fa-save"></i> Confirmer',
+        onConfirm: function () { form.submit(); }
     });
 });
 </script>

@@ -46,7 +46,7 @@
 
 <div class="welcome-banner">
   <h2><i class="fas fa-th-large" style="margin-right:10px;"></i> Bienvenue, {{ request.user.first_name|default:request.user.username }}</h2>
-  <p>Vous êtes connecté à <strong>{{ request.entreprise.nom }}</strong>. Sélectionnez un module pour commencer.</p>
+  <p>Sélectionnez un module pour commencer.</p>
 </div>
 
 {% if modules %}

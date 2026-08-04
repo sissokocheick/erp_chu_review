@@ -3,40 +3,56 @@ from django.views.generic import RedirectView
 
 
 from .views import (
-    dashboard, catalogue, commandes,
-    demandes, parametres, rapports, api,
+    dashboard, catalogue, commandes, demandes, parametres, rapports, api,
 )
 from .views.entrees import (
     liste_entrees, annuler_entree, apercu_bon_entree,
-    bon_entree_pdf, remplacer_scan_entree,
+    remplacer_scan_entree,
 )
 from .views.sorties import (
     liste_sorties, annuler_sortie, valider_bon_sortie,
     remplacer_scan_sortie,
 )
 from .views.retours import (
-    liste_retours_services, imprimer_bon_retour, apercu_bon_retour,
+    liste_retours_services, apercu_bon_retour,
 )
 from .views.hors_stock import (
     liste_bons_hors_stock, annuler_bon_hors_stock,
-    apercu_bon_hors_stock, imprimer_bon_hors_stock,
+    apercu_bon_hors_stock,
 )
-from .views.ajustements import liste_ajustements, imprimer_ajustement
-from .views.validation_bons import valider_bon, valider_ajustement
+from .views.ajustements import (
+    liste_ajustements, rejeter_ajustement, valider_ajustement,
+)
+from .views.validation_bons import valider_bon
 from .views.inventaires import (
-    liste_inventaires, imprimer_fiche_comptage,
-    imprimer_resultat_inventaire, saisir_inventaire,
+    liste_inventaires, saisir_inventaire,
     api_sauvegarder_ligne_inventaire,
 )
 from .views.livraisons import liste_livraisons, detail_livraisons_demande
 from .views.peremptions import (
     controle_peremptions, retirer_lot_perime,
 )
-from .views.stock import etat_stock, imprimer_etat_stock, imprimer_historique_article
+from .views.stock import etat_stock
 from .views.historique import journal_historique
 from .views.lots import api_lots_disponibles
-from .views.pdf_views import imprimer_bon_multi_lignes
 from .views.utils import changer_magasin
+
+# ═════════════════════════════════════════════════════════════════════════════
+# VUES D'IMPRESSION PDF — CENTRALISÉES dans pdf_views.py
+# ═════════════════════════════════════════════════════════════════════════════
+from .views.pdf_views import (
+    imprimer_bon_multi_lignes,
+    bon_entree_pdf,
+    imprimer_commande,
+    imprimer_bon_demande,
+    imprimer_ajustement,
+    imprimer_etat_stock,
+    imprimer_historique_article,
+    imprimer_fiche_comptage,
+    imprimer_resultat_inventaire,
+    rapport_consommation_pdf,
+    imprimer_bon_hors_stock,
+)
 
 
 urlpatterns = [
@@ -82,8 +98,8 @@ urlpatterns = [
     # RETOURS SERVICES
     # ═══════════════════════════════════════════════════════════════════════
     path('stock/retours-services/', liste_retours_services, name='liste_retours_services'),
-    path('retours-services/imprimer/<int:bon_id>/', imprimer_bon_retour, name='bon_retour_pdf'),
     path('retours-services/apercu/<int:bon_id>/', apercu_bon_retour, name='apercu_bon_retour'),
+    path('stock/retours-services/imprimer/<int:bon_id>/', imprimer_bon_multi_lignes, name='imprimer_bon_retour'),
 
     # ═══════════════════════════════════════════════════════════════════════
     # AJUSTEMENTS
@@ -91,6 +107,7 @@ urlpatterns = [
     path('ajustements/', liste_ajustements, name='liste_ajustements'),
     path('ajustements/imprimer/<int:ajustement_id>/', imprimer_ajustement, name='imprimer_ajustement'),
     path('ajustements/<int:ajustement_id>/valider/', valider_ajustement, name='valider_ajustement'),
+    path('ajustements/<int:ajustement_id>/rejeter/', rejeter_ajustement, name='rejeter_ajustement'),
 
     # ═══════════════════════════════════════════════════════════════════════
     # INVENTAIRES
@@ -118,8 +135,8 @@ urlpatterns = [
     # BONS HORS STOCK
     # ═══════════════════════════════════════════════════════════════════════
     path('bons/hors-stock/', liste_bons_hors_stock, name='liste_bons_hors_stock'),
-    path('bons/hors-stock/<int:bon_id>/imprimer/', imprimer_bon_hors_stock, name='imprimer_bon_hors_stock'),
     path('bons/hors-stock/<int:bon_id>/apercu/', apercu_bon_hors_stock, name='apercu_bon_hors_stock'),
+    path('bons/hors-stock/<int:bon_id>/imprimer/', imprimer_bon_hors_stock, name='imprimer_bon_hors_stock'),
     path('bons/hors-stock/<int:bon_id>/annuler/', annuler_bon_hors_stock, name='annuler_bon_hors_stock'),
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -150,7 +167,7 @@ urlpatterns = [
     # COMMANDES
     # ═══════════════════════════════════════════════════════════════════════
     path('commandes/', commandes.liste_commandes, name='liste_commandes'),
-    path('commande/<int:commande_id>/imprimer/', commandes.imprimer_commande, name='imprimer_commande'),
+    path('commande/<int:commande_id>/imprimer/', imprimer_commande, name='imprimer_commande'),
     path('commande/<int:commande_id>/receptionner/', commandes.receptionner_commande, name='receptionner_commande'),
     path('commande/<int:commande_id>/valider/', commandes.valider_commande, name='valider_commande'),
     path('commandes/<int:commande_id>/supprimer/', commandes.supprimer_commande, name='supprimer_commande'),
@@ -165,7 +182,7 @@ urlpatterns = [
     # DEMANDES
     # ═══════════════════════════════════════════════════════════════════════
     path('mes-demandes/', demandes.mes_demandes, name='mes_demandes'),
-    path('demande/<int:demande_id>/pdf/', demandes.imprimer_bon_demande, name='imprimer_bon_demande'),
+    path('demande/<int:demande_id>/pdf/', imprimer_bon_demande, name='imprimer_bon_demande'),
     path('mes-demandes/annuler/<int:demande_id>/', demandes.annuler_demande, name='annuler_demande'),
     path('gestion-demandes/', demandes.gestion_demandes, name='gestion_demandes'),
     path('gestion-demandes/valider/<int:demande_id>/', demandes.valider_traitement_demande, name='valider_traitement_demande'),
@@ -188,7 +205,7 @@ urlpatterns = [
     # RAPPORTS & STATS
     # ═══════════════════════════════════════════════════════════════════════
     path('rapports/', rapports.page_rapports, name='page_rapports'),
-    path('stock/rapports/consommation/pdf/', rapports.rapport_consommation_pdf, name='rapport_consommation_pdf'),
+    path('stock/rapports/consommation/pdf/', rapport_consommation_pdf, name='rapport_consommation_pdf'),
     path('rapports/export-stock/', rapports.export_stock_excel, name='export_stock_excel'),
     path('rapports/export-commandes/', rapports.export_commandes_excel, name='export_commandes_excel'),
     path('stats/demandes/', rapports.stats_demandes, name='stats_demandes'),

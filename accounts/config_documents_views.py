@@ -1,193 +1,155 @@
 # accounts/config_documents_views.py
 """
-Configuration globale des documents PDF (niveau entreprise).
-Alimente Entreprise.get_pdf_config() et ConfigDocument.
+Configuration globale des documents PDF (mono-tenant).
+Utilise core.ConfigurationHopital + accounts.ConfigDocument.
 """
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
-from django.core.exceptions import PermissionDenied
 
 from .permissions import verifier_permission
-from .models import Entreprise, ConfigDocument
+from .models import ConfigDocument
+from core.models import ConfigurationHopital
 
 
-@login_required(login_url='/accounts/login/')
-@verifier_permission('accounts.menu_parametres', 'accounts.menu_param_admin')
+TYPE_DOCS = [
+    ('BS', 'Bon de Sortie'),
+    ('BE', "Bon d'Entrée"),
+    ('BDM', 'Bon de Demande de Matériel'),
+    ('BSHS', 'Bon Hors Stock'),
+    ('BC', 'Bon de Commande'),
+    ('BDM', 'Bon de Demande'),
+]
+
+
+def _get_config_hopital():
+    """Retourne (ou crée) la configuration hôpital singleton."""
+    # CORRECTION : utiliser get_or_create pour éviter les doublons
+    obj = ConfigurationHopital.objects.order_by('id').first()
+    if not obj:
+        obj = ConfigurationHopital.objects.create()
+    return obj
+
+
+def _ensure_config_documents():
+    """Crée les ConfigDocument manquants pour chaque type."""
+    for code, _ in TYPE_DOCS:
+        ConfigDocument.objects.get_or_create(type_doc=code)
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_param_admin', 'accounts.menu_parametres')
 def config_documents_globaux(request):
     """Page de configuration globale des documents PDF."""
-    entreprise = request.entreprise
-
-    # S'assurer que les configs par défaut existent
-    entreprise.creer_configs_documents_par_defaut()
-
-    configs = {c.type_doc: c for c in entreprise.configs_documents.all()}
+    hopital = _get_config_hopital()
+    _ensure_config_documents()
+    configs = {c.type_doc: c for c in ConfigDocument.objects.all()}
 
     if request.method == 'POST':
-        return _handle_post(request, entreprise, configs)
+        return _handle_post(request, hopital, configs)
 
-    return _handle_get(request, entreprise, configs)
+    return _handle_get(request, hopital, configs)
 
 
-def _handle_get(request, entreprise, configs):
-    """Affiche le formulaire pré-rempli."""
-    # Préparer les configs pour le template (évite filtres custom)
-    type_docs = [
-        ('BS', 'Bon de Sortie'),
-        ('BE', "Bon d'Entrée"),
-        ('BR', 'Bon de Retour'),
-        ('BSHS', 'Bon Hors Stock'),
-        ('BC', 'Bon de Commande'),
-        ('BDM', 'Bon de Demande'),
-    ]
+def _handle_get(request, hopital, configs):
     configs_list = []
-    for code, label in type_docs:
+    for code, label in TYPE_DOCS:
         c = configs.get(code)
         configs_list.append({
             'code': code,
             'label': label,
             'config': c,
-            'code_document': c.code_document if c else '',
-            'date_creation_doc': c.date_creation_doc if c else '',
-            'date_revision_doc': c.date_revision_doc if c else '',
-            'version_doc': c.version_doc if c else '',
-            'ps2_label': c.ps2_label if c else '',
-            'afficher_logo': c.afficher_logo if c else True,
-            'afficher_cachet': c.afficher_cachet if c else True,
-            'afficher_cc': c.afficher_cc if c else True,
-            'afficher_ifu': c.afficher_ifu if c else True,
-            'afficher_rccm': c.afficher_rccm if c else True,
-            'afficher_telephone': c.afficher_telephone if c else True,
-            'afficher_signatures': c.afficher_signatures if c else True,
+            'code_document': getattr(c, 'code_document', '') if c else '',
+            'date_creation_doc': getattr(c, 'date_creation_doc', '') if c else '',
+            'date_revision_doc': getattr(c, 'date_revision_doc', '') if c else '',
+            'version_doc': getattr(c, 'version_doc', '') if c else '',
+            'ps2_label': getattr(c, 'ps2_label', '') if c else '',
+            'afficher_logo': getattr(c, 'afficher_logo', True) if c else True,
+            'afficher_cachet': getattr(c, 'afficher_cachet', True) if c else True,
+            'afficher_cc': getattr(c, 'afficher_cc', True) if c else True,
+            'afficher_ifu': getattr(c, 'afficher_ifu', True) if c else True,
+            'afficher_rccm': getattr(c, 'afficher_rccm', True) if c else True,
+            'afficher_telephone': getattr(c, 'afficher_telephone', True) if c else True,
+            'afficher_signatures': getattr(c, 'afficher_signatures', True) if c else True,
         })
 
     context = {
-        'entreprise': entreprise,
+        'hopital': hopital,
         'configs_list': configs_list,
-        # Labels signataires
-        'label_signataire_1': entreprise.label_signataire_1,
-        'label_signataire_2': entreprise.label_signataire_2,
-        'label_signataire_3': entreprise.label_signataire_3,
-        'label_signataire_4': entreprise.label_signataire_4,
-        'label_signataire_5': entreprise.label_signataire_5,
-        'label_signataire_6': entreprise.label_signataire_6,
+        # Labels signataires (si présents sur ConfigurationHopital)
+        'label_signataire_1': getattr(hopital, 'label_signataire_1', 'Le Demandeur'),
+        'label_signataire_2': getattr(hopital, 'label_signataire_2', 'Le Magasinier'),
+        'label_signataire_3': getattr(hopital, 'label_signataire_3', 'Le Responsable Service'),
+        'label_signataire_4': getattr(hopital, 'label_signataire_4', 'Le Directeur'),
+        'label_signataire_5': getattr(hopital, 'label_signataire_5', 'Le Contrôleur'),
+        'label_signataire_6': getattr(hopital, 'label_signataire_6', 'Le Réceptionnaire'),
         # Hiérarchie
-        'direction_label': entreprise.direction_label,
-        'sous_direction_label': entreprise.sous_direction_label,
-        'service_label': entreprise.service_label,
+        'direction_label': getattr(hopital, 'direction_label', ''),
+        'sous_direction_label': getattr(hopital, 'sous_direction_label', ''),
+        'service_label': getattr(hopital, 'service_label', ''),
         'republique_label': "RÉPUBLIQUE DE CÔTE D'IVOIRE",
         'devise_label': "Union - Discipline - Travail",
         # Pied de page
-        'pied_page_pdf': entreprise.pied_page_pdf,
-        'couleur_principale': entreprise.couleur_principale,
+        'pied_page_pdf': getattr(hopital, 'pied_page_pdf', ''),
+        'couleur_principale': getattr(hopital, 'couleur_principale', '#1c5b96'),
         # Préfixes
-        'prefixe_bon_sortie': entreprise.prefixe_bon_sortie,
-        'prefixe_bon_entree': entreprise.prefixe_bon_entree,
-        'prefixe_bon_retour': entreprise.prefixe_bon_retour,
-        'prefixe_bon_hors_stock': entreprise.prefixe_bon_hors_stock,
-        'prefixe_commande': entreprise.prefixe_commande,
+        'prefixe_bon_sortie': getattr(hopital, 'prefixe_bon_sortie', 'BS'),
+        'prefixe_bon_entree': getattr(hopital, 'prefixe_bon_entree', 'BE'),
+        'prefixe_bon_retour': getattr(hopital, 'prefixe_bon_retour', 'BR'),
+        'prefixe_bon_hors_stock': getattr(hopital, 'prefixe_bon_hors_stock', 'BSHS'),
+        'prefixe_commande': getattr(hopital, 'prefixe_commande', 'BC'),
     }
     return render(request, 'accounts/config_documents.html', context)
 
 
-def _handle_post(request, entreprise, configs):
-    """Sauvegarde les modifications."""
-    # ── SÉCURITÉ : vérification explicite de permission ──
+def _handle_post(request, hopital, configs):
     user = request.user
     if not user.is_superuser and not (
-        user.has_perm('accounts.menu_parametres') or 
+        user.has_perm('accounts.menu_parametres') or
         user.has_perm('accounts.menu_param_admin')
     ):
         messages.error(request, "⛔ Vous n'avez pas la permission de modifier cette configuration.")
-        return redirect('config_documents_globaux')
+        return redirect('accounts:config_documents_globaux')
 
     try:
         with transaction.atomic():
-            # ── 1. Infos entreprise ──
-            entreprise.direction_label = _sanitize_text(
-                request.POST.get('direction_label', ''), entreprise.direction_label
-            )
-            entreprise.sous_direction_label = _sanitize_text(
-                request.POST.get('sous_direction_label', ''), entreprise.sous_direction_label
-            )
-            entreprise.service_label = _sanitize_text(
-                request.POST.get('service_label', ''), entreprise.service_label
-            )
-            entreprise.pied_page_pdf = _sanitize_text(
-                request.POST.get('pied_page_pdf', ''), entreprise.pied_page_pdf
-            )
+            # ── 1. Infos hôpital (si les champs existent) ──
+            # CORRECTION : whitelist des champs autorisés pour éviter setattr arbitraire
+            ALLOWED_FIELDS = {
+                'direction_label': 200, 'sous_direction_label': 200, 'service_label': 200,
+                'pied_page_pdf': 500,
+                'label_signataire_1': 100, 'label_signataire_2': 100, 'label_signataire_3': 100,
+                'label_signataire_4': 100, 'label_signataire_5': 100, 'label_signataire_6': 100,
+                'prefixe_bon_sortie': 50, 'prefixe_bon_entree': 50, 'prefixe_bon_retour': 50,
+                'prefixe_bon_hors_stock': 50, 'prefixe_commande': 50,
+            }
+            for field, max_len in ALLOWED_FIELDS.items():
+                if hasattr(hopital, field):
+                    val = request.POST.get(field, '').strip()
+                    if val or field.startswith('label_') or field.startswith('prefixe_'):
+                        setattr(hopital, field, val[:max_len])
 
-            # Validation couleur
             couleur = request.POST.get('couleur_principale', '#1c5b96').strip()
-            if _validate_hex_color(couleur):
-                entreprise.couleur_principale = couleur
+            if hasattr(hopital, 'couleur_principale') and _validate_hex_color(couleur):
+                hopital.couleur_principale = couleur
 
-            # Labels signataires (limités à 100 caractères)
-            entreprise.label_signataire_1 = _truncate(
-                request.POST.get('label_signataire_1', 'Le Demandeur').strip(), 100
-            )
-            entreprise.label_signataire_2 = _truncate(
-                request.POST.get('label_signataire_2', 'Le Magasinier').strip(), 100
-            )
-            entreprise.label_signataire_3 = _truncate(
-                request.POST.get('label_signataire_3', 'Le Responsable Service').strip(), 100
-            )
-            entreprise.label_signataire_4 = _truncate(
-                request.POST.get('label_signataire_4', 'Le Directeur').strip(), 100
-            )
-            entreprise.label_signataire_5 = _truncate(
-                request.POST.get('label_signataire_5', 'Le Contrôleur').strip(), 100
-            )
-            entreprise.label_signataire_6 = _truncate(
-                request.POST.get('label_signataire_6', 'Le Réceptionnaire').strip(), 100
-            )
-
-            # Préfixes (limités à 10 caractères)
-            entreprise.prefixe_bon_sortie = _truncate(
-                request.POST.get('prefixe_bon_sortie', 'BS').strip(), 10
-            )
-            entreprise.prefixe_bon_entree = _truncate(
-                request.POST.get('prefixe_bon_entree', 'BE').strip(), 10
-            )
-            entreprise.prefixe_bon_retour = _truncate(
-                request.POST.get('prefixe_bon_retour', 'BR').strip(), 10
-            )
-            entreprise.prefixe_bon_hors_stock = _truncate(
-                request.POST.get('prefixe_bon_hors_stock', 'BSHS').strip(), 10
-            )
-            entreprise.prefixe_commande = _truncate(
-                request.POST.get('prefixe_commande', 'BC').strip(), 10
-            )
-
-            entreprise.save()
+            hopital.save()
 
             # ── 2. Configs par type de document ──
-            type_docs = ['BS', 'BE', 'BR', 'BSHS', 'BC', 'BDM']
-            for td in type_docs:
-                config = configs.get(td)
+            for code, _ in TYPE_DOCS:
+                config = configs.get(code)
                 if not config:
                     continue
 
-                prefix = f'config_{td}_'
-                config.code_document = _truncate(
-                    request.POST.get(f'{prefix}code_document', '').strip(), 50
-                )
-                config.date_creation_doc = _truncate(
-                    request.POST.get(f'{prefix}date_creation_doc', '').strip(), 20
-                )
-                config.date_revision_doc = _truncate(
-                    request.POST.get(f'{prefix}date_revision_doc', '').strip(), 20
-                )
-                config.version_doc = _truncate(
-                    request.POST.get(f'{prefix}version_doc', '').strip(), 10
-                )
-                config.ps2_label = _truncate(
-                    request.POST.get(f'{prefix}ps2_label', '').strip(), 100
-                )
+                prefix = f'config_{code}_'
+                config.code_document = _truncate(request.POST.get(f'{prefix}code_document', '').strip(), 50)
+                config.date_creation_doc = _truncate(request.POST.get(f'{prefix}date_creation_doc', '').strip(), 20)
+                config.date_revision_doc = _truncate(request.POST.get(f'{prefix}date_revision_doc', '').strip(), 20)
+                config.version_doc = _truncate(request.POST.get(f'{prefix}version_doc', '').strip(), 10)
+                config.ps2_label = _truncate(request.POST.get(f'{prefix}ps2_label', '').strip(), 100)
 
-                # Checkboxes (HTML envoie la valeur uniquement si cochée)
                 config.afficher_logo = request.POST.get(f'{prefix}afficher_logo') == 'on'
                 config.afficher_cachet = request.POST.get(f'{prefix}afficher_cachet') == 'on'
                 config.afficher_cc = request.POST.get(f'{prefix}afficher_cc') == 'on'
@@ -198,25 +160,17 @@ def _handle_post(request, entreprise, configs):
 
                 config.save()
 
-        messages.success(request, "✅ Configuration globale des documents PDF sauvegardée avec succès.")
+        messages.success(request, "✅ Configuration globale des documents PDF sauvegardée.")
     except Exception as e:
         messages.error(request, f"❌ Erreur lors de la sauvegarde : {e}")
 
-    return redirect('config_documents_globaux')
-
-
-def _sanitize_text(value, fallback=''):
-    """Nettoie une valeur texte, retourne fallback si vide."""
-    cleaned = value.strip() if value else ''
-    return cleaned if cleaned else fallback
+    return redirect('accounts:config_documents_globaux')
 
 
 def _truncate(value, max_length):
-    """Tronque une valeur à max_length caractères."""
     return value[:max_length] if value else ''
 
 
 def _validate_hex_color(value):
-    """Vérifie qu'une valeur est un code hexadécimal valide."""
     import re
-    return bool(re.match(r'^#[0-9A-Fa-f]{6}$', value)) if value else False
+    return bool(re.match(r'^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$', value)) if value else False

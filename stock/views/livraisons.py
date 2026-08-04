@@ -26,8 +26,7 @@ from core.pdf_service import DocumentGenerator
 from ..decorators import magasin_requis, catch_errors
 from ..forms import (
     SortieStockForm, EntreeStockForm, AjustementForm,
-    MagasinParametresForm,
-)
+    MagasinParametresForm)
 from ..models import (
     Mouvement, BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, StockItem, Ajustement,
@@ -35,8 +34,7 @@ from ..models import (
     CampagneInventaire, LigneInventaire, CircuitValidation,
     LivraisonPartielle, DemandeMateriel, LigneDemande,
     AccuseReception,
-    LivraisonLigne,
-)
+    LivraisonLigne)
 from ..services import (
     NumeroGenerator, StockService, PDFService, NotificationService
 )
@@ -51,16 +49,13 @@ User = get_user_model()
 @magasin_requis
 def liste_livraisons(request):
     """Vue liste des livraisons (GET uniquement)."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_id = request.session.get('magasin_actif_id')
 
     qs = LivraisonPartielle.objects.select_related(
         'demande__service_demandeur', 'demande__magasin_cible',
-        'livre_par', 'bon_sortie',
-    ).prefetch_related(
+        'livre_par', 'bon_sortie').prefetch_related(
         'lignes_livraison__article', 'accuse__receptionne_par__profil'
-    ).filter(
-        demande__magasin_cible__entreprise=entreprise
     ).order_by('-date_livraison')
 
     if magasin_id:
@@ -110,13 +105,10 @@ def liste_livraisons(request):
     }
     return render(request, 'stock/liste_livraisons.html', context)
 
-
-
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_livraisons')
 def detail_livraisons_demande(request, demande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
         DemandeMateriel.objects.select_related(
             'service_demandeur', 'demandeur', 'magasin_cible'
@@ -130,13 +122,10 @@ def detail_livraisons_demande(request, demande_id):
                         'lignes_livraison',
                         queryset=LivraisonLigne.objects.select_related('article')
                     ),
-                    'accuse__receptionne_par__profil',
-                )
+                    'accuse__receptionne_par__profil')
             ),
-            'lignes_demande__article',
-        ),
-        id=demande_id, magasin_cible__entreprise=entreprise
-    )
+            'lignes_demande__article'),
+        id=demande_id)
 
     profil = getattr(request.user, 'profil', None)
     magasin_id = request.session.get('magasin_actif_id')
@@ -161,7 +150,7 @@ def detail_livraisons_demande(request, demande_id):
         })
 
     motifs_annulation = MotifAnnulation.objects.filter(
-        entreprise=entreprise, actif=True
+        actif=True
     ).order_by('libelle')
 
     context = {
@@ -176,7 +165,6 @@ def detail_livraisons_demande(request, demande_id):
         'motifs_annulation': motifs_annulation,
     }
     return render(request, 'stock/detail_livraisons.html', context)
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # UTILITAIRES MAGASIN

@@ -5,13 +5,23 @@
 <meta charset="UTF-8">
 <title>Bon de Demande {{ demande.numero_demande }}</title>
 <style>
-/* ═══════════════════════════════════════════════════════════════════════════
-   BON DE DEMANDE — Template optimisé pour Chromium/Playwright
-   ═══════════════════════════════════════════════════════════════════════════ */
-
 @page {
     size: A4;
-    margin: 10mm 10mm 1mm 10mm;
+    margin: 10mm 10mm 18mm 10mm;
+    @bottom-center {
+        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+    }
+    @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+    }
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,16 +40,12 @@ body {
 .page-flex {
     display: flex;
     flex-direction: column;
-    min-height: 277mm;
+    min-height: 262mm;
 }
 
 .content-main {
     flex: 1 1 auto;
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   EN-TÊTES
-   ═══════════════════════════════════════════════════════════════════════════ */
 
 .en-tete-etatique {
     width: 100%;
@@ -64,10 +70,6 @@ body {
     margin-bottom: 2mm;
     font-size: 8pt;
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   TABLEAU DES ARTICLES
-   ═══════════════════════════════════════════════════════════════════════════ */
 
 .data-table {
     width: 100%;
@@ -94,10 +96,6 @@ body {
     font-weight: bold;
     background-color: #f0f0f0;
 }
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   BLOC BAS : Le demandeur (nom) + Signature (image ou texte)
-   ═══════════════════════════════════════════════════════════════════════════ */
 
 .bloc-bas {
     width: 100%;
@@ -162,24 +160,6 @@ body {
     margin: 0 auto;
 }
 
-/* ═══════════════════════════════════════════════════════════════════════════
-   PIED DE PAGE (avec ligne bleue)
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-.pied-separateur {
-    border: none;
-    border-top: 2px solid #1c5b96;
-    margin: 1mm 0;
-}
-
-.pied-page {
-    text-align: center;
-    font-size: 7pt;
-    color: #1c5b96;
-    line-height: 1.5;
-    padding-top: 1mm;
-}
-
 .page-break {
     page-break-before: always;
 }
@@ -190,16 +170,11 @@ img { max-width: 100%; height: auto; }
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- PAGE UNIQUE                                                           -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
 {% if not est_multi_page %}
 <div class="page page-flex">
 
-  <!-- CONTENU PRINCIPAL : en-tête + tableau -->
   <div class="content-main">
 
-    <!-- EN-TÊTE -->
     <div>
       {% if pdf_config.cartouche.afficher_republique or pdf_config.cartouche.afficher_devise %}
       <table class="en-tete-etatique">
@@ -267,7 +242,6 @@ img { max-width: 100%; height: auto; }
       </table>
     </div>
 
-    <!-- TABLEAU (SANS TOTAL) -->
     <div>
       <table class="data-table">
         <thead>
@@ -293,12 +267,10 @@ img { max-width: 100%; height: auto; }
       </table>
     </div>
 
-  </div> <!-- /content-main -->
+  </div>
 
-  <!-- BLOC BAS : Le demandeur (nom) + Signature (image ou texte) -->
   <div class="bloc-bas">
     <div class="bloc-approbation">
-      <!-- GAUCHE : Le demandeur avec NOM -->
       <div class="col-demandeur">
         <div class="label-demandeur">Le demandeur</div>
         <div class="info-demandeur">
@@ -306,7 +278,6 @@ img { max-width: 100%; height: auto; }
           <div class="fonction">{{ demandeur_fonction }}</div>
         </div>
       </div>
-      <!-- DROITE : Signature image si existe, sinon texte -->
       <div class="col-signature">
         {% if signature_url %}
           <img src="{{ signature_url }}" class="img-signature" alt="Signature">
@@ -315,30 +286,15 @@ img { max-width: 100%; height: auto; }
         {% endif %}
       </div>
     </div>
+  </div>
 
-    <!-- LIGNE BLEUE + PIED DE PAGE -->
-    <hr class="pied-separateur">
-    <div class="pied-page">
-      <div>CHU ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 2722496400 * CC N° : 1821717-Q * INFO@CHUANGRE.CI</div>
-      <div>Direction des Affaires Financières * Sous-Direction de la Logistique</div>
-      <div>Postes : 110 et 200</div>
-    </div>
-  </div> <!-- /bloc-bas -->
+</div>
 
-</div> <!-- /page-flex -->
-
-
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
-<!-- MULTI-PAGES                                                           -->
-<!-- ═══════════════════════════════════════════════════════════════════════ -->
 {% else %}
 
 {% for page in pages %}
 
   {% if forloop.first %}
-  <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <!-- PREMIÈRE PAGE : en-tête + tableau (pas de bloc bas)               -->
-  <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div class="page">
 
     <div>
@@ -437,9 +393,6 @@ img { max-width: 100%; height: auto; }
 
 
   {% elif page.est_derniere_page %}
-  <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <!-- DERNIÈRE PAGE : tableau + bloc bas + pied de page                -->
-  <!-- ═══════════════════════════════════════════════════════════════════ -->
   {% with nb_lignes=page.lignes|length %}
   {% if nb_lignes >= 15 %}
   <div class="page page-break page-flex">
@@ -447,7 +400,6 @@ img { max-width: 100%; height: auto; }
   <div class="page page-break">
   {% endif %}
 
-    <!-- CONTENU PRINCIPAL : tableau seul -->
     <div class="content-main">
       <div>
         <table class="data-table">
@@ -479,12 +431,10 @@ img { max-width: 100%; height: auto; }
         <strong>Commentaire :</strong> {{ demande.commentaire }}
       </div>
       {% endif %}
-    </div> <!-- /content-main -->
+    </div>
 
-    <!-- BLOC BAS : Le demandeur (nom) + Signature (image ou texte) -->
     <div class="bloc-bas">
       <div class="bloc-approbation">
-        <!-- GAUCHE : Le demandeur avec NOM -->
         <div class="col-demandeur">
           <div class="label-demandeur">Le demandeur</div>
           <div class="info-demandeur">
@@ -492,7 +442,6 @@ img { max-width: 100%; height: auto; }
             <div class="fonction">{{ demandeur_fonction }}</div>
             </div>
         </div>
-        <!-- DROITE : Signature image si existe, sinon texte -->
         <div class="col-signature">
           {% if signature_url %}
             <img src="{{ signature_url }}" class="img-signature" alt="Signature">
@@ -501,24 +450,13 @@ img { max-width: 100%; height: auto; }
           {% endif %}
         </div>
       </div>
+    </div>
 
-      <!-- LIGNE BLEUE + PIED DE PAGE -->
-      <hr class="pied-separateur">
-      <div class="pied-page">
-        <div>CHU ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 2722496400 * CC N° : 1821717-Q * INFO@CHUANGRE.CI</div>
-        <div>Direction des Affaires Financières * Sous-Direction de la Logistique</div>
-        <div>Postes : 110 et 200</div>
-      </div>
-    </div> <!-- /bloc-bas -->
-
-  </div> <!-- /page -->
+  </div>
   {% endwith %}
 
 
   {% else %}
-  <!-- ═══════════════════════════════════════════════════════════════════ -->
-  <!-- PAGE INTERMÉDIAIRE : tableau seul (pas de bloc bas)               -->
-  <!-- ═══════════════════════════════════════════════════════════════════ -->
   <div class="page page-break">
     <div>
       <table class="data-table">

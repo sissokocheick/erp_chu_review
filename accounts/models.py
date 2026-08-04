@@ -33,7 +33,7 @@ class ConfigDocument(models.Model):
         ('BC', 'Bon de Commande'),
     ]
 
-    type_doc = models.CharField(max_length=10, choices=TYPE_DOC_CHOICES)
+    type_doc = models.CharField(max_length=10, choices=TYPE_DOC_CHOICES, unique=True)
     # 💡 Après déduplication éventuelle des données (si plusieurs entreprises
     #    existaient en base), tu pourras passer type_doc en unique=True.
 
@@ -67,7 +67,7 @@ class ConfigDocument(models.Model):
 # ==========================================================
 class Specialite(models.Model):
     """Spécialités médicales de l'établissement."""
-    nom = models.CharField(max_length=100)
+    nom = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True, null=True)
     # 💡 Après déduplication éventuelle, tu pourras passer nom en unique=True.
 
@@ -93,7 +93,7 @@ class Specialite(models.Model):
 # ==========================================================
 class Fonction(models.Model):
     """Fonctions / Titres professionnels (affichés sous les signatures PDF)."""
-    nom = models.CharField(max_length=150, verbose_name="Nom de la fonction")
+    nom = models.CharField(max_length=150, unique=True, verbose_name="Nom de la fonction")
     description = models.TextField(blank=True, null=True, verbose_name="Description")
     # 💡 Après déduplication éventuelle, tu pourras passer nom en unique=True.
 
@@ -179,6 +179,10 @@ class Profil(models.Model):
     est_chef_service = models.BooleanField(
         default=False,
         verbose_name='Chef de service'
+    )
+    doit_changer_mdp = models.BooleanField(
+    default=True,
+    verbose_name="Doit changer le mot de passe"
     )
 
     @property
@@ -404,7 +408,7 @@ class AuditConnexion(models.Model):
         ('ADMIN', 'Action administrative'),
     ]
 
-    utilisateur = models.ForeignKey(User, on_delete=models.CASCADE, related_name='audits_connexion', null=True, blank=True)
+    utilisateur = models.ForeignKey(User, on_delete=models.SET_NULL, related_name='audits_connexion', null=True, blank=True)
     type_action = models.CharField(max_length=20, choices=TYPE_CHOICES)
     description = models.TextField(blank=True)
     adresse_ip = models.GenericIPAddressField(null=True, blank=True)
@@ -423,6 +427,46 @@ class AuditConnexion(models.Model):
 # ==========================================================
 # 🔄 SIGNAL : CRÉER LE PROFIL À LA CRÉATION D'UN USER
 # ==========================================================
+
+
+# ==========================================================
+# CONFIG SECURITE (singleton mono-tenant)
+# ==========================================================
+class ConfigSecurite(models.Model):
+    """Configuration unique de la politique de mots de passe."""
+    TYPE_CHOICES = [
+        ('ALEATOIRE', 'Aléatoire (recommandé)'),
+        ('FIXE', 'Mot de passe fixe'),
+    ]
+    type_mot_de_passe = models.CharField(
+        max_length=20, choices=TYPE_CHOICES, default='ALEATOIRE',
+        verbose_name="Mode d'attribution"
+    )
+    mot_de_passe_defaut = models.CharField(
+        max_length=128, blank=True, default='',
+        verbose_name="Mot de passe par défaut (mode fixe)"
+    )
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuration sécurité"
+        verbose_name_plural = "Configuration sécurité"
+
+    def __str__(self):
+        return f"Sécurité — {self.get_type_mot_de_passe_display()}"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        pass
+
+    @classmethod
+    def get_solo(cls):
+        obj, _ = cls.objects.get_or_create(pk=1)
+        return obj
+
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 

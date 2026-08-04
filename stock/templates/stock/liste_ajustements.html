@@ -261,6 +261,10 @@
     transition: .2s; box-shadow: 0 2px 8px rgba(253,126,20,0.3);
   }
   .btn-save:hover { background: #e65100; transform: translateY(-1px); }
+  .btn-save:disabled {
+    background: #ccc; color: #666; cursor: not-allowed;
+    transform: none; box-shadow: none;
+  }
 
   /* ═════ MODALE PDF ═════ */
   .mo-pdf {
@@ -516,13 +520,13 @@
     <table class="aj-table">
       <thead>
         <tr>
+          <th style="width:10%;">N° Ajustement</th>
           <th style="width:10%;">Date</th>
           <th style="width:20%;">Article</th>
-          <th style="width:14%;">Magasin</th>
           <th class="c" style="width:10%;">Ajustement</th>
           <th style="width:16%;">Motif / Commentaire</th>
-          <th style="width:12%;">Traçabilité</th>
-          <th style="width:10%;">Statut</th>
+          <th style="width:14%;">Traçabilité</th>
+          <th style="width:12%;">Statut</th>
           <th class="c" style="width:12%;">Actions</th>
         </tr>
       </thead>
@@ -591,6 +595,28 @@
       </button>
       <a href="#" id="btn-confirm-valider-link" class="btn-confirm-ok btn-warn">
         <i class="fas fa-check"></i> Valider
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation Rejeter (ligne) -->
+<div class="mo-confirm" id="modal-confirm-rejeter" data-modal="modal-confirm-rejeter">
+  <div class="mb-confirm" onclick="event.stopPropagation()">
+    <div class="mh-confirm">
+      <i class="fas fa-times-circle icon-danger"></i>
+      <h5>Confirmer le rejet</h5>
+    </div>
+    <div class="mbody-confirm">
+      Êtes-vous sûr de vouloir <strong>rejeter cet ajustement</strong> ?<br>
+      Cette action est irréversible et supprimera l'ajustement.
+    </div>
+    <div class="mfoot-confirm">
+      <button type="button" class="btn-confirm-cancel" data-close-modal="modal-confirm-rejeter">
+        <i class="fas fa-times"></i> Annuler
+      </button>
+      <a href="#" id="btn-confirm-rejeter-link" class="btn-confirm-ok btn-danger">
+        <i class="fas fa-check"></i> Rejeter
       </a>
     </div>
   </div>
@@ -671,6 +697,8 @@
     </div>
     <form method="POST" id="form-ajustement">
       {% csrf_token %}
+      <!-- Token anti-double-clic -->
+      <input type="hidden" name="post_token" id="post_token" value="">
 
       <!-- Champ magasin caché pour le POST -->
       <div style="display:none;">{{ form.magasin }}</div>
@@ -735,7 +763,7 @@
         <button type="button" class="btn-cancel" onclick="fermerModal()">
           <i class="fas fa-times me-1"></i>Annuler
         </button>
-        <button type="button" class="btn-save" onclick="confirmerCreationAjustement()">
+        <button type="button" class="btn-save" id="btn-save-ajustement" onclick="confirmerCreationAjustement()">
           <i class="fas fa-check me-1"></i>Valider l'ajustement
         </button>
       </div>
@@ -757,7 +785,16 @@ function fermerModalConfirm(id) {
 
 /* Confirmation Création Ajustement */
 var pendingCreationForm = null;
+var isSubmitting = false;
 function confirmerCreationAjustement() {
+    if (isSubmitting) return;  // ← bloque les doubles clics
+
+    // Générer un token unique anti-double-clic
+    var tokenField = document.getElementById('post_token');
+    if (tokenField) {
+        tokenField.value = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+
     pendingCreationForm = document.getElementById('form-ajustement');
     ouvrirModalConfirm('modal-confirm-creer');
 }
@@ -767,6 +804,13 @@ function confirmerValidation(url) {
     var link = document.getElementById('btn-confirm-valider-link');
     link.href = url;
     ouvrirModalConfirm('modal-confirm-valider');
+}
+
+/* Confirmation Rejeter (ligne) */
+function confirmerRejet(url) {
+    var link = document.getElementById('btn-confirm-rejeter-link');
+    link.href = url;
+    ouvrirModalConfirm('modal-confirm-rejeter');
 }
 
 /* Confirmation Upload / Remplacer */
@@ -792,16 +836,22 @@ function confirmerRemplacer(formId) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    /* Création ajustement */
+    /* Création ajustement — BLOQUE le double-clic */
     var btnCreer = document.getElementById('btn-confirm-creer-ok');
     if (btnCreer) {
         btnCreer.addEventListener('click', function() {
+            if (isSubmitting) return;
+            isSubmitting = true;
+
+            // Désactiver le bouton principal aussi
+            var btnSave = document.getElementById('btn-save-ajustement');
+            if (btnSave) btnSave.disabled = true;
+
             if (pendingCreationForm) {
                 Swal.fire({title:'Creation en cours...',didOpen:function(){Swal.showLoading()}});
                 pendingCreationForm.submit();
             }
             fermerModalConfirm('modal-confirm-creer');
-            pendingCreationForm = null;
         });
     }
     /* Upload */
@@ -872,6 +922,10 @@ function ouvrirModal() {
 }
 function fermerModal() {
     document.getElementById('modal-ajustement').classList.remove('open');
+    // Réactiver le bouton si on ferme sans soumettre
+    isSubmitting = false;
+    var btnSave = document.getElementById('btn-save-ajustement');
+    if (btnSave) btnSave.disabled = false;
 }
 
 document.addEventListener('DOMContentLoaded', function() {

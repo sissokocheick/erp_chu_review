@@ -122,7 +122,7 @@
         Sécurité & Mots de passe
     </h2>
     <p style="color: var(--text-medium); font-size: 13px; margin-bottom: 22px; margin-left: 46px;">
-        Configurez la politique de mot de passe pour les nouveaux utilisateurs de <strong>{{ request.entreprise.nom }}</strong>.
+        Configurez la politique de mot de passe pour les nouveaux utilisateurs.
     </p>
 
     <div class="admin-container">
@@ -172,14 +172,15 @@
                         <label>
                             <i class="fas fa-lock"></i> Mot de passe par défaut <span style="color:#dc3545;">*</span>
                         </label>
-                        <input type="text" 
-                               name="mot_de_passe_defaut" 
+                        <input type="password" 
+                               name="mot_de_passe_defaut" autocomplete="new-password" 
                                id="inputMdp"
                                class="form-control" 
                                placeholder="Ex: Changeme2024"
                                value="{{ config.mot_de_passe_defaut|default:'' }}"
                                minlength="6"
                                style="font-size: 16px; letter-spacing: 2px; font-weight: bold;">
+                        <button type="button" onclick="var el=document.getElementById('inputMdp');el.type=el.type==='password'?'text':'password';" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--text-light);"><i class="fas fa-eye"></i></button>
                         <small style="color: var(--text-light); display: block; margin-top: 6px;">
                             ⚠️ Minimum 6 caractères.
                         </small>
@@ -215,7 +216,7 @@
                     {% if config.type_mot_de_passe == 'FIXE' and config.mot_de_passe_defaut %}
                     <tr>
                         <th>Mot de passe</th>
-                        <td><code style="font-size: 15px; font-weight: bold;">{{ config.mot_de_passe_defaut }}</code></td>
+                        <td><code style="font-size: 15px; font-weight: bold;">••••••••</code></td>
                     </tr>
                     {% endif %}
                 </table>

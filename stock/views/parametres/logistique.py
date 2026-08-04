@@ -33,22 +33,16 @@ from accounts.models import ConfigDocument
     'accounts.menu_param_logistique',
     'accounts.menu_magasins',
     'accounts.menu_fournisseurs',
-    'accounts.menu_motifs_annulation',
-)
+    'accounts.menu_motifs_annulation')
 @catch_errors(redirect_url='/')
 def parametres_logistique(request):
-    entreprise = request.entreprise
-    if not entreprise:
-        messages.error(request, "❌ Aucune entreprise associée à votre compte.")
-        return redirect('dashboard_directeur')
-
     if request.method == 'POST':
-        return _handle_post(request, entreprise)
-    return _handle_get(request, entreprise)
+        return _handle_post(request)
+    return _handle_get(request)
 
 
-def _handle_get(request, entreprise):
-    config = get_or_create_logistique_config(entreprise)
+def _handle_get(request):
+    config = get_or_create_logistique_config()
 
     q_famille = request.GET.get('q_famille', '').strip()
     q_fournisseur = request.GET.get('q_fournisseur', '').strip()
@@ -56,23 +50,23 @@ def _handle_get(request, entreprise):
     q_magasin = request.GET.get('q_magasin', '').strip()
     q_beneficiaire = request.GET.get('q_beneficiaire', '').strip()
 
-    familles = FamilleArticle.objects.filter(entreprise=entreprise).order_by('intitule')
+    familles = FamilleArticle.objects.all().order_by('intitule')
     if q_famille:
         familles = familles.filter(intitule__icontains=q_famille)
 
-    fournisseurs = Fournisseur.objects.filter(entreprise=entreprise).order_by('raison_sociale')
+    fournisseurs = Fournisseur.objects.all().order_by('raison_sociale')
     if q_fournisseur:
         fournisseurs = fournisseurs.filter(raison_sociale__icontains=q_fournisseur)
 
-    motifs = MotifAnnulation.objects.filter(entreprise=entreprise).order_by('libelle')
+    motifs = MotifAnnulation.objects.all().order_by('libelle')
     if q_motif:
         motifs = motifs.filter(libelle__icontains=q_motif)
 
-    magasins = Magasin.objects.filter(entreprise=entreprise).order_by('nom')
+    magasins = Magasin.objects.all().order_by('nom')
     if q_magasin:
         magasins = magasins.filter(nom__icontains=q_magasin)
 
-    beneficiaires = Beneficiaire.objects.filter(entreprise=entreprise).order_by('nom_complet')
+    beneficiaires = Beneficiaire.objects.all().order_by('nom_complet')
     if q_beneficiaire:
         beneficiaires = beneficiaires.filter(
             Q(nom_complet__icontains=q_beneficiaire) | Q(poste__icontains=q_beneficiaire)
@@ -90,19 +84,18 @@ def _handle_get(request, entreprise):
             obj.is_deletable = not bool(obj._deps)
 
     edit_famille_id = request.GET.get('edit_famille', '').strip()
-    instance_famille = get_object_or_404(FamilleArticle, id=edit_famille_id, entreprise=entreprise) if edit_famille_id else None
+    instance_famille = get_object_or_404(FamilleArticle, id=edit_famille_id) if edit_famille_id else None
     form_famille = FamilleArticleForm(instance=instance_famille)
 
     edit_fournisseur_id = request.GET.get('edit_fournisseur', '').strip()
-    instance_fournisseur = get_object_or_404(Fournisseur, id=edit_fournisseur_id, entreprise=entreprise) if edit_fournisseur_id else None
+    instance_fournisseur = get_object_or_404(Fournisseur, id=edit_fournisseur_id) if edit_fournisseur_id else None
 
     edit_magasin_id = request.GET.get('edit_magasin', '').strip()
-    instance_magasin = get_object_or_404(Magasin, id=edit_magasin_id, entreprise=entreprise) if edit_magasin_id else None
+    instance_magasin = get_object_or_404(Magasin, id=edit_magasin_id) if edit_magasin_id else None
     form_magasin = MagasinForm(instance=instance_magasin)
 
-    configs_documents = {}
-    entreprise.creer_configs_documents_par_defaut()
-    configs_documents = {c.type_doc: c for c in entreprise.configs_documents.all()}
+    # Config documents (mono-tenant)
+    configs_documents = {c.type_doc: c for c in ConfigDocument.objects.all()}
 
     context = {
         'familles': familles_paginees,
@@ -124,7 +117,7 @@ def _handle_get(request, entreprise):
         'beneficiaires': beneficiaires_pagines,
         'q_beneficiaire': q_beneficiaire,
         'per_page_beneficiaire': per_page_beneficiaire,
-        'services': Service.objects.filter(entreprise=entreprise).order_by('nom'),
+        'services': Service.objects.all().order_by('nom'),
         'config': config,
         'configs_documents': configs_documents,
         'perm_config': request.user.has_perm('accounts.menu_parametres') or request.user.is_superuser,
@@ -147,7 +140,7 @@ def _handle_get(request, entreprise):
     return render(request, 'stock/parametres_logistique.html', context)
 
 
-def _handle_post(request, entreprise):
+def _handle_post(request):
     dispatch = {
         'enregistrer_famille': _post_famille,
         'enregistrer_fournisseur': _post_fournisseur,
@@ -158,27 +151,27 @@ def _handle_post(request, entreprise):
     }
     for key, handler in dispatch.items():
         if key in request.POST:
-            return handler(request, entreprise)
+            return handler(request)
 
     action = request.POST.get('action', '').strip()
     if action == 'supprimer_motif':
-        return _post_supprimer_motif(request, entreprise)
+        return _post_supprimer_motif(request)
     if action == 'toggle_motif':
-        return _post_toggle_motif(request, entreprise)
+        return _post_toggle_motif(request)
 
     if 'supprimer_famille' in request.POST:
-        return _post_supprimer_famille(request, entreprise)
+        return _post_supprimer_famille(request)
     if 'supprimer_fournisseur' in request.POST:
-        return _post_supprimer_fournisseur(request, entreprise)
+        return _post_supprimer_fournisseur(request)
     if 'supprimer_magasin' in request.POST:
-        return _post_supprimer_magasin(request, entreprise)
+        return _post_supprimer_magasin(request)
     if 'supprimer_beneficiaire' in request.POST:
-        return _post_supprimer_beneficiaire(request, entreprise)
+        return _post_supprimer_beneficiaire(request)
 
     return redirect('parametres_logistique')
 
 
-def _post_famille(request, entreprise):
+def _post_famille(request):
     if not request.user.has_perm('accounts.menu_fournisseurs') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -187,12 +180,12 @@ def _post_famille(request, entreprise):
     instance = None
     if edit_id:
         try:
-            instance = FamilleArticle.objects.get(id=edit_id, entreprise=entreprise)
+            instance = FamilleArticle.objects.get(id=edit_id)
         except FamilleArticle.DoesNotExist:
             instance = None
 
     form = FamilleArticleForm(request.POST, instance=instance)
-    ok, msg, _ = save_famille(form, entreprise, request.user)
+    ok, msg, _ = save_famille(form, request.user)  # version mono-tenant
     if ok:
         messages.success(request, msg)
         return redirect(redirect_url_with_tab('parametres_logistique', 'familles'))
@@ -200,7 +193,7 @@ def _post_famille(request, entreprise):
     return redirect('parametres_logistique')
 
 
-def _post_fournisseur(request, entreprise):
+def _post_fournisseur(request):
     if not request.user.has_perm('accounts.menu_fournisseurs') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -209,11 +202,11 @@ def _post_fournisseur(request, entreprise):
     instance = None
     if edit_id:
         try:
-            instance = Fournisseur.objects.get(id=edit_id, entreprise=entreprise)
+            instance = Fournisseur.objects.get(id=edit_id)
         except Fournisseur.DoesNotExist:
             instance = None
 
-    ok, msg, _ = save_fournisseur(request.POST, instance, entreprise, request.user)
+    ok, msg, _ = save_fournisseur(request.POST, instance, request.user)
     if ok:
         messages.success(request, msg)
         return redirect(redirect_url_with_tab('parametres_logistique', 'fournisseurs'))
@@ -221,21 +214,21 @@ def _post_fournisseur(request, entreprise):
     return redirect('parametres_logistique')
 
 
-def _post_magasin(request, entreprise):
+def _post_magasin(request):
     if not request.user.has_perm('accounts.menu_magasins') and not request.user.is_superuser:
-        messages.error(request, "⛔ Accès refusé : Vous n'avez pas la permission de gérer les magasins.")
+        messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
 
     edit_id = parse_optional_id(request, 'magasin_id', 'edit_magasin')
     instance = None
     if edit_id:
         try:
-            instance = Magasin.objects.get(id=edit_id, entreprise=entreprise)
+            instance = Magasin.objects.get(id=edit_id)
         except Magasin.DoesNotExist:
             instance = None
 
     form = MagasinForm(request.POST, instance=instance)
-    ok, msg, _ = save_magasin_logistique(form, instance, entreprise, request.user)
+    ok, msg, _ = save_magasin_logistique(form, instance, request.user)
     if ok:
         messages.success(request, msg)
         return redirect(redirect_url_with_tab('parametres_logistique', 'magasins'))
@@ -243,7 +236,7 @@ def _post_magasin(request, entreprise):
     return redirect('parametres_logistique')
 
 
-def _post_beneficiaire(request, entreprise):
+def _post_beneficiaire(request):
     if not request.user.has_perm('accounts.menu_param_logistique') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -252,11 +245,11 @@ def _post_beneficiaire(request, entreprise):
     instance = None
     if edit_id:
         try:
-            instance = Beneficiaire.objects.get(id=edit_id, entreprise=entreprise)
+            instance = Beneficiaire.objects.get(id=edit_id)
         except Beneficiaire.DoesNotExist:
             instance = None
 
-    ok, msg, _ = save_beneficiaire(request.POST, instance, entreprise)
+    ok, msg, _ = save_beneficiaire(request.POST, instance)
     if ok:
         messages.success(request, msg)
         return redirect(redirect_url_with_tab('parametres_logistique', 'beneficiaires'))
@@ -264,7 +257,7 @@ def _post_beneficiaire(request, entreprise):
     return redirect('parametres_logistique')
 
 
-def _post_motif(request, entreprise):
+def _post_motif(request):
     if not request.user.has_perm('accounts.menu_motifs_annulation') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -273,11 +266,11 @@ def _post_motif(request, entreprise):
     instance = None
     if edit_id:
         try:
-            instance = MotifAnnulation.objects.get(id=edit_id, entreprise=entreprise)
+            instance = MotifAnnulation.objects.get(id=edit_id)
         except MotifAnnulation.DoesNotExist:
             instance = None
 
-    ok, msg, _ = save_motif(request.POST, instance, entreprise, request.user)
+    ok, msg, _ = save_motif(request.POST, instance, request.user)
     if ok:
         messages.success(request, msg)
         return redirect(redirect_url_with_tab('parametres_logistique', 'motifs'))
@@ -285,13 +278,12 @@ def _post_motif(request, entreprise):
     return redirect('parametres_logistique')
 
 
-def _post_config(request, entreprise):
-    """Gestion de la configuration logistique avec validation complète."""
+def _post_config(request):
     if not request.user.has_perm('accounts.menu_parametres') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect(redirect_url_with_tab('parametres_logistique', 'config'))
 
-    config = get_or_create_logistique_config(entreprise)
+    config = get_or_create_logistique_config()
 
     delai = request.POST.get('delai_remplacement_bon_jours', '2').strip()
     ok_delai, msg_delai, _ = save_delai_remplacement(config, delai)
@@ -299,15 +291,12 @@ def _post_config(request, entreprise):
     conf_value = request.POST.get('confidentialite_demandes', 'PERSONNELLE').strip()
     ok_conf, msg_conf, _ = save_confidentialite_demandes(config, conf_value)
 
-    # Ne modifier obliger_reception_precedente que si les validations précédentes sont OK
     if ok_delai and ok_conf:
         config.obliger_reception_precedente = request.POST.get('obliger_reception_precedente', '') == '1'
-
         fields_to_update = ['obliger_reception_precedente', 'delai_remplacement_bon_jours']
         if hasattr(config, 'confidentialite_demandes'):
             fields_to_update.append('confidentialite_demandes')
         config.save(update_fields=fields_to_update)
-
         messages.success(request, "✅ Configuration logistique mise à jour avec succès.")
     else:
         if not ok_delai:
@@ -318,7 +307,7 @@ def _post_config(request, entreprise):
     return redirect(redirect_url_with_tab('parametres_logistique', 'config'))
 
 
-def _post_supprimer_motif(request, entreprise):
+def _post_supprimer_motif(request):
     if not request.user.has_perm('accounts.menu_motifs_annulation') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -333,7 +322,7 @@ def _post_supprimer_motif(request, entreprise):
         messages.error(request, "❌ Identifiant du motif invalide.")
         return redirect(redirect_url_with_tab('parametres_logistique', 'motifs'))
 
-    motif = get_object_or_404(MotifAnnulation, id=pk, entreprise=entreprise)
+    motif = get_object_or_404(MotifAnnulation, id=pk)
     deps = get_dependances(motif)
     if deps:
         messages.error(request, f"⛔ Impossible de supprimer : utilisé par {', '.join(deps)}.")
@@ -343,7 +332,7 @@ def _post_supprimer_motif(request, entreprise):
     return redirect(redirect_url_with_tab('parametres_logistique', 'motifs'))
 
 
-def _post_toggle_motif(request, entreprise):
+def _post_toggle_motif(request):
     if not request.user.has_perm('accounts.menu_motifs_annulation') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -358,13 +347,13 @@ def _post_toggle_motif(request, entreprise):
         messages.error(request, "❌ Identifiant du motif invalide.")
         return redirect(redirect_url_with_tab('parametres_logistique', 'motifs'))
 
-    motif = get_object_or_404(MotifAnnulation, id=pk, entreprise=entreprise)
+    motif = get_object_or_404(MotifAnnulation, id=pk)
     ok, msg, _ = toggle_motif(motif, request.user)
     messages.success(request, msg)
     return redirect(redirect_url_with_tab('parametres_logistique', 'motifs'))
 
 
-def _post_supprimer_famille(request, entreprise):
+def _post_supprimer_famille(request):
     if not request.user.has_perm('accounts.menu_fournisseurs') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -379,7 +368,7 @@ def _post_supprimer_famille(request, entreprise):
         messages.error(request, "❌ Identifiant de la famille invalide.")
         return redirect(redirect_url_with_tab('parametres_logistique', 'familles'))
 
-    famille = get_object_or_404(FamilleArticle, id=pk, entreprise=entreprise)
+    famille = get_object_or_404(FamilleArticle, id=pk)
     deps = get_dependances(famille)
     if deps:
         messages.error(request, f"⛔ Impossible de supprimer : utilisée par {', '.join(deps)}.")
@@ -389,7 +378,7 @@ def _post_supprimer_famille(request, entreprise):
     return redirect(redirect_url_with_tab('parametres_logistique', 'familles'))
 
 
-def _post_supprimer_fournisseur(request, entreprise):
+def _post_supprimer_fournisseur(request):
     if not request.user.has_perm('accounts.menu_fournisseurs') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -404,7 +393,7 @@ def _post_supprimer_fournisseur(request, entreprise):
         messages.error(request, "❌ Identifiant du fournisseur invalide.")
         return redirect(redirect_url_with_tab('parametres_logistique', 'fournisseurs'))
 
-    fournisseur = get_object_or_404(Fournisseur, id=pk, entreprise=entreprise)
+    fournisseur = get_object_or_404(Fournisseur, id=pk)
     deps = get_dependances(fournisseur)
     if deps:
         messages.error(request, f"⛔ Impossible de supprimer : utilisé par {', '.join(deps)}.")
@@ -414,7 +403,7 @@ def _post_supprimer_fournisseur(request, entreprise):
     return redirect(redirect_url_with_tab('parametres_logistique', 'fournisseurs'))
 
 
-def _post_supprimer_magasin(request, entreprise):
+def _post_supprimer_magasin(request):
     if not request.user.has_perm('accounts.menu_magasins') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -429,7 +418,7 @@ def _post_supprimer_magasin(request, entreprise):
         messages.error(request, "❌ Identifiant du magasin invalide.")
         return redirect(redirect_url_with_tab('parametres_logistique', 'magasins'))
 
-    magasin = get_object_or_404(Magasin, id=pk, entreprise=entreprise)
+    magasin = get_object_or_404(Magasin, id=pk)
     deps = get_dependances(magasin)
     if deps:
         messages.error(request, f"⛔ Impossible de supprimer : utilisé par {', '.join(deps)}.")
@@ -439,7 +428,7 @@ def _post_supprimer_magasin(request, entreprise):
     return redirect(redirect_url_with_tab('parametres_logistique', 'magasins'))
 
 
-def _post_supprimer_beneficiaire(request, entreprise):
+def _post_supprimer_beneficiaire(request):
     if not request.user.has_perm('accounts.menu_param_logistique') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
@@ -454,7 +443,7 @@ def _post_supprimer_beneficiaire(request, entreprise):
         messages.error(request, "❌ Identifiant du bénéficiaire invalide.")
         return redirect(redirect_url_with_tab('parametres_logistique', 'beneficiaires'))
 
-    benef = get_object_or_404(Beneficiaire, id=pk, entreprise=entreprise)
+    benef = get_object_or_404(Beneficiaire, id=pk)
     deps = get_dependances(benef)
     if deps:
         messages.error(request, f"⛔ Impossible de supprimer : utilisé par {', '.join(deps)}.")

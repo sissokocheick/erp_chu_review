@@ -10,6 +10,177 @@
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+     NEXUS ERP — Design System UX (NxUX)
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+window.NxUX = (function () {
+  'use strict';
+
+  function toast(type, message, timer) {
+    var map = {
+      success: { icon: 'success' },
+      error:   { icon: 'error' },
+      warning: { icon: 'warning' },
+      info:    { icon: 'info' }
+    };
+    var cfg = map[type] || map.info;
+    var isDark = document.body.classList.contains('dark-mode');
+
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: cfg.icon,
+      title: message,
+      showConfirmButton: false,
+      timer: timer || 3500,
+      timerProgressBar: true,
+      background: isDark ? '#1e293b' : '#fff',
+      color: isDark ? '#f1f5f9' : '#333'
+    });
+  }
+
+  function confirm(options) {
+    options = options || {};
+    return Swal.fire({
+      title: options.title || 'Confirmer',
+      text: options.text || '',
+      icon: options.icon || 'question',
+      showCancelButton: true,
+      confirmButtonColor: options.confirmColor || '#1c5b96',
+      cancelButtonColor: options.cancelColor || '#6c757d',
+      confirmButtonText: options.confirmText || 'Oui',
+      cancelButtonText: options.cancelText || 'Annuler',
+      reverseButtons: true,
+      focusCancel: true
+    }).then(function (result) {
+      if (result.isConfirmed && typeof options.onConfirm === 'function') {
+        options.onConfirm();
+      }
+      return result;
+    });
+  }
+
+  function confirmDelete(message, onConfirm) {
+    return confirm({
+      title: 'Confirmer la suppression',
+      text: message || 'Cette action est irréversible.',
+      icon: 'warning',
+      confirmText: '<i class="fas fa-trash-alt"></i> Supprimer',
+      confirmColor: '#dc3545',
+      onConfirm: onConfirm
+    });
+  }
+
+  function loading(btn, text) {
+    if (!btn) return;
+    btn.disabled = true;
+    btn.dataset.nxOriginalHtml = btn.innerHTML;
+    btn.innerHTML =
+      '<span style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:nxSpin .7s linear infinite;vertical-align:middle;margin-right:6px;"></span>' +
+      (text || 'Chargement…');
+  }
+
+  function stopLoading(btn) {
+    if (!btn) return;
+    btn.disabled = false;
+    if (btn.dataset.nxOriginalHtml) {
+      btn.innerHTML = btn.dataset.nxOriginalHtml;
+      delete btn.dataset.nxOriginalHtml;
+    }
+  }
+
+  // Injecte l’animation spinner une seule fois
+  if (!document.getElementById('nx-ux-style')) {
+    var style = document.createElement('style');
+    style.id = 'nx-ux-style';
+    style.textContent = '@keyframes nxSpin{to{transform:rotate(360deg)}}';
+    document.head.appendChild(style);
+  }
+
+  function submitWithConfirm(form, options) {
+    options = options || {};
+    confirm({
+      title: options.title || 'Confirmer ?',
+      text: options.text || '',
+      icon: options.icon || 'question',
+      confirmText: options.confirmText || 'Oui, enregistrer',
+      confirmColor: options.confirmColor || '#1c5b96',
+      onConfirm: function () {
+        var btn = options.btn || form.querySelector('[type=submit], .btn-save, .nx-btn-primary');
+        if (btn) loading(btn, options.loadingText || 'Enregistrement…');
+        form.submit();
+      }
+    });
+  }
+
+  // ── Formatage champs (global) ─────────────────────────────
+  function formatPhone(el) {
+    if (!el) return;
+    var val = String(el.value || '').replace(/\D/g, '').substring(0, 10);
+    var parts = val.match(/.{1,2}/g);
+    el.value = parts ? parts.join(' ') : val;
+  }
+
+  function formatUpper(el) {
+    if (!el) return;
+    el.value = String(el.value || '').toUpperCase();
+  }
+
+  function formatLogin(el) {
+    if (!el) return;
+    el.value = String(el.value || '').toLowerCase().replace(/\s+/g, '');
+  }
+
+  function formatEmail(el) {
+    if (!el) return;
+    el.value = String(el.value || '').toLowerCase().trim();
+  }
+
+  function formatPrenom(el) {
+    if (!el) return;
+    el.value = String(el.value || '').toLowerCase().replace(/(?:^|\s)\S/g, function (c) {
+      return c.toUpperCase();
+    });
+  }
+
+  function applyFormat(el) {
+    if (!el) return;
+    var t = (el.getAttribute('data-nx-format') || '').toLowerCase();
+    if (t === 'phone') formatPhone(el);
+    else if (t === 'upper' || t === 'nom') formatUpper(el);
+    else if (t === 'login') formatLogin(el);
+    else if (t === 'email') formatEmail(el);
+    else if (t === 'prenom') formatPrenom(el);
+  }
+
+  document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('[data-nx-format]').forEach(function (el) {
+      el.addEventListener('input', function () { applyFormat(el); });
+      el.addEventListener('blur', function () { applyFormat(el); });
+      if (el.value) applyFormat(el);
+    });
+  });
+
+  return {
+    toast: toast,
+    confirm: confirm,
+    confirmDelete: confirmDelete,
+    loading: loading,
+    stopLoading: stopLoading,
+    submitWithConfirm: submitWithConfirm,
+    formatPhone: formatPhone,
+    formatUpper: formatUpper,
+    formatLogin: formatLogin,
+    formatEmail: formatEmail,
+    formatPrenom: formatPrenom,
+    applyFormat: applyFormat
+  };
+})();
+
+function formatPhone(el) { if (window.NxUX) NxUX.formatPhone(el); }
+</script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 
     <!-- 🌙 ANTI-FLASH : lit le cookie serveur AVANT tout CSS -->
@@ -20,11 +191,22 @@
             if (isDark) {
                 document.documentElement.classList.add('html-dark-preload');
             }
+            // ── Anti-flash sidebar réduite ──
+            var isClosed = localStorage.getItem('nexuserp_sidebar_closed') === 'true';
+            if (isClosed && window.innerWidth > 768) {
+                document.documentElement.classList.add('sidebar-preload-closed');
+            }
         })();
     </script>
     <style>
         .html-dark-preload body { background-color: #0f172a !important; }
         .html-dark-preload .sidebar { background-color: #0a1a2f !important; }
+        /* Anti-flash sidebar réduite : appliqué AVANT le rendu */
+        .sidebar-preload-closed #sidebar-main { width: 50px !important; }
+        .sidebar-preload-closed #sidebar-main .logo-text,
+        .sidebar-preload-closed #sidebar-main .logo-subtitle,
+        .sidebar-preload-closed #sidebar-main .nav-text,
+        .sidebar-preload-closed #sidebar-main .nav-chevron { display: none !important; }
     </style>
 
     <style>
@@ -277,10 +459,10 @@
         .nx-tab.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); }
         body.dark-mode .nx-tab.active { color: #5dade2; border-bottom-color: #5dade2; }
 
-        /* ── 15. MODAL PDF (unique globale) ── */
+        /* ── 15. MODAL PDF (unique globale avec Z-INDEX corrigé) ── */
         .nx-modal {
             display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-            z-index: 99999; align-items: flex-start; justify-content: center;
+            z-index: 1000000; align-items: flex-start; justify-content: center;
             backdrop-filter: blur(3px); padding-top: 4vh; overflow-y: auto;
         }
         .nx-modal.open { display: flex; }
@@ -332,7 +514,45 @@
             display: flex; flex-direction: column; overflow-y: auto; z-index: 999999;
             transition: width 0.3s ease;
         }
-        .sidebar.desktop-closed { width: 0px !important; overflow: hidden; }
+        .sidebar.desktop-closed { width: 50px !important; overflow: visible; }
+        .sidebar.desktop-closed .sidebar-header { padding: 14px 2px; }
+        .sidebar.desktop-closed .logo-text, .sidebar.desktop-closed .logo-subtitle { display: none !important; }
+        .sidebar.desktop-closed .nav-text, .sidebar.desktop-closed .nav-chevron { display: none !important; }
+        .sidebar.desktop-closed .module-title, .sidebar.desktop-closed .menu-item {
+            justify-content: center; padding: 10px 0 !important; border-left: none;
+        }
+        .sidebar.desktop-closed .nav-icon { margin-right: 0 !important; font-size: 18px; }
+        .sidebar.desktop-closed .module-title { position: relative; cursor: pointer; }
+        
+        /* Infobulle Tooltip (s'affiche au survol quand rétreci) */
+        .sidebar.desktop-closed .module-title:hover::after, .sidebar.desktop-closed .menu-item:hover::after {
+            content: attr(data-title); position: absolute; left: 54px; background: #1c5b96; color: white;
+            padding: 5px 10px; border-radius: 4px; font-size: 11px; white-space: nowrap;
+            z-index: 999999; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+        /* Masque l'infobulle si le titre est actif */
+        .sidebar.desktop-closed .module-title.active::after { display: none !important; }
+
+        /* ── Accordéon vertical en mode réduit (icônes seules) ── */
+        .sidebar.desktop-closed .submenu.active {
+            max-height: 800px;
+            position: static !important;
+            width: 100% !important;
+            box-shadow: none !important;
+            padding: 4px 0 !important;
+            background-color: rgba(0,0,0,0.15) !important;
+        }
+        .sidebar.desktop-closed .submenu.active .menu-item {
+            justify-content: center !important;
+            padding: 8px 0 !important;
+            color: #fff;
+        }
+        .sidebar.desktop-closed .submenu.active .menu-item .nav-text { display: none !important; }
+        .sidebar.desktop-closed .submenu.active .menu-item .nav-icon {
+            margin-right: 0 !important;
+            font-size: 14px;
+        }
+
         .sidebar-header {
             padding: 18px 15px; text-align: center;
             border-bottom: 1px solid rgba(255,255,255,0.1);
@@ -344,35 +564,44 @@
         .logo-subtitle { font-size: 8px; color: rgba(255,255,255,0.5); letter-spacing: 2px; text-transform: uppercase; font-weight: 300; margin-top: 2px; }
 
         .module-title {
-            padding: 13px 18px; color: white; cursor: pointer; display: flex;
-            justify-content: space-between; align-items: center;
+            padding: 9px 14px; color: white; cursor: pointer; display: flex;
+            justify-content: flex-start; align-items: center;
             border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-weight: bold; font-size: 13.5px; text-transform: uppercase;
+            font-weight: 600; font-size: 11.5px; text-transform: uppercase;
             background-color: rgba(0,0,0,0.1); transition: 0.3s;
         }
+        .module-title .nav-chevron { margin-left: auto; }
+        .nav-icon { width: 20px; text-align: center; margin-right: 8px; font-size: 13px; }
+        .nav-text { display: inline; }
+        .nav-chevron { font-size: 11px; opacity: 0.7; }
         .module-title:hover { background-color: rgba(0,0,0,0.2); }
         .module-title span i { width: 25px; text-align: center; margin-right: 5px; }
 
-        .submenu { display: none; background-color: rgba(0,0,0,0.05); }
-        .submenu.active { display: block; }
+        .submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-in-out;
+            background-color: rgba(0,0,0,0.05);
+        }
+        .submenu.active {
+            max-height: 800px;
+        }
 
         .menu-item {
-            padding: 11px 15px 11px 35px; color: #d1e2f3; text-decoration: none;
-            display: flex; align-items: center; font-size: 12.5px;
-            transition: 0.2s; border-left: 4px solid transparent;
+            padding: 7px 12px 7px 32px; color: #d1e2f3; text-decoration: none;
+            display: flex; align-items: center; font-size: 11.5px;
+            transition: 0.2s; border-left: 3px solid transparent;
         }
-        .menu-item:hover { color: white; background-color: rgba(255,255,255,0.1); border-left: 4px solid white; }
-        .menu-item.active-link { background-color: rgba(255,255,255,0.15); border-left: 4px solid #fff; color: white; font-weight: bold; }
-        .menu-item i { width: 25px; text-align: center; margin-right: 5px; }
+        .menu-item:hover { color: white; background-color: rgba(255,255,255,0.1); border-left: 3px solid white; }
+        .menu-item.active-link { background-color: rgba(255,255,255,0.15); border-left: 3px solid #fff; color: white; font-weight: bold; }
+        .menu-item .nav-icon { width: 18px; text-align: center; margin-right: 6px; font-size: 11px; }
 
-        /* Active module (liens directs) */
+        /* Active module */
         a.module-title.active-module { background-color: rgba(255,255,255,0.2) !important; }
         body.dark-mode a.module-title.active-module { background-color: rgba(255,255,255,0.15) !important; }
 
-        /* ===== DARK MODE SPECIFIC FIXES FOR SIDEBAR ===== */
-        body.dark-mode .sidebar {
-            background-color: #0a1a2f;
-        }
+        /* Dark mode sidebar fixes */
+        body.dark-mode .sidebar { background-color: #0a1a2f; }
         body.dark-mode .sidebar-header {
             background: linear-gradient(180deg, #0b2b44 0%, #051b2f 100%);
             border-bottom-color: rgba(255,255,255,0.05);
@@ -382,24 +611,20 @@
             color: #e2e8f0;
             border-bottom-color: rgba(255,255,255,0.05);
         }
-        body.dark-mode .module-title:hover {
-            background-color: rgba(0, 0, 0, 0.5);
+        body.dark-mode .module-title:hover { background-color: rgba(0, 0, 0, 0.5); }
+        body.dark-mode .submenu { background-color: rgba(0, 0, 0, 0.4); }
+        body.dark-mode .sidebar.desktop-closed .submenu.active {
+            background: rgba(0,0,0,0.25) !important;
+            border: none;
         }
-        body.dark-mode .submenu {
-            background-color: rgba(0, 0, 0, 0.4);
-        }
-        body.dark-mode .menu-item {
-            color: #cbd5e1;
-        }
+        body.dark-mode .menu-item { color: #cbd5e1; }
         body.dark-mode .menu-item:hover {
             background-color: rgba(255, 255, 255, 0.1);
-            color: white;
-            border-left-color: #ffc107;
+            color: white; border-left-color: #ffc107;
         }
         body.dark-mode .menu-item.active-link {
             background-color: rgba(255, 255, 255, 0.15);
-            border-left-color: #ffc107;
-            color: white;
+            border-left-color: #ffc107; color: white;
         }
 
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -463,32 +688,14 @@
 
         /* Dark mode toggle */
         .btn-toggle-dark {
-            background: transparent;
-            border: none;
-            color: #6c757d;
-            font-size: 18px;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 50%;
-            transition: 0.3s;
-            width: 36px;
-            height: 36px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: transparent; border: none; color: #6c757d;
+            font-size: 18px; cursor: pointer; padding: 8px; border-radius: 50%;
+            transition: 0.3s; width: 36px; height: 36px;
+            display: flex; align-items: center; justify-content: center;
         }
-        .btn-toggle-dark:hover {
-            background: rgba(0,0,0,0.08);
-            color: #1c5b96;
-            transform: scale(1.1);
-        }
-        body.dark-mode .btn-toggle-dark {
-            color: #ffc107;
-        }
-        body.dark-mode .btn-toggle-dark:hover {
-            background: rgba(255,193,7,0.2);
-            color: #ffd54f;
-        }
+        .btn-toggle-dark:hover { background: rgba(0,0,0,0.08); color: #1c5b96; transform: scale(1.1); }
+        body.dark-mode .btn-toggle-dark { color: #ffc107; }
+        body.dark-mode .btn-toggle-dark:hover { background: rgba(255,193,7,0.2); color: #ffd54f; }
 
         /* DateRangePicker dark mode */
         body.dark-mode .daterangepicker { background: var(--bg-card); border-color: var(--border-light); color: var(--text-dark); }
@@ -502,19 +709,17 @@
         body.dark-mode .daterangepicker .cancelBtn { background: var(--bg-hover); color: var(--text-medium); border-color: var(--border-color); }
     </style>
 
-    <!-- Turbo Drive DESACTIVE - instable avec scripts inline existants -->
-    <!-- <script src="https://cdn.jsdelivr.net/npm/@hotwired/turbo@7.3.0/dist/turbo.es2017-umd.js"></script> -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-
-
+    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
 </head>
 <body>
 
     <div class="mobile-overlay" id="mobile-overlay" onclick="toggleSidebarMobile(event)"></div>
 
     <!-- ═══════════════════════════════════════════════════════════════
-         SIDEBAR (PERMANENT — ne recharge jamais)
+         SIDEBAR
          ═══════════════════════════════════════════════════════════════ -->
     <div class="sidebar" id="sidebar-main" data-turbo-permanent>
         <a href="{% if perms.accounts.menu_accueil %}{% url 'accounts:accueil_personnalise' %}{% else %}/{% endif %}"
@@ -543,233 +748,229 @@
                 </div>
                 <div class="logo-text">
                     <div class="logo-title"><span>Nexus</span>ERP</div>
-                    <div class="logo-subtitle">Suite de Gestion Intégrée</div>
+                    <div class="logo-subtitle">Suite de Gestion Integree</div>
                 </div>
             </div>
         </a>
 
+        <!-- ACCES RAPIDE -->
         {% if perms.accounts.menu_accueil %}
-        <a href="{% url 'accounts:accueil_personnalise' %}" class="module-title" style="text-decoration:none;">
-            <span><i class="fas fa-th-large" style="color:#ffc107;"></i> Accueil</span>
+        <a href="{% url 'accounts:accueil_personnalise' %}" class="module-title" style="text-decoration:none;" data-title="Accueil">
+            <i class="fas fa-th-large nav-icon" style="color:#ffc107;"></i><span class="nav-text">Accueil</span>
         </a>
         {% endif %}
-
         {% if perms.accounts.menu_dashboard %}
-        <a href="/" class="module-title" style="text-decoration:none;">
-            <span><i class="fas fa-chart-line"></i> Tableau de bord</span>
+        <a href="/" class="module-title" style="text-decoration:none;" data-title="Tableau de bord">
+            <i class="fas fa-chart-line nav-icon"></i><span class="nav-text">Tableau de bord</span>
         </a>
         {% endif %}
 
-        {% if perms.accounts.menu_demandes %}
-        <a href="{% url 'mes_demandes' %}" class="module-title" style="text-decoration:none;">
-            <span><i class="fas fa-clipboard-list" style="color:#17a2b8;"></i> Demandes</span>
-        </a>
-        {% endif %}
-
-        {% if peut_valider_demandes %}
-        <a href="{% url 'demandes_a_valider' %}" class="module-title" style="text-decoration:none;">
-            <span>
-                <i class="fas fa-clipboard-check" style="color:#ffc107;"></i> Valider Demandes
+        <!-- DEMANDES -->
+        {% if perms.accounts.menu_demandes or perms.accounts.menu_guichet or peut_valider_demandes %}
+        <div class="module-title" onclick="toggleMenu('menu-demandes')" data-title="Demandes">
+            <span style="display:flex;align-items:center;"><i class="fas fa-clipboard-list nav-icon" style="color:#17a2b8;"></i><span class="nav-text">Demandes</span></span>
+            <i class="fas fa-chevron-down nav-chevron" id="icon-menu-demandes"></i>
+        </div>
+        <div class="submenu" id="menu-demandes">
+            {% if perms.accounts.menu_demandes %}
+            <a href="{% url 'mes_demandes' %}" class="menu-item" data-title="Mes Demandes"><i class="fas fa-file-alt nav-icon"></i><span class="nav-text">Mes Demandes</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_guichet %}
+            <a href="{% url 'gestion_demandes' %}" class="menu-item" data-title="Guichet"><i class="fas fa-inbox nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Traiter (Guichet)</span></a>
+            {% endif %}
+            {% if peut_valider_demandes %}
+            <a href="{% url 'demandes_a_valider' %}" class="menu-item" data-title="Valider">
+                <i class="fas fa-clipboard-check nav-icon" style="color:#ffc107;"></i><span class="nav-text">A Valider</span>
                 {% if nb_demandes_a_valider > 0 %}
-                    <span style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 10px; font-size: 11px; margin-left: 8px;">{{ nb_demandes_a_valider }}</span>
+                <span style="background:#dc3545;color:white;padding:1px 6px;border-radius:10px;font-size:10px;margin-left:6px;font-weight:700;">{{ nb_demandes_a_valider }}</span>
                 {% endif %}
-            </span>
-        </a>
+            </a>
+            {% endif %}
+        </div>
         {% endif %}
 
-        {% if perms.accounts.menu_guichet or perms.accounts.menu_entrees or perms.accounts.menu_reception_commande or perms.accounts.menu_sorties or perms.accounts.menu_livraisons or perms.accounts.menu_sorties_hors_stock or perms.accounts.menu_retours_services %}
-            <div class="module-title" onclick="toggleMenu('menu-operations')">
-                <span><i class="fas fa-exchange-alt"></i> Opérations Flux</span>
-                <i class="fas fa-chevron-down" id="icon-menu-operations"></i>
-            </div>
-            <div class="submenu" id="menu-operations">
-                {% if perms.accounts.menu_guichet %}
-                <a href="{% url 'gestion_demandes' %}" class="menu-item"><i class="fas fa-inbox"></i> Traiter les Demandes</a>
-                {% endif %}
-                {% if perms.accounts.menu_livraisons %}
-                <a href="{% url 'liste_livraisons' %}" class="menu-item"><i class="fas fa-dolly" style="color:#cfabff;"></i> Livraisons</a>
-                {% endif %}
-                {% if perms.accounts.menu_entrees %}
-                <a href="{% url 'liste_entrees' %}" class="menu-item"><i class="fas fa-arrow-down" style="color:#7fe799;"></i> Entrées en Stock</a>
-                {% endif %}
-                {% if perms.accounts.menu_reception_commande %}
-                <a href="{% url 'liste_receptions' %}" class="menu-item"><i class="fas fa-truck-loading" style="color:#28a745;"></i> Réceptions Commandes</a>
-                {% endif %}
-                {% if perms.accounts.menu_sorties %}
-                <a href="{% url 'liste_sorties' %}" class="menu-item"><i class="fas fa-sign-out-alt" style="color:#ff9e9e;"></i> Bons de Sortie</a>
-                {% endif %}
-                {% if perms.accounts.menu_sorties_hors_stock %}
-                <a href="{% url 'liste_bons_hors_stock' %}" class="menu-item"><i class="fas fa-file-export" style="color:#ffc58a;"></i> Sorties Hors Stock</a>
-                {% endif %}
-                {% if perms.accounts.menu_retours_services %}
-                <a href="{% url 'liste_retours_services' %}" class="menu-item"><i class="fas fa-undo-alt" style="color:#8be0ee;"></i> Retours Services</a>
-                {% endif %}
-            </div>
+        <!-- MOUVEMENTS DE STOCK -->
+        {% if perms.accounts.menu_entrees or perms.accounts.menu_sorties or perms.accounts.menu_retours_services or perms.accounts.menu_sorties_hors_stock or perms.accounts.menu_livraisons or perms.accounts.menu_reception_commande %}
+        <div class="module-title" onclick="toggleMenu('menu-mouvements')" data-title="Mouvements">
+            <span style="display:flex;align-items:center;"><i class="fas fa-exchange-alt nav-icon" style="color:#28a745;"></i><span class="nav-text">Mouvements de Stock</span></span>
+            <i class="fas fa-chevron-down nav-chevron" id="icon-menu-mouvements"></i>
+        </div>
+        <div class="submenu" id="menu-mouvements">
+            {% if perms.accounts.menu_entrees %}
+            <a href="{% url 'liste_entrees' %}" class="menu-item" data-title="Entrees"><i class="fas fa-arrow-down nav-icon" style="color:#7fe799;"></i><span class="nav-text">Entrees en Stock</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_sorties %}
+            <a href="{% url 'liste_sorties' %}" class="menu-item" data-title="Sorties"><i class="fas fa-sign-out-alt nav-icon" style="color:#ff9e9e;"></i><span class="nav-text">Bons de Sortie</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_sorties_hors_stock %}
+            <a href="{% url 'liste_bons_hors_stock' %}" class="menu-item" data-title="Hors Stock"><i class="fas fa-file-export nav-icon" style="color:#ffc58a;"></i><span class="nav-text">Sorties Hors Stock</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_retours_services %}
+            <a href="{% url 'liste_retours_services' %}" class="menu-item" data-title="Retours"><i class="fas fa-undo-alt nav-icon" style="color:#8be0ee;"></i><span class="nav-text">Retours Services</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_livraisons %}
+            <a href="{% url 'liste_livraisons' %}" class="menu-item" data-title="Livraisons"><i class="fas fa-dolly nav-icon" style="color:#cfabff;"></i><span class="nav-text">Livraisons</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_reception_commande %}
+            <a href="{% url 'liste_receptions' %}" class="menu-item" data-title="Receptions"><i class="fas fa-truck-loading nav-icon" style="color:#28a745;"></i><span class="nav-text">Receptions Commandes</span></a>
+            {% endif %}
+        </div>
         {% endif %}
 
-        {% if perms.accounts.menu_stock or perms.accounts.menu_inventaires or perms.accounts.menu_ajustements or perms.accounts.menu_historique or perms.accounts.menu_peremptions or perms.accounts.menu_destructions %}
-            <div class="module-title" onclick="toggleMenu('menu-gestion-stocks')">
-                <span><i class="fas fa-boxes"></i> Gestion des Stocks</span>
-                <i class="fas fa-chevron-down" id="icon-menu-gestion-stocks"></i>
-            </div>
-            <div class="submenu" id="menu-gestion-stocks">
-                {% if perms.accounts.menu_stock %}
-                <a href="{% url 'etat_stock' %}" class="menu-item"><i class="fas fa-search-location"></i> État du Stock</a>
-                {% endif %}
-                {% if perms.accounts.menu_peremptions %}
-<a href="{% url 'controle_peremptions' %}" class="menu-item"><i class="fas fa-exclamation-triangle" style="color:#ffda6a;"></i> Suivi Péremptions</a>
-{% endif %}
-
-
-
-
-
-                {% if perms.accounts.menu_ajustements %}
-                <a href="{% url 'liste_ajustements' %}" class="menu-item"><i class="fas fa-balance-scale"></i> Ajustements Manuels</a>
-                {% endif %}
-                {% if perms.accounts.menu_inventaires %}
-                <a href="{% url 'liste_inventaires' %}" class="menu-item"><i class="fas fa-clipboard-check"></i> Campagnes Inventaires</a>
-                {% endif %}
-                {% if perms.accounts.menu_historique %}
-                <a href="{% url 'journal_historique' %}" class="menu-item"><i class="fas fa-history" style="color:#b6c2c9;"></i> Historique Mouvements</a>
-                {% endif %}
-            </div>
+        <!-- GESTION DES STOCKS -->
+        {% if perms.accounts.menu_stock or perms.accounts.menu_peremptions or perms.accounts.menu_destructions or perms.accounts.menu_ajustements or perms.accounts.menu_inventaires or perms.accounts.menu_historique %}
+        <div class="module-title" onclick="toggleMenu('menu-gestion-stocks')" data-title="Stocks">
+            <span style="display:flex;align-items:center;"><i class="fas fa-boxes nav-icon" style="color:#1c5b96;"></i><span class="nav-text">Gestion des Stocks</span></span>
+            <i class="fas fa-chevron-down nav-chevron" id="icon-menu-gestion-stocks"></i>
+        </div>
+        <div class="submenu" id="menu-gestion-stocks">
+            {% if perms.accounts.menu_stock %}
+            <a href="{% url 'etat_stock' %}" class="menu-item" data-title="Etat Stock"><i class="fas fa-search-location nav-icon"></i><span class="nav-text">Etat du Stock</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_ajustements %}
+            <a href="{% url 'liste_ajustements' %}" class="menu-item" data-title="Ajustements"><i class="fas fa-balance-scale nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Ajustements Manuels</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_inventaires %}
+            <a href="{% url 'liste_inventaires' %}" class="menu-item" data-title="Inventaires"><i class="fas fa-clipboard-check nav-icon" style="color:#28a745;"></i><span class="nav-text">Campagnes Inventaires</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_peremptions %}
+            <a href="{% url 'controle_peremptions' %}" class="menu-item" data-title="Peremptions"><i class="fas fa-exclamation-triangle nav-icon" style="color:#ffda6a;"></i><span class="nav-text">Suivi Peremptions</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_historique %}
+            <a href="{% url 'journal_historique' %}" class="menu-item" data-title="Historique"><i class="fas fa-history nav-icon" style="color:#b6c2c9;"></i><span class="nav-text">Historique Mouvements</span></a>
+            {% endif %}
+        </div>
         {% endif %}
 
+        <!-- ACHATS & CATALOGUE -->
         {% if perms.accounts.menu_commandes or perms.accounts.menu_articles or perms.accounts.menu_familles %}
-            <div class="module-title" onclick="toggleMenu('menu-achats-catalogue')">
-                <span><i class="fas fa-shopping-cart"></i> Achats & Catalogue</span>
-                <i class="fas fa-chevron-down" id="icon-menu-achats-catalogue"></i>
-            </div>
-            <div class="submenu" id="menu-achats-catalogue">
-                {% if perms.accounts.menu_commandes %}
-                <a href="{% url 'liste_commandes' %}" class="menu-item"><i class="fas fa-file-invoice-dollar"></i> Commandes Fourn.</a>
-                {% endif %}
-                {% if perms.accounts.menu_articles %}
-                <a href="{% url 'liste_articles' %}" class="menu-item"><i class="fas fa-list"></i> Catalogue Articles</a>
-                {% endif %}
-                {% if perms.accounts.menu_familles %}
-                <a href="{% url 'liste_familles' %}" class="menu-item"><i class="fas fa-tags"></i> Familles d'Articles</a>
-                {% endif %}
-            </div>
+        <div class="module-title" onclick="toggleMenu('menu-achats')" data-title="Achats">
+            <span style="display:flex;align-items:center;"><i class="fas fa-shopping-cart nav-icon" style="color:#e83e8c;"></i><span class="nav-text">Achats & Catalogue</span></span>
+            <i class="fas fa-chevron-down nav-chevron" id="icon-menu-achats"></i>
+        </div>
+        <div class="submenu" id="menu-achats">
+            {% if perms.accounts.menu_commandes %}
+            <a href="{% url 'liste_commandes' %}" class="menu-item" data-title="Commandes"><i class="fas fa-file-invoice-dollar nav-icon"></i><span class="nav-text">Commandes Fourn.</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_articles %}
+            <a href="{% url 'liste_articles' %}" class="menu-item" data-title="Articles"><i class="fas fa-barcode nav-icon" style="color:#0d47a1;"></i><span class="nav-text">Catalogue Articles</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_familles %}
+            <a href="{% url 'liste_familles' %}" class="menu-item" data-title="Familles"><i class="fas fa-tags nav-icon" style="color:#fd7e14;"></i><span class="nav-text">Familles d'Articles</span></a>
+            {% endif %}
+        </div>
         {% endif %}
 
+        <!-- PATRIMOINE & SAV -->
         {% if perms.accounts.menu_pat_tickets or perms.accounts.menu_pat_tech or perms.accounts.menu_pat_dispatch or perms.accounts.menu_pat_historique or perms.accounts.menu_pat_registre or perms.accounts.menu_pat_sas or perms.accounts.menu_pat_contrats or perms.accounts.menu_pat_import or perms.accounts.menu_pat_inventaire or perms.accounts.menu_pat_rebuts or perms.accounts.menu_pat_pertes or perms.accounts.menu_pat_parametres %}
-            <div class="module-title" onclick="toggleMenu('menu-patrimoine')">
-                <span><i class="fas fa-building"></i> Patrimoine & SAV</span>
-                <i class="fas fa-chevron-down" id="icon-menu-patrimoine"></i>
-            </div>
-            <div class="submenu" id="menu-patrimoine">
-                {% if perms.accounts.menu_pat_tickets %}
-                <a href="{% url 'patrimoine_mes_tickets' %}" class="menu-item"><i class="fas fa-ticket-alt" style="color:#20c997;"></i> Mes Tickets SAV</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_tech %}
-                <a href="{% url 'patrimoine_mes_interventions' %}" class="menu-item"><i class="fas fa-clipboard-list" style="color:#6f42c1;"></i> Mon Espace Tech</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_dispatch %}
-                <a href="{% url 'patrimoine_dispatch' %}" class="menu-item"><i class="fas fa-satellite-dish" style="color:#fd7e14;"></i> Dispatch Pannes</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_historique %}
-                <a href="{% url 'patrimoine_interventions' %}" class="menu-item"><i class="fas fa-history" style="color:#b6c2c9;"></i> Historique Global</a>
-                {% endif %}
-                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin: 5px 15px;"></div>
-                {% if perms.accounts.menu_pat_registre %}
-                <a href="{% url 'patrimoine_registre' %}" class="menu-item"><i class="fas fa-layer-group"></i> Registre Matériel</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_sas %}
-                <a href="{% url 'patrimoine_sas' %}" class="menu-item"><i class="fas fa-clock" style="color:#ffc107;"></i> Sas Immatriculation</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_contrats %}
-                <a href="{% url 'patrimoine_contrats' %}" class="menu-item"><i class="fas fa-file-contract" style="color:#17a2b8;"></i> Contrats</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_import %}
-                <a href="{% url 'patrimoine_import' %}" class="menu-item"><i class="fas fa-file-import"></i> Import Excel</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_inventaire %}
-                <a href="{% url 'patrimoine_campagnes_inventaire' %}" class="menu-item"><i class="fas fa-barcode" style="color:#28a745;"></i> Inventaire du Parc</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_rebuts %}
-                <a href="{% url 'patrimoine_rebuts' %}" class="menu-item"><i class="fas fa-trash-alt" style="color:#ef4444;"></i> Registre des Rebuts</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_pertes %}
-                <a href="{% url 'patrimoine_pertes' %}" class="menu-item"><i class="fas fa-search-minus" style="color:#f59e0b;"></i> Équipements Perdus</a>
-                {% endif %}
-                {% if perms.accounts.menu_pat_parametres %}
-                <a href="{% url 'patrimoine_parametres' %}" class="menu-item"><i class="fas fa-sliders-h" style="color:#ffda6a;"></i> Paramètres</a>
-                {% endif %}
-            </div>
+        <div class="module-title" onclick="toggleMenu('menu-patrimoine')" data-title="Patrimoine">
+            <span style="display:flex;align-items:center;"><i class="fas fa-building nav-icon" style="color:#20c997;"></i><span class="nav-text">Patrimoine & SAV</span></span>
+            <i class="fas fa-chevron-down nav-chevron" id="icon-menu-patrimoine"></i>
+        </div>
+        <div class="submenu" id="menu-patrimoine">
+            {% if perms.accounts.menu_pat_tickets %}
+            <a href="{% url 'patrimoine_mes_tickets' %}" class="menu-item" data-title="Tickets"><i class="fas fa-ticket-alt nav-icon" style="color:#20c997;"></i><span class="nav-text">Tickets SAV</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_tech %}
+            <a href="{% url 'patrimoine_mes_interventions' %}" class="menu-item" data-title="Tech"><i class="fas fa-clipboard-list nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Espace Tech</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_dispatch %}
+            <a href="{% url 'patrimoine_dispatch' %}" class="menu-item" data-title="Dispatch"><i class="fas fa-satellite-dish nav-icon" style="color:#fd7e14;"></i><span class="nav-text">Dispatch Pannes</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_historique %}
+            <a href="{% url 'patrimoine_interventions' %}" class="menu-item" data-title="Historique"><i class="fas fa-history nav-icon" style="color:#b6c2c9;"></i><span class="nav-text">Historique Global</span></a>
+            {% endif %}
+            <div style="border-top:1px solid rgba(255,255,255,0.08);margin:4px 15px;"></div>
+            {% if perms.accounts.menu_pat_registre %}
+            <a href="{% url 'patrimoine_registre' %}" class="menu-item" data-title="Registre"><i class="fas fa-layer-group nav-icon"></i><span class="nav-text">Registre Materiel</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_sas %}
+            <a href="{% url 'patrimoine_sas' %}" class="menu-item" data-title="Sas"><i class="fas fa-clock nav-icon" style="color:#ffc107;"></i><span class="nav-text">Sas Immatriculation</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_contrats %}
+            <a href="{% url 'patrimoine_contrats' %}" class="menu-item" data-title="Contrats"><i class="fas fa-file-contract nav-icon" style="color:#17a2b8;"></i><span class="nav-text">Contrats</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_import %}
+            <a href="{% url 'patrimoine_import' %}" class="menu-item" data-title="Import"><i class="fas fa-file-import nav-icon" style="color:#28a745;"></i><span class="nav-text">Import Excel</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_inventaire %}
+            <a href="{% url 'patrimoine_campagnes_inventaire' %}" class="menu-item" data-title="Inventaire"><i class="fas fa-barcode nav-icon" style="color:#28a745;"></i><span class="nav-text">Inventaire Parc</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_rebuts %}
+            <a href="{% url 'patrimoine_rebuts' %}" class="menu-item" data-title="Rebuts"><i class="fas fa-trash-alt nav-icon" style="color:#ef4444;"></i><span class="nav-text">Registre Rebuts</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_pertes %}
+            <a href="{% url 'patrimoine_pertes' %}" class="menu-item" data-title="Pertes"><i class="fas fa-search-minus nav-icon" style="color:#f59e0b;"></i><span class="nav-text">Equipements Perdus</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_parametres %}
+            <a href="{% url 'patrimoine_parametres' %}" class="menu-item" data-title="Parametres"><i class="fas fa-sliders-h nav-icon" style="color:#ffda6a;"></i><span class="nav-text">Parametres</span></a>
+            {% endif %}
+        </div>
         {% endif %}
 
-        {% if perms.accounts.menu_rapports %}
-        <div class="module-title" onclick="toggleMenu('menu-rapports')">
-            <span><i class="fas fa-chart-pie" style="color:#28a745;"></i> Rapports & Exports</span>
-            <i class="fas fa-chevron-down" id="icon-menu-rapports"></i>
+        <!-- RAPPORTS & EXPORTS -->
+        {% if perms.accounts.menu_rapports or perms.accounts.menu_stats_demandes or perms.accounts.menu_stats_sondages or perms.accounts.menu_stats_satisfaction %}
+        <div class="module-title" onclick="toggleMenu('menu-rapports')" data-title="Rapports">
+            <span style="display:flex;align-items:center;"><i class="fas fa-chart-pie nav-icon" style="color:#28a745;"></i><span class="nav-text">Rapports & Exports</span></span>
+            <i class="fas fa-chevron-down nav-chevron" id="icon-menu-rapports"></i>
         </div>
         <div class="submenu" id="menu-rapports">
-            <a href="{% url 'page_rapports' %}" class="menu-item"><i class="fas fa-file-export"></i> Exports CSV / PDF</a>
-            <a href="{% url 'stats_demandes' %}" class="menu-item"><i class="fas fa-chart-bar" style="color:#0d6efd;"></i> Stats Demandes</a>
-            <a href="{% url 'stats_sondages' %}" class="menu-item"><i class="fas fa-smile" style="color:#198754;"></i> Stats Sondages</a>
+            {% if perms.accounts.menu_rapports %}
+            <a href="{% url 'page_rapports' %}" class="menu-item" data-title="Exports"><i class="fas fa-file-export nav-icon"></i><span class="nav-text">Exports CSV / PDF</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_stats_demandes %}
+            <a href="{% url 'stats_demandes' %}" class="menu-item" data-title="Stats Demandes"><i class="fas fa-chart-bar nav-icon" style="color:#0d6efd;"></i><span class="nav-text">Stats Demandes</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_stats_sondages %}
+            <a href="{% url 'stats_sondages' %}" class="menu-item" data-title="Stats Sondages"><i class="fas fa-smile nav-icon" style="color:#198754;"></i><span class="nav-text">Stats Sondages</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_stats_satisfaction %}
+            <a href="{% url 'stats_satisfaction_services' %}" class="menu-item" data-title="Stats Satisfaction"><i class="fas fa-star-half-alt nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Stats Satisfaction</span></a>
+            {% endif %}
         </div>
         {% endif %}
 
+        <!-- PARAMETRES -->
         {% if perms.accounts.menu_parametres or perms.accounts.menu_param_admin or perms.accounts.menu_services or perms.accounts.menu_specialites or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation %}
-    <div class="module-title" onclick="toggleMenu('menu-parametres')">
-        <span><i class="fas fa-cogs"></i> Paramètres</span>
-        <i class="fas fa-chevron-down" id="icon-menu-parametres"></i>
-    </div>
-    <div class="submenu" id="menu-parametres">
-        {% if perms.accounts.menu_param_admin or perms.accounts.menu_services or perms.accounts.menu_specialites %}
-        <a href="{% url 'parametres_administratifs' %}" class="menu-item"><i class="fas fa-hospital-user"></i> Administratifs</a>
+        <div class="module-title" onclick="toggleMenu('menu-parametres')" data-title="Parametres">
+            <span style="display:flex;align-items:center;"><i class="fas fa-cogs nav-icon" style="color:#6c757d;"></i><span class="nav-text">Parametres</span></span>
+            <i class="fas fa-chevron-down nav-chevron" id="icon-menu-parametres"></i>
+        </div>
+        <div class="submenu" id="menu-parametres">
+            {% if perms.accounts.menu_param_admin or perms.accounts.menu_services or perms.accounts.menu_specialites %}
+            <a href="{% url 'parametres_administratifs' %}" class="menu-item" data-title="Admin"><i class="fas fa-hospital-user nav-icon" style="color:#1c5b96;"></i><span class="nav-text">Administratifs</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_parametres or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation %}
+            <a href="{% url 'parametres_logistique' %}" class="menu-item" data-title="Logistique"><i class="fas fa-truck nav-icon" style="color:#fd7e14;"></i><span class="nav-text">Logistique</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_modeles_pdf and magasin_actif %}
+            <a href="{% url 'modele_pdf_config' magasin_actif.id 'BS' %}" class="menu-item" data-title="PDF"><i class="fas fa-file-pdf nav-icon" style="color:#dc3545;"></i><span class="nav-text">Modeles PDF</span></a>
+            {% endif %}
+        </div>
         {% endif %}
-        {% if perms.accounts.menu_parametres or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation %}
-        <a href="{% url 'parametres_logistique' %}" class="menu-item"><i class="fas fa-truck"></i> Logistique</a>
-        {% endif %}
-        {% if perms.accounts.menu_modeles_pdf and magasin_actif %}
-        <a href="{% url 'modele_pdf_config' magasin_actif.id 'BS' %}" class="menu-item"><i class="fas fa-file-pdf" style="color:#dc3545;"></i> Modèles de documents PDF</a>
-        {% endif %}
-        {% if perms.accounts.menu_parametres_doc %}
-<a href="{% url 'accounts:config_documents_globaux' %}" class="menu-item">
-    <i class="fas fa-file-contract" style="color:#6f42c1;"></i> Config. Documents PDF
-</a>
-{% endif %}
-    </div>
-{% endif %}
 
+        <!-- SECURITE & ACCES -->
         {% if perms.accounts.menu_utilisateurs or perms.accounts.menu_roles or perms.accounts.menu_circuits_validation or perms.accounts.menu_journal_audit %}
-            <div class="module-title" onclick="toggleMenu('menu-securite')">
-                <span><i class="fas fa-shield-alt"></i> Sécurité & Accès</span>
-                <i class="fas fa-chevron-down" id="icon-menu-securite"></i>
-            </div>
-            <div class="submenu" id="menu-securite">
-                {% if perms.accounts.menu_utilisateurs %}
-                <a href="{% url 'accounts:page_utilisateurs' %}" class="menu-item"><i class="fas fa-users"></i> Utilisateurs</a>
-                {% endif %}
-                {% if perms.accounts.menu_roles %}
-                <a href="{% url 'accounts:page_roles' %}" class="menu-item"><i class="fas fa-user-shield"></i> Rôles & Permissions</a>
-                {% endif %}
-                {% if perms.accounts.menu_circuits_validation %}
-                <a href="{% url 'page_circuits_validation' %}" class="menu-item"><i class="fas fa-project-diagram"></i> Circuits Validation</a>
-                {% endif %}
-                {% if perms.accounts.menu_utilisateurs %}
-                <a href="{% url 'accounts:parametres_securite' %}" class="menu-item"><i class="fas fa-key"></i> Sécurité & Mots de passe</a>
-                {% endif %}
-                {% if perms.accounts.menu_journal_audit %}
-<a href="{% url 'accounts:journal_audit' %}" class="menu-item"><i class="fas fa-user-secret"></i> Journal & Audit</a>
-{% endif %}
-            </div>
+        <div class="module-title" onclick="toggleMenu('menu-securite')" data-title="Securite">
+            <span style="display:flex;align-items:center;"><i class="fas fa-shield-alt nav-icon" style="color:#0d47a1;"></i><span class="nav-text">Securite & Acces</span></span>
+            <i class="fas fa-chevron-down nav-chevron" id="icon-menu-securite"></i>
+        </div>
+        <div class="submenu" id="menu-securite">
+            {% if perms.accounts.menu_utilisateurs %}
+            <a href="{% url 'accounts:page_utilisateurs' %}" class="menu-item" data-title="Utilisateurs"><i class="fas fa-users nav-icon" style="color:#1c5b96;"></i><span class="nav-text">Utilisateurs</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_roles or user.is_superuser %}
+            <a href="{% url 'accounts:page_roles' %}" class="menu-item" data-title="Roles"><i class="fas fa-user-shield nav-icon" style="color:#0d47a1;"></i><span class="nav-text">Roles & Permissions</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_circuits_validation %}
+            <a href="{% url 'accounts:circuits_validation' %}" class="menu-item" data-title="Circuits"><i class="fas fa-project-diagram nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Circuits Validation</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_journal_audit %}
+            <a href="{% url 'accounts:journal_audit' %}" class="menu-item" data-title="Audit"><i class="fas fa-user-secret nav-icon" style="color:#6c757d;"></i><span class="nav-text">Journal & Audit</span></a>
+            {% endif %}
+        </div>
         {% endif %}
 
-        {% if user.is_superuser %}
-            <div class="module-title" onclick="toggleMenu('menu-saas')">
-                <span><i class="fas fa-cloud"></i> Configuration SaaS</span>
-                <i class="fas fa-chevron-down" id="icon-menu-saas"></i>
-            </div>
-            <div class="submenu" id="menu-saas">
-                <a href="{% url 'accounts:page_entreprises' %}" class="menu-item"><i class="fas fa-building" style="color:#fd7e14;"></i> Gestion des Entreprises</a>
-            </div>
-        {% endif %}
-
-        <div style="height: 50px;"></div>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════
@@ -850,7 +1051,7 @@
                         <span>{{ request.user.get_full_name|default:request.user.username }}</span>
                     </a>
 
-                    <form method="post" action="{% url 'accounts:logout' %}" style="margin: 0;" data-turbo="false">
+                    <form method="post" action="{% url 'accounts:custom_logout' %}" style="margin: 0;" data-turbo="false">
                         {% csrf_token %}
                         <button type="submit" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 14px; font-weight: bold; padding: 5px 10px; border-radius: 6px; transition: 0.2s; display: flex; align-items: center; gap: 5px;">
                             <i class="fas fa-sign-out-alt"></i> Déconnexion
@@ -916,90 +1117,97 @@
     {% block modals %}{% endblock %}
 
     <!-- ═══════════════════════════════════════════════════════════════
-         SCRIPT : MISE À JOUR DU MENU ACTIF (Turbo-compatible)
+         SCRIPT : MISE À JOUR DU MENU ACTIF & RESTAURATION D'ÉTAT
          ═══════════════════════════════════════════════════════════════ -->
     <script>
     (function() {
         'use strict';
 
-            function updateActiveMenu() {
-        const currentPath = window.location.pathname;
+        function updateActiveMenu() {
+            const currentPath = window.location.pathname;
 
-        // 1. NETTOYAGE TOTAL
-        document.querySelectorAll('.menu-item').forEach(el => {
-            el.classList.remove('active-link');
-        });
-        document.querySelectorAll('a.module-title').forEach(el => {
-            el.classList.remove('active-module');
-        });
-        document.querySelectorAll('.submenu').forEach(el => {
-            el.classList.remove('active');
-        });
-        document.querySelectorAll('.module-title i[id^="icon-menu-"]').forEach(el => {
-            el.classList.remove('fa-chevron-up');
-            el.classList.add('fa-chevron-down');
-        });
+            // 1. NETTOYAGE TOTAL
+            document.querySelectorAll('.menu-item').forEach(el => {
+                el.classList.remove('active-link');
+            });
+            document.querySelectorAll('a.module-title').forEach(el => {
+                el.classList.remove('active-module');
+            });
+            document.querySelectorAll('.submenu').forEach(el => {
+                el.classList.remove('active');
+            });
+            document.querySelectorAll('.module-title i[id^="icon-menu-"]').forEach(el => {
+                el.classList.remove('fa-chevron-up');
+                el.classList.add('fa-chevron-down');
+            });
 
-        // 2. TROUVER LE MEILLEUR LIEN ACTIF (le plus spécifique)
-        let bestLink = null;
-        let bestScore = 0;
+            // 2. TROUVER LE MEILLEUR LIEN ACTIF
+            let bestLink = null;
+            let bestScore = 0;
 
-        document.querySelectorAll('.menu-item').forEach(link => {
-            const href = link.getAttribute('href');
-            if (!href || href === '#' || href.startsWith('javascript')) return;
+            document.querySelectorAll('.menu-item').forEach(link => {
+                const href = link.getAttribute('href');
+                if (!href || href === '#' || href.startsWith('javascript')) return;
 
-            const linkPath = href.split('?')[0].replace(/\/+$/, '');
-            const currPath = currentPath.split('?')[0].replace(/\/+$/, '');
+                const linkPath = href.split('?')[0].replace(/\/+$/, '');
+                const currPath = currentPath.split('?')[0].replace(/\/+$/, '');
 
-            if (currPath === linkPath || currPath.startsWith(linkPath + '/')) {
-                const score = linkPath.length;
-                if (score > bestScore) {
-                    bestScore = score;
-                    bestLink = link;
+                if (currPath === linkPath || currPath.startsWith(linkPath + '/')) {
+                    const score = linkPath.length;
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestLink = link;
+                    }
+                }
+            });
+
+            // CORRECTION : forcer "Réceptions Commandes" quand on réceptionne
+            if (!bestLink && currentPath.includes('receptionner')) {
+                document.querySelectorAll('.menu-item').forEach(link => {
+                    const href = link.getAttribute('href') || '';
+                    if (href.includes('receptions')) {
+                        bestLink = link;
+                    }
+                });
+            }
+
+            if (bestLink) {
+                bestLink.classList.add('active-link');
+                const submenu = bestLink.closest('.submenu');
+                if (submenu) {
+                    submenu.classList.add('active');
+                    const icon = document.getElementById('icon-' + submenu.id);
+                    if (icon) {
+                        icon.classList.remove('fa-chevron-down');
+                        icon.classList.add('fa-chevron-up');
+                    }
                 }
             }
-        });
 
-        // ═══════════════════════════════════════════════════════════════
-        // CORRECTION : forcer "Réceptions Commandes" quand on réceptionne
-        // ═══════════════════════════════════════════════════════════════
-        if (!bestLink && currentPath.includes('receptionner')) {
-            document.querySelectorAll('.menu-item').forEach(link => {
-                const href = link.getAttribute('href') || '';
-                if (href.includes('receptions')) {
-                    bestLink = link;
+            // 3. LIENS DIRECTS
+            document.querySelectorAll('a.module-title').forEach(link => {
+                const href = link.getAttribute('href');
+                if (!href) return;
+                const linkPath = href.split('?')[0].replace(/\/+$/, '');
+                const currPath = currentPath.split('?')[0].replace(/\/+$/, '');
+                if (currPath === linkPath) {
+                    link.classList.add('active-module');
                 }
             });
         }
 
-        if (bestLink) {
-            bestLink.classList.add('active-link');
-            const submenu = bestLink.closest('.submenu');
-            if (submenu) {
-                submenu.classList.add('active');
-                const icon = document.getElementById('icon-' + submenu.id);
-                if (icon) {
-                    icon.classList.remove('fa-chevron-down');
-                    icon.classList.add('fa-chevron-up');
-                }
+        document.addEventListener('DOMContentLoaded', function() {
+            // RESTAURATION DE L'ÉTAT DU MENU (RÉDUIT/EXPANSÉ)
+            var isClosed = localStorage.getItem('nexuserp_sidebar_closed') === 'true';
+            var sb = document.getElementById('sidebar-main');
+            if (isClosed && window.innerWidth > 768) {
+                if (sb) sb.classList.add('desktop-closed');
             }
-        }
+            // Retire la classe anti-flash pour laisser le contrôle à desktop-closed
+            document.documentElement.classList.remove('sidebar-preload-closed');
 
-        // 3. LIENS DIRECTS (Accueil, Dashboard, Demandes...)
-        document.querySelectorAll('a.module-title').forEach(link => {
-            const href = link.getAttribute('href');
-            if (!href) return;
-            const linkPath = href.split('?')[0].replace(/\/+$/, '');
-            const currPath = currentPath.split('?')[0].replace(/\/+$/, '');
-            if (currPath === linkPath) {
-                link.classList.add('active-module');
-            }
+            updateActiveMenu();
         });
-    }
-
-                // Écouteurs (Turbo désactivé)
-        // document.addEventListener('turbo:load', updateActiveMenu);
-        document.addEventListener('DOMContentLoaded', updateActiveMenu);
     })();
     </script>
 
@@ -1007,25 +1215,33 @@
          SCRIPTS GLOBAUX
          ═══════════════════════════════════════════════════════════════ -->
     <script>
-        // ── Sidebar ──
+        // ── Sidebar : Gestion de l'ouverture et mémorisation ──
         function toggleMenu(menuId) {
             var menu = document.getElementById(menuId);
             var icon = document.getElementById('icon-' + menuId);
-            var isActive = menu.classList.contains('active');
+            var isActive = menu ? menu.classList.contains('active') : false;
+
             document.querySelectorAll('.submenu').forEach(function(sub) { sub.classList.remove('active'); });
             document.querySelectorAll('.module-title i[id^="icon-menu-"]').forEach(function(ic) { ic.classList.remove('fa-chevron-up'); ic.classList.add('fa-chevron-down'); });
-            if (!isActive) {
+
+            if (!isActive && menu) {
                 menu.classList.add('active');
                 if (icon) { icon.classList.remove('fa-chevron-down'); icon.classList.add('fa-chevron-up'); }
             }
         }
+
         function toggleSidebarMobile(event) {
             if (event) event.stopPropagation();
             if (window.innerWidth <= 768) {
                 document.querySelector('.sidebar').classList.toggle('mobile-open');
                 document.getElementById('mobile-overlay').classList.toggle('show');
             } else {
-                document.querySelector('.sidebar').classList.toggle('desktop-closed');
+                var sidebar = document.querySelector('.sidebar');
+                sidebar.classList.toggle('desktop-closed');
+                
+                // Mémorisation permanente dans le navigateur
+                var isClosed = sidebar.classList.contains('desktop-closed');
+                localStorage.setItem('nexuserp_sidebar_closed', isClosed);
             }
         }
 
@@ -1107,7 +1323,7 @@
         });
         document.addEventListener('DOMContentLoaded', updateNotifBadge);
 
-        // ── Mode Sombre (unifié login + app + BDD) ──
+        // ── Mode Sombre ──
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             var icon = document.getElementById('darkModeIcon');
@@ -1121,14 +1337,11 @@
                 icon.classList.add('fa-moon'); 
             }
             
-            // Sauvegarde local
             localStorage.setItem('nexuserp_dark_mode', isDark);
             
-            // Cookie pour transmission au login et au serveur
             var expires = new Date(Date.now() + 30 * 864e5).toUTCString();
             document.cookie = 'theme_pref=' + (isDark ? 'dark' : 'light') + '; expires=' + expires + '; path=/; SameSite=Lax';
             
-            // Sauvegarde BDD si connecté (silencieux)
             var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
             fetch('/accounts/api/save-theme/', {
                 method: 'POST',
@@ -1141,7 +1354,6 @@
         }
         
         function applyDarkMode() {
-            // Priorité : Cookie serveur > localStorage
             var m = document.cookie.match('(^|;) ?theme_pref=([^;]*)(;|$)');
             var cookieDark = m && decodeURIComponent(m[2]) === 'dark';
             var lsDark = localStorage.getItem('nexuserp_dark_mode') === 'true';
@@ -1156,29 +1368,10 @@
                 if (icon) { icon.classList.remove('fa-sun'); icon.classList.add('fa-moon'); }
             }
             
-            // Nettoie le preload une fois le CSS chargé
             document.documentElement.classList.remove('html-dark-preload');
         }
         
-                // Appliquer au chargement initial
         document.addEventListener('DOMContentLoaded', applyDarkMode);
-        // document.addEventListener('turbo:load', applyDarkMode);
-        
-                /* BLOC TURBO DESACTIVE - le dark mode reste géré par le script anti-flash dans <head>
-        document.addEventListener('turbo:before-render', function(event) {
-            var isDark = localStorage.getItem('nexuserp_dark_mode') === 'true';
-            var newBody = event.detail.newBody;
-            if (isDark) {
-                newBody.classList.add('dark-mode');
-                var newIcon = newBody.querySelector('#darkModeIcon');
-                if (newIcon) { newIcon.classList.remove('fa-moon'); newIcon.classList.add('fa-sun'); }
-            } else {
-                newBody.classList.remove('dark-mode');
-                var newIcon = newBody.querySelector('#darkModeIcon');
-                if (newIcon) { newIcon.classList.remove('fa-sun'); newIcon.classList.add('fa-moon'); }
-            }
-        });
-        */
 
         // ── Modal PDF Globale ──
         function nxOpenPdfModal(url, title) {
@@ -1224,32 +1417,29 @@
             }
         }
 
-        // ── Confirmations ──
+        // ── Confirmations (compatibilité + NxUX) ──
         function confirmerSuppression(arg1, message) {
             if (arg1 && typeof arg1.preventDefault === 'function') {
                 arg1.preventDefault();
                 const form = arg1.target.closest('form');
-                Swal.fire({
-                    title: 'Confirmer la suppression', text: message || 'Cette action est irréversible.', icon: 'warning',
-                    showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
-                    confirmButtonText: '<i class="fas fa-trash-alt"></i> Supprimer', cancelButtonText: 'Annuler', reverseButtons: true
-                }).then((result) => { if (result.isConfirmed && form) form.submit(); });
+                NxUX.confirmDelete(message, function () { if (form) form.submit(); });
             } else {
                 const formId = arg1;
-                Swal.fire({
-                    title: 'Confirmer la suppression', text: message || 'Cette action est irréversible.', icon: 'warning',
-                    showCancelButton: true, confirmButtonColor: '#dc3545', cancelButtonColor: '#6c757d',
-                    confirmButtonText: '<i class="fas fa-trash-alt"></i> Supprimer', cancelButtonText: 'Annuler', reverseButtons: true
-                }).then((result) => { if (result.isConfirmed) { const form = document.getElementById(formId); if (form) form.submit(); } });
+                NxUX.confirmDelete(message, function () {
+                    const form = document.getElementById(formId);
+                    if (form) form.submit();
+                });
             }
             return false;
         }
+
         function confirmerAction(url, message, icon) {
-            Swal.fire({
-                title: 'Confirmer', text: message || 'Voulez-vous continuer ?', icon: icon || 'warning',
-                showCancelButton: true, confirmButtonColor: '#1c5b96', cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Oui', cancelButtonText: 'Annuler'
-            }).then((result) => { if (result.isConfirmed) window.location.href = url; });
+            NxUX.confirm({
+                title: 'Confirmer',
+                text: message || 'Voulez-vous continuer ?',
+                icon: icon || 'warning',
+                onConfirm: function () { window.location.href = url; }
+            });
         }
 
         // ── Select2 global ──

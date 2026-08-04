@@ -8,39 +8,38 @@ logger = logging.getLogger(__name__)
 
 def magasin_requis(view_func):
     """
-    Remplace @module_stock_lock.
     Vérifie qu'un magasin actif est en session, ou en choisit un si unique.
+    Version mono-tenant.
     """
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
         if request.session.get('magasin_actif_id'):
             return view_func(request, *args, **kwargs)
 
-        from .services import StockService
         from .models import Magasin
-        entreprise = getattr(request, 'entreprise', None)
-        if not entreprise:
-            messages.error(request, "⛔ Aucune entreprise active.")
-            return redirect('/')
 
         user = request.user
         if user.is_superuser:
-            magasins = Magasin.objects.filter(entreprise=entreprise)
+            magasins = Magasin.objects.all()
         else:
-            magasins = user.profil.magasins_autorises.filter(entreprise=entreprise)
+            try:
+                magasins = user.profil.magasins_autorises.all()
+            except Exception:
+                magasins = Magasin.objects.none()
 
         if magasins.count() == 1:
             request.session['magasin_actif_id'] = str(magasins.first().id)
             return view_func(request, *args, **kwargs)
+
+        if magasins.count() == 0:
+            messages.error(request, "⛔ Vous n'avez accès à aucun magasin.")
+            return redirect('/')
 
         return render(request, 'stock/choix_magasin_obligatoire.html', {'url_voulue': request.path})
     return _wrapped_view
 
 
 def catch_errors(logger_ref=None, redirect_url='/', msg_generic="❌ Une erreur technique est survenue."):
-    """
-    Décorateur uniformisant la gestion des erreurs.
-    """
     def decorator(view_func):
         @wraps(view_func)
         def _wrapped_view(request, *args, **kwargs):

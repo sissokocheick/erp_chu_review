@@ -1,26 +1,18 @@
-# accounts/middleware.py
+# accounts/middleware.py — MONO-TENANT final
 import time
 from django.contrib.auth import logout
 from django.shortcuts import redirect
 from django.contrib import messages
-from django.http import HttpResponseRedirect
-from django.urls import resolve, reverse
-from accounts.models import Entreprise
-from core.managers import set_current_tenant
+from django.urls import resolve
 
 
 class AntiSpamMiddleware:
-    """
-    Anti-spam intelligent : ne compte que les requêtes POST non-AJAX.
-    """
+    """Anti-spam intelligent : ne compte que les requêtes POST."""
     def __init__(self, get_response):
         self.get_response = get_response
 
     def __call__(self, request):
         if request.user.is_authenticated and request.method == 'POST':
-            if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-                return self.get_response(request)
-
             LIMITE_REQUETES = 20
             FENETRE_TEMPS = 10
 
@@ -39,73 +31,11 @@ class AntiSpamMiddleware:
         return self.get_response(request)
 
 
-class SaaSMiddleware:
-    """
-    Middleware multi-tenant :
-    - Superuser : peut naviguer même si aucune entreprise active (fallback)
-    - Utilisateur normal : déconnecté seulement si vraiment orphelin
-    """
-    def __init__(self, get_response):
-        self.get_response = get_response
-
-    def __call__(self, request):
-        set_current_tenant(None)
-        request.entreprise = None
-
-        if request.user.is_authenticated:
-            if request.user.is_superuser:
-                eid = request.session.get('entreprise_id')
-                if eid:
-                    try:
-                        request.entreprise = Entreprise.objects.get(id=eid, est_active=True)
-                    except Entreprise.DoesNotExist:
-                        request.session.pop('entreprise_id', None)
-                        request.entreprise = None
-
-                # 🔧 FALLBACK : si aucune active, prendre la première (même inactive)
-                if not request.entreprise:
-                    first = Entreprise.objects.filter(est_active=True).first()
-                    if not first:
-                        first = Entreprise.objects.first()
-                    if first:
-                        request.session['entreprise_id'] = first.id
-                        request.entreprise = first
-                    else:
-                        # ✅ Message clair quand aucune entreprise n'existe
-                        messages.warning(
-                            request,
-                            "⚠️ Aucune entreprise n'existe dans le système. Veuillez en créer une depuis la page de gestion des entreprises."
-                        )
-            else:
-                profil = getattr(request.user, 'profil', None)
-                if profil and profil.entreprise:
-                    if profil.entreprise.est_active:
-                        request.entreprise = profil.entreprise
-                    else:
-                        request.entreprise = profil.entreprise
-                else:
-                    logout(request)
-                    request.session.flush()
-                    messages.error(
-                        request,
-                        "⛔ Votre compte n'est associé à aucune entreprise. Contactez l'administrateur."
-                    )
-                    return redirect('accounts:custom_login')
-
-            if request.entreprise:
-                set_current_tenant(request.entreprise)
-
-        try:
-            response = self.get_response(request)
-        finally:
-            set_current_tenant(None)
-
-        return response
-
-
 class PasswordChangeMiddleware:
-    """Bloque tout accès tant que l'utilisateur n'a pas changé son mot de passe initial."""
-
+    """
+    Bloque l'accès tant que l'utilisateur n'a pas changé son mot de passe initial.
+    Vérifie BOTH session ET base (pour les réinit admin en temps réel).
+    """
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -113,23 +43,29 @@ class PasswordChangeMiddleware:
         if not request.user.is_authenticated:
             return self.get_response(request)
 
-        if not request.session.get('must_change_password'):
+        must_change = request.session.get('must_change_password', False)
+        # CORRECTION : si la session dit non, vérifier la base (réinit admin)
+        if not must_change:
+            try:
+                if request.user.profil.doit_changer_mdp:
+                    request.session['must_change_password'] = True
+                    must_change = True
+            except Exception:
+                pass
+        if not must_change:
             return self.get_response(request)
 
-        # ✅ CORRECTION : utiliser resolve() + reverse() au lieu de hardcoder /accounts/
         try:
             current_url_name = resolve(request.path_info).url_name
         except Exception:
             current_url_name = None
 
-        # URLs autorisées même avec must_change_password
         allowed_url_names = [
             'custom_login',
             'logout',
             'changer_mdp_obligatoire',
         ]
 
-        # Autoriser les fichiers statiques et médias
         if request.path.startswith(('/static/', '/media/')):
             return self.get_response(request)
 
@@ -168,3 +104,35 @@ class ThemeMiddleware:
                 samesite='Lax'
             )
         return response
+
+
+class MagasinAutoSelectMiddleware:
+    """
+    Comportement mono-tenant :
+    - 1 magasin  → sélection automatique (silencieuse)
+    - Plusieurs  → l'utilisateur choisit via le formulaire existant
+    - Le choix reste en session
+    - Révalidation : si le magasin en session n'est plus autorisé, on le retire
+    """
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        if request.user.is_authenticated:
+            try:
+                magasins = request.user.profil.magasins_autorises.all()
+                magasin_ids = [str(m.id) for m in magasins]
+                actif_id = request.session.get('magasin_actif_id')
+
+                if not actif_id and len(magasin_ids) == 1:
+                    # Sélection automatique
+                    request.session['magasin_actif_id'] = magasin_ids[0]
+                elif actif_id and actif_id not in magasin_ids:
+                    # CORRECTION : le magasin en session n'est plus autorisé
+                    request.session.pop('magasin_actif_id', None)
+                    if len(magasin_ids) == 1:
+                        request.session['magasin_actif_id'] = magasin_ids[0]
+            except Exception:
+                pass
+
+        return self.get_response(request)

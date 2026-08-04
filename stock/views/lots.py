@@ -5,22 +5,19 @@ from django.http import JsonResponse
 from .catalogue import get_magasins_autorises
 from ..models import Article, StockItem
 
-
 @login_required(login_url='/auth/login/')
 def api_lots_disponibles(request, article_id, magasin_id):
     """
     Retourne les lots disponibles (StockItem) pour un article dans un magasin.
     Appel AJAX depuis le formulaire de sortie.
     """
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasins_autorises = get_magasins_autorises(request)
     if not magasins_autorises.filter(id=magasin_id).exists():
         return JsonResponse({'error': 'Magasin non autorisé'}, status=403)
 
-    # CORRECTION : vérifier que l'article appartient à l'entreprise
     article = Article.objects.filter(
-        id=article_id,
-        entreprise=entreprise
+        id=article_id
     ).first()
     if not article:
         return JsonResponse({'error': 'Article non trouvé ou non autorisé'}, status=403)

@@ -17,10 +17,9 @@ from decimal import Decimal
 from accounts.permissions import verifier_permission
 from ..models import (
     Mouvement, StockItem, Service, DemandeMateriel, LigneDemande,
-    AccuseReception, Magasin, Article, BonMouvement, Commande, LivraisonPartielle,
-)
+    AccuseReception, Magasin, Article, BonMouvement, Commande, LivraisonPartielle)
 from ..decorators import magasin_requis, catch_errors
-from ..services import StockService, PDFService
+# from ..services import StockService, PDFService  # SUPPRIMÉ : non utilisés dans ce fichier
 from .catalogue import paginer, get_magasins_autorises
 
 logger = logging.getLogger(__name__)
@@ -62,16 +61,12 @@ def _get_magasin_filtre(request):
 @magasin_requis
 @catch_errors(redirect_url='page_rapports')
 def page_rapports(request):
-    entreprise = request.entreprise
-    services = Service.objects.filter(
-        entreprise=entreprise
-    ).exclude(nom="DESTRUCTION / PÉREMPTIONS").order_by('nom')
+    services = Service.objects.exclude(nom="DESTRUCTION / PÉREMPTIONS").order_by('nom')
 
-    # ✅ AJOUT : passer le magasin_actif au template pour affichage
     magasin_actif_id = _get_magasin_filtre(request)
     magasin_actif = None
     if magasin_actif_id:
-        magasin_actif = Magasin.objects.filter(id=magasin_actif_id, entreprise=entreprise).first()
+        magasin_actif = Magasin.objects.filter(id=magasin_actif_id).first()
 
     return render(request, 'stock/rapports.html', {
         'services': services,
@@ -85,7 +80,6 @@ def page_rapports(request):
 @catch_errors(redirect_url='page_rapports')
 def export_stock_excel(request):
     """Export CSV de l'état du stock — FILTRÉ par magasin actif."""
-    entreprise = request.entreprise
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="Etat_du_Stock.csv"'
     response.write('\ufeff'.encode('utf8'))
@@ -99,9 +93,8 @@ def export_stock_excel(request):
 
     stocks = StockItem.objects.select_related(
         'article__famille', 'magasin'
-    ).filter(magasin__entreprise=entreprise)
+    ).all()
 
-    # ✅ CORRECTION : filtrer par magasin actif
     magasin_id = _get_magasin_filtre(request)
     if magasin_id:
         stocks = stocks.filter(magasin_id=magasin_id)
@@ -142,7 +135,6 @@ def export_stock_excel(request):
 @catch_errors(redirect_url='page_rapports')
 def export_commandes_excel(request):
     """Export CSV des commandes — FILTRÉ par magasin actif."""
-    entreprise = request.entreprise
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="Historique_Commandes.csv"'
     response.write('\ufeff'.encode('utf8'))
@@ -154,9 +146,8 @@ def export_commandes_excel(request):
     ])
     commandes = Commande.objects.select_related(
         'fournisseur', 'cree_par', 'magasin'
-    ).filter(magasin__entreprise=entreprise).order_by('-date_commande')
+    ).all().order_by('-date_commande')
 
-    # ✅ CORRECTION : filtrer par magasin actif
     magasin_id = _get_magasin_filtre(request)
     if magasin_id:
         commandes = commandes.filter(magasin_id=magasin_id)
@@ -178,7 +169,6 @@ def export_commandes_excel(request):
 @catch_errors(redirect_url='page_rapports')
 def export_mouvements_excel(request):
     """Export CSV de l'historique complet des mouvements — FILTRÉ par magasin actif."""
-    entreprise = request.entreprise
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="Historique_Mouvements.csv"'
     response.write('\ufeff'.encode('utf8'))
@@ -191,9 +181,8 @@ def export_mouvements_excel(request):
 
     mouvements = Mouvement.objects.select_related(
         'article', 'magasin', 'utilisateur', 'service_demandeur', 'fournisseur'
-    ).filter(magasin__entreprise=entreprise).order_by('-date_mouvement')
+    ).all().order_by('-date_mouvement')
 
-    # ✅ DÉJÀ CORRECT : filtrer par magasin actif
     magasin_id = _get_magasin_filtre(request)
     if magasin_id:
         mouvements = mouvements.filter(magasin_id=magasin_id)
@@ -222,7 +211,6 @@ def export_mouvements_excel(request):
 @catch_errors(redirect_url='page_rapports')
 def export_articles_excel(request):
     """Export CSV du catalogue articles complet — PAS de filtre magasin (catalogue global)."""
-    entreprise = request.entreprise
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = 'attachment; filename="Catalogue_Articles.csv"'
     response.write('\ufeff'.encode('utf8'))
@@ -233,11 +221,7 @@ def export_articles_excel(request):
         'Seuil Minimum', 'Seuil Critique', 'Seuil Maximum', 'Prix de Référence (FCFA)', 'Actif'
     ])
 
-    articles = Article.objects.select_related('famille').filter(
-        entreprise=entreprise
-    ).order_by('designation')
-
-    # ❌ PAS DE FILTRE MAGASIN — c'est le catalogue global
+    articles = Article.objects.select_related('famille').all().order_by('designation')
 
     for a in articles:
         unite_achat = getattr(a, 'unite_achat', None) or a.unite_distribution or "—"
@@ -259,82 +243,11 @@ def export_articles_excel(request):
 
 
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_rapports')
-@magasin_requis
-@catch_errors(redirect_url='page_rapports')
-def rapport_consommation_pdf(request):
-    """Rapport PDF de consommation — FILTRÉ par magasin actif."""
-    entreprise = request.entreprise
-    service_id = request.GET.get('service')
-    date_range = request.GET.get('date_range')
-
-    aujourdhui = timezone.now().date()
-    date_debut = aujourdhui.replace(day=1)
-    date_fin = aujourdhui
-
-    if date_range:
-        try:
-            dates = date_range.split(' - ')
-            if len(dates) == 2:
-                date_debut = datetime.strptime(dates[0], '%d/%m/%Y').date()
-                date_fin = datetime.strptime(dates[1], '%d/%m/%Y').date()
-        except ValueError:
-            pass
-
-    mouvements = Mouvement.objects.filter(
-        type_mouvement='SORTIE',
-        date_mouvement__date__gte=date_debut,
-        date_mouvement__date__lte=date_fin,
-        magasin__entreprise=entreprise
-    )
-
-    # ✅ DÉJÀ CORRECT : filtrer par magasin actif
-    magasin_id = _get_magasin_filtre(request)
-    if magasin_id:
-        mouvements = mouvements.filter(magasin_id=magasin_id)
-
-    service_cible = None
-    if service_id:
-        service_cible = get_object_or_404(
-            Service, id=service_id, entreprise=entreprise
-        )
-        mouvements = mouvements.filter(service_demandeur=service_cible)
-    else:
-        mouvements = mouvements.exclude(
-            service_demandeur__nom="DESTRUCTION / PÉREMPTIONS"
-        )
-
-    consommations = mouvements.values(
-        'article__reference', 'article__designation',
-        'article__unite_distribution', 'article__famille__intitule'
-    ).annotate(
-        total_sorti=Sum('quantite')
-    ).order_by('article__famille__intitule', '-total_sorti')
-
-    context = {
-        'consommations': consommations,
-        'date_debut': date_debut,
-        'date_fin': date_fin,
-        'service': service_cible,
-        'date_impression': timezone.now(),
-        'edite_par': request.user
-    }
-    html_string = render_to_string('stock/pdf_rapport_consommation.html', context)
-    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
-
-    response = HttpResponse(pdf_file, content_type='application/pdf')
-    nom_fichier = f"Consommation_{service_cible.nom if service_cible else 'Globale'}_{date_debut}_au_{date_fin}.pdf"
-    response['Content-Disposition'] = f'inline; filename="{nom_fichier}"'
-    return response
-
-
-@login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_stats_demandes')
 @magasin_requis
 @catch_errors(redirect_url='page_rapports')
 def stats_demandes(request):
     """Statistiques des demandes — FILTRÉ par magasin actif."""
-    entreprise = request.entreprise
     date_range = request.GET.get('date_range', '')
     service_id = request.GET.get('service', '')
     periode = request.GET.get('periode', 'mois')
@@ -342,18 +255,15 @@ def stats_demandes(request):
     date_debut, date_fin = parse_date_range(date_range, default_days=365)
 
     qs_demandes = DemandeMateriel.objects.filter(
-        magasin_cible__entreprise=entreprise,
         date_demande__date__gte=date_debut,
         date_demande__date__lte=date_fin
     ).exclude(statut__in=['BROUILLON', 'ANNULEE'])
 
     qs_lignes = LigneDemande.objects.filter(
-        demande__magasin_cible__entreprise=entreprise,
         demande__date_demande__date__gte=date_debut,
         demande__date_demande__date__lte=date_fin
     ).exclude(demande__statut__in=['BROUILLON', 'ANNULEE'])
 
-    # ✅ CORRECTION : filtrer par magasin actif
     magasin_id = _get_magasin_filtre(request)
     if magasin_id:
         qs_demandes = qs_demandes.filter(magasin_cible_id=magasin_id)
@@ -411,17 +321,16 @@ def stats_demandes(request):
         chart_evolution_labels = json.dumps([e['periode'].strftime('%d/%m/%Y') for e in evolution])
     chart_evolution_data = json.dumps([e['nb_demandes'] for e in evolution])
 
-    # ✅ AJOUT : récupérer le magasin actif pour l'affichage
     magasin_actif_id = _get_magasin_filtre(request)
     magasin_actif = None
     if magasin_actif_id:
-        magasin_actif = Magasin.objects.filter(id=magasin_actif_id, entreprise=entreprise).first()
+        magasin_actif = Magasin.objects.filter(id=magasin_actif_id).first()
 
     context = {
         'date_range': date_range,
         'periode': periode,
         'service_id': service_id,
-        'services': Service.objects.filter(entreprise=entreprise).order_by('nom'),
+        'services': Service.objects.all().order_by('nom'),
         'total_demandes': total_demandes,
         'taux_traitement': taux_traitement,
         'top_services': top_services,
@@ -440,7 +349,6 @@ def stats_demandes(request):
 @catch_errors(redirect_url='page_rapports')
 def stats_sondages(request):
     """Statistiques des sondages — FILTRÉ par magasin actif."""
-    entreprise = request.entreprise
     date_range = request.GET.get('date_range', '')
     service_id = request.GET.get('service', '')
 
@@ -450,12 +358,10 @@ def stats_sondages(request):
         est_signe=True,
         date_reception__date__gte=date_debut,
         date_reception__date__lte=date_fin,
-        livraison__demande__magasin_cible__entreprise=entreprise
     ).select_related(
         'livraison__demande__service_demandeur', 'receptionne_par'
     )
 
-    # ✅ CORRECTION : filtrer par magasin actif
     magasin_id = _get_magasin_filtre(request)
     if magasin_id:
         qs_signes = qs_signes.filter(livraison__demande__magasin_cible_id=magasin_id)
@@ -477,7 +383,6 @@ def stats_sondages(request):
     note_moyenne = round(note_moyenne, 1)
 
     qs_tous_accuses = AccuseReception.objects.filter(
-        livraison__demande__magasin_cible__entreprise=entreprise,
         livraison__date_livraison__date__gte=date_debut,
         livraison__date_livraison__date__lte=date_fin
     )
@@ -485,7 +390,6 @@ def stats_sondages(request):
         qs_tous_accuses = qs_tous_accuses.filter(
             livraison__demande__service_demandeur_id=int(service_id)
         )
-    # ✅ CORRECTION : filtrer par magasin actif aussi ici
     if magasin_id:
         qs_tous_accuses = qs_tous_accuses.filter(livraison__demande__magasin_cible_id=magasin_id)
 
@@ -546,16 +450,15 @@ def stats_sondages(request):
         'livraison__demande', 'livraison__livre_par'
     ).order_by('-date_reception')[:15]
 
-    # ✅ AJOUT : récupérer le magasin actif pour l'affichage
     magasin_actif_id = _get_magasin_filtre(request)
     magasin_actif = None
     if magasin_actif_id:
-        magasin_actif = Magasin.objects.filter(id=magasin_actif_id, entreprise=entreprise).first()
+        magasin_actif = Magasin.objects.filter(id=magasin_actif_id).first()
 
     context = {
         'date_range': date_range,
         'service_id': service_id,
-        'services': Service.objects.filter(entreprise=entreprise).order_by('nom'),
+        'services': Service.objects.all().order_by('nom'),
         'total_reponses': total_reponses,
         'total_accuses_crees': total_accuses_crees,
         'taux_reponse': taux_reponse,
@@ -582,7 +485,6 @@ def stats_sondages(request):
 @catch_errors(redirect_url='page_rapports')
 def api_details_stats(request):
     try:
-        entreprise = request.entreprise
         detail_type = request.GET.get('type')
         identifier = request.GET.get('id', '')
         page = max(1, int(request.GET.get('page', 1)))
@@ -594,7 +496,6 @@ def api_details_stats(request):
         periode = request.GET.get('periode', 'mois')
         date_debut, date_fin = parse_date_range(date_range, default_days=365)
 
-        # ✅ CORRECTION : filtrer par magasin actif dès le départ
         magasin_id = _get_magasin_filtre(request)
 
         data = []
@@ -604,12 +505,10 @@ def api_details_stats(request):
                            'services_actifs', 'articles_global', 'articles_par_service', 'evolution']:
 
             qs = DemandeMateriel.objects.filter(
-                magasin_cible__entreprise=entreprise,
                 date_demande__date__gte=date_debut,
                 date_demande__date__lte=date_fin
             ).exclude(statut__in=['BROUILLON', 'ANNULEE'])
 
-            # ✅ CORRECTION : filtrer par magasin actif
             if magasin_id:
                 qs = qs.filter(magasin_cible_id=magasin_id)
 
@@ -754,7 +653,6 @@ def api_details_stats(request):
 @catch_errors(redirect_url='page_rapports')
 def api_details_sondages(request):
     try:
-        entreprise = request.entreprise
         page = max(1, int(request.GET.get('page', 1)))
         per_page = 20
         offset = (page - 1) * per_page
@@ -769,7 +667,6 @@ def api_details_sondages(request):
             est_signe=True,
             date_reception__date__gte=date_debut,
             date_reception__date__lte=date_fin,
-            livraison__demande__magasin_cible__entreprise=entreprise
         ).select_related(
             'livraison__demande__service_demandeur',
             'livraison__livre_par',
@@ -777,7 +674,6 @@ def api_details_sondages(request):
             'livraison__demande__demandeur'
         )
 
-        # ✅ CORRECTION : filtrer par magasin actif
         magasin_id = _get_magasin_filtre(request)
         if magasin_id:
             qs = qs.filter(livraison__demande__magasin_cible_id=magasin_id)
@@ -838,16 +734,13 @@ def api_details_sondages(request):
 @catch_errors(redirect_url='page_rapports')
 def api_detail_demande(request, demande_id):
     try:
-        entreprise = request.entreprise
         demande = get_object_or_404(
             DemandeMateriel.objects.select_related(
                 'service_demandeur', 'demandeur', 'magasin_cible',
                 'valide_par', 'valide_par_chef', 'cloture_par', 'bon_sortie_lie'
             ),
-            id=demande_id, magasin_cible__entreprise=entreprise
-        )
+            id=demande_id)
 
-        # ✅ CORRECTION : vérifier que la demande appartient au magasin actif
         magasin_id = _get_magasin_filtre(request)
         if magasin_id and demande.magasin_cible_id != int(magasin_id):
             return JsonResponse({'error': 'Cette demande n\'appartient pas au magasin sélectionné.'}, status=403)
@@ -909,7 +802,6 @@ def api_detail_demande(request, demande_id):
 @catch_errors(redirect_url='page_rapports')
 def export_sondages_csv(request):
     """Export CSV des sondages — FILTRÉ par magasin actif."""
-    entreprise = request.entreprise
     date_range = request.GET.get('date_range', '')
     service_id = request.GET.get('service', '')
 
@@ -919,14 +811,12 @@ def export_sondages_csv(request):
         est_signe=True,
         date_reception__date__gte=date_debut,
         date_reception__date__lte=date_fin,
-        livraison__demande__magasin_cible__entreprise=entreprise
     ).select_related(
         'livraison__demande__service_demandeur',
         'livraison__livre_par',
         'receptionne_par'
     ).order_by('-date_reception')
 
-    # ✅ CORRECTION : filtrer par magasin actif
     magasin_id = _get_magasin_filtre(request)
     if magasin_id:
         qs = qs.filter(livraison__demande__magasin_cible_id=magasin_id)
@@ -974,31 +864,24 @@ def export_sondages_csv(request):
     return response
 
 
-# ═══════════════════════════════════════════════════════════════════════════════
-# NOUVELLE VUE : Statistiques de Satisfaction par Service
-# ═══════════════════════════════════════════════════════════════════════════════
-
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_rapports')
+@verifier_permission('accounts.menu_stats_satisfaction')
 @magasin_requis
 @catch_errors(redirect_url='page_rapports')
 def stats_satisfaction_services(request):
     """Statistiques de satisfaction par service — FILTRÉ par magasin actif."""
-    entreprise = request.entreprise
     date_range = request.GET.get('date_range', '')
     service_id = request.GET.get('service', '')
 
     date_debut, date_fin = parse_date_range(date_range, default_days=365)
 
-    services = Service.objects.filter(entreprise=entreprise).order_by('nom')
+    services = Service.objects.all().order_by('nom')
 
     qs_demandes = DemandeMateriel.objects.filter(
-        magasin_cible__entreprise=entreprise,
         date_demande__date__gte=date_debut,
         date_demande__date__lte=date_fin
     ).exclude(statut__in=['BROUILLON', 'ANNULEE'])
 
-    # ✅ CORRECTION : filtrer par magasin actif
     magasin_id = _get_magasin_filtre(request)
     if magasin_id:
         qs_demandes = qs_demandes.filter(magasin_cible_id=magasin_id)
@@ -1022,8 +905,7 @@ def stats_satisfaction_services(request):
             livraison__in=livraisons,
             est_signe=True,
             date_reception__date__gte=date_debut,
-            date_reception__date__lte=date_fin,
-        )
+            date_reception__date__lte=date_fin)
         total_accuses = accuses.count()
 
         sat = accuses.filter(satisfait=True).count()
@@ -1058,23 +940,21 @@ def stats_satisfaction_services(request):
     g_taux_rep = round((g_total_accuses / g_total_livraisons) * 100, 1) if g_total_livraisons else 0
     g_note = ((g_sat * 4.5) + (g_neut * 3) + (g_insat * 1.5)) / g_total_accuses if g_total_accuses else 0
 
-    # Filtre pour les graphiques : services ayant au moins 1 accusé
     svc_avec_data = [s for s in stats_services if s['total_accuses'] > 0]
     labels = [s['service'].nom for s in svc_avec_data]
     data_sat = [s['taux_satisfaction'] for s in svc_avec_data]
     data_rep = [s['taux_reponse'] for s in svc_avec_data]
     data_notes = [s['note_moyenne'] for s in svc_avec_data]
 
-    # ✅ AJOUT : récupérer le magasin actif pour l'affichage
     magasin_actif_id = _get_magasin_filtre(request)
     magasin_actif = None
     if magasin_actif_id:
-        magasin_actif = Magasin.objects.filter(id=magasin_actif_id, entreprise=entreprise).first()
+        magasin_actif = Magasin.objects.filter(id=magasin_actif_id).first()
 
     context = {
         'date_range': date_range,
         'service_id': service_id,
-        'services': Service.objects.filter(entreprise=entreprise).order_by('nom'),
+        'services': Service.objects.all().order_by('nom'),
         'stats_services': stats_services,
         'global': {
             'total_demandes': g_total_demandes,

@@ -7,7 +7,21 @@
 <style>
 @page {
     size: A4;
-    margin: 10mm 10mm 2mm 10mm; 
+    margin: 10mm 10mm 18mm 10mm;
+    @bottom-center {
+        content: "{{ pdf_config.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+    }
+    @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+    }
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -20,7 +34,7 @@ body {
 .page-flex {
     display: flex;
     flex-direction: column;
-    min-height: 282mm;
+    min-height: 262mm;
 }
 .content-main { flex: 1 1 auto; }
 .bloc-bas {
@@ -80,27 +94,6 @@ body {
     font-weight: bold;
     background-color: #f0f0f0;
 }
-.pied-trait {
-    border: none;
-    margin: 0.1mm 0;
-}
-.pied-texte {
-    text-align: center;
-    font-size: 7pt;
-    color: #1c5b96;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-.pagination {
-    text-align: right;
-    font-size: 7pt;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-/* Gestion automatique des numéros de pages */
-.pagination::after {
-    content: counter(page) " / " counter(pages);
-}
 img { max-width: 100%; height: auto; }
 </style>
 </head>
@@ -110,27 +103,21 @@ img { max-width: 100%; height: auto; }
   <div class="content-main">
 
     <div>
-      {% if pdf_config.cartouche.afficher_republique or pdf_config.cartouche.afficher_devise %}
       <table class="en-tete-etatique">
         <tr>
           <td style="width:50%; vertical-align:middle; text-align:left;">
-            {% if pdf_config.cartouche.afficher_republique %}
-              <div style="display:inline-block; text-align:center;">
-                <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
-              </div>
-            {% endif %}
+            <div style="display:inline-block; text-align:center;">
+              <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
+            </div>
           </td>
           <td style="width:50%; vertical-align:middle; text-align:right;">
-            {% if pdf_config.cartouche.afficher_republique %}
-              <div style="display:inline-block; text-align:center;">
-                <strong>République de Côte d'Ivoire</strong><br>
-                <em>Union - Discipline - Travail</em>
-              </div>
-            {% endif %}
+            <div style="display:inline-block; text-align:center;">
+              <strong>République de Côte d'Ivoire</strong><br>
+              <em>Union - Discipline - Travail</em>
+            </div>
           </td>
         </tr>
       </table>
-      {% endif %}
 
       <table class="cartouche">
         <tr>
@@ -140,25 +127,24 @@ img { max-width: 100%; height: auto; }
             {% endif %}
           </td>
           <td style="width:50%; text-align:center; vertical-align:middle; border-left:none;">
-            {% if pdf_config.metadonnees.ps2_label %}
-              <div style="font-size:10pt; font-weight:bold;">{{ pdf_config.metadonnees.ps2_label }}</div>
+            {% if pdf_config.ps2_label %}
+              <div style="font-size:10pt; font-weight:bold;">{{ pdf_config.ps2_label }}</div>
               <div style="border-top:1px solid #000; margin:1mm -2mm;"></div>
             {% endif %}
             <div style="font-size:15pt; font-weight:bold; text-transform:uppercase;">BON DE SORTIE</div>
             <div style="font-size:13pt; font-weight:bold; text-transform:uppercase;">HORS STOCK</div>
           </td>
           <td style="width:25%; vertical-align:top; text-align:left; border-left:none; font-size:9pt; font-weight:bold;">
-            {% if pdf_config.metadonnees.code_document %}Code : {{ pdf_config.metadonnees.code_document }}<br>{% endif %}
-            {% if pdf_config.metadonnees.date_creation_doc %}Créé le : {{ pdf_config.metadonnees.date_creation_doc }}<br>{% endif %}
-            {% if pdf_config.metadonnees.date_revision_doc %}Révisé le : {{ pdf_config.metadonnees.date_revision_doc }}<br>{% endif %}
-            {% if pdf_config.metadonnees.version_doc %}Version : {{ pdf_config.metadonnees.version_doc }}{% endif %}
+            {% if pdf_config.code_document %}Code : {{ pdf_config.code_document }}<br>{% endif %}
+            {% if pdf_config.date_creation_doc %}Créé le : {{ pdf_config.date_creation_doc }}<br>{% endif %}
+            {% if pdf_config.date_revision_doc %}Révisé le : {{ pdf_config.date_revision_doc }}<br>{% endif %}
+            {% if pdf_config.version_doc %}Version : {{ pdf_config.version_doc }}{% endif %}
           </td>
         </tr>
       </table>
 
       <table class="service-infos">
         <tr>
-          {# ── Case SERVICE OU DESTINATAIRE ── #}
           {% if service %}
           <td style="width:32%; border:2px solid #000; vertical-align:middle; text-align:center; padding:1.5mm;">
             <div style="font-size:7pt; font-weight:bold; text-transform:uppercase; letter-spacing:1px; color:#555; margin-bottom:0.5mm;">DESTINATAIRE</div>
@@ -173,29 +159,12 @@ img { max-width: 100%; height: auto; }
           <td style="width:32%;"></td>
           {% endif %}
 
-          {# Espace vide entre les deux cases #}
           <td style="width:2%; border:none;"></td>
 
-          {# ── Case FOURNISSEUR ── #}
-          {% if fournisseur %}
-          <td style="width:32%; border:2px solid #000; vertical-align:middle; text-align:center; padding:1.5mm;">
-            <div style="font-size:7pt; font-weight:bold; text-transform:uppercase; letter-spacing:1px; color:#555; margin-bottom:0.5mm;">FOURNISSEUR</div>
-            <div style="font-size:9pt; font-weight:bold;">{{ fournisseur.raison_sociale }}</div>
-            {% if fournisseur.telephone %}
-            <div style="font-size:7.5pt; margin-top:1mm;"><em>Tél :</em> {{ fournisseur.telephone }}</div>
-            {% endif %}
-            {% if fournisseur.email %}
-            <div style="font-size:7.5pt; margin-top:0.5mm;"><em>Email :</em> {{ fournisseur.email }}</div>
-            {% endif %}
-          </td>
-          {% else %}
           <td style="width:32%;"></td>
-          {% endif %}
 
-          {# Espace vide entre la case Fournisseur et la Date #}
           <td style="width:2%; border:none;"></td>
 
-          {# ── Case BON N° / DATE ── #}
           <td style="width:32%; border:none; vertical-align:middle; text-align:right; padding:0;">
             <div style="line-height:1.6; font-size:10pt;">
               <strong><em>Bon N° : <span style="font-size:11pt;">{{ bon.numero_bon }}</span></em></strong><br>
@@ -232,14 +201,11 @@ img { max-width: 100%; height: auto; }
   </div>
 
   <div class="bloc-bas">
-    {# ── 3 SIGNATURES ── #}
     <div style="width:100%; font-size:8pt; margin-bottom:2mm; display:flex; justify-content:space-between; align-items:flex-start;">
-      
-      {# 1. Sous-Directeur de la Logistique #}
+
       <div style="width:30%; text-align:center;">
         <div style="font-weight:bold; text-transform:uppercase; font-size:9pt;">Sous-Directeur de la Logistique</div>
-        {# Espace ajouté pour la signature #}
-        <div style="height: 15mm;"></div> 
+        <div style="height: 15mm;"></div>
         {% if signatures_config %}
           {% for sig in signatures_config %}
             {% if sig.label == "Sous-Directeur Logistique" %}
@@ -257,11 +223,9 @@ img { max-width: 100%; height: auto; }
         {% endif %}
       </div>
 
-      {# 2. Service Économique #}
       <div style="width:30%; text-align:center;">
         <div style="font-weight:bold; text-transform:uppercase; font-size:9pt;">Service Économique</div>
-        {# Espace ajouté pour la signature #}
-        <div style="height: 15mm;"></div> 
+        <div style="height: 15mm;"></div>
         {% if signatures_config %}
           {% for sig in signatures_config %}
             {% if sig.label == "Service Economique" %}
@@ -279,11 +243,9 @@ img { max-width: 100%; height: auto; }
         {% endif %}
       </div>
 
-      {# 3. Service Utilisateur #}
       <div style="width:30%; text-align:center;">
         <div style="font-weight:bold; text-transform:uppercase; font-size:9pt;">Service Utilisateur</div>
-        {# Espace ajouté pour la signature #}
-        <div style="height: 15mm;"></div> 
+        <div style="height: 15mm;"></div>
         {% if signatures_config %}
           {% for sig in signatures_config %}
             {% if sig.label == "Service Utilisateur" %}
@@ -302,15 +264,6 @@ img { max-width: 100%; height: auto; }
       </div>
 
     </div>
-
-    {% if pdf_config.pied_de_page.afficher_trait_couleur %}
-    <hr class="pied-trait" style="border-top:2px solid {{ pdf_config.pied_de_page.trait_couleur|default:'#17a2b8' }};">
-    {% endif %}
-    
-    <div class="pied-texte">ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 27 22 49 64 00 * CC N° : 1821717-Q * INFO@CHUANGRE.CI<br>Direction des Affaires Financières * Sous-Direction de la Logistique<br>Postes : 110 et 200</div>
-    
-    <div class="pagination"></div>
-    
   </div>
 </div>
 

@@ -39,7 +39,8 @@
         box-shadow: 0 0 0 3px rgba(28,91,150,0.1);
         background: var(--bg-card);
     }
-    .clean-input-pro:invalid { border-color: #dc3545; }
+    .clean-input-pro.is-invalid { border-color: #dc3545; }
+    .clean-input-pro[readonly] { background: var(--bg-hover); cursor: not-allowed; opacity: 0.85; }
 
     .btn-upload-media {
         background: var(--primary-blue); color: white;
@@ -51,7 +52,6 @@
     .btn-upload-media:hover { background: #0d3b6e; }
     .media-box { display: flex; flex-direction: column; align-items: center; width: 150px; }
 
-    /* Tableau */
     .table-container {
         background: var(--bg-card);
         border-radius: 10px;
@@ -76,25 +76,6 @@
     }
     .btn-add-user:hover { background: #0d3b6e; transform: translateY(-1px); }
 
-    .filter-bar {
-        display: flex; gap: 10px; align-items: center;
-        padding: 14px 22px; border-bottom: 1px solid var(--border-light);
-        background: var(--bg-stripe); flex-wrap: wrap;
-    }
-    .filter-bar select, .filter-bar input {
-        padding: 8px 12px; border: 1px solid var(--border-color);
-        border-radius: 7px; outline: none; font-size: 13px;
-        font-weight: 600; background: var(--bg-card); color: var(--text-dark);
-    }
-    .filter-bar select:focus, .filter-bar input:focus {
-        border-color: var(--primary-blue);
-    }
-    .filter-bar input { min-width: 220px; }
-    .filter-bar button {
-        background: var(--bg-hover); border: 1px solid var(--border-color);
-        padding: 8px 15px; border-radius: 7px; cursor: pointer; color: var(--text-dark);
-    }
-
     .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
     .data-table thead tr { background: var(--thead-bg); }
     .data-table thead th {
@@ -102,8 +83,6 @@
         font-weight: 600; font-size: 11px; text-transform: uppercase;
         letter-spacing: 0.5px; text-align: left; border: none;
     }
-    .data-table thead th:first-child { border-radius: 0; }
-    .data-table thead th:last-child { border-radius: 0; }
     .data-table tbody tr { border-bottom: 1px solid var(--border-light); transition: background 0.15s; }
     .data-table tbody tr:hover { background: var(--bg-hover); }
     .data-table tbody td { padding: 13px 14px; vertical-align: middle; color: var(--text-dark); }
@@ -129,6 +108,11 @@
     }
     .badge-active { background: #d4edda; color: #155724; }
     .badge-inactive { background: #f8d7da; color: #721c24; }
+    .badge-mdp {
+        background: #fff3cd; color: #856404; padding: 3px 8px;
+        border-radius: 10px; font-size: 10px; font-weight: 700; margin-left: 6px;
+    }
+    body.dark-mode .badge-mdp { background: #2a2510; color: #ffd54f; }
 
     .btn-action {
         background: transparent; border: none; cursor: pointer;
@@ -153,10 +137,11 @@
 
     /* Modal */
     .modal-overlay {
-        display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
         background: rgba(0,0,0,0.55); align-items: center; justify-content: center;
         z-index: 1000; padding: 20px; backdrop-filter: blur(3px);
     }
+    .modal-overlay.open { display: flex; }
     .modal-content {
         background: var(--bg-card); width: 100%; max-width: 900px;
         border-radius: 10px; box-shadow: 0 15px 40px rgba(0,0,0,0.3);
@@ -165,10 +150,6 @@
     }
     @keyframes modalIn { from { opacity: 0; transform: translateY(-15px); } to { opacity: 1; transform: translateY(0); } }
 
-    .modal-body-scroll {
-        display: flex; padding: 25px; gap: 30px; overflow-y: auto;
-        max-height: 65vh;
-    }
     .modal-footer-bar {
         padding: 15px 25px; border-top: 1px solid var(--border-light);
         display: flex; justify-content: flex-end; gap: 10px;
@@ -185,10 +166,19 @@
         padding: 10px 30px; border-radius: 8px; font-weight: 600;
         cursor: pointer; font-size: 13px; transition: 0.2s;
         box-shadow: 0 2px 8px rgba(28,91,150,0.3);
+        display: inline-flex; align-items: center; gap: 8px;
     }
     .btn-save:hover { background: #0d3b6e; transform: translateY(-1px); }
+    .btn-save:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+    .btn-save .spinner {
+        width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.3);
+        border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite;
+        display: none;
+    }
+    .btn-save.loading .spinner { display: block; }
+    .btn-save.loading .btn-text { display: none; }
+    @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ═══ AJOUT : bouton + fonction ═══ */
     .btn-plus-inline {
         background: var(--bg-hover); border: 1px solid var(--border-color);
         color: var(--primary-blue); width: 36px; height: 36px;
@@ -231,6 +221,44 @@
         background: #6f42c1; color: #fff;
         padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600;
     }
+
+    /* Erreur dans la modale */
+    .modal-error-box {
+        background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;
+        border-left: 4px solid #dc3545; padding: 12px 16px; border-radius: 8px;
+        font-size: 13px; margin-bottom: 18px; display: flex; align-items: flex-start; gap: 10px;
+    }
+    body.dark-mode .modal-error-box { background: rgba(239,154,154,0.15); color: #ff8a80; border-color: #ff8a80; }
+
+    /* Modale succès MDP temporaire */
+    .cred-box {
+        background: #f0fdf4; border: 1px solid #86efac; border-radius: 10px;
+        padding: 20px; margin: 16px 0; text-align: center;
+    }
+    body.dark-mode .cred-box { background: #1a3a2a; border-color: #28a745; }
+    .cred-row {
+        display: flex; align-items: center; justify-content: center; gap: 10px;
+        margin: 10px 0; font-family: monospace; font-size: 18px; font-weight: 700;
+        color: var(--text-dark); background: var(--bg-card); padding: 10px 16px;
+        border-radius: 8px; border: 1px dashed var(--border-color);
+    }
+    .btn-copy {
+        background: var(--primary-blue); color: white; border: none;
+        padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer;
+        display: inline-flex; align-items: center; gap: 5px;
+    }
+    .btn-copy:hover { background: #0d3b6e; }
+
+    .field-hint {
+        font-size: 11px; margin-top: 5px; min-height: 16px;
+        display: flex; align-items: center; gap: 5px;
+    }
+    .field-hint.ok { color: #28a745; }
+    .field-hint.err { color: #dc3545; }
+    .field-hint.loading { color: var(--text-light); }
+    .clean-input-pro.is-ok { border-color: #28a745 !important; }
+    .clean-input-pro.is-err { border-color: #dc3545 !important; }
+
 </style>
 
 <div class="table-container">
@@ -240,7 +268,7 @@
             <h2><i class="fas fa-users-cog" style="color: var(--primary-blue);"></i> Gestion des Utilisateurs</h2>
             <p>Gérez les identités, les accès et la traçabilité des agents.</p>
         </div>
-        <div style="display: flex; gap: 15px; align-items: center;">
+        <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
             <form method="GET" style="display: flex; gap: 10px; align-items: center;">
                 <select name="statut_filtre" onchange="this.form.submit()" style="padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 7px; outline: none; font-size: 13px; font-weight: 600; background: var(--bg-card); color: var(--text-dark);">
                     <option value="actif" {% if statut_filtre == 'actif' %}selected{% endif %}>🟢 Uniquement Actifs</option>
@@ -284,7 +312,8 @@
                             </div>
                             <div>
                                 <strong style="color: var(--primary-blue); font-size: 14px; text-transform: uppercase;">{{ u.last_name }}</strong> {{ u.first_name }}<br>
-                                <span style="font-size: 12px; color: var(--text-medium);"><i class="fas fa-at" style="width:12px;"></i> {{ u.username }}</span><br>
+                                <span style="font-size: 12px; color: var(--text-medium);"><i class="fas fa-at" style="width:12px;"></i> {{ u.username }}</span>
+                                {% if u.profil.doit_changer_mdp %}<span class="badge-mdp" title="Doit changer son mot de passe à la prochaine connexion"><i class="fas fa-key"></i> MDP à changer</span>{% endif %}<br>
                                 <span style="font-size: 11px; color: var(--text-light);"><i class="fas fa-mobile-alt" style="width:12px;"></i> {{ u.profil.contact|default_if_none:"Pas de numéro" }}</span>
                             </div>
                         </div>
@@ -292,7 +321,7 @@
                     <td style="padding: 13px 14px;">
                         <div style="margin-bottom: 5px;">
                             {% for g in u.groups.all %}
-                                <span class="badge-role">{{ g.roleentreprise.nom_affiche|default:g.name }}</span>
+                                <span class="badge-role">{{ g.name }}</span>
                             {% empty %}
                                 <span style="color: var(--text-light); font-style: italic;">Aucun rôle</span>
                             {% endfor %}
@@ -307,7 +336,7 @@
                     </td>
                     <td style="padding: 13px 14px;">
                         <div style="font-size: 12px; color: var(--text-dark);">
-                            <i class="fas fa-sign-in-alt" style="color: #28a745; width: 15px;"></i> 
+                            <i class="fas fa-sign-in-alt" style="color: #28a745; width: 15px;"></i>
                             {% if u.last_login %}
                                 {{ u.last_login|date:"d/m/Y" }} <br>
                                 <span style="color: var(--text-light); margin-left: 20px;">à {{ u.last_login|date:"H:i" }}</span>
@@ -331,26 +360,26 @@
                     </td>
                     <td style="padding: 13px 14px; text-align: center; white-space: nowrap;">
                         <button onclick="editerUser(
-                            '{{ u.id }}', 
-                            '{{ u.last_name|escapejs }}', 
-                            '{{ u.first_name|escapejs }}', 
-                            '{{ u.username|escapejs }}', 
-                            '{{ u.email|escapejs }}', 
-                            '{{ u.profil.contact|escapejs }}', 
-                            '{% if u.profil.specialite %}{{ u.profil.specialite.id }}{% endif %}', 
-                            '{% if u.groups.first %}{{ u.groups.first.id }}{% endif %}', 
-                            '{{ u.profil.service_id|default:'' }}', 
+                            '{{ u.id }}',
+                            '{{ u.last_name|escapejs }}',
+                            '{{ u.first_name|escapejs }}',
+                            '{{ u.username|escapejs }}',
+                            '{{ u.email|escapejs }}',
+                            '{{ u.profil.contact|escapejs }}',
+                            '{% if u.profil.specialite %}{{ u.profil.specialite.id }}{% endif %}',
+                            '{% if u.groups.first %}{{ u.groups.first.id }}{% endif %}',
+                            '{{ u.profil.service_id|default:'' }}',
                             '{% if u.profil.fonction %}{{ u.profil.fonction.id }}{% endif %}',
-                            '{% if u.profil.photo %}{{ u.profil.photo.url }}{% endif %}', 
-                            '{% if u.profil.statut_signature == 'VALIDEE' %}{{ u.profil.signature.url }}{% endif %}',
+                            '{% if u.profil.photo %}{{ u.profil.photo.url }}{% endif %}',
+                            '{% if u.profil.a_signature and u.profil.signature %}{{ u.profil.signature.url }}{% endif %}',
                             [{% for m in u.profil.magasins_autorises.all %}{{ m.id }}{% if not forloop.last %},{% endif %}{% endfor %}]
-                        )" 
-                        class="btn-action edit" title="Modifier"><i class="fas fa-edit"></i></button>
+                        )"
+                        class="btn-action edit" title="Modifier" aria-label="Modifier"><i class="fas fa-edit"></i></button>
 
-                        <a href="{% url 'accounts:reinitialiser_mdp' u.id %}" 
-                           class="btn-action" 
+                        <a href="{% url 'accounts:reinitialiser_mdp' u.id %}"
+                           class="btn-action"
                            style="color: #fd7e14; margin-right: 3px;"
-                           title="Réinitialiser le mot de passe">
+                           title="Réinitialiser le mot de passe" aria-label="Réinitialiser le mot de passe">
                             <i class="fas fa-key"></i>
                         </a>
 
@@ -358,9 +387,10 @@
                             {% csrf_token %}
                             <input type="hidden" name="user_id" value="{{ u.id }}">
                             <input type="hidden" name="toggle_statut" value="1">
-                            <button type="button" onclick="confirmToggle('{{ u.id }}', '{{ u.username|escapejs }}', {{ u.is_active|yesno:'true,false' }})" 
-                                    class="btn-action toggle {% if u.is_active %}activate{% endif %}" 
-                                    title="{% if u.is_active %}Désactiver{% else %}Réactiver{% endif %}">
+                            <button type="button" onclick="confirmToggle('{{ u.id }}', '{{ u.username|escapejs }}', {{ u.is_active|yesno:'true,false' }})"
+                                    class="btn-action toggle {% if not u.is_active %}activate{% endif %}"
+                                    title="{% if u.is_active %}Désactiver{% else %}Réactiver{% endif %}"
+                                    aria-label="{% if u.is_active %}Désactiver{% else %}Réactiver{% endif %}">
                                 <i class="fas fa-power-off"></i>
                             </button>
                         </form>
@@ -369,7 +399,10 @@
                 {% empty %}
                 <tr><td colspan="6" style="text-align: center; padding: 50px; color: var(--text-light);">
                     <i class="fas fa-users" style="font-size: 40px; display: block; margin-bottom: 15px; opacity: 0.4;"></i>
-                    Aucun utilisateur trouvé.
+                    Aucun utilisateur trouvé.<br>
+                    <button type="button" onclick="ouvrirModal()" class="btn-primary" style="margin-top: 18px; display: inline-flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-plus"></i> Créer le premier utilisateur
+                    </button>
                 </td></tr>
                 {% endfor %}
             </tbody>
@@ -389,17 +422,18 @@
     {% endif %}
 </div>
 
-<!-- ========== MODAL CRÉATION/MODIFICATION UTILISATEUR ========== -->
-<div id="modalUser" style="display: {% if modal_ouvert %}flex{% else %}none{% endif %}; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.55); align-items: center; justify-content: center; z-index: 1000; padding: 20px; backdrop-filter: blur(3px);">
-
-    <div style="background: var(--bg-card); width: 100%; max-width: 900px; border-radius: 10px; box-shadow: 0 15px 40px rgba(0,0,0,0.3); display: flex; flex-direction: column; overflow: hidden;">
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODALE CRÉATION / MODIFICATION                 -->
+<!-- ═══════════════════════════════════════════════ -->
+<div class="modal-overlay {% if show_modal %}open{% endif %}" id="modalUser">
+    <div class="modal-content">
 
         <div class="modal-header-pro">
-            <h3 id="modalTitle">Création d'utilisateur</h3>
-            <button type="button" onclick="fermerModal()"><i class="fas fa-times"></i></button>
+            <h3 id="modalTitle">{% if form_data.user_id %}Modification d'utilisateur{% else %}Création d'utilisateur{% endif %}</h3>
+            <button type="button" onclick="fermerModal()" title="Fermer" aria-label="Fermer"><i class="fas fa-times"></i></button>
         </div>
 
-        <form id="formUser" method="POST" enctype="multipart/form-data" style="margin: 0; display: flex; flex-direction: column; max-height: 85vh;">
+        <form id="formUser" method="POST" style="margin: 0; display: flex; flex-direction: column; max-height: 85vh;">
             {% csrf_token %}
             <input type="hidden" name="user_id" id="inp_user_id" value="{{ form_data.user_id|default:'' }}">
 
@@ -407,36 +441,37 @@
 
                 <div style="flex: 1; display: grid; grid-template-columns: 1fr 1fr; gap: 0 20px; align-content: start;">
 
-                    {% if modal_erreur %}
-                    <div style="grid-column: span 2; background: #f8d7da; color: #721c24; padding: 12px; border-radius: 8px; font-size: 13px; margin-bottom: 20px;">
-                        <i class="fas fa-exclamation-triangle"></i> Veuillez corriger les erreurs du formulaire ci-dessous.
+                    {% if form_error %}
+                    <div class="modal-error-box" style="grid-column: span 2;">
+                        <i class="fas fa-exclamation-triangle" style="margin-top:2px;"></i>
+                        <div>{{ form_error }}</div>
                     </div>
                     {% endif %}
 
                     <div class="field-wrapper">
                         <label class="input-label-pro">Nom : <span>*</span></label>
-                        <input type="text" name="last_name" id="inp_nom" value="{{ form_data.last_name|default:'' }}" required class="clean-input-pro" placeholder="Nom de famille">
+                        <input type="text" name="last_name" id="inp_nom" value="{{ form_data.last_name|default:'' }}" required class="clean-input-pro" placeholder="Nom de famille" data-nx-format="upper" style="text-transform:uppercase;">
                     </div>
                     <div class="field-wrapper">
                         <label class="input-label-pro">Prénoms : <span>*</span></label>
-                        <input type="text" name="first_name" id="inp_prenom" value="{{ form_data.first_name|default:'' }}" required class="clean-input-pro" placeholder="Prénoms complets">
+                        <input type="text" name="first_name" id="inp_prenom" value="{{ form_data.first_name|default:'' }}" required class="clean-input-pro" placeholder="Prénoms complets" data-nx-format="prenom">
                     </div>
 
                     <div class="field-wrapper">
                         <label class="input-label-pro">Login : <span>*</span></label>
-                        <input type="text" name="username" id="inp_username" value="{{ form_data.username|default:'' }}" required class="clean-input-pro" style="text-transform: lowercase;">
+                        <input type="text" name="username" id="inp_username" value="{{ form_data.username|default:'' }}" required minlength="3" maxlength="50" class="clean-input-pro" style="text-transform:lowercase;" data-nx-format="login" autocomplete="off" {% if form_data.user_id %}readonly{% endif %}>
                     </div>
                     <div class="field-wrapper">
-                        <label class="input-label-pro">Contact (SMS) : <span>*</span></label>
-                        <input type="tel" name="contact" id="inp_contact" value="{{ form_data.contact|default_if_none:'' }}" 
-                               required class="clean-input-pro" maxlength="14" placeholder="Ex: 01 02 03 04 05"
-                               oninput="formatPhone(this)">
+                        <label class="input-label-pro">Contact (SMS) :</label>
+                        <input type="tel" name="contact" id="inp_contact" value="{{ form_data.contact|default_if_none:'' }}"
+                               class="clean-input-pro" maxlength="14" placeholder="Ex: 01 02 03 04 05"
+                               data-nx-format="phone" inputmode="numeric">
                     </div>
 
                     <div class="field-wrapper">
-                        <label class="input-label-pro">E-mail (Valide) :</label>
-                        <input type="email" name="email" id="inp_email" value="{{ form_data.email|default:'' }}" class="clean-input-pro" 
-                               placeholder="adresse@email.com">
+                        <label class="input-label-pro">E-mail :</label>
+                        <input type="email" name="email" id="inp_email" value="{{ form_data.email|default:'' }}" class="clean-input-pro"
+                               placeholder="adresse@email.com" data-nx-format="email">
                     </div>
                     <div class="field-wrapper">
                         <label class="input-label-pro">Spécialité :</label>
@@ -453,7 +488,7 @@
                         <select name="groupe" id="inp_groupe" class="clean-input-pro" required>
                             <option value="">-- Sélectionner --</option>
                             {% for g in groupes %}
-                                <option value="{{ g.id }}" {% if form_data.groupe == g.id|stringformat:"s" %}selected{% endif %}>{{ g.roleentreprise.nom_affiche|default:g.name }}</option>
+                                <option value="{{ g.id }}" {% if form_data.groupe == g.id|stringformat:"s" %}selected{% endif %}>{{ g.name }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -467,7 +502,6 @@
                         </select>
                     </div>
 
-                    <!-- ═══ NOUVEAU : Champ Fonction + bouton + ═══ -->
                     <div class="field-wrapper" style="grid-column: span 2;">
                         <label class="input-label-pro">Fonction / Titre <small style="color:var(--text-light); font-weight:400;">(affiché sous la signature PDF)</small></label>
                         <div style="display:flex; gap:8px; align-items:center;">
@@ -487,12 +521,14 @@
                         <label class="input-label-pro">Magasins autorisés :</label>
                         <select name="magasins" id="inp_magasins" class="clean-input-pro select2-magasins" multiple="multiple" style="width: 100%;">
                             {% for m in magasins_tous %}
-                                <option value="{{ m.id }}">{{ m.nom }}</option>
+                                <option value="{{ m.id }}" {% if m.id|stringformat:"s" in form_data.magasin_ids %}selected{% endif %}>{{ m.nom }}</option>
                             {% endfor %}
                         </select>
                     </div>
                 </div>
 
+                <!-- NOTE : photo et signature ne sont pas gérées lors de la création/modification ici.
+                     Elles sont modifiables via le profil utilisateur. -->
                 <div style="width: 220px; border-left: 1px solid var(--border-light); padding-left: 30px; display: flex; flex-direction: column; gap: 35px; align-items: center; justify-content: flex-start;">
 
                     <div class="media-box">
@@ -524,15 +560,58 @@
 
             <div class="modal-footer-bar">
                 <button type="button" onclick="fermerModal()" class="btn-cancel">Annuler</button>
-                <button type="button" onclick="confirmSaveUser()" class="btn-save">Enregistrer</button>
-                <button type="submit" id="hiddenSubmitBtn" style="display:none;"></button>
+                <button type="button" onclick="confirmSaveUser()" class="btn-save" id="btnSaveUser">
+                    <span class="btn-text"><i class="fas fa-save"></i> Enregistrer</span>
+                    <span class="spinner"></span>
+                </button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- ═══════════════════════════════════════════════ -->
-<!-- MODALE : CRÉER FONCTION (AJAX)                -->
+<!-- MODALE SUCCÈS : MDP TEMPORAIRE                 -->
+<!-- ═══════════════════════════════════════════════ -->
+{% if new_credentials %}
+<div class="modal-overlay open" id="modalCredentials">
+    <div class="modal-content" style="max-width: 480px;">
+        <div class="modal-header-pro" style="background: linear-gradient(135deg, #28a745, #1e7e34);">
+            <h3><i class="fas fa-check-circle"></i> Utilisateur créé avec succès</h3>
+            <button type="button" onclick="document.getElementById('modalCredentials').classList.remove('open')"><i class="fas fa-times"></i></button>
+        </div>
+        <div style="padding: 24px;">
+            <p style="margin: 0 0 12px; color: var(--text-medium); font-size: 14px;">
+                Le compte <strong>{{ new_credentials.full_name }}</strong> a été créé.
+                Notez soigneusement le mot de passe temporaire :
+            </p>
+            <div class="cred-box">
+                <div style="font-size: 12px; color: var(--text-light); margin-bottom: 6px;">LOGIN</div>
+                <div class="cred-row">
+                    <span id="credUsername">{{ new_credentials.username }}</span>
+                    <button type="button" class="btn-copy" onclick="copyText('credUsername')"><i class="fas fa-copy"></i></button>
+                </div>
+                <div style="font-size: 12px; color: var(--text-light); margin: 14px 0 6px;">MOT DE PASSE TEMPORAIRE</div>
+                <div class="cred-row">
+                    <span id="credPassword">{{ new_credentials.password }}</span>
+                    <button type="button" class="btn-copy" onclick="copyText('credPassword')"><i class="fas fa-copy"></i></button>
+                </div>
+            </div>
+            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 14px; border-radius: 6px; font-size: 12px; color: #856404; margin-top: 12px;">
+                <i class="fas fa-info-circle"></i>
+                L’utilisateur devra <strong>obligatoirement changer ce mot de passe</strong> à sa première connexion.
+            </div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button type="button" class="btn-save" onclick="document.getElementById('modalCredentials').classList.remove('open')">
+                    <i class="fas fa-check"></i> J’ai noté le mot de passe
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- MODALE : CRÉER FONCTION (AJAX)                 -->
 <!-- ═══════════════════════════════════════════════ -->
 <div class="modal-fonction-overlay" id="modalFonction">
     <div class="modal-fonction-content">
@@ -561,23 +640,19 @@
 </div>
 
 <script>
-// ═══════════════ CONFIRMATION TOGGLE (ACTIVER/DÉSACTIVER) ═══════════════
+// ═══════════════ CONFIRMATION TOGGLE ═══════════════
 function confirmToggle(id, username, isActive) {
-    let action = isActive ? "Désactiver" : "Activer";
-    let text = isActive ? "Le compte de " + username + " sera désactivé." : "Le compte de " + username + " sera réactivé.";
-    let color = isActive ? '#dc3545' : '#28a745';
+    var action = isActive ? "Désactiver" : "Activer";
+    var text = isActive ? "Le compte de " + username + " sera désactivé." : "Le compte de " + username + " sera réactivé.";
+    var color = isActive ? '#dc3545' : '#28a745';
 
-    Swal.fire({
+    NxUX.confirm({
         title: action + " cet utilisateur ?",
         text: text,
         icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: color,
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Oui, ' + action.toLowerCase(),
-        cancelButtonText: 'Annuler'
-    }).then((result) => {
-        if (result.isConfirmed) {
+        confirmText: 'Oui, ' + action.toLowerCase(),
+        confirmColor: color,
+        onConfirm: function () {
             document.getElementById('formToggle-' + id).submit();
         }
     });
@@ -585,30 +660,25 @@ function confirmToggle(id, username, isActive) {
 
 // ═══════════════ CONFIRMATION SAUVEGARDE ═══════════════
 function confirmSaveUser() {
-    let form = document.getElementById('formUser');
-
+    var form = document.getElementById('formUser');
     if (!form.checkValidity()) {
         form.reportValidity();
         return;
     }
 
-    let userId = document.getElementById('inp_user_id').value;
-    let isEdit = (userId !== '');
-    let title = isEdit ? "Confirmer la modification ?" : "Créer ce nouvel utilisateur ?";
-    let text = isEdit ? "Les nouvelles informations remplaceront les anciennes." : "Ce compte sera immédiatement actif dans le système.";
+    var userId = document.getElementById('inp_user_id').value;
+    var isEdit = (userId !== '');
+    var btn = document.getElementById('btnSaveUser');
 
-    Swal.fire({
-        title: title,
-        text: text,
+    NxUX.confirm({
+        title: isEdit ? "Confirmer la modification ?" : "Créer ce nouvel utilisateur ?",
+        text: isEdit ? "Les nouvelles informations remplaceront les anciennes." : "Un mot de passe temporaire sera généré automatiquement.",
         icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#1c5b96',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Oui, enregistrer',
-        cancelButtonText: 'Annuler'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            let hiddenInput = document.createElement('input');
+        confirmText: 'Oui, enregistrer',
+        confirmColor: '#1c5b96',
+        onConfirm: function () {
+            NxUX.loading(btn, 'Enregistrement…');
+            var hiddenInput = document.createElement('input');
             hiddenInput.type = 'hidden';
             hiddenInput.name = 'enregistrer_user';
             hiddenInput.value = '1';
@@ -626,13 +696,14 @@ function formatPhone(input) {
     input.value = formatted ? formatted.join(' ') : val;
 }
 
-// ═══════════════ OUVERTURE MODALE UTILISATEUR ═══════════════
+// ═══════════════ OUVERTURE / FERMETURE MODALE ═══════════════
 function ouvrirModal() {
     document.getElementById('modalTitle').innerText = "Création d'utilisateur";
     document.getElementById('inp_user_id').value = '';
     document.getElementById('inp_nom').value = '';
     document.getElementById('inp_prenom').value = '';
     document.getElementById('inp_username').value = '';
+    document.getElementById('inp_username').removeAttribute('readonly');
     document.getElementById('inp_email').value = '';
     document.getElementById('inp_contact').value = '';
     document.getElementById('inp_specialite').value = '';
@@ -646,11 +717,15 @@ function ouvrirModal() {
     if (typeof jQuery !== 'undefined') {
         $('.select2-magasins').val(null).trigger('change');
     }
-    document.getElementById('modalUser').style.display = 'flex';
+    // Supprimer éventuel message d'erreur
+    let err = document.querySelector('.modal-error-box');
+    if (err) err.remove();
+    document.getElementById('modalUser').classList.add('open');
+    setTimeout(() => document.getElementById('inp_nom').focus(), 150);
 }
 
 function fermerModal() {
-    document.getElementById('modalUser').style.display = 'none';
+    document.getElementById('modalUser').classList.remove('open');
 }
 
 function editerUser(id, nom, prenom, username, email, contact, specialite, groupe, service_id, fonction_id, photoUrl, sigUrl, magasinsIds) {
@@ -659,19 +734,20 @@ function editerUser(id, nom, prenom, username, email, contact, specialite, group
     document.getElementById('inp_nom').value = nom;
     document.getElementById('inp_prenom').value = prenom;
     document.getElementById('inp_username').value = username;
+    document.getElementById('inp_username').setAttribute('readonly', 'readonly');
     document.getElementById('inp_email').value = email;
 
     let contactInput = document.getElementById('inp_contact');
-    if(contact && contact !== 'None') {
+    if (contact && contact !== 'None') {
         contactInput.value = contact;
         formatPhone(contactInput);
     } else {
         contactInput.value = '';
     }
 
-    document.getElementById('inp_specialite').value = specialite;
-    document.getElementById('inp_service').value = service_id;
-    document.getElementById('inp_groupe').value = groupe;
+    document.getElementById('inp_specialite').value = specialite || '';
+    document.getElementById('inp_service').value = service_id || '';
+    document.getElementById('inp_groupe').value = groupe || '';
     document.getElementById('inp_fonction').value = fonction_id || '';
     document.getElementById('inp_photo').value = '';
     document.getElementById('inp_signature').value = '';
@@ -688,13 +764,18 @@ function editerUser(id, nom, prenom, username, email, contact, specialite, group
         resetPreview('sigImg', 'sigPlaceholder');
     }
 
-    if (typeof jQuery !== 'undefined' && magasinsIds && magasinsIds.length > 0) {
-        $('.select2-magasins').val(magasinsIds).trigger('change');
-    } else if (typeof jQuery !== 'undefined') {
-        $('.select2-magasins').val(null).trigger('change');
+    if (typeof jQuery !== 'undefined') {
+        if (magasinsIds && magasinsIds.length > 0) {
+            $('.select2-magasins').val(magasinsIds.map(String)).trigger('change');
+        } else {
+            $('.select2-magasins').val(null).trigger('change');
+        }
     }
 
-    document.getElementById('modalUser').style.display = 'flex';
+    let err = document.querySelector('.modal-error-box');
+    if (err) err.remove();
+    document.getElementById('modalUser').classList.add('open');
+    setTimeout(() => document.getElementById('inp_nom').focus(), 150);
 }
 
 // ═══════════════ PRÉVISUALISATION IMAGES ═══════════════
@@ -707,8 +788,8 @@ function previewSignature(input) {
 function validateSize(input) {
     const file = input.files[0];
     if (file) {
-        if(file.size > 2097152) {
-            Swal.fire("Fichier trop lourd", "L'image ne doit pas dépasser 2 Mo.", "error");
+        if (file.size > 2097152) {
+            NxUX.toast('error', "L'image ne doit pas dépasser 2 Mo.");
             input.value = "";
             return false;
         }
@@ -739,6 +820,14 @@ function resetPreview(imgId, placeholderId) {
     document.getElementById(placeholderId).style.display = 'block';
 }
 
+// ═══════════════ COPIER TEXTE ═══════════════
+function copyText(elementId) {
+    var text = document.getElementById(elementId).textContent;
+    navigator.clipboard.writeText(text).then(function () {
+        NxUX.toast('success', 'Copié !');
+    });
+}
+
 // ═══════════════════════════════════════════════
 // MODALE FONCTION AJAX
 // ═══════════════════════════════════════════════
@@ -748,11 +837,9 @@ function openModalFonction() {
     document.getElementById('fonctionError').style.display = 'none';
     document.getElementById('modalFonction').style.display = 'flex';
 }
-
 function closeModalFonction() {
     document.getElementById('modalFonction').style.display = 'none';
 }
-
 function saveFonctionAjax() {
     var nom = document.getElementById('newFonctionNom').value.trim();
     var desc = document.getElementById('newFonctionDesc').value.trim();
@@ -783,6 +870,7 @@ function saveFonctionAjax() {
             select.add(opt);
             select.value = data.id;
             closeModalFonction();
+            NxUX.toast('success', 'Fonction créée');
         } else {
             errDiv.textContent = data.error || "Erreur lors de la création.";
             errDiv.style.display = 'block';
@@ -799,8 +887,17 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof jQuery !== 'undefined') {
         $('.select2-magasins').select2({
             placeholder: "Sélectionner...",
-            allowClear: true
+            allowClear: true,
+            width: '100%'
         });
+
+        // Pré-sélection magasins si form_data présent
+        {% if form_data.magasin_ids %}
+        var preselected = {{ form_data.magasin_ids|safe }};
+        if (preselected && preselected.length) {
+            $('.select2-magasins').val(preselected.map(String)).trigger('change');
+        }
+        {% endif %}
     }
 
     document.getElementById('modalUser').addEventListener('click', function(e) {
@@ -809,6 +906,120 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('modalFonction').addEventListener('click', function(e) {
         if (e.target === this) closeModalFonction();
     });
+
+    // Focus sur le premier champ en erreur si modale ouverte
+    {% if show_modal and form_error %}
+    setTimeout(function() {
+        var firstInvalid = document.querySelector('#formUser .clean-input-pro:invalid, #formUser .clean-input-pro[required]');
+        if (firstInvalid) firstInvalid.focus();
+    }, 200);
+    {% endif %}
 });
+
+// ═══════════════ VALIDATION AJAX TEMPS RÉEL ═══════════════
+(function () {
+    var API = "{% url 'accounts:api_verifier_champ_utilisateur' %}";
+    var timers = {};
+
+    function ensureHint(input) {
+        var wrap = input.closest('.field-wrapper') || input.parentElement;
+        var hint = wrap.querySelector('.field-hint');
+        if (!hint) {
+            hint = document.createElement('div');
+            hint.className = 'field-hint';
+            wrap.appendChild(hint);
+        }
+        return hint;
+    }
+
+    function setState(input, state, message) {
+        // state: '', 'ok', 'err', 'loading'
+        input.classList.remove('is-ok', 'is-err');
+        var hint = ensureHint(input);
+        hint.className = 'field-hint' + (state ? ' ' + state : '');
+        if (state === 'loading') {
+            hint.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification…';
+        } else if (state === 'ok') {
+            input.classList.add('is-ok');
+            hint.innerHTML = message ? '<i class="fas fa-check-circle"></i> ' + message : '';
+        } else if (state === 'err') {
+            input.classList.add('is-err');
+            hint.innerHTML = message ? '<i class="fas fa-times-circle"></i> ' + message : '';
+        } else {
+            hint.innerHTML = '';
+        }
+    }
+
+    function checkField(type, input) {
+        var value = (input.value || '').trim();
+        var excludeId = (document.getElementById('inp_user_id') || {}).value || '';
+
+        if (!value) {
+            setState(input, '', '');
+            return;
+        }
+
+        // Login : longueur minimale 3
+        if (type === 'username' && value.length < 3) {
+            setState(input, 'err', 'Le login doit contenir au moins 3 caractères.');
+            return;
+        }
+
+        // Contact : attendre 10 chiffres avant d'appeler (sauf si partiel pour format)
+        if (type === 'contact') {
+            var digits = value.replace(/\D/g, '');
+            if (digits.length > 0 && digits.length < 10) {
+                setState(input, 'err', 'Le numéro doit contenir exactement 10 chiffres.');
+                return;
+            }
+            if (digits.length === 0) {
+                setState(input, '', '');
+                return;
+            }
+        }
+
+        setState(input, 'loading');
+        var url = API + '?type=' + encodeURIComponent(type)
+            + '&value=' + encodeURIComponent(value)
+            + (excludeId ? '&exclude_id=' + encodeURIComponent(excludeId) : '');
+
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                if (!data.ok) {
+                    setState(input, '', '');
+                    return;
+                }
+                if (data.available) {
+                    setState(input, data.message ? 'ok' : '', data.message || '');
+                } else {
+                    setState(input, 'err', data.message || 'Valeur indisponible.');
+                }
+            })
+            .catch(function () {
+                setState(input, '', '');
+            });
+    }
+
+    function bind(type, inputId) {
+        var input = document.getElementById(inputId);
+        if (!input) return;
+        input.addEventListener('input', function () {
+            clearTimeout(timers[type]);
+            timers[type] = setTimeout(function () { checkField(type, input); }, 400);
+        });
+        input.addEventListener('blur', function () {
+            clearTimeout(timers[type]);
+            checkField(type, input);
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        bind('username', 'inp_username');
+        bind('email', 'inp_email');
+        bind('contact', 'inp_contact');
+    });
+})();
+
 </script>
 {% endblock %}

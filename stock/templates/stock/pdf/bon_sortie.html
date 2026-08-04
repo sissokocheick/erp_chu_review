@@ -7,7 +7,21 @@
 <style>
 @page {
     size: A4;
-    margin: 10mm 7mm 1mm 7mm;
+    margin: 10mm 7mm 18mm 7mm;
+    @bottom-center {
+        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:pdf_config.texte_institutionnel|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+    }
+    @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+    }
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -26,7 +40,7 @@ body {
 .page-flex {
     display: flex;
     flex-direction: column;
-    min-height: 277mm;
+    min-height: 262mm;
 }
 
 .content-main {
@@ -209,26 +223,12 @@ body {
     border: none;
     margin: 0;
 }
-.pied-texte {
-    text-align: center;
-    font-size: 7pt;
-    color: #1c5b96;
-    margin-top: 1mm;
-    width: 100%;
-}
 
 .page-break {
     page-break-before: always;
 }
 
 img { max-width: 100%; height: auto; }
-
-.pagination {
-    text-align: right;
-    font-size: 9pt;
-    margin-top: 0.5mm;
-    width: 100%;
-}
 </style>
 <base target="_blank">
 </head>
@@ -248,18 +248,18 @@ img { max-width: 100%; height: auto; }
         <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
       </div>
     </td>
-    
+
     <td style="width:50%; vertical-align:middle; text-align:right;">
       <div style="display:inline-block; text-align:center;">
-        
+
         {% if pdf_config.cartouche.afficher_republique %}
           <strong>République de Côte d'Ivoire</strong><br>
         {% endif %}
-        
+
         {% if pdf_config.cartouche.afficher_devise %}
           <em>Union - Discipline - Travail</em>
         {% endif %}
-        
+
       </div>
     </td>
   </tr>
@@ -418,9 +418,6 @@ img { max-width: 100%; height: auto; }
       </tr>
     </table>
     {% endif %}
-
-    <div class="pied-texte">ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 2722496400 * CC N° : 1821717-Q * INFO@CHUANGRE.CI<br>Direction des Affaires Financières * Sous-Direction de la Logistique<br>Postes : 110 et 200</div>
-    <div class="pagination">{{ pages.0.numero }} / {{ pages|length }}</div>
 
   </div>
 
@@ -648,9 +645,6 @@ img { max-width: 100%; height: auto; }
         </tr>
       </table>
       {% endif %}
-
-      <div class="pied-texte">ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 2722496400 * CC N° : 1821717-Q * INFO@CHUANGRE.CI<br>Direction des Affaires Financières * Sous-Direction de la Logistique<br>Postes : 110 et 200</div>
-      <div class="pagination">{{ page.numero }} / {{ pages|length }}</div>
 
     </div>
 

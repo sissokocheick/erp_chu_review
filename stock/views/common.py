@@ -22,12 +22,10 @@ from weasyprint import HTML
 
 from accounts.permissions import verifier_permission
 from core.models import Service, ConfigurationHopital
-from core.pdf_service import DocumentGenerator
 from ..decorators import magasin_requis, catch_errors
 from ..forms import (
     SortieStockForm, EntreeStockForm, AjustementForm,
-    MagasinParametresForm,
-)
+    MagasinParametresForm)
 from ..models import (
     Mouvement, BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, StockItem, Ajustement,
@@ -35,8 +33,7 @@ from ..models import (
     CampagneInventaire, LigneInventaire, CircuitValidation,
     LivraisonPartielle, DemandeMateriel, LigneDemande,
     AccuseReception,
-    LivraisonLigne,
-)
+    LivraisonLigne)
 from ..services import (
     NumeroGenerator, StockService, PDFService, NotificationService
 )
@@ -65,45 +62,5 @@ def _has_perm_bon(user, action, type_bon):
     return user.has_perm(f'stock.{codename}') or user.is_superuser
 # ══════════════════════════════════════════════════════════════════════════════
 # HELPERS CACHE PDF (storage-agnostic)
-# ══════════════════════════════════════════════════════════════════════════════
-
-
-
-def _servir_pdf_cache(bon, filename):
-    """
-    Lit un PDF depuis le stockage Django et retourne HttpResponse.
-    Retourne None si le cache est absent ou invalide.
-    """
-    if not bon.fichier_pdf or not bon.fichier_pdf.name:
-        return None
-    try:
-        if default_storage.exists(bon.fichier_pdf.name):
-            with default_storage.open(bon.fichier_pdf.name, 'rb') as f:
-                pdf_bytes = f.read()
-            response = HttpResponse(pdf_bytes, content_type='application/pdf')
-            response['Content-Disposition'] = f'inline; filename="{filename}"'
-            return response
-    except Exception as e:
-        logger.warning("[PDF] Cache inaccessible : %s", e)
-    return None
-
-
-
-
-def _sauver_pdf_cache(bon, filename, pdf_bytes):
-    """
-    Sauvegarde les bytes PDF dans le FileField du bon.
-    Supprime l'ancien fichier s'il existe pour éviter les conflits.
-    """
-    try:
-        if bon.fichier_pdf and bon.fichier_pdf.name and default_storage.exists(bon.fichier_pdf.name):
-            default_storage.delete(bon.fichier_pdf.name)
-        bon.fichier_pdf.save(filename, ContentFile(pdf_bytes), save=True)
-    except Exception as e:
-        logger.warning("[PDF] Sauvegarde cache échouée : %s", e)
-
-
-# ══════════════════════════════════════════════════════════════════════════════
-# ENTRÉES
 # ══════════════════════════════════════════════════════════════════════════════
 

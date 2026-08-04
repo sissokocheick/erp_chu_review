@@ -1,0 +1,224 @@
+{% extends "base_ui.html" %}
+{% block title %}Circuits de validation{% endblock %}
+
+{% block extra_css %}
+<style>
+  .cv-page { max-width: 980px; margin: 0 auto; }
+
+  .cv-hero {
+    background: linear-gradient(135deg, #0d47a1 0%, #17a2b8 100%);
+    border-radius: 14px; padding: 28px 32px; margin-bottom: 28px;
+    color: #fff; display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 16px; box-shadow: 0 8px 24px rgba(13,71,161,.25);
+  }
+  .cv-hero h1 { margin: 0; font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 12px; }
+  .cv-hero p { margin: 8px 0 0; opacity: .9; font-size: 14px; max-width: 520px; line-height: 1.5; }
+  .cv-hero-stat {
+    background: rgba(255,255,255,.18); backdrop-filter: blur(6px);
+    border-radius: 12px; padding: 14px 20px; text-align: center; min-width: 100px;
+  }
+  .cv-hero-stat .n { font-size: 28px; font-weight: 800; line-height: 1; }
+  .cv-hero-stat .l { font-size: 11px; text-transform: uppercase; letter-spacing: .5px; opacity: .85; margin-top: 4px; }
+
+  .cv-card {
+    background: var(--bg-card, #fff); border-radius: 14px; margin-bottom: 18px;
+    border: 1px solid var(--border-color, #e8ecf1);
+    box-shadow: 0 2px 12px rgba(0,0,0,.04);
+    overflow: hidden; transition: box-shadow .2s, transform .2s;
+  }
+  .cv-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.08); }
+
+  .cv-card-top {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 22px; gap: 12px; flex-wrap: wrap;
+    border-left: 5px solid #adb5bd;
+  }
+  .cv-card-top.active { border-left-color: #28a745; background: linear-gradient(90deg, rgba(40,167,69,.08), transparent); }
+  .cv-card-top.inactive { border-left-color: #adb5bd; background: var(--bg-stripe, #f8f9fb); }
+
+  .cv-type { display: flex; align-items: center; gap: 14px; }
+  .cv-ico {
+    width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #fff; flex-shrink: 0;
+  }
+  .cv-ico.commande { background: linear-gradient(135deg, #e83e8c, #c2185b); }
+  .cv-ico.demande { background: linear-gradient(135deg, #6f42c1, #4a148c); }
+  .cv-ico.reception, .cv-ico.entree { background: linear-gradient(135deg, #28a745, #1b5e20); }
+  .cv-ico.sortie { background: linear-gradient(135deg, #fd7e14, #e65100); }
+  .cv-ico.ajustement { background: linear-gradient(135deg, #17a2b8, #006064); }
+  .cv-ico.inventaire { background: linear-gradient(135deg, #1c5b96, #0d47a1); }
+  .cv-ico.default { background: linear-gradient(135deg, #6c757d, #455a64); }
+
+  .cv-type-name { font-size: 16px; font-weight: 700; color: var(--text-dark, #1a1a2e); margin: 0; }
+  .cv-type-sub { font-size: 12px; color: var(--text-light, #889); margin-top: 2px; }
+
+  .cv-pill {
+    font-size: 11px; font-weight: 800; letter-spacing: .4px; padding: 5px 12px;
+    border-radius: 20px; text-transform: uppercase;
+  }
+  .cv-pill.on { background: #d4edda; color: #155724; }
+  .cv-pill.off { background: #e9ecef; color: #6c757d; }
+  body.dark-mode .cv-pill.on { background: rgba(40,167,69,.25); color: #81c784; }
+  body.dark-mode .cv-pill.off { background: rgba(108,117,125,.3); color: #adb5bd; }
+
+  .cv-body { padding: 20px 22px 22px; }
+  .cv-grid {
+    display: grid; grid-template-columns: 1fr 1.6fr auto;
+    gap: 20px; align-items: end;
+  }
+  @media (max-width: 800px) {
+    .cv-grid { grid-template-columns: 1fr; }
+  }
+
+  .cv-label {
+    font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px;
+    color: var(--text-medium, #666); margin-bottom: 10px; display: block;
+  }
+
+  .cv-switch {
+    display: flex; align-items: center; gap: 12px; cursor: pointer;
+    padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border-color, #e0e0e0);
+    background: var(--bg-input, #fff); transition: border-color .2s, background .2s;
+  }
+  .cv-switch:hover { border-color: #17a2b8; }
+  .cv-switch input { width: 18px; height: 18px; accent-color: #28a745; cursor: pointer; }
+  .cv-switch span { font-size: 14px; font-weight: 600; color: var(--text-dark); }
+  .cv-hint { font-size: 11px; color: var(--text-light, #999); margin-top: 8px; line-height: 1.4; }
+
+  .select2-container--default .select2-selection--multiple {
+    border-radius: 10px !important; border-color: var(--border-color, #e0e0e0) !important;
+    min-height: 44px !important; padding: 4px 6px !important;
+  }
+
+  .cv-btn {
+    background: linear-gradient(135deg, #17a2b8, #138496); color: #fff; border: none;
+    padding: 12px 22px; border-radius: 10px; font-weight: 700; font-size: 13px;
+    cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    box-shadow: 0 4px 12px rgba(23,162,184,.3); transition: transform .15s, box-shadow .15s;
+    white-space: nowrap; min-height: 44px;
+  }
+  .cv-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(23,162,184,.4); }
+  .cv-btn:active { transform: translateY(0); }
+
+  .cv-empty {
+    text-align: center; padding: 60px 20px; color: var(--text-light);
+    background: var(--bg-card); border-radius: 14px; border: 2px dashed var(--border-color);
+  }
+  .cv-empty i { font-size: 48px; opacity: .3; display: block; margin-bottom: 16px; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="nx-container">
+  <div class="cv-page">
+
+    <div class="cv-hero">
+      <div>
+        <h1><i class="fas fa-check-double"></i> Circuits de validation</h1>
+        <p>Paramétrez les autorisations hiérarchiques requises pour chaque type de mouvement stock.</p>
+      </div>
+      <div class="cv-hero-stat">
+        <div class="n">{{ circuits|length }}</div>
+        <div class="l">circuit{{ circuits|length|pluralize }}</div>
+      </div>
+    </div>
+
+    {% for circuit in circuits %}
+    {% with td=circuit.type_document %}
+    <div class="cv-card">
+      <div class="cv-card-top {% if circuit.est_actif %}active{% else %}inactive{% endif %}">
+        <div class="cv-type">
+          <div class="cv-ico {% if td == 'COMMANDE' %}commande{% elif td == 'DEMANDE' %}demande{% elif td == 'RECEPTION' or td == 'ENTREE' %}reception{% elif td == 'SORTIE' %}sortie{% elif td == 'AJUSTEMENT' %}ajustement{% elif td == 'INVENTAIRE' %}inventaire{% else %}default{% endif %}">
+            <i class="fas {% if td == 'COMMANDE' %}fa-shopping-cart{% elif td == 'DEMANDE' %}fa-clipboard-list{% elif td == 'RECEPTION' or td == 'ENTREE' %}fa-arrow-down{% elif td == 'SORTIE' %}fa-arrow-up{% elif td == 'AJUSTEMENT' %}fa-sliders-h{% elif td == 'INVENTAIRE' %}fa-clipboard-check{% else %}fa-exchange-alt{% endif %}"></i>
+          </div>
+          <div>
+            <p class="cv-type-name">{{ circuit.get_type_document_display|default:td }}</p>
+            <div class="cv-type-sub">
+              {% with n=circuit.validateurs.count %}
+                {{ n }} validateur{{ n|pluralize }}
+              {% endwith %}
+            </div>
+          </div>
+        </div>
+        <span class="cv-pill {% if circuit.est_actif %}on{% else %}off{% endif %}">
+          {% if circuit.est_actif %}● Actif{% else %}○ Inactif{% endif %}
+        </span>
+      </div>
+
+      <form method="POST" class="cv-body cv-form">
+        {% csrf_token %}
+        <input type="hidden" name="circuit_id" value="{{ circuit.id }}">
+
+        <div class="cv-grid">
+          <div>
+            <label class="cv-label">Statut</label>
+            <label class="cv-switch">
+              <input type="checkbox" name="est_actif" {% if circuit.est_actif %}checked{% endif %}>
+              <span>Validation hiérarchique</span>
+            </label>
+            <p class="cv-hint">Si décoché, l’action est validée automatiquement.</p>
+          </div>
+
+          <div>
+            <label class="cv-label">Validateurs</label>
+            <select name="valideurs" class="select2-valideurs" multiple="multiple" style="width:100%;"
+                    aria-label="Validateurs">
+              {% for u in utilisateurs %}
+              <option value="{{ u.id }}"
+                {% for v in circuit.validateurs.all %}{% if v.valideur_id == u.id %}selected{% endif %}{% endfor %}>
+                {{ u.last_name }} {{ u.first_name }} ({{ u.username }})
+              </option>
+              {% endfor %}
+            </select>
+            <p class="cv-hint">Sélectionnez une ou plusieurs personnes autorisées à valider.</p>
+          </div>
+
+          <div>
+            <button type="submit" class="cv-btn" title="Mettre à jour" aria-label="Mettre à jour">
+              <i class="fas fa-save"></i> Enregistrer
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+    {% endwith %}
+    {% empty %}
+    <div class="cv-empty">
+      <i class="fas fa-project-diagram"></i>
+      Aucun circuit de validation configuré.
+    </div>
+    {% endfor %}
+
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+    jQuery('.select2-valideurs').select2({
+      placeholder: 'Ajouter des validateurs…',
+      allowClear: true,
+      width: '100%'
+    });
+  }
+  document.querySelectorAll('.cv-form').forEach(function (form) {
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var f = this, btn = f.querySelector('.cv-btn');
+      if (window.NxUX && NxUX.confirm) {
+        NxUX.confirm({
+          title: 'Enregistrer ce circuit ?',
+          text: 'Statut et validateurs seront mis à jour.',
+          onConfirm: function () {
+            if (NxUX.loading) NxUX.loading(btn, 'Enregistrement…');
+            f.submit();
+          }
+        });
+      } else { f.submit(); }
+    });
+  });
+});
+</script>
+{% endblock %}

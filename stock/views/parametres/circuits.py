@@ -7,20 +7,13 @@ from accounts.permissions import verifier_permission
 from ...services.parametre_service import update_circuit
 from ...models import CircuitValidation
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_circuits_validation')
 def page_circuits_validation(request):
-    entreprise = request.entreprise
-    if not entreprise:
-        messages.error(request, "❌ Aucune entreprise associée à votre compte.")
-        return redirect('dashboard_directeur')
-
     # Initialisation des circuits (idéalement dans une migration ou signal)
     for code, nom in CircuitValidation.TYPE_DOC_CHOICES:
         CircuitValidation.objects.get_or_create(
             type_document=code,
-            entreprise=entreprise,
             defaults={'est_actif': False}
         )
 
@@ -43,12 +36,11 @@ def page_circuits_validation(request):
         # Vérifier que le circuit appartient à l'entreprise
         circuit = get_object_or_404(
             CircuitValidation,
-            id=circuit_id,
-            entreprise=entreprise
+            id=circuit_id
         )
 
         with transaction.atomic():
-            circuit = update_circuit(circuit_id, est_actif, valideurs_ids, entreprise)
+            circuit = update_circuit(circuit_id, est_actif, valideurs_ids)
 
         messages.success(
             request,
@@ -56,14 +48,10 @@ def page_circuits_validation(request):
         )
         return redirect('page_circuits_validation')
 
-    circuits = CircuitValidation.objects.filter(
-        entreprise=entreprise
-    ).order_by('type_document')
+    circuits = CircuitValidation.objects.all().order_by('type_document')
 
     utilisateurs = CircuitValidation.valideurs.field.related_model.objects.filter(
-        is_active=True,
-        profil__entreprise=entreprise
-    ).order_by('first_name', 'last_name')
+        is_active=True).order_by('first_name', 'last_name')
 
     return render(
         request,

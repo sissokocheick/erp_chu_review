@@ -174,7 +174,7 @@
     <i class="fas fa-user-shield ico"></i>
     <div>
       <h4>Rôles &amp; Accès</h4>
-      <small>Définissez les accès par rôle — {{ entreprise.nom }}</small>
+      <small>Définissez les accès par rôle</small>
     </div>
   </div>
   <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
@@ -212,7 +212,7 @@
         <td>
           <div class="role-name">
             <span class="role-id">#{{ groupe.id }}</span>
-            {% if groupe.roleentreprise %}{{ groupe.roleentreprise.nom_affiche }}{% else %}{{ groupe.name|cut:"@" }}{% endif %}
+            {{ groupe.name }}
           </div>
           <div class="mini-prog" style="margin-top:4px;">
             <div style="display:flex;align-items:center;gap:6px;">
@@ -241,9 +241,9 @@
           </div>
         </td>
         <td class="c" style="white-space:nowrap;">
-          {% with nom_affiche=groupe.roleentreprise.nom_affiche|default:groupe.name|cut:"@" %}
+          
           <button type="button" class="btn-ic edit" title="Modifier"
-            onclick="modifierRole('{{ groupe.id }}','{{ nom_affiche|escapejs }}',[{% for p in groupe.permissions.all %}{{ p.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
+            onclick="modifierRole('{{ groupe.id }}','{{ groupe.name|escapejs }}',[{% for p in groupe.permissions.all %}{{ p.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
             <i class="fas fa-edit"></i>
           </button>
           {% if groupe.users_count > 0 %}
@@ -254,16 +254,16 @@
               <input type="hidden" name="action" value="supprimer">
               <input type="hidden" name="groupe_id" value="{{ groupe.id }}">
               <button type="button" class="btn-ic del" title="Supprimer"
-                onclick="confirmerSuppression(event, 'Supprimer le rôle « {{ nom_affiche|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                onclick="confirmerSuppression(event, 'Supprimer le rôle « {{ groupe.name|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
             </form>
           {% endif %}
-          {% endwith %}
+          
         </td>
       </tr>
       {% empty %}
       <tr class="empty-row"><td colspan="6">
         <i class="fas fa-shield-alt" style="font-size:32px;display:block;margin-bottom:10px;opacity:0.3;"></i>
-        Aucun rôle créé pour {{ entreprise.nom }}.<br><small>Cliquez sur « Créer un rôle » pour commencer.</small>
+        Aucun rôle créé.<br><small>Cliquez sur « Créer un rôle » pour commencer.</small>
       </td></tr>
       {% endfor %}
     </tbody>

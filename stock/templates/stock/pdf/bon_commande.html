@@ -7,7 +7,22 @@
 <style>
 @page {
     size: A4;
-    margin: 10mm 7mm 1mm 7mm; }
+    margin: 10mm 7mm 18mm 7mm;
+    @bottom-center {
+        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+    }
+    @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+    }
+}
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
     font-family: 'Times New Roman', Times, serif;
@@ -19,7 +34,7 @@ body {
 .page-flex {
     display: flex;
     flex-direction: column;
-    min-height: 277mm;
+    min-height: 262mm;
 }
 .content-main { flex: 1 1 auto; }
 .bloc-bas {
@@ -29,7 +44,6 @@ body {
 }
 .page-flex .bloc-bas { margin-top: auto; }
 
-/* ── EN-TETE ETATIQUE ── */
 .en-tete-etatique {
     width: 100%;
     font-size: 8pt;
@@ -48,14 +62,7 @@ body {
 .en-tete-etatique .right-cell {
     text-align: right;
 }
-.en-tete-etatique .line1 {
-    display: block;
-}
-.en-tete-etatique .line2 {
-    display: block;
-}
 
-/* ── CARTOUCHE PRINCIPAL ── */
 .cartouche {
     width: 100%;
     border-collapse: collapse;
@@ -87,7 +94,6 @@ body {
     padding: 0;
     vertical-align: middle;
 }
-
 .code-cell {
     width: 25%;
     text-align: left;
@@ -97,7 +103,6 @@ body {
     border-left: 1.5px solid #000 !important;
 }
 
-/* ── INFOS COMMANDE ── */
 .infos-commande {
     width: 100%;
     border-collapse: collapse;
@@ -123,7 +128,6 @@ body {
     white-space: nowrap;
 }
 
-/* ── MODALITES ── */
 .modalites {
     width: 100%;
     border-collapse: collapse;
@@ -148,7 +152,6 @@ body {
     font-size: 10pt;
 }
 
-/* ── TABLEAU ARTICLES ── */
 .data-table {
     width: 100%;
     border-collapse: collapse;
@@ -188,7 +191,6 @@ body {
 .data-table .col-un { width: 12%; }
 .data-table .col-qt { width: 13%; }
 
-/* ── TEXTE LEGAL ── */
 .texte-legal {
     font-size: 9pt;
     font-style: italic;
@@ -198,7 +200,6 @@ body {
     border: 1px solid #000;
 }
 
-/* ── SIGNATURES ── */
 .signatures-block {
     width: 100%;
     margin-bottom: 2mm;
@@ -239,31 +240,6 @@ body {
     margin-top: 1mm;
 }
 
-/* ── FOOTER ── */
-.footer-bc {
-    text-align: center;
-    font-size: 7pt;
-    line-height: 1.5;
-    border-top: 2px solid #1c5b96;
-    padding-top: 1mm;
-    margin-top: 0;
-}
-.footer-bc .pied-texte {
-    font-weight: bold;
-    color: #1c5b96;
-}
-.footer-bc .pied-line {
-    display: block;
-    margin: 0;
-    padding: 0;
-}
-.footer-bc .pagination {
-    font-weight: bold;
-    color: #1c5b96;
-    margin-top: 1mm;
-    text-align: right;
-}
-
 img { max-width: 100%; height: auto; }
 </style>
 </head>
@@ -280,25 +256,24 @@ img { max-width: 100%; height: auto; }
         <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
       </div>
     </td>
-    
+
     <td style="width:50%; vertical-align:middle; text-align:right;">
       <div style="display:inline-block; text-align:center;">
-        
+
         {% if pdf_config.cartouche.afficher_republique %}
           <strong>République de Côte d'Ivoire</strong><br>
         {% endif %}
-        
+
         {% if pdf_config.cartouche.afficher_devise %}
           <em>Union - Discipline - Travail</em>
         {% endif %}
-        
+
       </div>
     </td>
   </tr>
 </table>
 {% endif %}
 
-    <!-- CARTOUCHE -->
     <table class="cartouche">
       <tr>
         <td class="logo-cell">
@@ -312,7 +287,7 @@ img { max-width: 100%; height: auto; }
                     {{ pdf_config.metadonnees.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
                 </span>
             </div>
-            
+
             <div style="height:17mm; line-height:17mm; width:100%; box-sizing:border-box; text-align:center;">
                 <span style="font-size:16pt; font-weight:bold; text-transform:uppercase; letter-spacing:1px; display:inline-block; vertical-align:middle; line-height:normal;">
                     BON DE COMMANDE
@@ -328,7 +303,6 @@ img { max-width: 100%; height: auto; }
       </tr>
     </table>
 
-    <!-- INFOS COMMANDE -->
     <table class="infos-commande">
       <tr>
         <td style="width:50%;">
@@ -343,7 +317,6 @@ img { max-width: 100%; height: auto; }
       </tr>
     </table>
 
-    <!-- MODALITES -->
     <table class="modalites">
       <tr>
         <td>
@@ -361,7 +334,6 @@ img { max-width: 100%; height: auto; }
       </tr>
     </table>
 
-    <!-- TABLEAU ARTICLES -->
     <table class="data-table">
       <thead>
         <tr>
@@ -385,16 +357,13 @@ img { max-width: 100%; height: auto; }
       </tbody>
     </table>
 
-    <!-- TEXTE LEGAL -->
     <div class="texte-legal">
       Exécuter la commande conformément aux modalités et spécifications précisées ci-dessus.
     </div>
 
-  </div> <!-- /content-main -->
+  </div>
 
-  <!-- BLOC BAS : SIGNATURES + FOOTER -->
   <div class="bloc-bas">
-
     {% if signatures_config %}
     <div class="signatures-block">
       <div class="sig-row">
@@ -417,17 +386,7 @@ img { max-width: 100%; height: auto; }
       </div>
     </div>
     {% endif %}
-
-    <div class="footer-bc">
-      <div class="pied-texte">
-        <div class="pied-line">ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 2722496400 * CC N° : 1821717-Q * INFO@CHUANGRE.CI</div>
-        <div class="pied-line">Direction des Affaires Financières * Sous-Direction de la Logistique</div>
-        <div class="pied-line">Postes : 110 et 200</div>
-      </div>
-      <div class="pagination">{{ page.numero|default:1 }} / {{ pages|length|default:1 }}</div>
-    </div>
-
-  </div> <!-- /bloc-bas -->
+  </div>
 </div>
 
 </body>

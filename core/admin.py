@@ -1,4 +1,4 @@
-# core/admin.py — CORRIGÉ (v2)
+# core/admin.py — CORRIGÉ (mono-tenant)
 from django.contrib import admin
 from .models import ConfigurationHopital, Service
 
@@ -12,18 +12,13 @@ class ConfigurationHopitalAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ('code', 'nom', 'entreprise', 'date_creation')
+    list_display = ('code', 'nom', 'date_creation')
     search_fields = ('code', 'nom')
-    list_filter = ('entreprise',)
     readonly_fields = ('date_creation', 'date_modification', 'cree_par', 'modifie_par')
-    # ✅ CORRECTION: raw_id_fields pour éviter chargement massif des FK
-    raw_id_fields = ('entreprise', 'cree_par', 'modifie_par')
+    raw_id_fields = ('cree_par', 'modifie_par')
 
     def get_queryset(self, request):
         qs = super().get_queryset(request)
-        if request.user.is_superuser:
-            return qs
-        # ✅ CORRECTION: hasattr complet pour éviter AttributeError
-        if hasattr(request.user, 'profil') and request.user.profil is not None:
-            return qs.filter(entreprise=request.user.profil.entreprise)
-        return qs.none()
+        # En mono-tenant, tout le monde voit tous les services
+        # (ou on peut filtrer plus tard selon les besoins)
+        return qs

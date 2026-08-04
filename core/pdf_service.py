@@ -1,4 +1,4 @@
-# core/pdf_service.py — CORRIGÉ (v2)
+# core/pdf_service.py — CORRIGÉ (mono-tenant v1)
 import functools
 import os
 import base64
@@ -8,7 +8,6 @@ from decimal import Decimal
 
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.apps import apps
 
 from weasyprint import HTML
 
@@ -27,16 +26,16 @@ class DocumentGenerator:
         self.entreprise = entreprise
         if not self.entreprise and request and hasattr(request, 'entreprise'):
             self.entreprise = request.entreprise
-        # ✅ CORRECTION P0 (v2): Suppression du fallback dangereux first()
-        # L'entreprise DOIT être fournie explicitement
+        # ✅ CORRECTION MONO-TENANT : fallback sur le singleton ConfigurationHopital
+        # au lieu de planter. Le paramètre 'entreprise' est conservé pour
+        # compatibilité avec le code existant, mais en mono-tenant il désigne
+        # toujours l'unique ConfigurationHopital.
         if not self.entreprise:
-            raise ValueError(
-                "entreprise requise pour générer un PDF. "
-                "Passer request= ou entreprise= explicitement."
-            )
+            from core.models import ConfigurationHopital
+            self.entreprise = ConfigurationHopital.get_instance()
 
     @staticmethod
-    @functools.lru_cache(maxsize=128)  # ✅ CORRECTION P0: augmenté 32→128
+    @functools.lru_cache(maxsize=128)
     def _img_url_cached(path: str, mtime: float) -> str:
         if not path or not os.path.exists(path):
             logger.warning(f"[PDF] Image introuvable sur le disque : {path}")
@@ -61,6 +60,18 @@ class DocumentGenerator:
             logger.warning(f"[PDF] URI fichier échoué pour {path} : {e}")
         return ""
 
+
+    def _get_logo_url(self):
+        """Retourne le logo depuis ParametrePDF (prioritaire) ou entreprise (fallback)."""
+        # Priorité 1 : ParametrePDF (logo uploadé via l'interface web)
+        if self.request:
+            logo_url = ParametrePDF.get_logo_url(self.request)
+            if logo_url:
+                return logo_url
+        # Priorité 2 : logo de l'entreprise (ConfigurationHopital)
+        if self.entreprise and hasattr(self.entreprise, 'logo') and self.entreprise.logo:
+            return self._img_url(self.entreprise.logo)
+        return None
     def _img_url(self, image_field):
         if not image_field:
             return ""
@@ -74,7 +85,7 @@ class DocumentGenerator:
 
     def _get_magasin_config(self, magasin, type_doc):
         try:
-            from stock.models import ModeleDocumentMagasin
+            from stock.models import ModeleDocumentMagasin, ParametrePDF
             modele = magasin.modeles_documents.get(
                 type_document=self._map_type_doc(type_doc),
                 est_actif=True
@@ -87,9 +98,7 @@ class DocumentGenerator:
             return {}
 
     def _legacy_to_configurable(self, cfg, type_doc):
-        from stock.models import ModeleDocumentMagasin
-        # ✅ CORRECTION P0 (v2): Gérer le cas où cfg est déjà un dict
-        # _default_config_structured attend un type_document (string), pas un dict
+        from stock.models import ModeleDocumentMagasin, ParametrePDF
         if isinstance(cfg, dict):
             return cfg
         return ModeleDocumentMagasin._default_config_structured(cfg, type_doc)
@@ -187,7 +196,6 @@ class DocumentGenerator:
             ctx.update(extra)
         return ctx
 
-    # ✅ CORRECTION P0 (v2): Méthode publique render_bytes (au lieu de _render_bytes privée)
     def render_bytes(self, template_name, context):
         """Méthode publique pour rendre un template et générer un PDF."""
         return self._render_bytes(template_name, context)
@@ -209,7 +217,6 @@ class DocumentGenerator:
     def _get_user_fonction(self, user, default=""):
         if not user:
             return default or ""
-        # ✅ CORRECTION P2: Cache du profil pour éviter N+1
         profil = getattr(user, '_cached_profil', None)
         if profil is None:
             profil = getattr(user, 'profil', None)
@@ -254,7 +261,6 @@ class DocumentGenerator:
             'espaceur_mm': 0.0,
         }
 
-    # ✅ CORRECTION P2: Factoriser la résolution de demande
     def _resolve_demande(self, bon, livraison=None):
         """Résout la demande liée à un bon (factorisé)."""
         demande = None
@@ -266,7 +272,6 @@ class DocumentGenerator:
             demande = bon.demande_origine.first()
         return demande
 
-    # ✅ CORRECTION P2: Factoriser l'extraction du code service
     def _extract_service_code(self, service_obj):
         if not service_obj:
             return ''
@@ -286,7 +291,6 @@ class DocumentGenerator:
         total_qte_demandee = 0
         total_qte_servie = 0
 
-        # ✅ CORRECTION P0 (v2): Utiliser _resolve_demande (factorisé)
         livraison = LivraisonPartielle.objects.filter(bon_sortie=bon).first()
         demande = self._resolve_demande(bon, livraison)
 
@@ -303,7 +307,6 @@ class DocumentGenerator:
             qte_servie = l.quantite
             qte_demandee = qte_demandee_par_article.get(l.article_id, qte_servie)
 
-            # ✅ CORRECTION P0 (v2): Ne pas écraser si le fallback est vide
             if hasattr(l, 'ligne_livraison') and l.ligne_livraison and getattr(l.ligne_livraison, 'quantite_demandee', None):
                 qte_demandee = l.ligne_livraison.quantite_demandee
             elif hasattr(l, 'ligne_demande') and l.ligne_demande and getattr(l.ligne_demande, 'quantite_demandee', None):
@@ -356,7 +359,6 @@ class DocumentGenerator:
             vu_par = bon.valide_par
             validation_date = getattr(bon, 'date_validation', None)
 
-        # ✅ CORRECTION P0 (v2): magasinier peut être None → logger + fallback
         magasinier = bon.cree_par
         if not magasinier:
             logger.warning(f"[PDF] Bon {bon.pk}: cree_par est None — case 'SORTIE EFFECTUÉE' sera vide")
@@ -396,7 +398,6 @@ class DocumentGenerator:
              'signature_path': reception_sig, 'date': reception_date, 'has_signature': bool(reception_sig), 'default_text': ''},
         ]
 
-        # ✅ CORRECTION P0 (v2): case_labels[2] protégé contre date_bon None
         date_bon_str = bon.date_bon.strftime('%d/%m/%Y') if bon.date_bon else ''
         case_labels = [
             "Émission",
@@ -457,7 +458,6 @@ class DocumentGenerator:
         est_multi_page = pagination['est_multi_page']
         espaceur_mm = pagination['espaceur_mm']
 
-        # ✅ CORRECTION P2: Utiliser _extract_service_code (factorisé)
         service_code = self._extract_service_code(bon.service_demandeur)
 
         est_livraison_partielle = False
@@ -492,8 +492,8 @@ class DocumentGenerator:
             'numero_livraison': getattr(livraison, 'numero_livraison', None) if livraison else None,
             'pdf_config': config,
             'espaceur_mm': espaceur_mm,
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
+            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
             'service_poste': getattr(bon.service_demandeur, 'poste', '') if bon.service_demandeur else '',
         })
         if extra_context:
@@ -561,8 +561,8 @@ class DocumentGenerator:
             'service_code': service_code,
             'pdf_config': config,
             'espaceur_mm': espaceur_mm,
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
+            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
             'type_bon_label': "BON DE DEMANDE",
             'doc_subtitle': "DE MATERIELS ET FOURNITURES",
             'service_poste': getattr(demande.service_demandeur, 'poste', '') if demande.service_demandeur else '',
@@ -641,7 +641,6 @@ class DocumentGenerator:
         signatures_config = []
         sigs_cfg = config.get('signatures', [])
 
-        # ✅ CORRECTION P0 (v2): Toujours ajouter les cases visibles, même sans valideur
         sig1 = sigs_cfg[0] if len(sigs_cfg) > 0 else {'label': 'Le Responsable', 'role': 'responsable', 'visible': True}
         if sig1.get('visible', True):
             signatures_config.append({
@@ -682,8 +681,8 @@ class DocumentGenerator:
             'numero_livraison': numero_livraison,
             'pdf_config': config,
             'type_bon_label': "BON D'ENTRÉE",
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
+            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
             'signatures_config': signatures_config,
             'est_reception_partielle': est_reception_partielle,
             'espaceur_mm': espaceur_mm,
@@ -781,8 +780,8 @@ class DocumentGenerator:
             'pdf_config': config,
             'type_bon_label': "BON DE RETOUR",
             'doc_subtitle': "DE MATERIELS ET FOURNITURES",
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
+            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
             'service_poste': getattr(bon.service_demandeur, 'poste', '') if bon.service_demandeur else '',
             'espaceur_mm': espaceur_mm,
         })
@@ -859,7 +858,7 @@ class DocumentGenerator:
             'magasin': bon.magasin,
             'service': bon.service_demandeur,
             'fournisseur': bon.fournisseur,
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
             'pdf_config': config,
             'type_bon_label': "BON DE SORTIE",
             'doc_subtitle': "HORS STOCK",
@@ -896,11 +895,13 @@ class DocumentGenerator:
 
         parts = []
         if e:
-            if getattr(e, 'adresse', None):     parts.append(e.adresse)
+            if getattr(e, 'adresse', None):         parts.append(e.adresse)
             if getattr(e, 'telephone', None):     parts.append(f"Tél : {e.telephone}")
-            if getattr(e, 'email', None):         parts.append(f"Email : {e.email}")
-            if getattr(e, 'cc', None):            parts.append(f"CC N° : {e.cc}")
-            if getattr(e, 'poste', None):         parts.append(f"Postes : {e.poste}")
+            # ✅ CORRECTION MONO-TENANT : ConfigurationHopital utilise 'email_contact'
+            # et n'a pas de champ 'poste'. Les champs 'raison_sociale' et 'designation'
+            # n'existent pas non plus mais sont des fallbacks après 'nom' qui existe.
+            if getattr(e, 'email_contact', None):   parts.append(f"Email : {e.email_contact}")
+            if getattr(e, 'cc', None):              parts.append(f"CC N° : {e.cc}")
         footer_line2 = "  •  ".join(parts)
 
         footer_line3 = config.get(
@@ -973,8 +974,8 @@ class DocumentGenerator:
             'utilisateur': utilisateur,
             'pdf_config': config,
             'type_bon_label': "ÉTAT DU STOCK",
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
+            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
         })
         if extra_context:
             ctx.update(extra_context)
@@ -1016,8 +1017,8 @@ class DocumentGenerator:
             'signatures_config': signatures_config,
             'pdf_config': config,
             'type_bon_label': "BON D'AJUSTEMENT DE STOCK",
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
+            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
         })
         if extra_context:
             ctx.update(extra_context)
@@ -1032,8 +1033,8 @@ class DocumentGenerator:
             'utilisateur': utilisateur,
             'pdf_config': config,
             'type_bon_label': f"HISTORIQUE – {article.designation}",
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
+            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
         })
         if extra_context:
             ctx.update(extra_context)
@@ -1051,8 +1052,8 @@ class DocumentGenerator:
             'date_impression': date_impression or timezone.now(),
             'pdf_config': config,
             'type_bon_label': f"FICHE DE COMPTAGE – {campagne.titre}",
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
+            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
             'imprimeur_sig': imprimeur_sig,
         })
         if extra_context:
@@ -1074,8 +1075,8 @@ class DocumentGenerator:
             'date_impression': date_impression or timezone.now(),
             'pdf_config': config,
             'type_bon_label': f"RÉSULTAT INVENTAIRE – {campagne.titre}",
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
+            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
             'saisisseur_sig': saisisseur_sig,
             'valideur_sig': valideur_sig,
         })
@@ -1093,7 +1094,7 @@ class DocumentGenerator:
             'service': service,
             'edite_par': edite_par,
             'pdf_config': config,
-            'logo_url': self._img_url(self.entreprise.logo) if self.entreprise else None,
+            'logo_url': self._get_logo_url(),
         })
         if extra_context:
             ctx.update(extra_context)

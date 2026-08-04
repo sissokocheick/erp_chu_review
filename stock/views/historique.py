@@ -34,8 +34,7 @@ from ..models import (
     CampagneInventaire, LigneInventaire, CircuitValidation,
     LivraisonPartielle, DemandeMateriel, LigneDemande,
     AccuseReception,
-    LivraisonLigne,
-)
+    LivraisonLigne)
 from .catalogue import paginer, get_magasins_autorises
 
 logger = logging.getLogger(__name__)
@@ -46,7 +45,7 @@ User = get_user_model()
 @magasin_requis
 def journal_historique(request):
     """Vue journal d'historique (GET uniquement)."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     q = request.GET.get('q', '').lower()
     date_range = request.GET.get('date_range', '')
 
@@ -54,7 +53,7 @@ def journal_historique(request):
     magasin_nom = "TOUS LES MAGASINS"
     if magasin_id:
         try:
-            magasin_nom = Magasin.objects.get(id=magasin_id, entreprise=entreprise).nom
+            magasin_nom = Magasin.objects.get(id=magasin_id).nom
         except Magasin.DoesNotExist:
             pass
 
@@ -73,52 +72,38 @@ def journal_historique(request):
         date_fin = timezone.now().date()
         date_debut = date_fin - timedelta(days=60)
 
-    entreprise_id = entreprise.id if entreprise else 0
+    h_articles = Article.history.filter(
+        history_date__date__gte=date_debut,
+        history_date__date__lte=date_fin
+    ).order_by('-history_date')[:50]
+    h_magasins = Magasin.history.filter(
+        history_date__date__gte=date_debut,
+        history_date__date__lte=date_fin
+    ).order_by('-history_date')[:50]
+    h_fournisseurs = Fournisseur.history.filter(
+        history_date__date__gte=date_debut,
+        history_date__date__lte=date_fin
+    ).order_by('-history_date')[:50]
 
-    if entreprise_id:
-        h_articles = Article.history.filter(
-            entreprise_id=entreprise_id,
+    magasins_ids = list(Magasin.objects.all().values_list('id', flat=True))
+    if magasins_ids:
+        h_mouvements = Mouvement.history.filter(
+            magasin_id__in=magasins_ids,
             history_date__date__gte=date_debut,
             history_date__date__lte=date_fin
         ).order_by('-history_date')[:50]
-        h_magasins = Magasin.history.filter(
-            entreprise_id=entreprise_id,
-            history_date__date__gte=date_debut,
-            history_date__date__lte=date_fin
-        ).order_by('-history_date')[:50]
-        h_fournisseurs = Fournisseur.history.filter(
-            entreprise_id=entreprise_id,
-            history_date__date__gte=date_debut,
-            history_date__date__lte=date_fin
-        ).order_by('-history_date')[:50]
-
-        magasins_ids = list(Magasin.objects.filter(entreprise=entreprise).values_list('id', flat=True))
-        if magasins_ids:
-            h_mouvements = Mouvement.history.filter(
-                magasin_id__in=magasins_ids,
-                history_date__date__gte=date_debut,
-                history_date__date__lte=date_fin
-            ).order_by('-history_date')[:50]
-        else:
-            h_mouvements = Mouvement.history.none()
-
-        h_services = Service.history.filter(
-            entreprise_id=entreprise_id,
-            history_date__date__gte=date_debut,
-            history_date__date__lte=date_fin
-        ).order_by('-history_date')[:50] if hasattr(Service, 'history') else Service.objects.none()
-
-        h_roles = Group.history.filter(
-            history_date__date__gte=date_debut,
-            history_date__date__lte=date_fin
-        ).order_by('-history_date')[:50] if hasattr(Group, 'history') else Group.objects.none()
     else:
-        h_articles = Article.history.none()
-        h_magasins = Magasin.history.none()
-        h_services = Service.history.none() if hasattr(Service, 'history') else Service.objects.none()
-        h_fournisseurs = Fournisseur.history.none()
         h_mouvements = Mouvement.history.none()
-        h_roles = Group.history.none() if hasattr(Group, 'history') else Group.objects.none()
+
+    h_services = Service.history.filter(
+        history_date__date__gte=date_debut,
+        history_date__date__lte=date_fin
+    ).order_by('-history_date')[:50] if hasattr(Service, 'history') else Service.objects.none()
+
+    h_roles = Group.history.filter(
+        history_date__date__gte=date_debut,
+        history_date__date__lte=date_fin
+    ).order_by('-history_date')[:50] if hasattr(Group, 'history') else Group.objects.none()
 
     if magasin_id:
         h_mouvements = [m for m in h_mouvements if getattr(m, 'magasin_id', None) == int(magasin_id)]
@@ -170,7 +155,6 @@ def journal_historique(request):
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return render(request, 'stock/historique_lignes.html', context)
     return render(request, 'stock/historique.html', context)
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # BONS HORS STOCK

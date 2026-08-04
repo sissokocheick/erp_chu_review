@@ -10,16 +10,14 @@ from ..models import Magasin
 from django.urls import reverse
 from urllib.parse import urlencode
 
-
 def get_magasin_actif(request):
     """Retourne le magasin actif de la session si autorisé."""
     magasin_id = request.session.get('magasin_actif_id')
-    if magasin_id and request.entreprise:
-        return Magasin.objects.filter(
-            id=magasin_id, entreprise=request.entreprise
-        ).first()
+    # if magasin_id and None  # SUPPRIMÉ (mono-tenant)
+    return Magasin.objects.filter(
+        id=magasin_id
+    ).first()
     return None
-
 
 def paginer(qs, request, per_page_key='per_page', default=15, max_all=500):
     """Pagination identique à catalogue.paginer()."""
@@ -35,7 +33,6 @@ def paginer(qs, request, per_page_key='per_page', default=15, max_all=500):
             limite = default
     page = request.GET.get('page')
     return Paginator(qs, limite).get_page(page), per_page
-
 
 def filtrer_par_date(qs, request, date_field='date_creation'):
     """Applique le filtre date_range sur un queryset."""
@@ -54,7 +51,6 @@ def filtrer_par_date(qs, request, date_field='date_creation'):
             pass
     return qs, date_range
 
-
 def filtrer_par_texte(qs, request, champs, param='q'):
     """
     Applique un filtre Q() OR sur plusieurs champs.
@@ -68,7 +64,6 @@ def filtrer_par_texte(qs, request, champs, param='q'):
         qs = qs.filter(q_filter).distinct()
     return qs, q
 
-
 def build_redirect_url(base_name, query=None, per_page=None, default_per_page='15'):
     """Construit une URL de redirection en conservant filtres & pagination."""
     url = reverse(base_name)
@@ -80,7 +75,6 @@ def build_redirect_url(base_name, query=None, per_page=None, default_per_page='1
     if params:
         url += '?' + urlencode(params)
     return url
-
 
 def render_liste(request, qs, template, ajax_template,
                  context_extra=None, context_object_name='items',

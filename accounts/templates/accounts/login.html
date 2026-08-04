@@ -638,66 +638,52 @@
                     {% endfor %}
                 {% endif %}
 
-                <!-- Honeypot anti-bot -->
+                <!-- Honeypot anti-bot (à vérifier côté serveur dans custom_login) -->
                 <input type="text" name="a_username" style="position:absolute;opacity:0;top:-1000px;" tabindex="-1" autocomplete="off">
                 <input type="password" name="a_password" style="position:absolute;opacity:0;top:-1000px;" tabindex="-1" autocomplete="off">
 
                 <form method="POST" action="{% url 'accounts:custom_login' %}" id="loginForm" novalidate autocomplete="off">
-                    {% csrf_token %}
-                    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
+    {% csrf_token %}
+    {% if next %}<input type="hidden" name="next" value="{{ next }}">{% endif %}
 
-                    <div class="form-floating">
-                        <input type="text"
-                               name="username"
-                               id="id_username"
-                               class="form-control"
-                               placeholder=" "
-                               required
-                               value="{{ request.POST.username|default:'' }}"
-                               autofocus
-                               autocomplete="off"
-                               autocorrect="off"
-                               autocapitalize="off"
-                               spellcheck="false">
-                        <label for="id_username">Login</label>
-                    </div>
+    <div class="form-floating">
+        <input type="text"
+               name="username"
+               id="id_username"
+               class="form-control"
+               placeholder=" "
+               required
+               value="{{ request.POST.username|default:'' }}"
+               autofocus
+               autocomplete="off"
+               autocorrect="off"
+               autocapitalize="off"
+               spellcheck="false">
+        <label for="id_username">Login</label>
+    </div>
 
-                    <div class="form-floating">
-                        <input type="password"
-                               name="password"
-                               id="id_password"
-                               class="form-control"
-                               placeholder=" "
-                               required
-                               autocomplete="new-password"
-                               autocorrect="off"
-                               autocapitalize="off"
-                               spellcheck="false">
-                        <label for="id_password">Mot de passe</label>
-                        <button type="button" class="password-toggle" id="passwordToggle" aria-label="Afficher/Masquer">
-                            <i class="fas fa-eye" id="passwordIcon"></i>
-                        </button>
-                    </div>
+    <div class="form-floating">
+        <input type="password"
+               name="password"
+               id="id_password"
+               class="form-control"
+               placeholder=" "
+               required
+               autocomplete="current-password"
+               autocorrect="off"
+               autocapitalize="off"
+               spellcheck="false">
+        <label for="id_password">Mot de passe</label>
+        <button type="button" class="password-toggle" id="passwordToggle" aria-label="Afficher/Masquer">
+            <i class="fas fa-eye" id="passwordIcon"></i>
+        </button>
+    </div>
 
-                    <div class="custom-select-wrapper">
-                        <label for="entreprise_slug">Entité juridique</label>
-                        <select name="entreprise_slug" id="entreprise_slug" class="form-control" required autocomplete="off">
-                            <option value="">Sélectionnez votre environnement...</option>
-                            {% for e in entreprises %}
-                                <option value="{{ e.slug }}" {% if request.POST.entreprise_slug == e.slug %}selected{% endif %}>
-                                    {{ e.nom }}
-                                </option>
-                            {% empty %}
-                                <option value="" disabled>Aucune entité disponible</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-
-                    <button type="submit" class="btn-login" id="submitBtn">
-                        <span class="btn-text"><i class="fas fa-arrow-right-to-bracket"></i> Accéder à l'espace</span>
-                        <div class="spinner"></div>
-                    </button>
-                </form>
+    <button type="submit" class="btn-login" id="submitBtn">
+        <span class="btn-text"><i class="fas fa-arrow-right-to-bracket"></i> Accéder à l'espace</span>
+        <div class="spinner"></div>
+    </button>
+</form>
 
                 <div class="session-info">
                     <i class="fas fa-shield-halved"></i>
@@ -717,7 +703,6 @@
             const passwordIcon = document.getElementById('passwordIcon');
             const loginForm = document.getElementById('loginForm');
             const submitBtn = document.getElementById('submitBtn');
-            const selectEntreprise = document.getElementById('entreprise_slug');
 
             // Sync icône thème
             const isDark = body.classList.contains('dark-mode');
@@ -748,20 +733,10 @@
                 }
             });
 
-            // Mémoriser la dernière entreprise
-            const lastSlug = localStorage.getItem('nexuserp_last_entreprise_slug');
-            if (lastSlug && selectEntreprise) {
-                const opt = selectEntreprise.querySelector('option[value="' + lastSlug + '"]');
-                if (opt) opt.selected = true;
-            }
-
             loginForm.addEventListener('submit', () => {
-                if (selectEntreprise && selectEntreprise.value) {
-                    localStorage.setItem('nexuserp_last_entreprise_slug', selectEntreprise.value);
-                }
-                submitBtn.classList.add('loading');
-                submitBtn.disabled = true;
-            });
+    submitBtn.classList.add('loading');
+    submitBtn.disabled = true;
+});
         });
     </script>
 

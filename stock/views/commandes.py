@@ -14,15 +14,13 @@ from accounts.permissions import verifier_permission
 from ..models import (
     Commande, LigneCommande, BonMouvement, LigneBon,
     Fournisseur, Article, Magasin, Mouvement, CircuitValidation,
-    BonDeLivraison, FamilleArticle,
-)
+    BonDeLivraison, FamilleArticle)
 from ..decorators import magasin_requis, catch_errors
 from ..services import NumeroGenerator, NotificationService
 from ..services.bon_service import BonService
 from ..services.stock_transaction_service import StockTransactionService
-from .catalogue import paginer
+from .catalogue import paginer, get_magasins_autorises
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
-from core.pdf_service import DocumentGenerator
 from django.urls import reverse
 from core.models import ConfigurationHopital
 from django.db.models import Sum, Count, Case, When, Value, IntegerField
@@ -30,9 +28,7 @@ from django.db.models import Sum, Count, Case, When, Value, IntegerField
 # Constante : taille maximale de fichier upload (1 Mo)
 MAX_FILE_SIZE = 1024 * 1024  # 1 Mo en octets
 
-
 logger = logging.getLogger(__name__)
-
 
 def _safe_delete(obj, user=None):
     """
@@ -53,7 +49,6 @@ def _safe_delete(obj, user=None):
             return
     obj.delete()
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # COMMANDES (ACHATS)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -63,7 +58,7 @@ def _safe_delete(obj, user=None):
 @magasin_requis
 @catch_errors(redirect_url='liste_commandes')
 def liste_commandes(request):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_actif_id = request.session.get('magasin_actif_id')
 
     commandes = Commande.objects.select_related(
@@ -83,9 +78,9 @@ def liste_commandes(request):
             statut__in=['LIVRE_TOTAL', 'SOLDE', 'ANNULE']
         ).order_by('-date_commande')
 
-    fournisseurs = Fournisseur.objects.filter(entreprise=entreprise).order_by('raison_sociale')
-    articles = Article.objects.filter(entreprise=entreprise).select_related('famille').order_by('designation')
-    familles = FamilleArticle.objects.filter(entreprise=entreprise).order_by('intitule')
+    fournisseurs = Fournisseur.objects.all().order_by('raison_sociale')
+    articles = Article.objects.all().select_related('famille').order_by('designation')
+    familles = FamilleArticle.objects.all().order_by('intitule')
 
     q = request.GET.get('q', '')
     if q:
@@ -122,7 +117,7 @@ def liste_commandes(request):
     if not peut_valider:
         try:
             circuit = CircuitValidation.objects.get(
-                type_document='COMMANDE', entreprise=entreprise
+                type_document='COMMANDE'
             )
             if circuit.est_actif and circuit.valideurs.filter(id=request.user.id).exists():
                 peut_valider = True
@@ -131,7 +126,7 @@ def liste_commandes(request):
             peut_valider = False
             logger.warning(
                 f"[COMMANDE] Pas de circuit de validation configuré "
-                f"pour l'entreprise {entreprise.id}"
+                f"None"
             )
 
     peut_creer = (request.user.has_perm('accounts.menu_commandes') or request.user.is_superuser)
@@ -154,10 +149,10 @@ def liste_commandes(request):
             messages.error(request, "❌ Veuillez sélectionner un magasin.")
         else:
             # ── Validation : tous les articles doivent appartenir à la famille ──
-            famille = get_object_or_404(FamilleArticle, id=famille_id, entreprise=entreprise)
+            famille = get_object_or_404(FamilleArticle, id=famille_id)
             if article_ids:
                 articles_hors_famille = Article.objects.filter(
-                    id__in=article_ids, entreprise=entreprise
+                    id__in=article_ids
                 ).exclude(famille=famille)
                 if articles_hors_famille.exists():
                     noms = ", ".join(a.designation for a in articles_hors_famille[:3])
@@ -191,8 +186,7 @@ def liste_commandes(request):
                         cree_par=request.user, modifie_par=request.user,
                         objet=request.POST.get('objet', '').strip() or None,
                         delai_livraison=delai_livraison,
-                        date_livraison_prevue=date_livraison_prevue,
-                    )
+                        date_livraison_prevue=date_livraison_prevue)
                     commande.save()
             except IntegrityError:
                 messages.error(request, "⛔ Erreur de génération de numéro unique. Veuillez réessayer.")
@@ -228,39 +222,15 @@ def liste_commandes(request):
         return render(request, 'stock/commandes_lignes.html', context)
     return render(request, 'stock/liste_commandes.html', context)
 
-
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_commandes')
-@magasin_requis
-def imprimer_commande(request, commande_id):
-    entreprise = request.entreprise
-    commande = get_object_or_404(
-        Commande.objects.prefetch_related('lignes_commande__article').select_related(
-            'fournisseur', 'cree_par', 'magasin'
-        ),
-        id=commande_id, magasin__entreprise=entreprise
-    )
-
-    gen = DocumentGenerator(request=request, entreprise=entreprise)
-    pdf_bytes = gen.bon_commande(commande)
-
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = (
-        f'inline; filename="Commande_{commande.numero_commande}.pdf"'
-    )
-    return response
-
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_reception_commande')
 @magasin_requis
 @catch_errors(redirect_url='liste_commandes')
 def receptionner_commande(request, commande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
         Commande.objects.prefetch_related('lignes_commande__article'),
-        id=commande_id, magasin__entreprise=entreprise
-    )
+        id=commande_id)
 
     if commande.statut == 'LIVRE_TOTAL':
         messages.warning(
@@ -269,10 +239,10 @@ def receptionner_commande(request, commande_id):
         )
         return redirect('liste_commandes')
 
-    magasins = Magasin.objects.filter(entreprise=entreprise)
+    magasins = Magasin.objects.all()
     magasin_id_actif = request.session.get('magasin_actif_id')
     magasin_actif = Magasin.objects.filter(
-        id=magasin_id_actif, entreprise=entreprise
+        id=magasin_id_actif
     ).first()
 
     if request.method == 'POST':
@@ -286,7 +256,7 @@ def receptionner_commande(request, commande_id):
         # CORRECTION : validation du magasin
         try:
             magasin = Magasin.objects.get(
-                id=magasin_id, entreprise=entreprise, is_actif=True
+                id=magasin_id, is_deleted=False
             )
         except Magasin.DoesNotExist:
             messages.error(request, "⛔ Magasin invalide ou inactif.")
@@ -358,8 +328,7 @@ def receptionner_commande(request, commande_id):
                             numero_lot=lot, date_peremption=date_p,
                             prix_unitaire=pu_val,
                             quantite_demandee=reliquat_avant,
-                            reste=reliquat_apres,
-                        )
+                            reste=reliquat_apres)
 
                         if not circuit_actif:
                             mouvement = Mouvement(
@@ -370,8 +339,7 @@ def receptionner_commande(request, commande_id):
                                 reference_document=f"{bon.numero_bon} (Réf Cmd: {commande.numero_commande})",
                                 utilisateur=request.user,
                                 commentaire=f"Réception commande {commande.numero_commande}",
-                                numero_lot=lot, date_peremption=date_p,
-                            )
+                                numero_lot=lot, date_peremption=date_p)
                             StockTransactionService.executer(mouvement)
 
                         ligne_cmd.quantite_recue += qte_recue
@@ -412,22 +380,20 @@ def receptionner_commande(request, commande_id):
     context = {'commande': commande, 'magasins': magasins, 'magasin_actif': magasin_actif}
     return render(request, 'stock/receptionner_commande.html', context)
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_commandes')
 @magasin_requis
 @catch_errors(redirect_url='liste_commandes')
 def valider_commande(request, commande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
-        Commande, id=commande_id, magasin__entreprise=entreprise
-    )
+        Commande, id=commande_id)
     
     # ✅ CORRECTION : Fail-closed complet
     peut_valider = request.user.is_superuser
     try:
         circuit = CircuitValidation.objects.get(
-            type_document='COMMANDE', entreprise=entreprise
+            type_document='COMMANDE'
         )
         if circuit.est_actif and not circuit.valideurs.filter(id=request.user.id).exists() and not request.user.is_superuser:
             messages.error(
@@ -442,11 +408,8 @@ def valider_commande(request, commande_id):
         peut_valider = False
         logger.warning(
 
-
-
-
             f"[COMMANDE] Pas de circuit de validation configuré "
-            f"pour l'entreprise {entreprise.id}"
+            f"None"
         )
 
     if not peut_valider:
@@ -469,16 +432,14 @@ def valider_commande(request, commande_id):
         )
     return redirect('liste_commandes')
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_commandes')
 @magasin_requis
 @catch_errors(redirect_url='liste_commandes')
 def supprimer_commande(request, commande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
-        Commande, id=commande_id, magasin__entreprise=entreprise
-    )
+        Commande, id=commande_id)
     # Vérification des dépendances avant suppression
     deps = []
     if commande.bons_reception.exists():
@@ -509,18 +470,16 @@ def supprimer_commande(request, commande_id):
         )
     return redirect('liste_commandes')
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_commandes')
 @magasin_requis
 @transaction.atomic
 @catch_errors(redirect_url='liste_commandes')
 def modifier_commande(request, commande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
         Commande.objects.select_related('famille'),
-        id=commande_id, magasin__entreprise=entreprise
-    )
+        id=commande_id)
 
     if commande.statut != 'EN_ATTENTE':
         messages.error(request, "Impossible de modifier : commande déjà en cours de réception ou clôturée.")
@@ -535,7 +494,7 @@ def modifier_commande(request, commande_id):
             messages.error(request, "❌ Veuillez sélectionner une famille d'articles.")
             return redirect('liste_commandes')
 
-        famille = get_object_or_404(FamilleArticle, id=famille_id, entreprise=entreprise)
+        famille = get_object_or_404(FamilleArticle, id=famille_id)
 
         # ═══════════════════════════════════════════════════════
         # ✅ VALIDATION SUR LA MODIFICATION
@@ -559,7 +518,7 @@ def modifier_commande(request, commande_id):
         articles_ids = request.POST.getlist('articles[]')
         if articles_ids:
             articles_hors_famille = Article.objects.filter(
-                id__in=articles_ids, entreprise=entreprise
+                id__in=articles_ids
             ).exclude(famille=famille)
             if articles_hors_famille.exists():
                 noms = ", ".join(a.designation for a in articles_hors_famille[:3])
@@ -593,14 +552,14 @@ def modifier_commande(request, commande_id):
         messages.success(request, f"La commande {commande.numero_commande} a été mise à jour ({famille.intitule}).")
         return redirect('liste_commandes')
 
-    fournisseurs = Fournisseur.objects.filter(entreprise=entreprise)
-    articles = Article.objects.filter(entreprise=entreprise).select_related('famille')
+    fournisseurs = Fournisseur.objects.all()
+    articles = Article.objects.all().select_related('famille')
     
     # Si la commande a déjà une famille, on pré-filtre les articles
     if commande.famille_id:
         articles = articles.filter(famille=commande.famille)
     
-    familles = FamilleArticle.objects.filter(entreprise=entreprise).order_by('intitule')
+    familles = FamilleArticle.objects.all().order_by('intitule')
     
     context = {
         'commande': commande,
@@ -611,16 +570,14 @@ def modifier_commande(request, commande_id):
     }
     return render(request, 'stock/modifier_commande.html', context)
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_commandes')
 @require_POST
 @catch_errors(redirect_url='liste_commandes')
 def solder_commande(request, commande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
-        Commande, id=commande_id, magasin__entreprise=entreprise
-    )
+        Commande, id=commande_id)
     if commande.statut in ['EN_ATTENTE', 'LIVRE_PARTIEL']:
         commande.statut = 'SOLDE'
         commande.save()
@@ -635,7 +592,6 @@ def solder_commande(request, commande_id):
         )
     return redirect('liste_commandes')
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # RÉCEPTIONS
 # ══════════════════════════════════════════════════════════════════════════════
@@ -646,7 +602,7 @@ def solder_commande(request, commande_id):
 @catch_errors(redirect_url='liste_commandes')
 def liste_receptions(request):
     """Vue liste des réceptions (GET uniquement, POST géré par receptionner_commande)."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_actif_id = request.session.get('magasin_actif_id')
 
     onglet = request.GET.get('onglet', 'en_cours')
@@ -654,7 +610,7 @@ def liste_receptions(request):
 
     qs = Commande.objects.select_related('fournisseur', 'cree_par', 'famille').prefetch_related(
         'lignes_commande__article', 'bons_reception__magasin', 'bons_livraison_commande'
-    ).filter(magasin__entreprise=entreprise, statut__in=statuts).order_by('-date_commande')
+    ).filter( statut__in=statuts).order_by('-date_commande')
 
     if magasin_actif_id:
         qs = qs.filter(magasin_id=magasin_actif_id)
@@ -672,7 +628,7 @@ def liste_receptions(request):
 
     commandes_pagines, per_page = paginer(qs, request)
 
-    config = ConfigurationHopital.objects.filter(entreprise=entreprise).first()
+    config = ConfigurationHopital.objects.first()
     delai_jours = getattr(config, 'delai_remplacement_bon_jours', 2) if config else 2
 
     # ✅ reliquat est maintenant un champ DB (PositiveIntegerField)
@@ -733,14 +689,14 @@ def liste_receptions(request):
         total_reliquat += reliquat_total
 
     counts = {
-        'en_cours': Commande.objects.filter(magasin__entreprise=entreprise, statut__in=['EN_ATTENTE', 'LIVRE_PARTIEL']).count(),
-        'terminees': Commande.objects.filter(magasin__entreprise=entreprise, statut__in=['LIVRE_TOTAL', 'SOLDE', 'ANNULE']).count(),
+        'en_cours': Commande.objects.filter( statut__in=['EN_ATTENTE', 'LIVRE_PARTIEL']).count(),
+        'terminees': Commande.objects.filter( statut__in=['LIVRE_TOTAL', 'SOLDE', 'ANNULE']).count(),
     }
 
     context = {
         'commandes_data': commandes_data,
         'commandes': commandes_pagines,
-        'fournisseurs': Fournisseur.objects.filter(entreprise=entreprise).order_by('raison_sociale'),
+        'fournisseurs': Fournisseur.objects.all().order_by('raison_sociale'),
         'q_commande': q,
         'per_page': per_page,
         'onglet': onglet,
@@ -753,16 +709,14 @@ def liste_receptions(request):
     }
     return render(request, 'stock/liste_receptions.html', context)
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_reception_commande')
 @require_POST
 @catch_errors(redirect_url='liste_receptions')
 def joindre_bon_livraison(request, commande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
-        Commande, id=commande_id, magasin__entreprise=entreprise
-    )
+        Commande, id=commande_id)
 
     if not commande.bons_reception.exists():
         messages.error(request, "⛔ Impossible de joindre un bon : la commande n'a pas encore été réceptionnée.")
@@ -789,9 +743,7 @@ def joindre_bon_livraison(request, commande_id):
             BonMouvement,
             id=bon_entree_id,
             commande_liee=commande,
-            type_bon='ENTREE',
-            magasin__entreprise=entreprise,
-        )
+            type_bon='ENTREE')
         # Vérifie qu'il n'y a pas déjà un BL pour cette réception
         if BonDeLivraison.objects.filter(bon_entree=bon_entree).exists():
             messages.error(request, "⛔ Un BL est déjà joint à cette réception.")
@@ -812,20 +764,17 @@ def joindre_bon_livraison(request, commande_id):
     )
     return redirect('liste_receptions')
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_reception_commande')
 @require_POST
 @catch_errors(redirect_url='liste_receptions')
 def remplacer_bon_livraison(request, bon_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     bon = get_object_or_404(
         BonDeLivraison,
-        id=bon_id,
-        commande__magasin__entreprise=entreprise
-    )
+        id=bon_id)
 
-    config = ConfigurationHopital.objects.filter(entreprise=entreprise).first()
+    config = ConfigurationHopital.objects.first()
     delai_jours = getattr(config, 'delai_remplacement_bon_jours', 2) if config else 2
 
     delai_ecoule = (timezone.now() - bon.date_upload).days
@@ -868,32 +817,15 @@ def remplacer_bon_livraison(request, bon_id):
     )
     return redirect('liste_receptions')
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_reception_commande')
 def voir_bon_livraison(request, bon_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     bon = get_object_or_404(
         BonDeLivraison,
-        id=bon_id,
-        commande__magasin__entreprise=entreprise
-    )
+        id=bon_id)
     if bon.fichier:
         content_type = 'application/pdf' if bon.fichier.name.endswith('.pdf') else 'image/jpeg'
         return FileResponse(bon.fichier.open(), content_type=content_type)
     return HttpResponse("Aucun document joint.", status=404)
 
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_reception_commande')
-@magasin_requis
-def imprimer_bon_entree(request, bon_id):
-    entreprise = request.entreprise
-    bon = get_object_or_404(
-        BonMouvement.objects.prefetch_related('lignes_bon__article').select_related('magasin', 'fournisseur'),
-        id=bon_id, magasin__entreprise=entreprise, type_bon='ENTREE'
-    )
-    gen = DocumentGenerator(request=request, entreprise=entreprise)
-    pdf_bytes = gen.bon_entree(bon)
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="BE_{bon.numero_bon}.pdf"'
-    return response

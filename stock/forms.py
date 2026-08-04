@@ -35,19 +35,14 @@ class SortieStockForm(forms.ModelForm):
             'date_peremption': 'Date de péremption',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.utilisateur = kwargs.pop('utilisateur', None)
         super().__init__(*args, **kwargs)
-        if entreprise:
-            self.fields['article'].queryset = Article.objects.filter(
-                entreprise=entreprise, stocks__quantite_physique__gt=0
-            ).distinct()
-            self.fields['magasin'].queryset = Magasin.objects.filter(entreprise=entreprise)
-            self.fields['service_demandeur'].queryset = Service.objects.filter(entreprise=entreprise)
-        else:
-            self.fields['article'].queryset = Article.objects.none()
-            self.fields['magasin'].queryset = Magasin.objects.none()
-            self.fields['service_demandeur'].queryset = Service.objects.none()
+        self.fields['article'].queryset = Article.objects.filter(
+            stocks__quantite_physique__gt=0
+        ).distinct()
+        self.fields['magasin'].queryset = Magasin.objects.all()
+        self.fields['service_demandeur'].queryset = Service.objects.all()
         self.fields['service_demandeur'].label = "Service Demandeur"
 
     def clean(self):
@@ -112,17 +107,12 @@ class EntreeStockForm(forms.ModelForm):
             'date_peremption': 'Date de péremption',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.utilisateur = kwargs.pop('utilisateur', None)
         super().__init__(*args, **kwargs)
-        if entreprise:
-            self.fields['article'].queryset = Article.objects.filter(entreprise=entreprise)
-            self.fields['magasin'].queryset = Magasin.objects.filter(entreprise=entreprise)
-            self.fields['fournisseur'].queryset = Fournisseur.objects.filter(entreprise=entreprise)
-        else:
-            self.fields['article'].queryset = Article.objects.none()
-            self.fields['magasin'].queryset = Magasin.objects.none()
-            self.fields['fournisseur'].queryset = Fournisseur.objects.none()
+        self.fields['article'].queryset = Article.objects.all()
+        self.fields['magasin'].queryset = Magasin.objects.all()
+        self.fields['fournisseur'].queryset = Fournisseur.objects.all()
 
     def save(self, commit=True):
         instance = super().save(commit=False)
@@ -190,31 +180,22 @@ class ArticleForm(forms.ModelForm):
             'gere_lots_peremption': 'Gere les lots et peremptions',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
-        self.entreprise = entreprise
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if entreprise:
-            self.fields['famille'].queryset = FamilleArticle.objects.filter(entreprise=entreprise)
-        else:
-            self.fields['famille'].queryset = FamilleArticle.objects.none()
+        self.fields['famille'].queryset = FamilleArticle.objects.all()
 
     def clean_designation(self):
         designation = self.cleaned_data.get('designation', '').strip()
-        if designation and self.entreprise:
-            qs = Article.objects.filter(
-                designation__iexact=designation,
-                entreprise=self.entreprise
-            )
+        if designation:
+            qs = Article.objects.filter(designation__iexact=designation)
             if self.instance and self.instance.pk:
                 qs = qs.exclude(pk=self.instance.pk)
             if qs.exists():
-                raise forms.ValidationError("Un article avec cette designation existe deja dans cette entreprise.")
+                raise forms.ValidationError("Un article avec cette designation existe deja.")
         return designation
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.entreprise and not instance.entreprise_id:
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance
@@ -250,14 +231,11 @@ class ServiceForm(forms.ModelForm):
             'telecopie':       'Télécopie / Fax',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entreprise = entreprise
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.entreprise and not getattr(instance, 'entreprise_id', None):
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance
@@ -283,14 +261,11 @@ class FournisseurForm(forms.ModelForm):
             'telecopie': 'Télécopie / Fax',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entreprise = entreprise
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.entreprise and not instance.entreprise_id:
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance
@@ -354,14 +329,11 @@ class FamilleArticleForm(forms.ModelForm):
             'est_immobilisable': 'Est immobilisable (Biens d\'équipement)',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entreprise = entreprise
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.entreprise and not getattr(instance, 'entreprise_id', None):
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance
@@ -373,7 +345,7 @@ class FamilleArticleForm(forms.ModelForm):
 class AjustementForm(forms.ModelForm):
     class Meta:
         model  = Ajustement
-        fields = ['article', 'magasin', 'motif', 'quantite', 'commentaire', 'statut_validation']
+        fields = ['article', 'magasin', 'motif', 'quantite', 'commentaire']
         widgets = {
             'article':    forms.Select(attrs={'class': 'form-control'}),
             'magasin':    forms.Select(attrs={'class': 'form-control'}),
@@ -383,29 +355,22 @@ class AjustementForm(forms.ModelForm):
                 'class': 'form-control', 'rows': '2',
                 'placeholder': 'Expliquez la raison...'
             }),
-            'statut_validation': forms.Select(attrs={'class': 'form-control'}),
-        }
-        labels = {
-            'statut_validation': 'Statut de validation',
         }
 
-    def __init__(self, *args, entreprise=None, utilisateur=None, **kwargs):
+    def __init__(self, *args, **kwargs):
+        kwargs.pop('entreprise', None)
+        self.utilisateur = kwargs.pop('utilisateur', None)
         super().__init__(*args, **kwargs)
-        self.utilisateur = utilisateur
-        if entreprise:
-            self.fields['article'].queryset = Article.objects.filter(entreprise=entreprise)
-            self.fields['magasin'].queryset = Magasin.objects.filter(entreprise=entreprise)
-        else:
-            self.fields['article'].queryset = Article.objects.none()
-            self.fields['magasin'].queryset = Magasin.objects.none()
-        # Par défaut, l'ajustement est en BROUILLON pour permettre la saisie
-        # avant validation (évite le IntegrityError sur Mouvement.utilisateur)
-        if not self.instance.pk:
-            self.fields['statut_validation'].initial = 'BROUILLON'
+        self.fields['article'].queryset = Article.objects.all()
+        self.fields['magasin'].queryset = Magasin.objects.all()
+        for champ in ['magasin', 'commentaire', 'motif']:
+            if champ in self.fields:
+                self.fields[champ].required = False
+                self.fields[champ].widget.attrs.pop('required', None)
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.utilisateur and not instance.cree_par_id:
+        if self.utilisateur and not getattr(instance, 'cree_par_id', None):
             instance.cree_par = self.utilisateur
         if commit:
             instance.save()
@@ -431,14 +396,11 @@ class MagasinForm(forms.ModelForm):
             }),
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entreprise = entreprise
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.entreprise and not instance.entreprise_id:
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance
@@ -474,25 +436,16 @@ class BonHorsStockForm(forms.ModelForm):
             'reference_externe': 'N° BL / Référence',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entreprise = entreprise
-        if entreprise:
-            self.fields['magasin'].queryset = Magasin.objects.filter(entreprise=entreprise)
-            self.fields['fournisseur'].queryset = Fournisseur.objects.filter(entreprise=entreprise)
-            self.fields['service_demandeur'].queryset = Service.objects.filter(entreprise=entreprise)
-            self.fields['destinataire'].queryset = Beneficiaire.objects.filter(entreprise=entreprise)
-        else:
-            self.fields['magasin'].queryset = Magasin.objects.none()
-            self.fields['fournisseur'].queryset = Fournisseur.objects.none()
-            self.fields['service_demandeur'].queryset = Service.objects.none()
-            self.fields['destinataire'].queryset = Beneficiaire.objects.none()
+        self.fields['magasin'].queryset = Magasin.objects.all()
+        self.fields['fournisseur'].queryset = Fournisseur.objects.all()
+        self.fields['service_demandeur'].queryset = Service.objects.all()
+        self.fields['destinataire'].queryset = Beneficiaire.objects.all()
 
     def save(self, commit=True):
         instance = super().save(commit=False)
         instance.type_bon = 'SORTIE_HORS_STOCK'
-        if self.entreprise and not instance.entreprise_id:
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance
@@ -513,14 +466,11 @@ class SpecialiteForm(forms.ModelForm):
             }),
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entreprise = entreprise
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.entreprise and not getattr(instance, 'entreprise_id', None):
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance
@@ -542,15 +492,11 @@ class MagasinParametresForm(forms.ModelForm):
             'pied_de_page': "Si vide, le pied de page de l'entreprise est utilisé automatiquement.",
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if entreprise:
-            self.fields['responsable'].queryset = User.objects.filter(
-                is_active=True,
-                profil__entreprise=entreprise
-            ).order_by('first_name', 'last_name')
-        else:
-            self.fields['responsable'].queryset = User.objects.none()
+        self.fields['responsable'].queryset = User.objects.filter(
+            is_active=True
+        ).order_by('first_name', 'last_name')
 
 
 # ==========================================================
@@ -578,18 +524,15 @@ class BeneficiaireForm(forms.ModelForm):
             'service': 'Service rattaché',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entreprise = entreprise
         if entreprise:
-            self.fields['service'].queryset = Service.objects.filter(entreprise=entreprise)
+            self.fields['service'].queryset = Service.objects.all()
         else:
             self.fields['service'].queryset = Service.objects.none()
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.entreprise and not instance.entreprise_id:
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance
@@ -613,14 +556,11 @@ class MotifAnnulationForm(forms.ModelForm):
             'libelle': 'Libellé du motif',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entreprise = entreprise
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.entreprise and not instance.entreprise_id:
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance
@@ -650,14 +590,11 @@ class FonctionForm(forms.ModelForm):
             'description': 'Description',
         }
 
-    def __init__(self, *args, entreprise=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.entreprise = entreprise
 
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.entreprise and not getattr(instance, 'entreprise_id', None):
-            instance.entreprise = self.entreprise
         if commit:
             instance.save()
         return instance

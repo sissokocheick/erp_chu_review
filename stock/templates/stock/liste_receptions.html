@@ -1244,7 +1244,8 @@ function imprimerModal(url, titre) {
     if (printBonId) {
         var cleanUrl = window.location.pathname + window.location.search.replace(/[?&]print_bon=\d+/, '').replace(/^&/, '?');
         window.history.replaceState({}, document.title, cleanUrl);
-        imprimerModal('/stock/bon/' + printBonId + '/imprimer/', 'Bon d entrée générée');
+        var urlImpression = "{% url 'imprimer_bon_multi_lignes' 0 %}".replace('/0/', '/' + printBonId + '/');
+        imprimerModal(urlImpression, "Bon d'entrée générée");
     }
 })();
 

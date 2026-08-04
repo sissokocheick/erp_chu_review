@@ -403,6 +403,10 @@
 <script>
 /* ═════ MODAL PDF (lecteur natif) ═════ */
 function imprimerModal(url, titre) {
+    // ✅ CORRECTION : normaliser l'URL si elle contient /stock/bon/ (ancien path hardcodé)
+    if (url && url.includes('/stock/bon/')) {
+        url = url.replace('/stock/bon/', '/bon/');
+    }
     var modal   = document.getElementById('modal-pdf');
     var iframe  = document.getElementById('pdf-iframe');
     var loader  = document.getElementById('pdf-loader');

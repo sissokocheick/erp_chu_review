@@ -7,17 +7,11 @@ from accounts.permissions import verifier_permission
 from ...services.parametre_service import safe_delete_entity
 from ...models import MotifAnnulation
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_motifs_annulation')
 @transaction.atomic
 def parametres_motifs(request):
-    entreprise = request.entreprise
-    if not entreprise:
-        messages.error(request, "❌ Aucune entreprise associée à votre compte.")
-        return redirect('dashboard_directeur')
-
-    motifs = MotifAnnulation.objects.filter(entreprise=entreprise).order_by('libelle')
+    motifs = MotifAnnulation.objects.all().order_by('libelle')
 
     if request.method == 'POST':
         action = request.POST.get('action', '').strip()
@@ -30,11 +24,11 @@ def parametres_motifs(request):
                 messages.error(request, "❌ Le libellé est obligatoire.")
             elif len(libelle) > 255:
                 messages.error(request, "❌ Le libellé ne doit pas dépasser 255 caractères.")
-            elif MotifAnnulation.objects.filter(entreprise=entreprise, libelle__iexact=libelle).exists():
+            elif MotifAnnulation.objects.filter(libelle__iexact=libelle).exists():
                 messages.error(request, f"⚠️ Le motif '{libelle}' existe déjà.")
             else:
                 MotifAnnulation.objects.create(
-                    libelle=libelle, entreprise=entreprise,
+                    libelle=libelle,
                     cree_par=request.user, modifie_par=request.user
                 )
                 messages.success(request, "✅ Nouveau motif d'annulation ajouté.")
@@ -53,8 +47,7 @@ def parametres_motifs(request):
 
             motif = get_object_or_404(
                 MotifAnnulation,
-                id=motif_id,
-                entreprise=entreprise
+                id=motif_id
             )
 
             if motif.bonmouvement_set.exists():

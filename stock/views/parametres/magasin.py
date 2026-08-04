@@ -7,20 +7,14 @@ from accounts.permissions import verifier_permission
 from ...forms import MagasinParametresForm
 from ...models import Magasin
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_magasins')
 @transaction.atomic
 def parametres_magasin(request, magasin_id):
-    entreprise = request.entreprise
-    if not entreprise:
-        messages.error(request, "❌ Aucune entreprise associée à votre compte.")
-        return redirect('dashboard_directeur')
-
-    magasin = get_object_or_404(Magasin, id=magasin_id, entreprise=entreprise)
+    magasin = get_object_or_404(Magasin, id=magasin_id)
 
     if request.method == 'POST':
-        form = MagasinParametresForm(request.POST, instance=magasin, entreprise=entreprise)
+        form = MagasinParametresForm(request.POST, instance=magasin)
         if form.is_valid():
             form.save()
             messages.success(
@@ -31,6 +25,6 @@ def parametres_magasin(request, magasin_id):
         else:
             messages.error(request, "❌ Veuillez corriger les erreurs dans le formulaire.")
     else:
-        form = MagasinParametresForm(instance=magasin, entreprise=entreprise)
+        form = MagasinParametresForm(instance=magasin)
 
     return render(request, 'stock/parametres_magasin.html', {'form': form, 'magasin': magasin})

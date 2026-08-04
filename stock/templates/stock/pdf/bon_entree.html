@@ -7,8 +7,21 @@
 <style>
 @page {
     size: A4;
-    /* Marge du bas réduite à 2mm pour coller au bord inférieur */
-    margin: 10mm 10mm 2mm 10mm; 
+    margin: 10mm 10mm 18mm 10mm;
+    @bottom-center {
+        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+    }
+    @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+    }
 }
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body {
@@ -23,7 +36,7 @@ body {
 .page-flex {
     display: flex;
     flex-direction: column;
-    min-height: 282mm; 
+    min-height: 262mm;
 }
 .content-main { flex: 1 1 auto; }
 .bloc-bas {
@@ -83,26 +96,6 @@ body {
     text-align: center;
     font-weight: bold;
     background-color: #f0f0f0;
-}
-.pied-trait {
-    border: none;
-    margin: 0.1mm 0;
-}
-.pied-texte {
-    text-align: center;
-    font-size: 7pt;
-    color: #1c5b96;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-.pagination {
-    text-align: right;
-    font-size: 7pt;
-    margin-top: 0;
-    margin-bottom: 0;
-}
-.pagination::after {
-    content: counter(page) " / " counter(pages);
 }
 img { max-width: 100%; height: auto; }
 </style>
@@ -261,12 +254,6 @@ img { max-width: 100%; height: auto; }
         {% endif %}
       </div>
     </div>
-
-    {% if pdf_config.pied_de_page.afficher_trait_couleur %}
-    <hr class="pied-trait" style="border-top:2px solid {{ pdf_config.pied_de_page.trait_couleur|default:'#17a2b8' }};">
-    {% endif %}
-    <div class="pied-texte">ANGRE BESSIKOI * Adresse : 28 BP 1350 ABIDJAN * Tél : 2722496400 * CC N° : 1821717-Q * INFO@CHUANGRE.CI<br>Direction des Affaires Financières * Sous-Direction de la Logistique<br>Postes : 110 et 200</div>
-    <div class="pagination"></div>
   </div>
 </div>
 

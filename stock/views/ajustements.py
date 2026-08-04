@@ -13,7 +13,6 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 
 from accounts.permissions import verifier_permission
-from core.pdf_service import DocumentGenerator
 from ..decorators import magasin_requis, catch_errors
 from ..forms import AjustementForm
 from ..models import (
@@ -39,12 +38,12 @@ def liste_ajustements(request):
 
 def _afficher_ajustements(request):
     """Branche GET : filtres, pagination, contexte."""
-    entreprise = request.entreprise
     magasin_actif_id = request.session.get('magasin_actif_id')
+    magasin_actif = get_magasin_actif(request)
 
     qs = Ajustement.objects.select_related(
-        'article', 'magasin', 'cree_par'
-    ).filter(magasin__entreprise=entreprise)
+        'article', 'magasin', 'cree_par', 'valide_par'
+    ).all()
     if magasin_actif_id:
         qs = qs.filter(magasin_id=magasin_actif_id)
     qs = qs.order_by('-date_creation')
@@ -55,17 +54,16 @@ def _afficher_ajustements(request):
         try:
             circuit = CircuitValidation.objects.get(
                 type_document='AJUSTEMENT',
-                entreprise=entreprise,
                 is_deleted=False
             )
             if circuit.est_actif and circuit.valideurs.filter(id=request.user.id).exists():
                 peut_valider = True
         except CircuitValidation.DoesNotExist:
-            # CORRECTION : fail-closed - pas de circuit = pas de validation possible
             peut_valider = False
 
     extra = {
-        'form': AjustementForm(entreprise=entreprise),
+        'form': AjustementForm(),
+        'magasin_actif': magasin_actif,
         'peut_creer': request.user.has_perm('accounts.menu_ajustements') or request.user.is_superuser,
         'peut_modifier': request.user.has_perm('accounts.menu_ajustements') or request.user.is_superuser,
         'peut_valider': peut_valider,
@@ -82,14 +80,28 @@ def _afficher_ajustements(request):
 
 
 def _creer_ajustement(request):
-    """Branche POST : validation formulaire, création via service, redirection."""
-    entreprise = request.entreprise
+    """Branche POST : validation formulaire, création via service, redirection.
+
+    CRITIQUE : un seul save() sur Ajustement pour éviter les doublons de signaux post_save.
+    """
+    # ═════ PROTECTION ANTI-DOUBLE-CLIC ═════
+    post_token = request.POST.get('post_token', '')
+    last_token = request.session.get('last_ajustement_token', '')
+
+    if post_token and post_token == last_token:
+        messages.warning(request, "⚠️ Cet ajustement a déjà été soumis.")
+        return redirect('liste_ajustements')
+
+    if post_token:
+        request.session['last_ajustement_token'] = post_token
+    # ════════════════════════════════════════
+
     magasins_autorises = get_magasins_autorises(request)
     magasin_actif_id = request.session.get('magasin_actif_id')
     if magasin_actif_id and not magasins_autorises.filter(id=magasin_actif_id).exists():
         messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
         return redirect('liste_ajustements')
-    form = AjustementForm(request.POST, entreprise=entreprise)
+    form = AjustementForm(request.POST)
 
     if not form.is_valid():
         messages.error(request, "❌ Veuillez corriger les erreurs dans le formulaire.")
@@ -107,38 +119,41 @@ def _creer_ajustement(request):
                 if magasin_actif_id:
                     ajustement.magasin_id = magasin_actif_id
 
-            # ✅ Sauvegarder explicitement en base AVANT le service
-            ajustement.save()
+            # ═════ DÉTERMINER LE STATUT AVANT LE PREMIER (ET UNIQUE) SAVE() ═════
+            # Par défaut : pas de circuit = exécution immédiate
+            ajustement.statut_validation = 'VALIDE'
 
-            # ✅ VÉRIFIER LE CIRCUIT DE VALIDATION
             try:
                 circuit = CircuitValidation.objects.get(
                     type_document='AJUSTEMENT',
-                    entreprise=entreprise,
                     is_deleted=False
                 )
                 if circuit.est_actif:
                     # Circuit actif : on ne fait PAS les mouvements maintenant
                     ajustement.statut_validation = 'ATTENTE'
-                    ajustement.save(update_fields=['statut_validation'])
-                    messages.success(
-                        request,
-                        f"⏳ Ajustement {ajustement.id} créé en ATTENTE de validation. "
-                        f"({ajustement.get_motif_display()}) — "
-                        f"Article : {ajustement.article.designation}, Qté : {ajustement.quantite}"
-                    )
-                    return redirect('liste_ajustements')
             except CircuitValidation.DoesNotExist:
-                pass  # Pas de circuit → continue et exécute
+                pass  # Pas de circuit → reste sur 'VALIDE'
+            # ════════════════════════════════════════════════════════════════════
 
-            # Pas de circuit actif : exécuter normalement
-            StockService.ajuster_stock(ajustement)
+            # UN SEUL save() ici — évite les doubles déclenchements de post_save
+            ajustement.save()
 
-        messages.success(
-            request,
-            f"✅ Stock ajusté ! ({ajustement.get_motif_display()}) — "
-            f"Article : {ajustement.article.designation}, Qté : {ajustement.quantite}"
-        )
+            # Si pas de circuit actif : exécuter le mouvement de stock maintenant
+            if ajustement.statut_validation == 'VALIDE':
+                StockService.ajuster_stock(ajustement)
+                messages.success(
+                    request,
+                    f"✅ Stock ajusté ! ({ajustement.get_motif_display()}) — "
+                    f"Article : {ajustement.article.designation}, Qté : {ajustement.quantite}"
+                )
+            else:
+                messages.success(
+                    request,
+                    f"⏳ Ajustement {ajustement.id} créé en ATTENTE de validation. "
+                    f"({ajustement.get_motif_display()}) — "
+                    f"Article : {ajustement.article.designation}, Qté : {ajustement.quantite}"
+                )
+
         return redirect('liste_ajustements')
 
     except (ValidationError, ValueError) as e:
@@ -150,16 +165,105 @@ def _creer_ajustement(request):
 @verifier_permission('accounts.menu_ajustements')
 @magasin_requis
 @catch_errors(redirect_url='liste_ajustements')
-def imprimer_ajustement(request, ajustement_id):
-    entreprise = request.entreprise
-    ajustement = get_object_or_404(
-        Ajustement.objects.select_related('article', 'magasin', 'cree_par'),
-        id=ajustement_id, magasin__entreprise=entreprise
+def valider_ajustement(request, ajustement_id):
+    """Valider un ajustement en attente : exécute le mouvement de stock.
+
+    Protection race-condition : select_for_update() + statut mis à jour AVANT ajuster_stock.
+    Protection double-clic : token de session.
+    """
+    # ═════ PROTECTION ANTI-DOUBLE-CLIC ═════
+    token = request.GET.get('token', '')
+    last_token = request.session.get('last_valider_token', '')
+    if token and token == last_token:
+        messages.warning(request, "⚠️ Cet ajustement a déjà été validé.")
+        return redirect('liste_ajustements')
+    if token:
+        request.session['last_valider_token'] = token
+    # ════════════════════════════════════════
+
+    with transaction.atomic():
+        # Verrouiller la ligne pour éviter les race conditions
+        ajustement = get_object_or_404(
+            Ajustement.objects.select_for_update().select_related('article', 'magasin'),
+            id=ajustement_id
+        )
+
+        # Vérifier que c'est bien en attente (bloque les doublons)
+        if ajustement.statut_validation != 'ATTENTE':
+            messages.error(request, "❌ Cet ajustement n'est pas en attente de validation.")
+            return redirect('liste_ajustements')
+
+        # Vérifier que l'utilisateur est valideur
+        peut_valider = request.user.is_superuser
+        if not peut_valider:
+            try:
+                circuit = CircuitValidation.objects.get(
+                    type_document='AJUSTEMENT',
+                    is_deleted=False
+                )
+                if circuit.est_actif and circuit.valideurs.filter(id=request.user.id).exists():
+                    peut_valider = True
+            except CircuitValidation.DoesNotExist:
+                peut_valider = False
+
+        if not peut_valider:
+            messages.error(request, "⛔ Vous n'êtes pas autorisé à valider cet ajustement.")
+            return redirect('liste_ajustements')
+
+        # ═════ BLOCAGE ANTI-DOUBLON ═════
+        # Mettre le statut à VALIDE AVANT d'appeler ajuster_stock.
+        # Ainsi, une seconde requête (même en parallèle) verra 'VALIDE'
+        # et ne passera pas le test 'ATTENTE' ci-dessus.
+        ajustement.statut_validation = 'VALIDE'
+        ajustement.valide_par = request.user
+        ajustement.date_validation = timezone.now()
+        ajustement.save(update_fields=['statut_validation', 'valide_par', 'date_validation'])
+
+        # Exécuter le mouvement de stock
+        StockService.ajuster_stock(ajustement)
+
+    messages.success(
+        request,
+        f"✅ Ajustement validé ! ({ajustement.get_motif_display()}) — "
+        f"Article : {ajustement.article.designation}, Qté : {ajustement.quantite}"
     )
+    return redirect('liste_ajustements')
 
-    gen = DocumentGenerator(request=request, entreprise=entreprise)
-    pdf_bytes = gen.ajustement(ajustement)
 
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="Ajustement_{ajustement.id}.pdf"'
-    return response
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_ajustements')
+@magasin_requis
+@catch_errors(redirect_url='liste_ajustements')
+def rejeter_ajustement(request, ajustement_id):
+    """Rejeter un ajustement en attente : passe le statut à REJETE, ne touche pas au stock."""
+    ajustement = get_object_or_404(Ajustement, id=ajustement_id)
+
+    # Vérifier que l'utilisateur est valideur
+    peut_valider = request.user.is_superuser
+    if not peut_valider:
+        try:
+            circuit = CircuitValidation.objects.get(
+                type_document='AJUSTEMENT',
+                is_deleted=False
+            )
+            if circuit.est_actif and circuit.valideurs.filter(id=request.user.id).exists():
+                peut_valider = True
+        except CircuitValidation.DoesNotExist:
+            peut_valider = False
+
+    if not peut_valider:
+        messages.error(request, "⛔ Vous n'êtes pas autorisé à rejeter cet ajustement.")
+        return redirect('liste_ajustements')
+
+    if ajustement.statut_validation != 'ATTENTE':
+        messages.error(request, "❌ Seuls les ajustements en attente peuvent être rejetés.")
+        return redirect('liste_ajustements')
+
+    article_nom = ajustement.article.designation
+    ajustement.statut_validation = 'REJETE'
+    ajustement.modifie_par = request.user
+    ajustement.date_modification = timezone.now()
+    ajustement.save(update_fields=['statut_validation', 'modifie_par', 'date_modification'])
+
+    messages.success(request, f"🗑️ Ajustement rejeté — Article : {article_nom}")
+    return redirect('liste_ajustements')

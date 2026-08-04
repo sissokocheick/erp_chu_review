@@ -12,14 +12,14 @@ logger = logging.getLogger(__name__)
 # ==========================================================
 def valider_mot_de_passe(password, contexte='default'):
     """
-    Valide un mot de passe selon la politique de sécurité de l'application.
+    Valide un mot de passe selon la politique unique NexusERP.
 
     Règles :
-        - Minimum 6 caractères
+        - Minimum 8 caractères
         - Au moins 1 lettre majuscule
         - Au moins 1 chiffre
 
-    Contextes supportés :
+    Contextes supportés (même règles pour tous) :
         - 'default'    : Création, réinitialisation admin
         - 'profil'     : Changement depuis le profil
         - 'obligatoire': Changement obligatoire premier login
@@ -29,9 +29,11 @@ def valider_mot_de_passe(password, contexte='default'):
         list : Liste des messages d'erreur (vide si valide)
     """
     erreurs = []
+    if not password:
+        return ["Mot de passe requis"]
 
-    if len(password) < 6:
-        erreurs.append("Au moins 6 caractères")
+    if len(password) < 8:
+        erreurs.append("Au moins 8 caractères")
     if not any(c.isupper() for c in password):
         erreurs.append("Une lettre majuscule")
     if not any(c.isdigit() for c in password):
@@ -40,17 +42,29 @@ def valider_mot_de_passe(password, contexte='default'):
     return erreurs
 
 
-def generer_mot_de_passe_aleatoire(longueur=10):
+def generer_mot_de_passe_aleatoire(longueur=12):
     """
-    Génère un mot de passe aléatoire conforme à la politique de sécurité.
+    Génère un mot de passe aléatoire conforme à la politique (8+, maj, chiffre).
     """
     import secrets
     import string
 
-    alphabet = string.ascii_letters + string.digits
+    if longueur < 8:
+        longueur = 8
 
+    alphabet = string.ascii_letters + string.digits
     while True:
-        password = ''.join(secrets.choice(alphabet) for _ in range(longueur))
+        chars = [
+            secrets.choice(string.ascii_uppercase),
+            secrets.choice(string.ascii_lowercase),
+            secrets.choice(string.digits),
+        ]
+        chars += [secrets.choice(alphabet) for _ in range(longueur - 3)]
+        # Mélange sécurisé (Fisher-Yates)
+        for i in range(len(chars) - 1, 0, -1):
+            j = secrets.randbelow(i + 1)
+            chars[i], chars[j] = chars[j], chars[i]
+        password = ''.join(chars)
         if not valider_mot_de_passe(password):
             return password
 
@@ -60,36 +74,15 @@ def generer_mot_de_passe_aleatoire(longueur=10):
 # ==========================================================
 def log_audit(request, message, type_action='OTHER', instance=None, utilisateur=None, details=None):
     """
-    Enregistre une action d'audit dans JournalAudit (modèle personnalisé).
-
-    Args:
-        request: HttpRequest (peut être None pour les appels hors requête)
-        message: Description de l'action
-        type_action: Type d'action (LOGIN, LOGOUT, CREATE, UPDATE, DELETE, PERMISSION, OTHER)
-        instance: Instance de modèle concernée (optionnel)
-        utilisateur: User instance explicite (utile pour les échecs de connexion où request.user = AnonymousUser)
-        details: dict avec des détails supplémentaires (optionnel)
-
-    Notes:
-        - Pour les échecs de connexion : passer utilisateur=None et request
-        - Pour les actions authentifiées : laisser utilisateur=None (récupéré depuis request.user)
+    Enregistre une action d'audit dans JournalAudit (mono-tenant).
     """
     try:
         from .models import JournalAudit
 
-        # Déterminer l'utilisateur
         user = utilisateur
         if user is None and request and hasattr(request, 'user') and request.user.is_authenticated:
             user = request.user
 
-        # Déterminer l'entreprise
-        entreprise = None
-        if request and hasattr(request, 'entreprise'):
-            entreprise = request.entreprise
-        elif user and hasattr(user, 'profil') and user.profil and user.profil.entreprise:
-            entreprise = user.profil.entreprise
-
-        # Déterminer l'IP
         adresse_ip = None
         if request and hasattr(request, 'META'):
             x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -98,7 +91,6 @@ def log_audit(request, message, type_action='OTHER', instance=None, utilisateur=
             else:
                 adresse_ip = request.META.get('REMOTE_ADDR')
 
-        # Construire les détails
         details_final = details or {}
         if instance:
             details_final['modele'] = instance.__class__.__name__
@@ -106,7 +98,6 @@ def log_audit(request, message, type_action='OTHER', instance=None, utilisateur=
 
         JournalAudit.objects.create(
             utilisateur=user,
-            entreprise=entreprise,
             action=message[:200],
             type_action=type_action,
             modele_concerne=instance.__class__.__name__ if instance else '',

@@ -12,13 +12,11 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.permissions import verifier_permission
-from core.pdf_service import DocumentGenerator
 from ..decorators import magasin_requis, catch_errors
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, Service,
-    Fournisseur, Beneficiaire,
-)
+    Fournisseur, Beneficiaire)
 from ..services import NumeroGenerator, StockService, PDFService, NotificationService
 from ..services.bon_service import BonService
 from .catalogue import paginer, get_magasins_autorises
@@ -42,21 +40,19 @@ def liste_retours_services(request):
 
 def _afficher_retours(request):
     """Branche GET : filtres, pagination, contexte."""
-    entreprise = request.entreprise
     magasin_id = request.session.get('magasin_actif_id')
 
     qs = BonMouvement.objects.filter(
         type_bon='RETOUR_SERVICE',
-        magasin_id=magasin_id,
-        magasin__entreprise=entreprise
+        magasin_id=magasin_id
     ).select_related('magasin', 'service_demandeur', 'cree_par').prefetch_related(
         'lignes_bon__article'
     ).order_by('-date_bon')
 
     extra = {
-        'services': Service.objects.filter(entreprise=entreprise).order_by('nom'),
-        'magasins': Magasin.objects.filter(entreprise=entreprise).order_by('nom'),
-        'articles': Article.objects.filter(entreprise=entreprise).order_by('designation'),
+        'services': Service.objects.all().order_by('nom'),
+        'magasins': Magasin.objects.all().order_by('nom'),
+        'articles': Article.objects.all().order_by('designation'),
         'magasin_actif': get_magasin_actif(request),
         'peut_creer': _has_perm_bon(request.user, 'add', 'RETOUR_SERVICE'),
         'peut_annuler': _has_perm_bon(request.user, 'change', 'RETOUR_SERVICE'),
@@ -78,7 +74,6 @@ def _afficher_retours(request):
 
 def _creer_retour(request):
     """Branche POST : validation, création via service, redirection."""
-    entreprise = request.entreprise
     magasin_id = request.session.get('magasin_actif_id')
 
     action = request.POST.get('action')
@@ -89,8 +84,7 @@ def _creer_retour(request):
         if nom:
             b = Beneficiaire.objects.create(
                 nom_complet=nom, poste=poste,
-                service_id=service_id if service_id else None,
-                entreprise=entreprise
+                service_id=service_id if service_id else None
             )
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
@@ -123,23 +117,21 @@ def _creer_retour(request):
         messages.error(request, "❌ Vous devez ajouter au moins un article.")
         return redirect('liste_retours_services')
 
-    magasins_autorises = get_magasins_autorises(request)
     if not magasins_autorises.filter(id=magasin_id_effectif).exists():
         messages.error(request, "⛔ Magasin non autorisé.")
         return redirect('liste_retours_services')
 
     # Conversion IDs → objets
-    magasin = get_object_or_404(Magasin, id=magasin_id_effectif, entreprise=entreprise)
+    magasin = get_object_or_404(Magasin, id=magasin_id_effectif)
 
     service = None
     if service_id:
-        service = get_object_or_404(Service, id=service_id, entreprise=entreprise)
+        service = get_object_or_404(Service, id=service_id)
 
-    # CORRECTION : validation des articles contre l'entreprise
+    # Validation des articles
     articles_valides = set(
         Article.objects.filter(
-            id__in=[aid for aid in article_ids if aid],
-            entreprise=entreprise
+            id__in=[aid for aid in article_ids if aid]
         ).values_list('id', flat=True)
     )
 
@@ -149,7 +141,7 @@ def _creer_retour(request):
             if int(aid) not in articles_valides:
                 messages.error(
                     request,
-                    "⛔ Un ou plusieurs articles sélectionnés n'appartiennent pas à votre entreprise."
+                    "⛔ Un ou plusieurs articles sélectionnés ne sont pas valides."
                 )
                 return redirect('liste_retours_services')
             lignes.append({
@@ -165,7 +157,7 @@ def _creer_retour(request):
             utilisateur=request.user,
             magasin=magasin,
             service=service,
-            reference_externe=ref_ext,
+            reference_externe=ref_ext
         )
     except IntegrityError as e:
         logger.exception("[RETOUR] IntegrityError création bon : %s", e)
@@ -178,26 +170,6 @@ def _creer_retour(request):
 
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_retours_services')
-@magasin_requis
-@catch_errors(redirect_url='liste_retours_services')
-def imprimer_bon_retour(request, bon_id):
-    entreprise = request.entreprise
-    bon = get_object_or_404(
-        BonMouvement,
-        id=bon_id,
-        type_bon='RETOUR_SERVICE',
-        magasin__entreprise=entreprise
-    )
-    service_poste = getattr(bon.service_demandeur, 'poste_telephone', '') if bon.service_demandeur else ''
-    gen = DocumentGenerator(request=request, entreprise=entreprise)
-    pdf_bytes = gen.bon_retour(bon, extra_context={'service_poste': service_poste})
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="bon_retour_{bon.numero_bon}.pdf"'
-    return response
-
-
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_retours_services')
 def apercu_bon_retour(request, bon_id):
     User = get_user_model()
 
@@ -205,19 +177,13 @@ def apercu_bon_retour(request, bon_id):
         BonMouvement,
         id=bon_id,
         type_bon='RETOUR_SERVICE',
-        magasin__entreprise=request.entreprise
     )
 
     lignes_brutes = list(bon.lignes_bon.select_related('article').all())
     total_qte = sum(l.quantite for l in lignes_brutes)
 
-    entreprise = request.entreprise
     pdf_config = {}
-    if entreprise and hasattr(entreprise, 'get_pdf_config'):
-        try:
-            pdf_config = entreprise.get_pdf_config() or {}
-        except Exception:
-            pdf_config = {}
+    logo_url = None
 
     lignes_data = []
     for ligne in lignes_brutes:
@@ -243,8 +209,7 @@ def apercu_bon_retour(request, bon_id):
         chef_service = User.objects.filter(
             profil__service=bon.service_demandeur,
             profil__est_chef_service=True,
-            is_active=True,
-            profil__entreprise=entreprise
+            is_active=True
         ).first()
 
     responsable = getattr(bon.magasin, 'responsable', None) if bon.magasin else None
@@ -260,8 +225,7 @@ def apercu_bon_retour(request, bon_id):
         'chef_service': chef_service,
         'responsable': responsable,
         'magasinier': magasinier,
-        'entreprise': entreprise,
-        'logo_url': request.build_absolute_uri(entreprise.logo.url) if entreprise and entreprise.logo else None,
+        'logo_url': logo_url,
         'date_impression': timezone.now(),
         'pdf_config': pdf_config,
     }

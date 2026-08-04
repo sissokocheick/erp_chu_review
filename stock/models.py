@@ -1,12 +1,12 @@
-# stock/models.py — VERSION CORRIGÉE AUDIT 2026-05-23
+# stock/models.py — MONO-TENANT v2 (CORRIGÉ)
 # Corrections appliquées :
-#   1. related_name uniques (5 conflits résolus)
-#   2. db_index ajoutés sur champs à fort trafic
-#   3. MinValueValidator(0) sur tous les DecimalField financiers
-#   4. CheckConstraint quantité > 0 sur tous les modèles de lignes
-#   5. Références en chaîne remplacées par classes directes (même fichier)
-#   6. Logging warning dans generer_numero() après 50 itérations
-#   7. Commentaire SRP sur Mouvement.save()
+#   1. Toutes les FK 'accounts.Entreprise' → SUPPRIMÉES (mono-tenant)
+#   2. TenantManager/GlobalManager remplacés par managers standard + soft-delete
+#   3. StockItem : contrainte unique (article, magasin, batch_number)
+#   4. CompteurDocument : plus de FK entreprise
+#   5. hash_preuve généré systématiquement (même update_stock=False)
+#   6. CMUP unifié : calcul dans le modèle uniquement
+#   7. simple_history ajouté sur BonMouvement, DemandeMateriel, LivraisonPartielle
 
 from django.db import models, transaction, IntegrityError
 from django.conf import settings
@@ -18,7 +18,6 @@ from core.models import Service
 from simple_history.models import HistoricalRecords
 from decimal import Decimal
 from functools import lru_cache
-from core.managers import TenantManager, GlobalManager
 import logging
 
 logger = logging.getLogger(__name__)
@@ -29,6 +28,22 @@ STATUT_VALIDATION_CHOICES = [
     ('VALIDE',    'Validé / Approuvé'),
     ('REJETE',    'Rejeté'),
 ]
+
+# ==========================================
+# MANAGERS MONO-TENANT (soft-delete uniquement)
+# ==========================================
+class BaseManager(models.Manager):
+    """Manager de base avec filtre soft-delete automatique."""
+    def get_queryset(self):
+        qs = super().get_queryset()
+        if hasattr(self.model, 'is_deleted'):
+            qs = qs.filter(is_deleted=False)
+        return qs
+
+    def with_deleted(self):
+        """Inclut les lignes supprimées logiquement (audit, admin)."""
+        return super().get_queryset()
+
 
 # ==========================================
 # COMPTEUR ATOMIQUE DE DOCUMENTS
@@ -42,13 +57,9 @@ class CompteurDocument(models.Model):
         'COMMANDE': 'BC',
         'DEMANDE': 'BDM',
         'DEMANDE_MATERIEL': 'BDM',
+        'AJUSTEMENT': 'AJ',
     }
     """Table de compteurs séquentiels, garantit l'unicité en concurrence."""
-    entreprise = models.ForeignKey(
-        'accounts.Entreprise',
-        on_delete=models.CASCADE,
-        related_name='compteurs_documents'
-    )
     type_doc = models.CharField(
         max_length=20,
         choices=[
@@ -58,6 +69,7 @@ class CompteurDocument(models.Model):
             ('BON_HS', 'Bon Hors Stock'),
             ('COMMANDE', 'Commande'),
             ('DEMANDE', 'Demande'),
+            ('AJUSTEMENT', 'Ajustement de Stock'),
         ]
     )
     annee = models.PositiveSmallIntegerField(
@@ -67,7 +79,7 @@ class CompteurDocument(models.Model):
     dernier_numero = models.PositiveIntegerField(default=0)
 
     class Meta:
-        unique_together = ('entreprise', 'type_doc', 'annee')
+        unique_together = ('type_doc', 'annee')
         verbose_name = "Compteur de documents"
         verbose_name_plural = "Compteurs de documents"
 
@@ -75,48 +87,41 @@ class CompteurDocument(models.Model):
         return f"{self.type_doc}/{self.annee} - {self.dernier_numero}"
 
     @classmethod
-    def generer_numero(cls, entreprise_id, type_doc, format_func, max_retries=3,
+    def generer_numero(cls, type_doc, format_func, max_retries=3,
                        model_class=None, field_name='numero_bon'):
         """
         Génère un numéro atomique via select_for_update().
-        format_func(compteur, annee, entreprise_id) -> str
-        Si model_class est fourni, vérifie que le numéro n'existe pas déjà (y compris soft-deleted).
+        format_func(compteur, annee) -> str
+        Si model_class est fourni, vérifie que le numéro n'existe pas déjà.
         """
         annee = timezone.now().year
         for attempt in range(max_retries):
             try:
                 with transaction.atomic():
                     compteur, created = cls.objects.select_for_update().get_or_create(
-                        entreprise_id=entreprise_id,
                         type_doc=type_doc,
-                        annee=0,  # Compteur GLOBAL permanent — séquence continue sur toutes les années
+                        annee=0,  # Compteur GLOBAL permanent
                         defaults={'dernier_numero': 0}
                     )
-                    # Boucle interne : trouver un numéro vraiment libre
                     for tentative in range(1000):
                         compteur.dernier_numero += 1
-                        numero = format_func(compteur.dernier_numero, annee, entreprise_id)
-                        # ✅ AUDIT : log warning si trop de tentatives (compteur potentiellement corrompu)
+                        numero = format_func(compteur.dernier_numero, annee)
                         if tentative >= 50 and tentative % 10 == 0:
                             logger.warning(
-                                "Compteur %s/%s-E%s : %d tentatives pour générer un numéro libre",
-                                type_doc, annee, entreprise_id, tentative
+                                "Compteur %s/%s : %d tentatives pour générer un numéro libre",
+                                type_doc, annee, tentative
                             )
                         if model_class is None:
                             compteur.save()
                             return numero
-                        # Vérifier l'unicité (y compris soft-deleted via all_objects)
                         manager = getattr(model_class, 'all_objects', model_class.objects)
                         if not manager.filter(**{field_name: numero}).exists():
                             compteur.save()
                             return numero
-                    # ✅ CORRECTION : exception explicite pour compteur bloqué
                     raise RuntimeError(
-                        f"Compteur bloqué à 1000 incréments pour {type_doc} "
-                        f"(entreprise {entreprise_id})."
+                        f"Compteur bloqué à 1000 incréments pour {type_doc}."
                     )
             except IntegrityError:
-                # Conflit de concurrence (get_or_create) : retry
                 if attempt == max_retries - 1:
                     raise IntegrityError(
                         f"Impossible de générer un numéro unique pour {type_doc} "
@@ -124,7 +129,6 @@ class CompteurDocument(models.Model):
                     )
                 continue
             except RuntimeError:
-                # Compteur bloqué : inutile de retry, on remonte
                 raise RuntimeError(
                     f"Impossible de générer un numéro unique pour {type_doc} "
                     f"(compteur corrompu)."
@@ -174,7 +178,6 @@ class SoftDeleteModel(models.Model):
 # 1. LES ACTEURS
 # ==========================================================
 class Fournisseur(TracabiliteModel, SoftDeleteModel):
-    entreprise      = models.ForeignKey('accounts.Entreprise', on_delete=models.CASCADE, related_name='fournisseurs')
     code            = models.CharField(max_length=20)
     raison_sociale  = models.CharField(max_length=200)
     telephone       = models.CharField(max_length=50,  blank=True, null=True)
@@ -184,8 +187,8 @@ class Fournisseur(TracabiliteModel, SoftDeleteModel):
     note_evaluation = models.PositiveSmallIntegerField(default=5)
     history         = HistoricalRecords()
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return f"{self.code} - {self.raison_sociale}"
@@ -196,7 +199,7 @@ class Fournisseur(TracabiliteModel, SoftDeleteModel):
         ordering = ['code']
         constraints = [
             models.UniqueConstraint(
-                fields=['entreprise', 'code'],
+                fields=['code'],
                 condition=models.Q(is_deleted=False),
                 name='unique_fournisseur_actif'
             ),
@@ -206,7 +209,6 @@ class Fournisseur(TracabiliteModel, SoftDeleteModel):
 # 2. LE CATALOGUE
 # ==========================================================
 class FamilleArticle(TracabiliteModel, SoftDeleteModel):
-    entreprise           = models.ForeignKey('accounts.Entreprise', on_delete=models.CASCADE, related_name='familles_articles')
     TYPE_FAMILLE_CHOICES = [
         ('MED', '💊 Médicaments & Produits de Pharmacie'),
         ('MAT', '🩺 Matériel Médical & Soins'),
@@ -218,16 +220,16 @@ class FamilleArticle(TracabiliteModel, SoftDeleteModel):
         ('FIFO', 'Premier Entré / Premier Sorti'),
         ('LIFO', 'Dernier Entré / Premier Sorti'),
     ]
-    code = models.CharField(max_length=20)
+    code = models.CharField(max_length=20, unique=True)
     intitule = models.CharField(max_length=200)
     type_famille = models.CharField(max_length=10, choices=TYPE_FAMILLE_CHOICES)
     methode_valorisation = models.CharField(max_length=10, choices=METHODE_VALORISATION_CHOICES, default='CMUP')
     est_centralise       = models.BooleanField(default=False)
     categorie            = models.CharField(max_length=100, blank=True, null=True)
     ligne_budgetaire = models.CharField(
-        max_length=100, 
-        blank=True, 
-        null=True, 
+        max_length=100,
+        blank=True,
+        null=True,
         verbose_name="Ligne budgétaire"
     )
 
@@ -238,8 +240,8 @@ class FamilleArticle(TracabiliteModel, SoftDeleteModel):
         verbose_name="Les articles de cette famille sont des immobilisations"
     )
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return f"{self.code} - {self.intitule}"
@@ -247,21 +249,12 @@ class FamilleArticle(TracabiliteModel, SoftDeleteModel):
     class Meta:
         verbose_name = "Famille d'article"
         verbose_name_plural = "Familles d'articles"
-        constraints = [
-            models.UniqueConstraint(
-                fields=['entreprise', 'code'],
-                condition=models.Q(is_deleted=False),
-                name='unique_famille_actif'
-            ),
-        ]
 
 class Article(TracabiliteModel, SoftDeleteModel):
-    entreprise         = models.ForeignKey('accounts.Entreprise', on_delete=models.CASCADE, related_name='articles_entreprise')
     famille            = models.ForeignKey(FamilleArticle, on_delete=models.PROTECT, related_name='articles_famille')
-    
-    # On utilise la référence comme code auto-généré (j'ai augmenté le max_length à 100 au cas où)
+
     reference          = models.CharField(max_length=100, blank=True, null=True, db_index=True, verbose_name="Référence / Code")
-    
+
     designation        = models.CharField(max_length=255, db_index=True)
     unite_distribution = models.CharField(max_length=50)
     seuil_minimum      = models.PositiveIntegerField(default=5,  help_text="Seuil alerte jaune")
@@ -281,14 +274,11 @@ class Article(TracabiliteModel, SoftDeleteModel):
         help_text="Si coché, cet article nécessite un suivi des numéros de lot et dates de péremption."
     )
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def save(self, *args, **kwargs):
-        # Génération automatique de la REFERENCE à la création — VERSION THREAD-SAFE V3
-        # Utilise CompteurDocument pour éviter le TOCTOU du count() + 1
         if not self.pk and not self.reference:
-            # 1. Préparation du préfixe (Ligne Budgétaire + Famille)
             code_famille = self.famille.code.strip() if self.famille.code else ""
             ligne_budg = self.famille.ligne_budgetaire
             prefixe = ""
@@ -299,15 +289,12 @@ class Article(TracabiliteModel, SoftDeleteModel):
             else:
                 prefixe = f"{code_famille}"
 
-            # 2. Utiliser CompteurDocument pour générer un numéro atomique par famille
-            # On crée un type_doc dynamique par famille pour isoler les compteurs
-            type_doc_famille = f"A_{prefixe}"[:20]  # 'A_' plus court que 'ART_' pour plus de headroom
+            type_doc_famille = f"A_{prefixe}"[:20]
 
-            def format_ref(compteur, annee, eid):
+            def format_ref(compteur, annee):
                 return f"{prefixe}{compteur:03d}"
 
             self.reference = CompteurDocument.generer_numero(
-                self.entreprise_id,
                 type_doc_famille,
                 format_ref,
                 model_class=self.__class__,
@@ -315,6 +302,7 @@ class Article(TracabiliteModel, SoftDeleteModel):
             )
 
         super().save(*args, **kwargs)
+
     @property
     def requiert_lot_peremption(self):
         """Vrai si l'article OU sa famille gère les lots/péremptions."""
@@ -327,7 +315,6 @@ class Article(TracabiliteModel, SoftDeleteModel):
         return self.seuil_minimum
 
     def __str__(self):
-        # On affiche la référence générée dans les menus déroulants
         if self.reference:
             return f"[{self.reference}] {self.designation}"
         return self.designation
@@ -336,18 +323,17 @@ class Article(TracabiliteModel, SoftDeleteModel):
         verbose_name = "Article"
         verbose_name_plural = "Articles"
         constraints = [
-            # ✅ CORRECTION : exclure les NULL de l'unicité
             models.UniqueConstraint(
-                fields=['entreprise', 'reference'],
+                fields=['reference'],
                 condition=models.Q(is_deleted=False) & models.Q(reference__isnull=False),
                 name='unique_article_actif'
             ),
         ]
+
 # ==========================================================
 # 3. LE STOCK PHYSIQUE
 # ==========================================================
 class Magasin(TracabiliteModel, SoftDeleteModel):
-    entreprise   = models.ForeignKey('accounts.Entreprise', on_delete=models.CASCADE, related_name='magasins')
     nom          = models.CharField(max_length=100)
     localisation = models.CharField(max_length=200, blank=True)
 
@@ -378,8 +364,8 @@ class Magasin(TracabiliteModel, SoftDeleteModel):
 
     history = HistoricalRecords()
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     class Meta:
         verbose_name = "Magasin"
@@ -413,7 +399,6 @@ class StockItem(models.Model):
         return self.quantite_physique * Decimal(str(cmup))
 
     def save(self, *args, **kwargs):
-        # ✅ CORRECTION : normaliser '' en None pour les contraintes d'unicité
         if self.batch_number == '':
             self.batch_number = None
         super().save(*args, **kwargs)
@@ -421,14 +406,27 @@ class StockItem(models.Model):
     def __str__(self):
         return f"{self.article.designation} - {self.magasin.nom} : {self.quantite_physique}"
 
+    class Meta:
+        # ✅ CORRECTION : contrainte unique (article, magasin, batch_number)
+        constraints = [
+            models.UniqueConstraint(
+                fields=['article', 'magasin', 'batch_number'],
+                condition=models.Q(batch_number__isnull=False),
+                name='unique_stockitem_lot'
+            ),
+            models.UniqueConstraint(
+                fields=['article', 'magasin'],
+                condition=models.Q(batch_number__isnull=True),
+                name='unique_stockitem_sans_lot'
+            ),
+        ]
+
 # ==========================================================
 # 4. LES MOUVEMENTS
 # ==========================================================
 class Mouvement(models.Model):
     """
     Mouvement de stock (entree, sortie, ajustement).
-    ✅ CORRECTION : champs is_deleted et est_annule ajoutés manuellement
-    au lieu d'hériter de SoftDeleteModel (conflit avec date_creation existante).
     """
     is_deleted = models.BooleanField(default=False, verbose_name="Supprimé")
     deleted_at = models.DateTimeField(null=True, blank=True, verbose_name="Date de suppression")
@@ -467,8 +465,8 @@ class Mouvement(models.Model):
     date_peremption    = models.DateField(blank=True, null=True, db_index=True)
     history            = HistoricalRecords()
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def clean(self):
         """Validation métier SANS modification de stock."""
@@ -485,19 +483,19 @@ class Mouvement(models.Model):
             if dispo < self.quantite:
                 raise ValidationError(f"Stock insuffisant dans {self.magasin}: {dispo} disponible(s)")
 
+    def _generer_hash_preuve(self):
+        """✅ CORRECTION : génère le hash de preuve de manière centralisée."""
+        import hashlib
+        data = f"{self.date_mouvement.isoformat()}|{self.utilisateur_id}|{self.article_id}|{self.quantite}|{self.type_mouvement}"
+        return hashlib.sha256(data.encode()).hexdigest()[:64]
+
     def save(self, *args, update_stock=True, **kwargs):
         """
-        Sauvegarde du Mouvement.
-        ⚠️ AUDIT : Cette méthode viole le principe SRP (Single Responsibility).
-            La logique de mise à jour de stock devrait être extraite dans
-            StockTransactionService lors du prochain refactoring.
+        Sauvegarde du Mouvement avec mise à jour de stock.
+        ✅ CORRECTION : hash_preuve généré systématiquement.
         """
-        # ✅ CORRECTION : Initialisation unique de is_new
         is_new = self.pk is None
 
-        # ✅ CORRECTION : interdire la modification d'un mouvement existant
-        # avec update_stock=True. Pour modifier un champ non-stock (commentaire),
-        # utiliser : mouvement.save(update_stock=False)
         if not is_new and update_stock:
             raise ValidationError(
                 "La modification d'un mouvement existant est interdite. "
@@ -511,6 +509,10 @@ class Mouvement(models.Model):
         ]:
             if not self.magasin_id:
                 raise ValidationError("Un mouvement de stock doit être rattaché à un magasin.")
+
+        # ✅ CORRECTION : générer le hash AVANT toute opération
+        if not self.hash_preuve:
+            self.hash_preuve = self._generer_hash_preuve()
 
         if is_new and update_stock:
             with transaction.atomic():
@@ -527,7 +529,6 @@ class Mouvement(models.Model):
                     ancienne_val = stock.valeur_cmup or Decimal('0')
                     nouvelle_qte = ancienne_qte + self.quantite
 
-                    # ✅ CORRECTION : CMUP recalculé sur TOUTES les entrées avec prix_unitaire
                     if self.prix_unitaire and nouvelle_qte > 0:
                         pu = Decimal(str(self.prix_unitaire))
                         nouveau_cmup = ((ancienne_val * ancienne_qte) + (pu * self.quantite)) / nouvelle_qte
@@ -555,39 +556,22 @@ class Mouvement(models.Model):
                     stock.quantite_physique -= self.quantite
                     stock.save()
 
-                # ✅ CORRECTION : générer le hash de preuve AVANT le super().save() général
-                if not self.hash_preuve:
-                    import hashlib
-                    data = f"{self.date_mouvement.isoformat()}|{self.utilisateur_id}|{self.article_id}|{self.quantite}|{self.type_mouvement}"
-                    self.hash_preuve = hashlib.sha256(data.encode()).hexdigest()[:64]
-
                 super().save(*args, **kwargs)
         else:
             super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        """
-        Annule l'effet du mouvement sur le stock avant suppression.
-        ✅ CORRECTION : vérifie que le mouvement n'a pas déjà été annulé
-           pour éviter le double-reversal du stock.
-        """
+        """Annule l'effet du mouvement sur le stock avant suppression."""
         with transaction.atomic():
             if not self.is_deleted and not self.est_annule:
                 self._reverse_stock_effect()
             super().delete(*args, **kwargs)
 
     def soft_delete(self, user=None):
-        """
-        Surcharge pour s'assurer qu'un soft-delete annule l'effet du mouvement
-        sur le stock physique, au lieu de juste changer le flag is_deleted.
-        ✅ CORRECTION : vérifie que le mouvement n'a pas déjà été annulé
-           pour éviter le double-reversal du stock.
-        """
+        """Soft-delete avec annulation du stock."""
         with transaction.atomic():
             if not self.is_deleted and not self.est_annule:
                 self._reverse_stock_effect()
-
-            # Logique de soft-delete manuelle
             self.is_deleted = True
             self.deleted_at = timezone.now()
             if user:
@@ -595,11 +579,7 @@ class Mouvement(models.Model):
             self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'])
 
     def _reverse_stock_effect(self):
-        """
-        Extrait la logique d'annulation de stock pour la réutiliser
-        dans delete() et soft_delete().
-        ✅ CORRECTION : recalcule le CMUP depuis l'historique complet.
-        """
+        """Annule l'effet du mouvement sur le stock."""
         batch = self.numero_lot if self.numero_lot else None
         try:
             stock = StockItem.objects.select_for_update().get(
@@ -611,7 +591,6 @@ class Mouvement(models.Model):
         if self.type_mouvement in [
             'ENTREE', 'RETOUR_SERVICE', 'AJUSTEMENT_POS', 'INVENTAIRE_POS'
         ]:
-            # Ces mouvements ont AJOUTÉ du stock → on retire
             if stock:
                 stock.quantite_physique = max(0, stock.quantite_physique - self.quantite)
                 self._recalculer_cmup_depuis_historique(stock)
@@ -621,13 +600,10 @@ class Mouvement(models.Model):
             'SORTIE', 'RETOUR_FOURNISSEUR', 'AJUSTEMENT_NEG',
             'AJUSTEMENT_NEG_FORCE', 'INVENTAIRE_NEG'
         ]:
-            # Ces mouvements ont RETIRÉ du stock → on remet
             if stock:
                 stock.quantite_physique += self.quantite
                 stock.save()
             else:
-                # Si le stock a été complètement vidé et supprimé, on le recrée
-                # ✅ CORRECTION : récupère le prix_unitaire du mouvement pour le CMUP
                 StockItem.objects.create(
                     article=self.article, magasin=self.magasin, batch_number=batch,
                     quantite_physique=self.quantite,
@@ -635,10 +611,7 @@ class Mouvement(models.Model):
                 )
 
     def _recalculer_cmup_depuis_historique(self, stock):
-        """
-        ✅ CORRECTION : Recalcule le CMUP exact en se basant sur les mouvements
-        d'entrée restants (pas de soustraction d'une moyenne pondérée).
-        """
+        """Recalcule le CMUP exact en se basant sur les mouvements d'entrée restants."""
         entrees = Mouvement.objects.filter(
             article=stock.article,
             magasin=stock.magasin,
@@ -683,49 +656,42 @@ class Ajustement(TracabiliteModel, SoftDeleteModel):
         related_name='ajustements_valides', verbose_name="Validé par"
     )
     date_validation   = models.DateTimeField(null=True, blank=True)
+    numero_ajustement = models.CharField(
+        max_length=50, editable=False, db_index=True,
+        verbose_name="Numéro d'ajustement", null=True, blank=True
+    )
     history           = HistoricalRecords()
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def save(self, *args, **kwargs):
         """
-        ✅ CORRECTION : créer automatiquement le Mouvement de stock
-        lors du passage au statut VALIDE, enveloppé dans une transaction atomique.
+        ✅ CORRECTION : sauvegarde standard + génération du numéro.
+        Le mouvement de stock est créé UNIQUEMENT par StockService.ajuster_stock().
         """
-        old_statut = None
-        if self.pk:
-            try:
-                old_statut = Ajustement.objects.get(pk=self.pk).statut_validation
-            except Ajustement.DoesNotExist:
-                pass
-
-        # ✅ CORRECTION : transaction atomique pour garantir la cohérence
-        with transaction.atomic():
-            super().save(*args, **kwargs)
-
-            # Si on vient de valider l'ajustement, créer le mouvement de stock
-            if old_statut != 'VALIDE' and self.statut_validation == 'VALIDE':
-                type_mvt = 'AJUSTEMENT_POS' if self.motif == 'AJOUT' else 'AJUSTEMENT_NEG'
-                Mouvement.objects.create(
-                    type_mouvement=type_mvt,
-                    article=self.article,
-                    magasin=self.magasin,
-                    quantite=self.quantite,
-                    utilisateur=self.valide_par or self.cree_par,
-                    commentaire=f"Ajustement {self.motif} - {self.commentaire or ''}",
-                    reference_document=f"ADJ-{self.pk}"
-                )
+        if not self.numero_ajustement:
+            def format_num(compteur, annee):
+                return f"AJ-{annee}-{compteur:03d}"
+            self.numero_ajustement = CompteurDocument.generer_numero(
+                'AJUSTEMENT', format_num,
+                model_class=self.__class__, field_name='numero_ajustement'
+            )
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Ajustement {self.article.designation} - {self.motif}"
-
 
     class Meta:
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(quantite__gt=0),
                 name='ajustement_quantite_positive'
+            ),
+            models.UniqueConstraint(
+                fields=['numero_ajustement'],
+                condition=models.Q(is_deleted=False) & models.Q(numero_ajustement__isnull=False),
+                name='unique_ajustement_actif'
             ),
         ]
 
@@ -771,8 +737,8 @@ class CampagneInventaire(TracabiliteModel, SoftDeleteModel):
         verbose_name="Articles choisis (si type = Personnalisé)"
     )
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return f"{self.titre} - {self.magasin.nom} ({self.get_statut_display()})"
@@ -785,7 +751,6 @@ class LigneInventaire(models.Model):
     history            = HistoricalRecords()
 
     def ecart(self):
-        # ✅ CORRECTION : retourne None si le comptage n'a pas encore été fait
         if self.quantite_physique is not None:
             return self.quantite_physique - self.quantite_theorique
         return None
@@ -801,11 +766,10 @@ class LigneInventaire(models.Model):
             ),
         ]
 
-# =========================================================
+# ==========================================================
 # GESTION DES BONS
-# =========================================================
+# ==========================================================
 class MotifAnnulation(SoftDeleteModel):
-    entreprise        = models.ForeignKey('accounts.Entreprise', on_delete=models.CASCADE, related_name='motifs_annulation')
     libelle           = models.CharField(max_length=100)
     actif             = models.BooleanField(default=True)
     cree_le           = models.DateTimeField(auto_now_add=True)
@@ -813,8 +777,8 @@ class MotifAnnulation(SoftDeleteModel):
     cree_par          = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='motifs_crees')
     modifie_par       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='motifs_modifies')
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         return self.libelle
@@ -827,20 +791,19 @@ class MotifAnnulation(SoftDeleteModel):
         verbose_name_plural = "Motifs d'annulation"
         constraints = [
             models.UniqueConstraint(
-                fields=['entreprise', 'libelle'],
+                fields=['libelle'],
                 condition=models.Q(is_deleted=False),
                 name='unique_motif_actif'
             ),
         ]
 
 class Beneficiaire(SoftDeleteModel):
-    entreprise  = models.ForeignKey('accounts.Entreprise', on_delete=models.CASCADE, related_name='beneficiaires')
     nom_complet = models.CharField(max_length=150, verbose_name="Nom et Prénom")
     poste       = models.CharField(max_length=100, blank=True, null=True, verbose_name="Poste / Fonction")
     service     = models.ForeignKey(Service, on_delete=models.SET_NULL, null=True, blank=True, related_name='beneficiaires_lies')
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def __str__(self):
         if self.poste:
@@ -853,7 +816,7 @@ class Beneficiaire(SoftDeleteModel):
         ordering = ['nom_complet']
         constraints = [
             models.UniqueConstraint(
-                fields=['entreprise', 'nom_complet'],
+                fields=['nom_complet'],
                 condition=models.Q(is_deleted=False),
                 name='unique_beneficiaire_actif'
             ),
@@ -871,11 +834,8 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
 
     type_bon            = models.CharField(max_length=30, choices=TYPE_BON_CHOICES, db_index=True)
     numero_bon          = models.CharField(max_length=50, editable=False, db_index=True)
-    # ✅ CORRECTION : entreprise_id dénormalisé pour contrainte d'unicité par entreprise
-    entreprise          = models.ForeignKey('accounts.Entreprise', on_delete=models.CASCADE, related_name='bons_mouvement', null=False, blank=True)
     date_bon            = models.DateTimeField(default=timezone.now, db_index=True)
 
-    # ✅ RÉINTÉGRÉ : champ est_annule pour la logique d'annulation
     est_annule          = models.BooleanField(default=False, db_index=True)
 
     numero_livraison    = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="N° de livraison (chronologie)")
@@ -920,13 +880,20 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
         verbose_name="Scan uploadé par"
     )
 
-    def get_signataires_pdf(self, entreprise):
+    history = HistoricalRecords()
+
+    objects     = BaseManager()
+    all_objects = models.Manager()
+
+    def get_signataires_pdf(self, config_hopital):
         """
         Retourne les 6 signataires prêts pour le template PDF.
-        Si une validation existe, on affiche le nom + fonction snapshotée.
-        Sinon on affiche le label par défaut de l'entreprise.
+        ✅ CORRECTION : utilise ConfigurationHopital au lieu d'Entreprise.
         """
-        labels = entreprise.get_labels_signatures()
+        labels = config_hopital.labels_signatures if hasattr(config_hopital, 'labels_signatures') else [
+            'Émission / Demandeur', 'Vu pour exécution', 'Sortie effectuée',
+            'Réception', 'Contrôleur', 'Approbation'
+        ]
         resultat = []
         for i, label in enumerate(labels, start=1):
             val = self.validations.filter(ordre=i).first()
@@ -958,13 +925,11 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
         try:
             circuit = CircuitValidation.objects.get(
                 type_document='SORTIE',
-                entreprise=self.magasin.entreprise,
                 est_actif=True
             )
         except CircuitValidation.DoesNotExist:
             return True
         nb_valideurs = circuit.valideurs.count()
-        # ✅ CORRECTION : ne compter que les validations avec un valideur réel
         nb_signes = self.validations.filter(valideur__isnull=False).count()
         return nb_signes >= min(nb_valideurs, 6)
 
@@ -973,11 +938,10 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
         verbose_name_plural = "Bons de mouvement"
         ordering            = ['-date_bon']
         constraints = [
-            # ✅ CORRECTION : unicité du numéro de bon PAR ENTREPRISE (pas globale)
             models.UniqueConstraint(
-                fields=['entreprise', 'numero_bon'],
+                fields=['numero_bon'],
                 condition=models.Q(is_deleted=False),
-                name='unique_bon_par_entreprise'
+                name='unique_bon_actif'
             ),
         ]
         permissions = [
@@ -995,24 +959,15 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
             ('can_delete_bon_hors_stock','Peut supprimer des bons hors stock'),
         ]
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
-
     def save(self, *args, **kwargs):
         """
-        Sauvegarde du bon avec :
-        1. Génération automatique du numéro de bon
-        2. Vérification du circuit de validation pour le statut initial
+        Sauvegarde du bon avec génération automatique du numéro.
+        ✅ CORRECTION : plus de FK entreprise, numérotation globale.
         """
         if not self.magasin_id:
             raise ValidationError("Un bon doit être rattaché à un magasin.")
 
-        # ✅ CORRECTION : toujours synchroniser l'entreprise avec le magasin
-        self.entreprise_id = self.magasin.entreprise_id
-
-        # ── 1. Numéro de bon ──
         if not self.numero_bon:
-
             mapping = {
                 'ENTREE':             ('BON_ENTREE', 'BE'),
                 'RETOUR_SERVICE':     ('BON_RETOUR', 'BR'),
@@ -1020,16 +975,14 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
             }
             type_doc, prefix = mapping.get(self.type_bon, ('BON_SORTIE', 'BS'))
 
-            def format_num(compteur, annee, eid):
+            def format_num(compteur, annee):
                 return f"{prefix}-{annee}-{compteur:03d}"
 
             self.numero_bon = CompteurDocument.generer_numero(
-                self.entreprise_id, type_doc, format_num,
+                type_doc, format_num,
                 model_class=self.__class__, field_name='numero_bon'
             )
 
-        # ── 2. Circuit de validation (NOUVEAU) ──
-        # Si c'est une création (pas de PK), on vérifie le circuit
         if not self.pk:
             mapping_circuit = {
                 'ENTREE':             'ENTREE',
@@ -1044,7 +997,6 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
                 try:
                     circuit = CircuitValidation.objects.get(
                         type_document=type_circuit,
-                        entreprise=self.magasin.entreprise,
                         is_deleted=False
                     )
                     if not circuit.est_actif:
@@ -1052,7 +1004,6 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
                     else:
                         self.statut_validation = 'ATTENTE'
                 except CircuitValidation.DoesNotExist:
-                    # ✅ CORRECTION : fail-closed — pas de circuit = BROUILLON (pas VALIDÉ)
                     self.statut_validation = 'BROUILLON'
 
         super().save(*args, **kwargs)
@@ -1071,9 +1022,6 @@ class LigneBon(models.Model):
         verbose_name="Prix unitaire CMUP (FCFA)",
         validators=[MinValueValidator(Decimal('0.00'))]
     )
-    # ═══════════════════════════════════════════════════════
-    # CHAMPS POUR RÉCEPTION PARTIELLE (traçabilité historique)
-    # ═══════════════════════════════════════════════════════
     quantite_demandee = models.PositiveIntegerField(
         default=0,
         verbose_name="Quantité demandée (reliquat avant réception)",
@@ -1084,7 +1032,6 @@ class LigneBon(models.Model):
         verbose_name="Reliquat après réception",
         help_text="Reliquat restant après cette réception (0 si réception complète)"
     )
-    # ═══════════════════════════════════════════════════════
     numero_lot      = models.CharField(max_length=50, blank=True, null=True, db_index=True)
     date_peremption = models.DateField(blank=True, null=True)
 
@@ -1104,7 +1051,6 @@ class LigneBon(models.Model):
                 condition=models.Q(quantite__gt=0),
                 name='lignebon_quantite_positive'
             ),
-            # ✅ CORRECTION : empêcher de servir plus que demandé
             models.CheckConstraint(
                 condition=models.Q(quantite_servie__lte=models.F('quantite')) | models.Q(quantite_servie__isnull=True),
                 name='lignebon_servie_lte_demandee'
@@ -1124,45 +1070,36 @@ class CircuitValidation(SoftDeleteModel):
         ('INVENTAIRE', "Campagnes d'Inventaires"),
     ]
 
-    entreprise    = models.ForeignKey('accounts.Entreprise', on_delete=models.CASCADE, related_name='circuits_validation', null=True, blank=True)
     type_document = models.CharField(max_length=20, choices=TYPE_DOC_CHOICES)
     est_actif     = models.BooleanField(default=False)
     valideurs = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, 
+        settings.AUTH_USER_MODEL,
         through='CircuitValidateur',
-        blank=True, 
+        blank=True,
         related_name='circuits_autorises'
     )
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def __str__(self):
-        return f"{self.get_type_document_display()} - {self.entreprise or 'GLOBAL'} ({'ACTIF' if self.est_actif else 'INACTIF'})"
+        return f"{self.get_type_document_display()} ({'ACTIF' if self.est_actif else 'INACTIF'})"
 
     class Meta:
         verbose_name        = "Circuit de Validation"
         verbose_name_plural = "Circuits de Validation"
         constraints = [
-            # ✅ CORRECTION : contrainte pour circuits avec entreprise
-            models.UniqueConstraint(
-                fields=['type_document', 'entreprise'],
-                condition=models.Q(is_deleted=False) & models.Q(entreprise__isnull=False),
-                name='unique_circuit_actif_par_entreprise'
-            ),
-            # ✅ CORRECTION : contrainte pour circuits globaux (entreprise=NULL)
             models.UniqueConstraint(
                 fields=['type_document'],
-                condition=models.Q(is_deleted=False) & models.Q(entreprise__isnull=True),
-                name='unique_circuit_actif_global'
+                condition=models.Q(is_deleted=False),
+                name='unique_circuit_actif'
             ),
         ]
 
 
 class CircuitValidateur(models.Model):
     """
-    ✅ CORRECTION : Modèle through pour définir l'ordre des valideurs dans un circuit.
-    Remplace le ManyToManyField simple qui ne permettait pas d'ordonner les signataires.
+    Modèle through pour définir l'ordre des valideurs dans un circuit.
     """
     circuit = models.ForeignKey(CircuitValidation, on_delete=models.CASCADE, related_name='validateurs')
     valideur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
@@ -1196,15 +1133,11 @@ class Commande(SoftDeleteModel):
     fournisseur       = models.ForeignKey(Fournisseur, on_delete=models.PROTECT, related_name='commandes_fournisseur')
     statut            = models.CharField(max_length=20, choices=STATUT_CHOICES, default='EN_ATTENTE')
     magasin           = models.ForeignKey(Magasin, on_delete=models.PROTECT, null=True, blank=True, related_name='commandes_magasin')
-    # ═══════════════════════════════════════════════════════
-    # COMMANDE PAR FAMILLE : chaque commande est rattachée à UNE famille d'articles
-    # Tous les articles de la commande doivent appartenir à cette famille
-    # ═══════════════════════════════════════════════════════
     famille = models.ForeignKey(
         FamilleArticle,
         on_delete=models.PROTECT,
         related_name='commandes_famille',
-        null=True, blank=True,          # ← temporaire, le temps de la migration de données
+        null=True, blank=True,
         verbose_name="Famille d'articles"
     )
     cree_par          = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT,   related_name='commandes_creees')
@@ -1216,37 +1149,35 @@ class Commande(SoftDeleteModel):
 
     objet = models.CharField(max_length=500, blank=True, null=True, verbose_name="Objet de la commande")
     delai_livraison = models.PositiveIntegerField(
-        blank=True, 
-        null=True, 
+        blank=True,
+        null=True,
         verbose_name="Délai de livraison (en jours)"
     )
     date_livraison_prevue = models.DateField(blank=True, null=True, verbose_name="Date de livraison prévue")
 
     history           = HistoricalRecords()
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     def save(self, *args, **kwargs):
         if not self.pk and not self.numero_commande:
             if not self.magasin_id:
                 raise ValidationError("Une commande doit être rattachée à un magasin.")
-            entreprise_id = self.magasin.entreprise_id
 
-            def format_num(compteur, annee, eid):
+            def format_num(compteur, annee):
                 return f"BC-{annee}-{compteur:03d}"
 
             self.numero_commande = CompteurDocument.generer_numero(
-                entreprise_id, 'COMMANDE', format_num,
+                'COMMANDE', format_num,
                 model_class=self.__class__, field_name='numero_commande'
             )
 
             try:
-                circuit = CircuitValidation.objects.get(type_document='COMMANDE', entreprise_id=entreprise_id)
+                circuit = CircuitValidation.objects.get(type_document='COMMANDE')
                 if not circuit.est_actif:
                     self.statut_validation = 'VALIDE'
             except CircuitValidation.DoesNotExist:
-                # ✅ CORRECTION : fail-closed — pas de circuit = BROUILLON (pas VALIDÉ)
                 self.statut_validation = 'BROUILLON'
 
         super().save(*args, **kwargs)
@@ -1260,8 +1191,6 @@ class Commande(SoftDeleteModel):
         ordering            = ['-date_commande']
 
 
-
-
 class LigneCommande(models.Model):
     """Ligne d'une commande fournisseur."""
     commande          = models.ForeignKey(Commande, on_delete=models.CASCADE, related_name='lignes_commande')
@@ -1269,7 +1198,6 @@ class LigneCommande(models.Model):
     quantite_demandee = models.PositiveIntegerField()
     quantite_recue    = models.PositiveIntegerField(default=0)
 
-    # ✅ NOUVEAU CHAMP — remplace la @property reliquat
     reliquat = models.PositiveIntegerField(
         default=0,
         db_index=True,
@@ -1287,7 +1215,6 @@ class LigneCommande(models.Model):
             return Decimal(str(self.prix_unitaire)) * self.quantite_demandee
         return None
 
-    # ✅ NOUVEAU — recalcule automatiquement le reliquat a chaque save()
     def save(self, *args, **kwargs):
         self.reliquat = max(0, self.quantite_demandee - self.quantite_recue)
         super().save(*args, **kwargs)
@@ -1304,6 +1231,7 @@ class LigneCommande(models.Model):
                 name='lignecmd_qte_demandee_positive'
             ),
         ]
+
 # ==========================================================
 # DEMANDES DE MATÉRIEL
 # ==========================================================
@@ -1353,8 +1281,10 @@ class DemandeMateriel(SoftDeleteModel):
     date_validation_chef = models.DateTimeField(null=True, blank=True)
     motif_refus          = models.CharField(max_length=255, null=True, blank=True)
 
-    objects     = TenantManager()
-    all_objects = GlobalManager()
+    history = HistoricalRecords()
+
+    objects     = BaseManager()
+    all_objects = models.Manager()
 
     @property
     def quantite_demandee_totale(self):
@@ -1362,7 +1292,6 @@ class DemandeMateriel(SoftDeleteModel):
 
     @property
     def quantite_servie_totale(self):
-        # ✅ CORRECTION : exclure les livraisons annulées du calcul
         return self.livraisons.filter(est_annule=False).aggregate(
             total=models.Sum('quantite_livree')
         )['total'] or 0
@@ -1414,7 +1343,6 @@ class DemandeMateriel(SoftDeleteModel):
         return badges.get(self.statut, {'couleur': '#999', 'icone': 'fa-question-circle', 'texte': self.statut})
 
     def actualiser_statut(self):
-        # ✅ CORRECTION : bloquer la mise à jour pour TOUS les statuts historiques
         if self.statut in self.STATUTS_HISTORIQUE:
             return
 
@@ -1423,15 +1351,13 @@ class DemandeMateriel(SoftDeleteModel):
             return
 
         if self.reste <= 0:
-            # ✅ CORRECTION : un seul aggregate au lieu de 2 requêtes N+1
-            # ✅ CORRECTION : exclure les livraisons annulées du comptage
             from django.db.models import Count, Q
             livraisons_stats = self.livraisons.filter(est_annule=False).aggregate(
                 total=Count('id'),
                 signees=Count('id', filter=Q(accuse__est_signe=True, accuse__est_annule=False)),
                 sans_accuse=Count('id', filter=Q(accuse__isnull=True)),
             )
-            tous_signes = (livraisons_stats['signees'] == livraisons_stats['total'] 
+            tous_signes = (livraisons_stats['signees'] == livraisons_stats['total']
                           and livraisons_stats['sans_accuse'] == 0)
             nouveau_statut = 'RECEPTIONNE' if tous_signes else 'LIVREE'
         else:
@@ -1445,7 +1371,6 @@ class DemandeMateriel(SoftDeleteModel):
         return f"{self.numero_demande} - {self.service_demandeur.nom}"
 
     def clean(self):
-        # ✅ CORRECTION : empêcher la modification d'une demande en statut historique
         if self.pk and self.statut in self.STATUTS_HISTORIQUE:
             raise ValidationError(
                 f"Une demande en statut '{self.get_statut_display()}' ne peut plus être modifiée."
@@ -1465,7 +1390,6 @@ class LigneDemande(models.Model):
 
     @property
     def quantite_livree(self):
-        # ✅ CORRECTION : exclure les livraisons annulées du calcul
         return LivraisonLigne.objects.filter(
             livraison__demande=self.demande,
             article=self.article,
@@ -1500,35 +1424,26 @@ class LivraisonPartielle(models.Model):
     bon_sortie       = models.ForeignKey('BonMouvement', on_delete=models.SET_NULL, null=True, blank=True, related_name='livraison_origine', verbose_name="Bon de sortie lié")
     observations     = models.TextField(blank=True, null=True, verbose_name="Observations du magasinier")
 
-    # ✅ RÉINTÉGRÉ : champ est_annule pour la logique d'annulation
     est_annule       = models.BooleanField(default=False, verbose_name="Annulé")
 
+    history = HistoricalRecords()
+
     def save(self, *args, **kwargs):
-        """
-        Génération atomique du numéro de livraison via CompteurDocument.
-        ✅ CORRECTION : remplace le select_for_update() sur queryset vide (bug race condition)
-           par le système de compteur atomique déjà utilisé ailleurs.
-        """
         if not self.pk:
             with transaction.atomic():
-                # Verrouiller la demande
                 demande = DemandeMateriel.objects.select_for_update().get(pk=self.demande_id)
 
-                # ✅ CORRECTION : utiliser CompteurDocument pour génération atomique
-                def format_num_livraison(compteur, annee, eid):
-                    return compteur  # Retourne un int pour numero_livraison
+                def format_num_livraison(compteur, annee):
+                    return compteur
 
                 self.numero_livraison = CompteurDocument.generer_numero(
-                    entreprise_id=demande.magasin_cible.entreprise_id,
-                    type_doc=f"LIV_{demande.id}"[:20],  # Tronqué à 20 caractères — plus de headroom
+                    type_doc=f"LIV_{demande.id}"[:20],
                     format_func=format_num_livraison
                 )
 
-                # Auto-calcul est_partielle
                 reste_apres = max(0, demande.reste - self.quantite_livree)
                 self.est_partielle = reste_apres > 0
 
-                # ✅ CORRECTION : Appel standard à super().save() (le bloc hash_preuve a été retiré)
                 super().save(*args, **kwargs)
         else:
             super().save(*args, **kwargs)
@@ -1555,7 +1470,6 @@ class LivraisonPartielle(models.Model):
             self.est_annule = True
             self.save(update_fields=['est_annule'])
 
-            # Remettre le stock si un bon de sortie est lié
             if self.bon_sortie:
                 for ligne in self.bon_sortie.lignes_bon.all():
                     try:
@@ -1574,7 +1488,6 @@ class LivraisonPartielle(models.Model):
                             "Impossible de créer le mouvement de retour pour l'annulation "
                             f"livraison #{self.numero_livraison}, article {ligne.article}: {e}"
                         )
-                        # On continue malgré l'erreur — le stock pourra être ajusté manuellement
 
             self.demande.actualiser_statut()
 
@@ -1586,21 +1499,15 @@ class LivraisonPartielle(models.Model):
 
 class LivraisonLigne(models.Model):
     livraison = models.ForeignKey(
-        LivraisonPartielle, 
-        on_delete=models.CASCADE, 
+        LivraisonPartielle,
+        on_delete=models.CASCADE,
         related_name='lignes_livraison'
     )
     article = models.ForeignKey(Article, on_delete=models.CASCADE)
 
-    # ── Champs de base ──
     quantite_livree = models.PositiveIntegerField(default=0)
     prix_unitaire = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
 
-    # ── Traçabilité livraison partielle (3 champs cohérents) ──
-    # Sémantique corrigée audit 2026-07-04 :
-    #   quantite_demandee  = VRAIE quantité demandée (depuis LigneDemande)
-    #   reste_avant_livraison = reste À LIVRER avant cette livraison
-    #   reste = reste APRÈS cette livraison (0 si complète)
     quantite_demandee = models.PositiveIntegerField(
         default=0,
         verbose_name="Quantité demandée (originale)",
@@ -1618,7 +1525,6 @@ class LivraisonLigne(models.Model):
     )
 
     def save(self, *args, **kwargs):
-        # Auto-population des champs de traçabilité à la création
         if self._state.adding:
             ligne_demande = LigneDemande.objects.filter(
                 demande=self.livraison.demande,
@@ -1639,19 +1545,17 @@ class AccuseReception(models.Model):
     est_signe        = models.BooleanField(default=False, verbose_name="Accusé signé")
     signature_image  = models.ImageField(upload_to='signatures/accuses/%Y/%m/', null=True, blank=True, verbose_name="Signature (image)")
 
-    # ✅ RÉINTÉGRÉ : champ est_annule pour la logique d'annulation
     est_annule       = models.BooleanField(default=False, verbose_name="Annulé")
 
     def signer(self, user, est_satisfait=None, texte_observations=""):
         """
         Signe l'accusé de réception.
-        ✅ CORRECTION : vérifie que l'utilisateur est autorisé à signer.
+        ✅ CORRECTION : vérifie que l'utilisateur est le demandeur ou superuser.
         """
         from django.utils import timezone
         import os
         from django.core.files import File
 
-        # ✅ CORRECTION : vérifier l'autorisation
         demandeur = self.livraison.demande.demandeur
         if user != demandeur and not user.is_superuser:
             raise ValidationError(
@@ -1784,7 +1688,6 @@ class ValidationDocument(models.Model):
     def __str__(self):
         return f"Case {self.ordre} — {self.valideur} ({self.fonction_snapshot or '—'})"
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # MODÈLE DE DOCUMENT PDF CONFIGURABLE PAR MAGASIN
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1795,7 +1698,7 @@ class ModeleDocumentMagasin(TracabiliteModel):
 
     Hiérarchie de résolution :
     1. ModeleDocumentMagasin (si est_actif=True)
-    2. accounts.ConfigDocument (config entreprise)
+    2. accounts.ConfigDocument (config globale)
     3. _default_config() (fallback)
     """
     TYPE_DOC_CHOICES = [
@@ -1849,18 +1752,11 @@ class ModeleDocumentMagasin(TracabiliteModel):
 
     @staticmethod
     @lru_cache(maxsize=128)
-    def _default_config_structured(cfg_entreprise_json, type_doc):
+    def _default_config_structured(cfg_doc_json, type_doc):
         """
-        Construit la structure JSON par défaut à partir de la config entreprise legacy.
-        Utilise @lru_cache pour éviter les recalculs répétés (max 128 configs en mémoire).
-        cfg_entreprise_json est un tuple de tuples (hashable) pour le cache.
-
-        ⚠️ ATTENTION : Ce cache est statique par processus. Si un admin modifie
-        la ConfigDocument en base, le cache restera obsolète jusqu'au redémarrage.
-        Pour invalider : ModeleDocumentMagasin._default_config_structured.cache_clear()
+        Construit la structure JSON par défaut à partir de la config document.
         """
-        # Reconvertir le tuple en dict
-        cfg_entreprise = dict(cfg_entreprise_json) if cfg_entreprise_json else {}
+        cfg_doc = dict(cfg_doc_json) if cfg_doc_json else {}
 
         mapping = {
             'BON_SORTIE': 'BS', 'BON_ENTREE': 'BE', 'BON_RETOUR': 'BR',
@@ -1918,17 +1814,17 @@ class ModeleDocumentMagasin(TracabiliteModel):
 
         return {
             'cartouche': {
-                'afficher_logo':           cfg_entreprise.get('afficher_logo', True),
+                'afficher_logo':           cfg_doc.get('afficher_logo', True),
                 'position_logo':            'left',
-                'afficher_republique':     cfg_entreprise.get('afficher_republique', True),
+                'afficher_republique':     True,
                 'afficher_devise':          True,
                 'afficher_direction':       True,
                 'afficher_sous_direction':  True,
                 'afficher_service':         True,
-                'afficher_telephone':       cfg_entreprise.get('afficher_telephone', True),
-                'afficher_cc':              cfg_entreprise.get('afficher_cc', True),
-                'afficher_ifu':             cfg_entreprise.get('afficher_ifu', True),
-                'afficher_rccm':            cfg_entreprise.get('afficher_rccm', True),
+                'afficher_telephone':       cfg_doc.get('afficher_telephone', True),
+                'afficher_cc':              cfg_doc.get('afficher_cc', True),
+                'afficher_ifu':             cfg_doc.get('afficher_ifu', True),
+                'afficher_rccm':            cfg_doc.get('afficher_rccm', True),
                 'trait_separation_epaisseur': 1,
                 'trait_separation_couleur':   '#000000',
                 'afficher_code_iso':          True,
@@ -1952,25 +1848,25 @@ class ModeleDocumentMagasin(TracabiliteModel):
                 'style_cases': True,
             },
             'pied_de_page': {
-                'texte_personnalise': cfg_entreprise.get('pied_page_pdf', ''),
+                'texte_personnalise': cfg_doc.get('pied_page_pdf', ''),
                 'afficher_numero_page': True,
                 'afficher_date_generation': True,
                 'afficher_trait_couleur': True,
                 'trait_couleur': '#17a2b8',
             },
             'metadonnees': {
-                'code_document':      cfg_entreprise.get('code_document', code_iso),
-                'date_creation_doc':  cfg_entreprise.get('date_creation_doc', '10/06/2024'),
-                'date_revision_doc':  cfg_entreprise.get('date_revision_doc', '19/05/2025'),
-                'version_doc':        cfg_entreprise.get('version_doc', '002'),
-                'ps2_label':          cfg_entreprise.get('ps2_label', ps2),
+                'code_document':      cfg_doc.get('code_document', code_iso),
+                'date_creation_doc':  cfg_doc.get('date_creation_doc', '10/06/2024'),
+                'date_revision_doc':  cfg_doc.get('date_revision_doc', '19/05/2025'),
+                'version_doc':        cfg_doc.get('version_doc', '002'),
+                'ps2_label':          cfg_doc.get('ps2_label', ps2),
             },
-            'direction_label':      cfg_entreprise.get('direction_label', "DIRECTION DES AFFAIRES FINANCIÈRES"),
-            'sous_direction_label': cfg_entreprise.get('sous_direction_label', "SOUS-DIRECTION DE LA LOGISTIQUE"),
-            'service_label':        cfg_entreprise.get('service_label', "SERVICE APPROVISIONNEMENT ET GESTION DES STOCKS"),
-            'couleur_principale':   cfg_entreprise.get('couleur_principale', "#1c5b96"),
-            'republique_label':     cfg_entreprise.get('republique_label', "RÉPUBLIQUE DE CÔTE D'IVOIRE"),
-            'devise_label':         cfg_entreprise.get('devise_label', "Union - Discipline - Travail"),
+            'direction_label':      "DIRECTION DES AFFAIRES FINANCIÈRES",
+            'sous_direction_label': "SOUS-DIRECTION DE LA LOGISTIQUE",
+            'service_label':        "SERVICE APPROVISIONNEMENT ET GESTION DES STOCKS",
+            'couleur_principale':   "#1c5b96",
+            'republique_label':     "RÉPUBLIQUE DE CÔTE D'IVOIRE",
+            'devise_label':         "Union - Discipline - Travail",
         }
 
     @staticmethod
@@ -1988,16 +1884,12 @@ class ModeleDocumentMagasin(TracabiliteModel):
 
     @classmethod
     def invalidate_cache(cls):
-        """Invalide le cache LRU des configurations par défaut. À appeler après
-        toute modification de ConfigDocument ou ModeleDocumentMagasin."""
+        """Invalide le cache LRU des configurations par défaut."""
         cls._default_config_structured.cache_clear()
 
     @staticmethod
     def _freeze_dict(obj):
-        """
-        Convertit récursivement un dict/list en structure hashable (tuple).
-        Nécessaire pour que @lru_cache puisse hasher l'argument.
-        """
+        """Convertit récursivement un dict/list en structure hashable (tuple)."""
         if isinstance(obj, dict):
             return tuple(sorted((k, ModeleDocumentMagasin._freeze_dict(v)) for k, v in obj.items()))
         elif isinstance(obj, list):
@@ -2007,22 +1899,84 @@ class ModeleDocumentMagasin(TracabiliteModel):
     def get_config_complete(self, type_doc_legacy='BON_SORTIE'):
         """
         Retourne la configuration fusionnée avec les valeurs par défaut.
-        Garantit que toutes les clés attendues par les templates existent.
         """
-        from accounts.models import Entreprise, ConfigDocument
+        from accounts.models import ConfigDocument
 
-        entreprise = self.magasin.entreprise
-
-        cfg_entreprise = {}
-        if hasattr(entreprise, 'get_pdf_config'):
-            try:
-                cfg_entreprise = entreprise.get_pdf_config(type_doc=type_doc_legacy)
-            except Exception:
-                pass
+        cfg_doc = {}
+        try:
+            # ✅ CORRECTION MONO-TENANT : ConfigDocument.type_doc stocke les codes courts
+            # (BS, BE, BR...) et non les libellés legacy (BON_SORTIE, BON_ENTREE...)
+            _mapping_type_doc = {
+                'BON_SORTIE': 'BS', 'BON_ENTREE': 'BE', 'BON_RETOUR': 'BR',
+                'BON_HS': 'BSHS', 'COMMANDE': 'BC', 'DEMANDE': 'BDM',
+            }
+            _code_court = _mapping_type_doc.get(type_doc_legacy, type_doc_legacy)
+            config = ConfigDocument.objects.filter(type_doc=_code_court).first()
+            if config:
+                cfg_doc = {
+                    'afficher_logo': config.afficher_logo,
+                    'afficher_cachet': config.afficher_cachet,
+                    'afficher_cc': config.afficher_cc,
+                    'afficher_ifu': config.afficher_ifu,
+                    'afficher_rccm': config.afficher_rccm,
+                    'afficher_telephone': config.afficher_telephone,
+                    'afficher_signatures': config.afficher_signatures,
+                    'code_document': config.code_document,
+                    'date_creation_doc': config.date_creation_doc,
+                    'date_revision_doc': config.date_revision_doc,
+                    'version_doc': config.version_doc,
+                    'ps2_label': config.ps2_label,
+                }
+        except Exception:
+            pass
 
         cfg = self.config or {}
-        # ✅ CORRECTION : convertir récursivement en structure hashable pour @lru_cache
-        # Les listes internes (ex: colonnes) doivent aussi devenir des tuples
-        cfg_key = self._freeze_dict(cfg_entreprise) if cfg_entreprise else ()
+        cfg_key = self._freeze_dict(cfg_doc) if cfg_doc else ()
         defaults = self._default_config_structured(cfg_key, type_doc_legacy)
         return self._deep_merge(defaults, cfg)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PARAMÈTRES PDF GLOBAUX (Logo unique pour tous les magasins)
+# ══════════════════════════════════════════════════════════════════════════════
+class ParametrePDF(models.Model):
+    """Paramètres globaux pour les documents PDF (logo unique pour tous les magasins)."""
+
+    logo = models.ImageField(
+        upload_to='pdf/logos/',
+        null=True,
+        blank=True,
+        verbose_name="Logo global",
+        help_text="Logo affiché sur tous les documents PDF. Format recommandé : PNG transparent, 300x300px minimum."
+    )
+    modifie_le = models.DateTimeField(auto_now=True)
+    modifie_par = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='parametres_pdf_modifies'
+    )
+
+    class Meta:
+        verbose_name = "Paramètre PDF global"
+        verbose_name_plural = "Paramètres PDF globaux"
+
+    def __str__(self):
+        return "Logo PDF global"
+
+    @classmethod
+    def get_instance(cls):
+        """Retourne l'instance unique (singleton). Crée si inexistant."""
+        obj, created = cls.objects.get_or_create(pk=1)
+        return obj
+
+    @classmethod
+    def get_logo_url(cls, request):
+        """Retourne l'URL absolue du logo global, ou None."""
+        obj = cls.get_instance()
+        if obj.logo:
+            try:
+                return request.build_absolute_uri(obj.logo.url)
+            except Exception:
+                pass
+        return None

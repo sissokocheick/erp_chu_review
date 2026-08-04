@@ -8,17 +8,11 @@ from accounts.permissions import verifier_permission
 from ...decorators import catch_errors
 from ...services.parametre_service import supprimer_entite, redirect_url_with_tab
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_parametres')
 @require_POST
 @catch_errors(redirect_url='/')
 def supprimer_parametre(request, type_entite, id_entite):
-    entreprise = request.entreprise
-    if not entreprise:
-        messages.error(request, "❌ Aucune entreprise associée à votre compte.")
-        return redirect('dashboard_directeur')
-
     perm_map = {
         'famille': 'accounts.menu_fournisseurs',
         'fournisseur': 'accounts.menu_fournisseurs',
@@ -36,14 +30,13 @@ def supprimer_parametre(request, type_entite, id_entite):
         messages.error(request, "⛔ Accès refusé.")
         return redirect(reverse('parametres_administratifs'))
 
-    # Validation de id_entite
     try:
         id_entite = int(id_entite)
     except (ValueError, TypeError):
         messages.error(request, "❌ Identifiant invalide.")
         return redirect(reverse('parametres_administratifs'))
 
-    ok, msg, url_name, tab = supprimer_entite(type_entite, id_entite, entreprise, request.user)
+    ok, msg, url_name, tab = supprimer_entite(type_entite, id_entite, request.user)
     if ok:
         messages.success(request, msg)
     else:

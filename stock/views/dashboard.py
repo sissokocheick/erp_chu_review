@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib import messages  # ← CORRECTION CRITIQUE : import manquant
+from django.contrib import messages
 from django.db.models import Sum, F, Count, DecimalField, Value, OuterRef, Subquery, Case, When
 from django.db.models.functions import Coalesce
 from django.utils import timezone
@@ -12,37 +12,29 @@ import json
 from accounts.permissions import verifier_permission
 from ..models import (
     Article, Mouvement, StockItem, Magasin,
-    Fournisseur, Service,
-)
+    Fournisseur, Service)
 from ..decorators import catch_errors
 
 
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_dashboard')
-@catch_errors(redirect_url='/auth/accueil/')  # ← CORRECTION : /auth/accueil/ existe, pas /accounts/accueil/
+@catch_errors(redirect_url='/auth/accueil/')
 def dashboard_directeur(request):
-    entreprise = getattr(request, 'entreprise', None)
-    if not entreprise:
-        messages.error(request, '⛔ Aucune entreprise active. Veuillez vous reconnecter.')
-        return redirect('accounts:custom_login')
-
     aujourdhui = timezone.now().date()
-    total_articles = Article.objects.filter(entreprise=entreprise).count()
+    total_articles = Article.objects.all().count()
     sorties_jour = Mouvement.objects.filter(
-        magasin__entreprise=entreprise, type_mouvement='SORTIE',
+        type_mouvement='SORTIE',
         date_mouvement__date=aujourdhui
     ).count()
     entrees_jour = Mouvement.objects.filter(
-        magasin__entreprise=entreprise, type_mouvement='ENTREE',
+        type_mouvement='ENTREE',
         date_mouvement__date=aujourdhui
     ).count()
 
-    stocks_base = StockItem.objects.filter(
-        magasin__entreprise=entreprise
-    ).select_related('article', 'article__famille', 'magasin')
+    stocks_base = StockItem.objects.select_related('article', 'article__famille', 'magasin')
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ALERTES STOCK — Coalesce pour gérer les seuils critiques NULL
+    # ALERTES STOCK
     # ═══════════════════════════════════════════════════════════════════════
     stocks_critiques = stocks_base.filter(
         article__seuil_critique__isnull=False,
@@ -62,30 +54,28 @@ def dashboard_directeur(request):
 
     trente_jours_avant = aujourdhui - timedelta(days=30)
     top_articles = Mouvement.objects.filter(
-        magasin__entreprise=entreprise, type_mouvement='SORTIE',
+        type_mouvement='SORTIE',
         date_mouvement__date__gte=trente_jours_avant
     ).values('article__designation').annotate(
         total_sorti=Sum('quantite')
     ).order_by('-total_sorti')[:5]
 
     top_services = Mouvement.objects.filter(
-        magasin__entreprise=entreprise, type_mouvement='SORTIE',
+        type_mouvement='SORTIE',
         date_mouvement__date__gte=trente_jours_avant,
         service_demandeur__isnull=False
     ).values('service_demandeur__nom').annotate(
         total_sorti=Sum('quantite')
     ).order_by('-total_sorti')[:5]
 
-    mouvements_recents = Mouvement.objects.filter(
-        magasin__entreprise=entreprise
-    ).select_related('article', 'utilisateur').order_by('-date_mouvement')[:8]
+    mouvements_recents = Mouvement.objects.select_related(
+        'article', 'utilisateur'
+    ).order_by('-date_mouvement')[:8]
 
     # ═══════════════════════════════════════════════════════════════════════
-    # VALORISATION CMUP — fallback sur prix_reference si CMUP = 0
+    # VALORISATION CMUP
     # ═══════════════════════════════════════════════════════════════════════
-    resultat_valeur = StockItem.objects.filter(
-        magasin__entreprise=entreprise
-    ).aggregate(
+    resultat_valeur = StockItem.objects.aggregate(
         total=Sum(
             F('quantite_physique') * Case(
                 When(valeur_cmup__gt=0, then=F('valeur_cmup')),
@@ -98,27 +88,23 @@ def dashboard_directeur(request):
     valeur_stock_total = resultat_valeur['total'] or 0
 
     # ═══════════════════════════════════════════════════════════════════════
-    # HISTORIQUE — filtre uniforme sur 7 jours
+    # HISTORIQUE (7 jours)
     # ═══════════════════════════════════════════════════════════════════════
     date_limite_historique = aujourdhui - timedelta(days=7)
-    entreprise_id = entreprise.id
 
     h_articles = Article.history.filter(
-        entreprise_id=entreprise_id,
-        history_date__date__gte=date_limite_historique
-    ).order_by('-history_date')[:12]
-    h_magasins = Magasin.history.filter(
-        entreprise_id=entreprise_id,
-        history_date__date__gte=date_limite_historique
-    ).order_by('-history_date')[:12]
-    h_fournisseurs = Fournisseur.history.filter(
-        entreprise_id=entreprise_id,
         history_date__date__gte=date_limite_historique
     ).order_by('-history_date')[:12]
 
-    magasins_ids = list(Magasin.objects.filter(
-        entreprise=entreprise
-    ).values_list('id', flat=True))
+    h_magasins = Magasin.history.filter(
+        history_date__date__gte=date_limite_historique
+    ).order_by('-history_date')[:12]
+
+    h_fournisseurs = Fournisseur.history.filter(
+        history_date__date__gte=date_limite_historique
+    ).order_by('-history_date')[:12]
+
+    magasins_ids = list(Magasin.objects.values_list('id', flat=True))
     if magasins_ids:
         h_mouvements = Mouvement.history.filter(
             magasin_id__in=magasins_ids,
@@ -149,7 +135,7 @@ def dashboard_directeur(request):
         })
 
     # ═══════════════════════════════════════════════════════════════════════
-    # PÉREMPTIONS — reliquat théorique > 0 ET stock physique > 0
+    # PÉREMPTIONS
     # ═══════════════════════════════════════════════════════════════════════
     sorties_par_lot = Mouvement.objects.filter(
         type_mouvement='SORTIE',
@@ -160,7 +146,6 @@ def dashboard_directeur(request):
         total_sorti=Sum('quantite')
     ).values('total_sorti')
 
-    # ── NOUVEAU : sous-requête stock physique réel ──
     stock_physique_sub = StockItem.objects.filter(
         article=OuterRef('article'),
         magasin=OuterRef('magasin')
@@ -169,7 +154,6 @@ def dashboard_directeur(request):
     date_alerte = aujourdhui + timedelta(days=90)
 
     lots_en_alerte = Mouvement.objects.filter(
-        magasin__entreprise=entreprise,
         type_mouvement='ENTREE',
         date_peremption__isnull=False,
         date_peremption__lte=date_alerte,
@@ -180,11 +164,10 @@ def dashboard_directeur(request):
         stock_physique=Coalesce(Subquery(stock_physique_sub), 0)
     ).filter(
         quantite_restante__gt=0,
-        stock_physique__gt=0   # ←←← CLÉ : ignore les stocks vides
+        stock_physique__gt=0
     ).select_related('article', 'magasin').order_by('date_peremption')
 
     lots_perimes = Mouvement.objects.filter(
-        magasin__entreprise=entreprise,
         type_mouvement='ENTREE',
         date_peremption__isnull=False,
         date_peremption__lt=aujourdhui
@@ -194,7 +177,7 @@ def dashboard_directeur(request):
         stock_physique=Coalesce(Subquery(stock_physique_sub), 0)
     ).filter(
         quantite_restante__gt=0,
-        stock_physique__gt=0   # ←←← CLÉ : ignore les stocks vides
+        stock_physique__gt=0
     ).select_related('article', 'magasin').order_by('-date_peremption')
 
     context = {

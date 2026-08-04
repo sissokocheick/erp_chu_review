@@ -6,7 +6,21 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 8mm 8mm 10mm 8mm;
+            margin: 8mm 8mm 18mm 8mm;
+            @bottom-center {
+                content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+                font-size: 7pt;
+                color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+                font-weight: bold;
+                text-align: center;
+                width: 100%;
+            }
+            @bottom-right {
+                content: counter(page) " / " counter(pages);
+                font-size: 7pt;
+                color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+                font-weight: bold;
+            }
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -16,7 +30,6 @@
             background: #fff;
         }
 
-        /* ── Top Header ── */
         .top-header {
             width: 100%;
             display: table;
@@ -34,7 +47,6 @@
         .top-header-right .republic { font-weight: bold; }
         .top-header-right .motto { font-style: italic; }
 
-        /* ── Cartouche principal ── */
         .main-cartridge {
             width: 100%;
             display: table;
@@ -101,7 +113,6 @@
         .cart-col-quality .q-row { margin-bottom: 3px; white-space: nowrap; }
         .cart-col-quality .q-label { font-weight: bold; }
 
-        /* ── Info sous cartouche ── */
         .info-box {
             margin-bottom: 10px;
             padding: 6px 8px;
@@ -111,7 +122,6 @@
             font-size: 9pt;
         }
 
-        /* ── Tableau ── */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -136,28 +146,11 @@
         .col-mag { width: 18%; }
         .col-qte { width: 12%; text-align: center; }
         .col-statut { width: 15%; text-align: center; }
-
-        /* ── Footer ── */
-        .footer-chu {
-            text-align: center;
-            font-size: 7pt;
-            line-height: 1.3;
-            margin-top: 8px;
-        }
-        .footer-line {
-            border: none;
-            border-top: 2px solid #2e86c1;
-            margin-bottom: 4px;
-        }
-        .footer-chu .address { color: {{ pdf_config.couleur_principale|default:"#1c5b96" }}; font-weight: bold; margin-bottom: 1px; }
-        .footer-chu .direction-fin { color: #c0392b; font-weight: bold; margin-bottom: 1px; }
-        .footer-chu .postes { color: {{ pdf_config.couleur_principale|default:"#1c5b96" }}; font-weight: bold; }
     </style>
 <base target="_blank">
 </head>
 <body>
 
-    <!-- Top Header -->
     <div class="top-header">
         <div class="top-header-left">
             <div class="ministry">{{ pdf_config.ministere_label|default:"Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle" }}</div>
@@ -168,15 +161,14 @@
         </div>
     </div>
 
-    <!-- Cartouche principal -->
     <div class="main-cartridge">
         <div class="cart-col-logo">
-            {% if pdf_config.afficher_logo and logo_url %}
-                <img src="{{ logo_url }}" alt="Logo {{ entreprise.nom|default:'' }}">
+            {% if pdf_config.cartouche.afficher_logo and logo_url %}
+                <img src="{{ logo_url }}" alt="Logo {{ magasin.nom|default:'' }}">
             {% else %}
                 <div style="height:55px;"></div>
             {% endif %}
-            <div class="institution-text">{{ entreprise.nom|default:"" }}</div>
+            <div class="institution-text">{{ magasin.nom|default:"" }}</div>
         </div>
         <div class="cart-col-title">
             <div class="process">{{ pdf_config.ps2_label|default:"PS2 : GERER LES PRESTATIONS EXTERNES" }}</div>
@@ -237,14 +229,6 @@
             {% endfor %}
         </tbody>
     </table>
-
-    <!-- Footer -->
-    <div class="footer-chu">
-        <hr class="footer-line">
-        <div class="address">{{ entreprise.adresse|default:"" }}</div>
-        <div class="direction-fin">{{ pdf_config.direction_label|default:"Direction des Affaires Financières" }} * {{ pdf_config.sous_direction_label|default:"Sous-Direction de la Logistique" }}</div>
-        <div class="postes">{{ pdf_config.service_label|default:"Service Approvisionnement et Gestion des Stocks" }}</div>
-    </div>
 
 </body>
 </html>

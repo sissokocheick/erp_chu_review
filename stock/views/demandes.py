@@ -14,8 +14,7 @@ from accounts.permissions import verifier_permission
 from ..models import (
     DemandeMateriel, LigneDemande, LivraisonPartielle, LivraisonLigne,
     AccuseReception, BonMouvement, LigneBon, Mouvement,
-    Magasin, Article, Service, CircuitValidation, MotifAnnulation, StockItem,
-)
+    Magasin, Article, Service, CircuitValidation, MotifAnnulation, StockItem)
 from ..decorators import magasin_requis, catch_errors
 from ..services import (
     NumeroGenerator, PDFService, NotificationService, DemandeService
@@ -28,15 +27,14 @@ try:
 except (ModuleNotFoundError, ImportError):
     def get_magasins_autorises(request):
         from ..models import Magasin
-        return Magasin.objects.filter(entreprise=request.entreprise)
+        return Magasin.objects.all()
 
 from .catalogue import paginer
 from django.core.exceptions import ObjectDoesNotExist
-from core.pdf_service import DocumentGenerator
+from stock.pdf_utils import render_pdf_to_bytes, get_pdf_config, build_signature_cases, sauver_pdf_cache
 from django.core.files.base import ContentFile
 from django.template.loader import render_to_string
 from django.http import HttpResponse
-
 
 def _get_service_user(request):
     profil = None
@@ -53,14 +51,12 @@ def _get_service_user(request):
             service_user = profil.services.first()
     return service_user
 
-
 def _is_ajax(request):
     """Détection robuste requête AJAX (fetch / XMLHttpRequest / HTMX)."""
     return (
         request.headers.get('x-requested-with') == 'XMLHttpRequest'
         or request.headers.get('HX-Request') == 'true'
     )
-
 
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_demandes')
@@ -72,31 +68,26 @@ def mes_demandes(request):
         return _traiter_mes_demandes_post(request)
     return _afficher_mes_demandes(request)
 
-
 def _afficher_mes_demandes(request):
     """Branche GET : liste des demandes de l'utilisateur."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     service_user = _get_service_user(request)
 
     # ═══════════════════════════════════════════════════════════════════════
     # RÉCUPÉRATION DU PARAMÈTRE DE CONFIDENTIALITÉ
     # ═══════════════════════════════════════════════════════════════════════
-    config = get_or_create_logistique_config(entreprise)
+    config = get_or_create_logistique_config()
     confidentialite = getattr(config, 'confidentialite_demandes', 'PERSONNELLE')
 
     # ── Filtre de base selon la confidentialité ──
     if confidentialite == 'SERVICE' and service_user:
         # Mode SERVICE : tous les agents du même service voient les demandes
         qs = DemandeMateriel.objects.filter(
-            service_demandeur=service_user,
-            magasin_cible__entreprise=entreprise
-        )
+            service_demandeur=service_user)
     else:
         # Mode PERSONNELLE (défaut) : chaque agent ne voit que SES demandes
         qs = DemandeMateriel.objects.filter(
-            demandeur=request.user,
-            magasin_cible__entreprise=entreprise
-        )
+            demandeur=request.user)
 
     qs = qs.select_related(
         'service_demandeur', 'magasin_cible', 'valide_par',
@@ -132,7 +123,7 @@ def _afficher_mes_demandes(request):
         qs = qs.filter(
             Q(numero_demande__icontains=q) |
             Q(lignes_demande__article__designation__icontains=q) |
-            Q(magasin_cible__nom__icontains=q)
+            Q(nom__icontains=q)
         ).distinct()
 
     # ── Split actives / historique ──
@@ -144,14 +135,14 @@ def _afficher_mes_demandes(request):
 
     demandes_pagines, per_page = paginer(qs, request, per_page_key='per_page', default=10)
 
-    magasins = Magasin.objects.filter(entreprise=entreprise).order_by('nom')
+    magasins = Magasin.objects.all().order_by('nom')
     magasin_id = request.session.get('magasin_actif_id')
     magasin_actif = Magasin.objects.filter(
-        id=magasin_id, entreprise=entreprise
+        id=magasin_id
     ).first() if magasin_id else magasins.first()
 
     circuit = CircuitValidation.objects.filter(
-        type_document='DEMANDE', est_actif=True, entreprise=entreprise
+        type_document='DEMANDE', est_actif=True
     ).first()
 
     context = {
@@ -162,7 +153,7 @@ def _afficher_mes_demandes(request):
         'a_un_service': service_user is not None,
         'magasins': magasins,
         'magasin_actif': magasin_actif,
-        'articles': Article.objects.filter(entreprise=entreprise).order_by('designation'),
+        'articles': Article.objects.all().order_by('designation'),
         'date_range': date_range,
         'circuit_actif': bool(circuit),
         # Passer l'info de confidentialité au template pour affichage éventuel
@@ -175,23 +166,20 @@ def _afficher_mes_demandes(request):
 
     return render(request, 'stock/mes_demandes.html', context)
 
-
 def _traiter_mes_demandes_post(request):
     """Branche POST : clôture ou création d'une demande."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     action = request.POST.get('action')
 
     if action == 'cloturer_demande':
         return _cloturer_ma_demande(request)
     return _creer_ma_demande(request)
 
-
 def _cloturer_ma_demande(request):
     """POST : clôture d'une demande par son demandeur."""
     demande = get_object_or_404(
         DemandeMateriel, id=request.POST.get('demande_id'),
-        demandeur=request.user, magasin_cible__entreprise=request.entreprise
-    )
+        demandeur=request.user)
     demande.statut = 'CLOTUREE'
     demande.cloture_par = request.user
     demande.date_cloture = timezone.now()
@@ -200,22 +188,20 @@ def _cloturer_ma_demande(request):
     messages.success(request, f"✅ La demande {demande.numero_demande} a été clôturée.")
     return redirect('mes_demandes')
 
-
 def _creer_ma_demande(request):
     """POST : creation d une nouvelle demande."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     service_user = _get_service_user(request)
 
     if not service_user:
         messages.error(request, "Impossible : Vous n avez pas de service rattache.")
         return redirect('mes_demandes')
 
-    # ── Verification : reception obligatoire de la livraison precedente ──
-    config = get_or_create_logistique_config(entreprise)
+        # ── Verification : reception obligatoire de la livraison precedente ──
+    config = get_or_create_logistique_config()
     if getattr(config, 'obliger_reception_precedente', False):
         a_livraison_non_signee = LivraisonPartielle.objects.filter(
             demande__demandeur=request.user,
-            demande__magasin_cible__entreprise=entreprise,
             accuse__est_signe=False
         ).exists()
         if a_livraison_non_signee:
@@ -241,9 +227,9 @@ def _creer_ma_demande(request):
         return redirect('mes_demandes')
 
     with transaction.atomic():
-        numero_demande = NumeroGenerator.generer_numero_demande(service_user, entreprise)
+        numero_demande = NumeroGenerator.generer_numero_demande(service_user)
         circuit = CircuitValidation.objects.filter(
-            type_document='DEMANDE', est_actif=True, entreprise=entreprise
+            type_document='DEMANDE', est_actif=True
         ).first()
 
         if circuit and circuit.est_actif:
@@ -269,15 +255,16 @@ def _creer_ma_demande(request):
 
     # ── Génération du Bon de Demande PDF ──
     try:
-        gen = DocumentGenerator(request=request)
-        pdf_bytes = gen.bon_demande(demande)
-        # Optionnel : sauvegarder le PDF sur la demande si champ fichier_pdf existe
-        if hasattr(demande, 'fichier_pdf') and hasattr(demande.fichier_pdf, 'save'):
-            demande.fichier_pdf.save(
-                f"BD_{demande.numero_demande}.pdf",
-                ContentFile(pdf_bytes),
-                save=True
-            )
+        pdf_config, logo_url = get_pdf_config(demande.magasin, 'DEMANDE', request)
+        context = {
+            'demande': demande,
+            'lignes': demande.lignes.all(),
+            'pdf_config': pdf_config,
+            'logo_url': logo_url,
+            'signature_cases': build_signature_cases(demande, pdf_config, request),
+        }
+        pdf_bytes = render_pdf_to_bytes(request, 'stock/pdf/bon_demande.html', context)
+        sauver_pdf_cache(demande, f"BD_{demande.numero_demande}.pdf", pdf_bytes)
     except Exception as e:
         logging.getLogger(__name__).warning(
             f"[PDF Demande] Génération échouée pour {demande.numero_demande} : {e}"
@@ -285,7 +272,6 @@ def _creer_ma_demande(request):
 
     messages.success(request, msg_succes)
     return redirect('mes_demandes')
-
 
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_guichet')
@@ -297,17 +283,16 @@ def gestion_demandes(request):
         return redirect('gestion_demandes')  # POST géré par valider_traitement_demande
     return _afficher_gestion_demandes(request)
 
-
 def _afficher_gestion_demandes(request):
     """Branche GET : liste des demandes à traiter pour le magasin actif."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_id = request.session.get('magasin_actif_id')
 
     if not magasin_id:
         messages.error(request, "⚠️ Veuillez sélectionner un magasin.")
         return redirect('/')
 
-    magasin_actif = Magasin.objects.filter(id=magasin_id, entreprise=entreprise).first()
+    magasin_actif = Magasin.objects.filter(id=magasin_id).first()
     if not magasin_actif:
         request.session.pop('magasin_actif_id', None)
         messages.error(request, "⛔ Magasin inaccessible. Veuillez en choisir un autre.")
@@ -326,8 +311,7 @@ def _afficher_gestion_demandes(request):
     )
 
     qs = DemandeMateriel.objects.filter(
-        magasin_cible_id=magasin_id, magasin_cible__entreprise=entreprise
-    ).select_related('demandeur', 'service_demandeur').prefetch_related(
+        magasin_cible_id=magasin_id).select_related('demandeur', 'service_demandeur').prefetch_related(
         'lignes_demande__article',
         Prefetch('livraisons', queryset=LivraisonPartielle.objects.prefetch_related('accuse'))
     ).annotate(
@@ -403,29 +387,25 @@ def _afficher_gestion_demandes(request):
         'onglet': onglet,
         'counts': counts,
         'magasin_actif': magasin_actif,
-        'motifs_annulation': MotifAnnulation.objects.filter(entreprise=entreprise, actif=True).order_by('libelle'),
-        'services': Service.objects.filter(entreprise=entreprise).order_by('nom'),
+        'motifs_annulation': MotifAnnulation.objects.filter(actif=True).order_by('libelle'),
+        'services': Service.objects.all().order_by('nom'),
         'a_un_service': _get_service_user(request) is not None or request.user.has_perm('accounts.menu_guichet'),
-        'articles': Article.objects.filter(entreprise=entreprise).order_by('designation'),
+        'articles': Article.objects.all().order_by('designation'),
         'date_range': request.GET.get('date_range', ''),
     }
     return render(request, 'stock/gestion_demandes.html', context)
-
 
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_guichet')
 @magasin_requis
 @catch_errors(redirect_url='gestion_demandes')
 def valider_traitement_demande(request, demande_id):
-    entreprise = request.entreprise
-
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     if request.method != 'POST':
         return redirect('gestion_demandes')
 
     demande = get_object_or_404(
-        DemandeMateriel, id=demande_id,
-        magasin_cible__entreprise=entreprise
-    )
+        DemandeMateriel, id=demande_id)
     magasin_id = request.session.get('magasin_actif_id')
 
     if str(demande.magasin_cible_id) != str(magasin_id):
@@ -437,7 +417,7 @@ def valider_traitement_demande(request, demande_id):
         return redirect('gestion_demandes')
 
     circuit_sortie = CircuitValidation.objects.filter(
-        type_document='SORTIE', entreprise=entreprise, est_actif=True
+        type_document='SORTIE', est_actif=True
     ).first()
 
     lignes = demande.lignes_demande.select_related('article').all()
@@ -470,8 +450,7 @@ def valider_traitement_demande(request, demande_id):
             lignes_qte_map=lignes_qte_map,
             user=request.user,
             cloturer=request.POST.get('cloturer_demande') == '1',
-            motif_cloture=request.POST.get('motif_cloture', '').strip(),
-        )
+            motif_cloture=request.POST.get('motif_cloture', '').strip())
     except ValidationError as e:
         logger.exception("[Demandes] %s", e)
         messages.error(request, "❌ Une erreur est survenue. Veuillez réessayer.")
@@ -559,11 +538,9 @@ def valider_traitement_demande(request, demande_id):
 @login_required(login_url='/auth/login/')
 @magasin_requis
 def api_statut_demande(request, demande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
-        DemandeMateriel, id=demande_id,
-        magasin_cible__entreprise=entreprise
-    )
+        DemandeMateriel, id=demande_id)
 
     profil = getattr(request.user, 'profil', None)
     est_magasinier = request.user.has_perm('accounts.menu_guichet')
@@ -597,17 +574,14 @@ def api_statut_demande(request, demande_id):
         'livraisons': livraisons_data,
     })
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_guichet')
 @magasin_requis
 @catch_errors(redirect_url='gestion_demandes')
 def cloturer_demande(request, demande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
-        DemandeMateriel, id=demande_id,
-        magasin_cible__entreprise=entreprise
-    )
+        DemandeMateriel, id=demande_id)
     magasin_id = request.session.get('magasin_actif_id')
 
     if str(demande.magasin_cible_id) != str(magasin_id):
@@ -639,24 +613,20 @@ def cloturer_demande(request, demande_id):
         return redirect('gestion_demandes')
     return redirect('detail_livraisons_demande', demande_id=demande.id)
 
-
 @login_required(login_url='/auth/login/')
 def signer_accuse_reception(request, accuse_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     accuse = get_object_or_404(
         AccuseReception.objects.select_related(
             'livraison__demande__service_demandeur',
             'livraison__demande__demandeur',
-            'livraison__livre_par',
-        ).prefetch_related('livraison__lignes_livraison__article'),
+            'livraison__livre_par').prefetch_related('livraison__lignes_livraison__article'),
         id=accuse_id
     )
     demande = accuse.livraison.demande
     livraison = accuse.livraison
 
-    if demande.magasin_cible.entreprise != entreprise:
-        messages.error(request, "⛔ Accès non autorisé.")
-        return redirect('/')
+    # Mono-tenant : vérification entreprise supprimée
 
     def get_bon_sortie_id():
         if hasattr(livraison, 'bon_sortie') and livraison.bon_sortie:
@@ -673,7 +643,7 @@ def signer_accuse_reception(request, accuse_id):
 
     if bon and bon.statut_validation == 'ATTENTE':
         circuit = CircuitValidation.objects.filter(
-            type_document='SORTIE', entreprise=entreprise, est_actif=True
+            type_document='SORTIE', est_actif=True
         ).prefetch_related('valideurs').first()
         est_valideur = (
             circuit and (
@@ -802,7 +772,6 @@ def signer_accuse_reception(request, accuse_id):
     }
     return render(request, 'stock/signer_accuse.html', context)
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_valider_demandes')
 def demandes_a_valider(request):
@@ -812,11 +781,10 @@ def demandes_a_valider(request):
     Seuls les valideurs du circuit voient les demandes EN_ATTENTE_VALIDATION
     de leur propre service.
     """
-    entreprise = request.entreprise
-
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     # ── 1. Vérification du circuit DEMANDE ──
     circuit = CircuitValidation.objects.filter(
-        type_document='DEMANDE', est_actif=True, entreprise=entreprise
+        type_document='DEMANDE', est_actif=True
     ).first()
 
     if not circuit:
@@ -854,9 +822,7 @@ def demandes_a_valider(request):
                     demandes_a_maj = DemandeMateriel.objects.select_for_update().filter(
                         id__in=demande_ids,
                         service_demandeur=service_user,
-                        statut='EN_ATTENTE_VALIDATION',
-                        service_demandeur__entreprise=entreprise
-                    )
+                        statut='EN_ATTENTE_VALIDATION')
                     nb_maj = demandes_a_maj.count()
                     for d in demandes_a_maj:
                         d.statut = 'EN_ATTENTE'
@@ -904,9 +870,7 @@ def demandes_a_valider(request):
                     demandes_a_maj = DemandeMateriel.objects.select_for_update().filter(
                         id__in=demande_ids,
                         service_demandeur=service_user,
-                        statut='EN_ATTENTE_VALIDATION',
-                        service_demandeur__entreprise=entreprise
-                    )
+                        statut='EN_ATTENTE_VALIDATION')
                     nb_maj = demandes_a_maj.count()
                     for d in demandes_a_maj:
                         d.statut = 'REFUSEE'
@@ -934,9 +898,7 @@ def demandes_a_valider(request):
             demande = get_object_or_404(
                 DemandeMateriel,
                 id=demande_id,
-                service_demandeur=service_user,
-                service_demandeur__entreprise=entreprise
-            )
+                service_demandeur=service_user)
             if action == 'approuver':
                 demande.statut = 'EN_ATTENTE'
                 demande.valide_par_chef = request.user
@@ -970,9 +932,7 @@ def demandes_a_valider(request):
     q = request.GET.get('q', '')
 
     demandes_base = DemandeMateriel.objects.filter(
-        service_demandeur=service_user,
-        service_demandeur__entreprise=entreprise
-    ).order_by('-date_demande')
+        service_demandeur=service_user).order_by('-date_demande')
 
     if onglet == 'historique':
         demandes = demandes_base.exclude(statut='EN_ATTENTE_VALIDATION')
@@ -1007,11 +967,9 @@ def demandes_a_valider(request):
 @login_required(login_url='/auth/login/')
 @catch_errors(redirect_url='mes_demandes')
 def annuler_demande(request, demande_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
-        DemandeMateriel, id=demande_id,
-        magasin_cible__entreprise=entreprise
-    )
+        DemandeMateriel, id=demande_id)
 
     if demande.demandeur != request.user and not request.user.has_perm(
         'accounts.menu_guichet'
@@ -1050,7 +1008,6 @@ def annuler_demande(request, demande_id):
 
     return redirect('mes_demandes')
 
-
 # ═══════════════════════════════════════════════════════════════════════════
 # API : detail d une demande (pour accordéon lazy load)
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1058,13 +1015,12 @@ def annuler_demande(request, demande_id):
 @login_required(login_url='/auth/login/')
 def api_detail_demande(request, demande_id):
     """Renvoie le HTML du detail d une demande pour l accordéon."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
         DemandeMateriel.objects.select_related('service_demandeur').prefetch_related(
             'lignes_demande__article', 'livraisons__accuse', 'livraisons__bon_sortie'
         ),
-        id=demande_id, demandeur=request.user, magasin_cible__entreprise=entreprise
-    )
+        id=demande_id, demandeur=request.user)
     html = render_to_string('stock/mes_demandes_detail.html', {'d': demande})
     return JsonResponse({'html': html})
 
@@ -1072,30 +1028,3 @@ def api_detail_demande(request, demande_id):
 # BON DE DEMANDE PDF
 # ═══════════════════════════════════════════════════════════════════════════
 
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_demandes')
-def imprimer_bon_demande(request, demande_id):
-    """Génère et retourne le PDF du Bon de Demande."""
-
-    entreprise = request.entreprise
-    demande = get_object_or_404(
-        DemandeMateriel, id=demande_id,
-        magasin_cible__entreprise=entreprise
-    )
-
-    # Vérification d'accès : demandeur, magasinier, ou staff
-    profil = getattr(request.user, 'profil', None)
-    est_magasinier = request.user.has_perm('accounts.menu_guichet')
-    est_demandeur = (demande.demandeur == request.user)
-    est_du_service = (profil and profil.service == demande.service_demandeur)
-
-    if not (est_demandeur or est_magasinier or est_du_service or request.user.is_staff):
-        messages.error(request, "⛔ Vous n'avez pas accès à ce document.")
-        return redirect('mes_demandes')
-
-    gen = DocumentGenerator(request=request)
-    pdf_bytes = gen.bon_demande(demande)
-
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="BD_{demande.numero_demande}.pdf"'
-    return response

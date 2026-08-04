@@ -25,53 +25,60 @@ class CompteurDocumentService:
     }
 
     @classmethod
-    def generer_numero_bon(cls, type_bon, entreprise):
+    def generer_numero_bon(cls, type_bon, entreprise=None):
         """
         Génère un numéro de bon au format PREFIXE-ANNEE-SEQUENCE.
         La séquence est CONTINUE (pas de réinitialisation par année).
+
+        ✅ CORRECTION MONO-TENANT : paramètre entreprise ignoré (compatibilité).
         """
         type_doc, prefix = cls.TYPE_BON_MAPPING.get(type_bon, ('BON_ENTREE', 'BE'))
 
         # ✅ CORRECTION : suppression du paramètre mort `eid`
-        def format_num(compteur, annee, eid):
+        def format_num(compteur, annee, eid=None):
             # eid est fourni par CompteurDocument.generer_numero mais non utilisé ici
             return f"{prefix}-{annee}-{compteur:04d}"
 
         # Vérification d'unicité active via model_class et field_name
         from stock.models import BonMouvement
+        # ✅ CORRECTION MONO-TENANT : entreprise_id=1 (singleton) au lieu de entreprise.id
         return CompteurDocument.generer_numero(
-            entreprise.id, type_doc, format_num,
+            type_doc, format_num,
+            max_retries=10,
             model_class=BonMouvement,
-            field_name='numero_bon',
-            max_retries=10
+            field_name='numero_bon'
         )
 
     @classmethod
-    def generer_numero_commande(cls, entreprise):
-        """Génère un numéro de commande au format BC-ANNEE-SEQUENCE."""
-        def format_num(compteur, annee, eid):
+    def generer_numero_commande(cls, entreprise=None):
+        """Génère un numéro de commande au format BC-ANNEE-SEQUENCE.
+        ✅ CORRECTION MONO-TENANT : paramètre entreprise ignoré (compatibilité).
+        """
+        def format_num(compteur, annee, eid=None):
             return f"BC-{annee}-{compteur:04d}"
 
         # Vérification d'unicité active via model_class et field_name
         from stock.models import Commande
         return CompteurDocument.generer_numero(
-            entreprise.id, 'COMMANDE', format_num,
+            'COMMANDE', format_num,
+            max_retries=10,
             model_class=Commande,
-            field_name='numero_commande',
-            max_retries=10
+            field_name='numero_commande'
         )
 
     @classmethod
-    def generer_numero_demande(cls, entreprise):
-        """Génère un numéro de demande au format BDM-ANNEE-SEQUENCE."""
-        def format_num(compteur, annee, eid):
+    def generer_numero_demande(cls, entreprise=None):
+        """Génère un numéro de demande au format BDM-ANNEE-SEQUENCE.
+        ✅ CORRECTION MONO-TENANT : paramètre entreprise ignoré (compatibilité).
+        """
+        def format_num(compteur, annee, eid=None):
             return f"BDM-{annee}-{compteur:04d}"
 
         # Vérification d'unicité active via model_class et field_name
         from stock.models import DemandeMateriel
         return CompteurDocument.generer_numero(
-            entreprise.id, 'DEMANDE_MATERIEL', format_num,
+            'DEMANDE_MATERIEL', format_num,
+            max_retries=10,
             model_class=DemandeMateriel,
-            field_name='numero_demande',
-            max_retries=10
+            field_name='numero_demande'
         )

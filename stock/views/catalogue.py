@@ -3,43 +3,41 @@ from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.db import IntegrityError
 from django.http import JsonResponse
-
-from accounts.permissions import verifier_permission
-from ..models import Article, Mouvement, FamilleArticle
-from ..forms import ArticleForm, FamilleArticleForm
-from ..decorators import magasin_requis, catch_errors
-from ..services import StockService
-from ..models import Magasin
 from django.core.paginator import Paginator
 from django.urls import reverse
 from urllib.parse import urlencode
 from django.contrib import messages
+import logging
+
+from accounts.permissions import verifier_permission
+from ..models import Article, Mouvement, FamilleArticle, Magasin
+from ..forms import ArticleForm, FamilleArticleForm
+from ..decorators import magasin_requis, catch_errors
+
+logger = logging.getLogger(__name__)
 
 
 def get_magasins_autorises(request):
-    entreprise = request.entreprise
-    if not entreprise:
-        return Magasin.objects.none()
+    """Retourne les magasins autorisés pour l'utilisateur (mono-tenant)."""
     user = request.user
     if user.is_superuser:
-        return Magasin.objects.filter(entreprise=entreprise)
-    return user.profil.magasins_autorises.filter(entreprise=entreprise)
+        return Magasin.objects.all()
+    try:
+        return user.profil.magasins_autorises.all()
+    except Exception:
+        return Magasin.objects.none()
 
 
 def paginer(queryset, request, per_page_key='per_page', default=15):
-    """Pagination. Si per_page='all', pas de pagination (retourne tout)."""
+    """Pagination. Si per_page='all', pas de pagination."""
     per_page_raw = request.GET.get(per_page_key, str(default))
 
     if per_page_raw == 'all':
-        # Pas de pagination : on force l'evaluation en liste pour eviter
-        # les requetes COUNT/LIMIT inutiles
         if hasattr(queryset, 'count'):
-            # C'est un QuerySet, on le convertit en liste
             liste = list(queryset)
         else:
             liste = list(queryset)
         count = len(liste)
-        # On cree un paginator avec tous les elements sur une seule page
         paginator = Paginator(liste, max(count, 1))
         page = paginator.get_page(1)
         return page, 'all'
@@ -72,8 +70,7 @@ def build_redirect_url(base_name, query=None, per_page=None, default_per_page=15
 @magasin_requis
 @catch_errors(redirect_url='liste_articles')
 def liste_articles(request):
-    entreprise = request.entreprise
-    articles = Article.objects.filter(entreprise=entreprise).select_related(
+    articles = Article.objects.all().select_related(
         'famille'
     ).prefetch_related('stocks__magasin').order_by('-date_creation')
 
@@ -84,7 +81,6 @@ def liste_articles(request):
             Q(reference__icontains=query)
         ).distinct()
 
-    # -- Filtre par famille --
     famille_id = request.GET.get('famille', '')
     if famille_id:
         articles = articles.filter(famille_id=famille_id)
@@ -97,25 +93,24 @@ def liste_articles(request):
         or request.POST.get('article_id')
     )
     instance_a = get_object_or_404(
-        Article, id=edit_article_id, entreprise=entreprise
+        Article, id=edit_article_id
     ) if edit_article_id else None
-    form = ArticleForm(instance=instance_a, entreprise=entreprise)
+    form = ArticleForm(instance=instance_a)
 
     if request.method == 'POST':
-        form = ArticleForm(request.POST, instance=instance_a, entreprise=entreprise)
+        form = ArticleForm(request.POST, instance=instance_a)
         if form.is_valid():
             article = form.save(commit=False)
-            article.entreprise = entreprise
             if not article.pk:
                 article.cree_par = request.user
             article.modifie_par = request.user
 
             try:
                 article.save()
-                action_text = "modifie" if edit_article_id else "ajoute"
+                action_text = "modifié" if edit_article_id else "ajouté"
                 messages.success(
                     request,
-                    "L'article '" + article.designation + "' a ete " + action_text + " avec succes !"
+                    f"L'article '{article.designation}' a été {action_text} avec succès !"
                 )
                 return redirect(build_redirect_url(
                     'liste_articles',
@@ -124,12 +119,11 @@ def liste_articles(request):
                     famille_id=famille_id
                 ))
             except IntegrityError:
-                messages.error(request, "Erreur de base de donnees : Cet article existe deja.")
+                messages.error(request, "Erreur de base de données : Cet article existe déjà.")
         else:
             messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
 
-    # Recuperer les familles pour le filtre
-    familles = FamilleArticle.objects.filter(entreprise=entreprise).order_by('intitule')
+    familles = FamilleArticle.objects.all().order_by('intitule')
 
     context = {
         'articles': articles_pagines,
@@ -140,10 +134,8 @@ def liste_articles(request):
         'famille_id': famille_id,
     }
 
-    # Detection requete AJAX (fetch vanilla)
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if is_ajax:
-        # Recharge table + pagination + compteur
         return render(request, 'stock/articles_contenu.html', context)
     return render(request, 'stock/liste_articles.html', context)
 
@@ -152,10 +144,9 @@ def liste_articles(request):
 @verifier_permission('accounts.menu_stock')
 @magasin_requis
 def historique_article(request, article_id):
-    entreprise = request.entreprise
-    article = get_object_or_404(Article, id=article_id, entreprise=entreprise)
+    article = get_object_or_404(Article, id=article_id)
     mouvements = Mouvement.objects.filter(
-        article=article, magasin__entreprise=entreprise
+        article=article
     ).select_related('magasin', 'fournisseur', 'service_demandeur', 'utilisateur')
 
     tri = request.GET.get('tri', 'date_desc')
@@ -173,10 +164,9 @@ def historique_article(request, article_id):
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_familles')
 def liste_familles(request):
-    entreprise = request.entreprise
-    familles = FamilleArticle.objects.filter(
-        entreprise=entreprise
-    ).select_related('cree_par', 'modifie_par').order_by('-date_creation')
+    familles = FamilleArticle.objects.all().select_related(
+        'cree_par', 'modifie_par'
+    ).order_by('-date_creation')
 
     query = request.GET.get('q', '')
     if query:
@@ -192,7 +182,7 @@ def liste_familles(request):
         or request.POST.get('famille_id')
     )
     instance_f = get_object_or_404(
-        FamilleArticle, id=edit_famille_id, entreprise=entreprise
+        FamilleArticle, id=edit_famille_id
     ) if edit_famille_id else None
     form = FamilleArticleForm(instance=instance_f)
 
@@ -201,34 +191,36 @@ def liste_familles(request):
             code = request.POST.get('code', '').strip()
             if code:
                 instance_f = FamilleArticle.objects.filter(
-                    entreprise=entreprise, code__iexact=code
+                    code__iexact=code
                 ).first()
                 if instance_f:
                     edit_famille_id = instance_f.id
+
         form = FamilleArticleForm(request.POST, instance=instance_f)
         if form.is_valid():
             famille = form.save(commit=False)
-            famille.entreprise = entreprise
             if not famille.pk:
                 famille.cree_par = request.user
             famille.modifie_par = request.user
+
             query_check = FamilleArticle.objects.filter(
-                entreprise=entreprise, code__iexact=famille.code
+                code__iexact=famille.code
             )
             if famille.pk:
                 query_check = query_check.exclude(pk=famille.pk)
+
             if query_check.exists():
                 messages.error(
                     request,
-                    f"Impossible : Le code '{famille.code}' existe deja."
+                    f"Impossible : Le code '{famille.code}' existe déjà."
                 )
             else:
                 try:
                     famille.save()
-                    action_text = "modifiee" if edit_famille_id else "ajoutee"
+                    action_text = "modifiée" if edit_famille_id else "ajoutée"
                     messages.success(
                         request,
-                        f"La famille '{famille.intitule}' a ete {action_text} avec succes !"
+                        f"La famille '{famille.intitule}' a été {action_text} avec succès !"
                     )
                     return redirect(build_redirect_url('liste_familles', query=query, per_page=per_page))
                 except IntegrityError as e:
@@ -237,7 +229,6 @@ def liste_familles(request):
         else:
             messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
 
-    # -- Contexte pour AJAX (recharge table + pagination + compteur) --
     is_ajax = (
         request.headers.get('X-Requested-With') == 'XMLHttpRequest'
         or request.META.get('HTTP_X_REQUESTED_WITH') == 'XMLHttpRequest'
@@ -259,31 +250,23 @@ def liste_familles(request):
     }
     return render(request, 'stock/liste_familles.html', context)
 
-# =======================================================================
-# API VERIFICATION DOUBLON ARTICLE (AJAX)
-# =======================================================================
+
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_articles')
 @magasin_requis
 def verifier_article(request):
-    """API AJAX : verifie si un article existe deja (designation ou reference)."""
-    entreprise = request.entreprise
+    """API AJAX : vérifie si un article existe déjà."""
     designation = request.GET.get('designation', '').strip()
     reference = request.GET.get('reference', '').strip()
     exclude_id = request.GET.get('exclude_id', '').strip()
 
     article = None
     if designation:
-        article = Article.objects.filter(
-            entreprise=entreprise, designation__iexact=designation
-        ).first()
+        article = Article.objects.filter(designation__iexact=designation).first()
     elif reference:
-        article = Article.objects.filter(
-            entreprise=entreprise, reference__iexact=reference
-        ).first()
+        article = Article.objects.filter(reference__iexact=reference).first()
 
     if article:
-        # Exclure l'article en cours de modification
         if exclude_id and str(article.id) == exclude_id:
             return JsonResponse({'existe': False})
         return JsonResponse({

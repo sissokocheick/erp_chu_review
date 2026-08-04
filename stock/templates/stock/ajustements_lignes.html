@@ -11,18 +11,6 @@
   .art-nom { font-weight: 700; color: #1c5b96; font-size: 14px; }
   .art-ref { font-size: 11px; color: var(--text-light); }
 
-  .mag-tag {
-    background: rgba(28,91,150,0.12);
-    color: #1c5b96;
-    padding: 2px 8px;
-    border-radius: 10px;
-    font-size: 11px;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-  }
-
   .qte-box-aj {
     display: inline-flex;
     align-items: center;
@@ -87,6 +75,7 @@
   .statut-valide { background: rgba(40,167,69,0.15); color: #28a745; }
   .statut-attente { background: rgba(255,193,7,0.15); color: #856404; }
   .statut-brouillon { background: rgba(108,117,125,0.15); color: #6c757d; }
+  .statut-rejete { background: rgba(220,53,69,0.15); color: #dc3545; }
 
   .btn-valider {
     background: #28a745; color: white; border: none;
@@ -97,26 +86,35 @@
   }
   .btn-valider:hover { background: #1e7e34; transform: translateY(-1px); }
 
+  .btn-rejeter {
+    background: #dc3545; color: white; border: none;
+    padding: 6px 10px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; gap: 5px;
+    transition: .2s;
+  }
+  .btn-rejeter:hover { background: #b02a37; transform: translateY(-1px); }
+
   /* DARK MODE */
   body.dark-mode .art-nom { color: #5bc0de; }
-  body.dark-mode .mag-tag { background: rgba(100,181,246,0.15); color: #90caf9; }
   body.dark-mode .qte-ajout   { background: rgba(129,199,132,0.2); color: #81c784; box-shadow: 0 0 0 2px rgba(129,199,132,0.35); }
   body.dark-mode .qte-retrait { background: rgba(239,154,154,0.2); color: #ff8a80; box-shadow: 0 0 0 2px rgba(239,154,154,0.35); }
   body.dark-mode .btn-replace { color: #ffe082; background: rgba(255,213,79,0.1); }
   body.dark-mode .btn-replace:hover { background: #ffc107; color: #856404; }
+  body.dark-mode .statut-rejete { background: rgba(239,154,154,0.2); color: #ff8a80; }
 </style>
 
 {% for ajustement in ajustements %}
 <tr class="ajustement-row">
+  <td style="padding: 12px; text-align: center;">
+    <span style="font-weight:800; font-size: 13px; color: #1c5b96; font-family: monospace;">{{ ajustement.numero_ajustement|default:"—" }}</span>
+  </td>
   <td style="padding: 12px;">
     <div class="aj-date"><strong>{{ ajustement.date_creation|date:"d/m/Y" }}</strong><br><small>{{ ajustement.date_creation|date:"H:i" }}</small></div>
   </td>
   <td style="padding: 12px;">
     <div class="art-nom">{{ ajustement.article.designation }}</div>
     {% if ajustement.article.reference %}<div class="art-ref">Ref. {{ ajustement.article.reference }}</div>{% endif %}
-  </td>
-  <td style="padding: 12px;">
-    <span class="mag-tag"><i class="fas fa-warehouse"></i>{{ ajustement.magasin.nom }}</span>
   </td>
   <td style="padding: 12px; text-align: center;">
     {% if ajustement.motif == 'AJOUT' %}
@@ -134,14 +132,36 @@
   <td style="padding: 12px;">
     <div class="tracab">
       <div><i class="fas fa-user-edit" style="color:#fd7e14;margin-right:4px;"></i><strong>{{ ajustement.cree_par.username|default:"Systeme" }}</strong></div>
-      <div style="color:var(--text-light);font-size:11px;"><i class="fas fa-clock" style="margin-right:4px;"></i>{{ ajustement.date_creation|date:"d/m/Y a H:i" }}</div>
+      <div style="color:var(--text-light);font-size:11px;"><i class="fas fa-clock" style="margin-right:4px;"></i>{{ ajustement.date_creation|date:"d/m/Y H:i" }}</div>
     </div>
   </td>
   <td style="padding: 12px; text-align: center;">
     {% if ajustement.statut_validation == 'VALIDE' %}
-      <span class="statut-badge statut-valide"><i class="fas fa-check-circle"></i> Valide</span>
+      <span class="statut-badge statut-valide"><i class="fas fa-check-circle"></i> Validé</span>
+      {% if ajustement.valide_par %}
+        <div style="font-size:11px;color:var(--text-medium);margin-top:4px;font-weight:600;">
+          {{ ajustement.valide_par.get_full_name|default:ajustement.valide_par.username }}
+        </div>
+      {% endif %}
+      {% if ajustement.date_validation %}
+        <div style="font-size:11px;color:var(--text-light);">
+          {{ ajustement.date_validation|date:"d/m/Y H:i" }}
+        </div>
+      {% endif %}
     {% elif ajustement.statut_validation == 'ATTENTE' %}
       <span class="statut-badge statut-attente"><i class="fas fa-clock"></i> En attente</span>
+    {% elif ajustement.statut_validation == 'REJETE' %}
+      <span class="statut-badge statut-rejete"><i class="fas fa-times-circle"></i> Rejeté</span>
+      {% if ajustement.modifie_par %}
+        <div style="font-size:11px;color:var(--text-medium);margin-top:4px;font-weight:600;">
+          {{ ajustement.modifie_par.get_full_name|default:ajustement.modifie_par.username }}
+        </div>
+      {% endif %}
+      {% if ajustement.date_modification %}
+        <div style="font-size:11px;color:var(--text-light);">
+          {{ ajustement.date_modification|date:"d/m/Y H:i" }}
+        </div>
+      {% endif %}
     {% else %}
       <span class="statut-badge statut-brouillon"><i class="fas fa-edit"></i> Brouillon</span>
     {% endif %}
@@ -152,6 +172,10 @@
         <button type="button" class="btn-valider" title="Valider l'ajustement" aria-label="Valider l'ajustement"
                 onclick="if(typeof confirmerValidation==='function'){confirmerValidation('{% url 'valider_ajustement' ajustement.id %}')}else{console.error('confirmerValidation non defini')}">
           <i class="fas fa-check"></i> Valider
+        </button>
+        <button type="button" class="btn-rejeter" title="Rejeter l'ajustement" aria-label="Rejeter l'ajustement"
+                onclick="if(typeof confirmerRejet==='function'){confirmerRejet('{% url 'rejeter_ajustement' ajustement.id %}')}else{if(confirm('Rejeter cet ajustement ?')){window.location.href='{% url 'rejeter_ajustement' ajustement.id %}';}}">
+          <i class="fas fa-times"></i> Rejeter
         </button>
       {% endif %}
 

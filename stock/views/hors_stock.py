@@ -13,21 +13,19 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.permissions import verifier_permission
-from core.pdf_service import DocumentGenerator
+from core.models import ConfigurationHopital
 from ..decorators import magasin_requis, catch_errors
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, Service,
-    Fournisseur, Beneficiaire,
-)
+    Fournisseur, Beneficiaire)
 from ..services import NumeroGenerator, PDFService, NotificationService
 from ..services.bon_service import BonService
 from .catalogue import paginer, get_magasins_autorises
-from .common import _has_perm_bon, _servir_pdf_cache, _sauver_pdf_cache
+from .common import _has_perm_bon
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
 
 logger = logging.getLogger(__name__)
-
 
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_sorties_hors_stock')
@@ -39,10 +37,9 @@ def liste_bons_hors_stock(request):
         return _creer_bon_hors_stock(request)
     return _afficher_bons_hors_stock(request)
 
-
 def _afficher_bons_hors_stock(request):
     """Branche GET : filtres, pagination, contexte."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasins_autorises = get_magasins_autorises(request)
 
     onglet = request.GET.get('onglet', 'actifs')
@@ -104,21 +101,19 @@ def _afficher_bons_hors_stock(request):
         'per_page': per_page,
         'magasins': magasins_autorises.order_by('nom'),
         'magasin_actif': magasin_actif,
-        'fournisseurs': Fournisseur.objects.filter(est_agree=True, entreprise=entreprise),
-        'services': Service.objects.filter(entreprise=entreprise),
-        'articles': Article.objects.filter(entreprise=entreprise).order_by('designation'),
-        'beneficiaires': Beneficiaire.objects.filter(entreprise=entreprise).order_by('nom_complet'),
-        'motifs_annulation': MotifAnnulation.objects.filter(entreprise=entreprise, actif=True),
+        'fournisseurs': Fournisseur.objects.filter(est_agree=True),
+        'services': Service.objects.all(),
+        'articles': Article.objects.all().order_by('designation'),
+        'beneficiaires': Beneficiaire.objects.all().order_by('nom_complet'),
+        'motifs_annulation': MotifAnnulation.objects.filter(actif=True),
         'peut_creer': _has_perm_bon(request.user, 'add', 'SORTIE_HORS_STOCK'),
         'peut_annuler': _has_perm_bon(request.user, 'change', 'SORTIE_HORS_STOCK'),
     }
     return render(request, 'stock/liste_bons_hors_stock.html', context)
 
-
 def _creer_bon_hors_stock(request):
     """Branche POST : validation, création via service, redirection."""
-    entreprise = request.entreprise
-
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     action = request.POST.get('action')
     if action == 'creer_beneficiaire':
         nom = request.POST.get('nom_complet', '').strip()
@@ -127,8 +122,7 @@ def _creer_bon_hors_stock(request):
         if nom:
             b = Beneficiaire.objects.create(
                 nom_complet=nom, poste=poste,
-                service_id=service_id if service_id else None,
-                entreprise=entreprise
+                service_id=service_id if service_id else None
             )
             if request.headers.get('x-requested-with') == 'XMLHttpRequest':
                 return JsonResponse({
@@ -150,22 +144,22 @@ def _creer_bon_hors_stock(request):
     if not magasins_autorises.filter(id=int(magasin_id)).exists():
         messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
         return redirect('liste_bons_hors_stock')
-    magasin = get_object_or_404(Magasin, id=int(magasin_id), entreprise=entreprise)
+    magasin = get_object_or_404(Magasin, id=int(magasin_id))
 
     fournisseur_id = request.POST.get('fournisseur')
     fournisseur = None
     if fournisseur_id and fournisseur_id.strip().isdigit():
-        fournisseur = get_object_or_404(Fournisseur, id=int(fournisseur_id), entreprise=entreprise)
+        fournisseur = get_object_or_404(Fournisseur, id=int(fournisseur_id))
 
     service_id = request.POST.get('service_demandeur')
     service_demandeur = None
     if service_id and service_id.strip().isdigit():
-        service_demandeur = get_object_or_404(Service, id=int(service_id), entreprise=entreprise)
+        service_demandeur = get_object_or_404(Service, id=int(service_id))
 
     destinataire_id = request.POST.get('destinataire')
     destinataire = None
     if destinataire_id and destinataire_id.strip().isdigit():
-        destinataire = get_object_or_404(Beneficiaire, id=int(destinataire_id), entreprise=entreprise)
+        destinataire = get_object_or_404(Beneficiaire, id=int(destinataire_id))
 
     ref_externe = request.POST.get('reference_externe', '').strip()
     commentaire = request.POST.get('commentaire', '').strip()
@@ -176,11 +170,10 @@ def _creer_bon_hors_stock(request):
         messages.error(request, "❌ Le bon ne peut pas être vide.")
         return redirect('liste_bons_hors_stock')
 
-    # CORRECTION : validation des articles contre l'entreprise
+    # Validation des articles (mono-tenant)
     articles_valides = set(
         Article.objects.filter(
-            id__in=[aid for aid in article_ids if aid and aid.strip().isdigit()],
-            entreprise=entreprise
+            id__in=[aid for aid in article_ids if aid and aid.strip().isdigit()]
         ).values_list('id', flat=True)
     )
 
@@ -192,7 +185,7 @@ def _creer_bon_hors_stock(request):
             if aid_int not in articles_valides:
                 messages.error(
                     request,
-                    "⛔ Un ou plusieurs articles sélectionnés n'appartiennent pas à votre entreprise."
+                    "⛔ Un ou plusieurs articles sélectionnés ne sont pas valides."
                 )
                 return redirect('liste_bons_hors_stock')
             lignes.append({'article_id': aid_int, 'quantite': int(qte_dem.strip())})
@@ -210,8 +203,7 @@ def _creer_bon_hors_stock(request):
             service_demandeur=service_demandeur,
             destinataire=destinataire,
             reference_externe=ref_externe,
-            commentaire=commentaire,
-        )
+            commentaire=commentaire)
     except IntegrityError as e:
         logger.exception("[BSHS] IntegrityError création bon : %s", e)
         messages.error(request, "⛔ Erreur lors de la création du bon. Vérifiez la console pour le détail.")
@@ -220,13 +212,12 @@ def _creer_bon_hors_stock(request):
     messages.success(request, f"✅ Bon {bon.numero_bon} enregistré.")
     return redirect(f"{reverse('liste_bons_hors_stock')}?print_bon={bon.id}")
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_sorties_hors_stock')
 @magasin_requis
 @catch_errors(redirect_url='liste_bons_hors_stock')
 def annuler_bon_hors_stock(request, bon_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     if request.method != 'POST':
         return redirect('liste_bons_hors_stock')
 
@@ -241,7 +232,7 @@ def annuler_bon_hors_stock(request, bon_id):
         messages.error(request, "❌ Veuillez sélectionner un motif d'annulation.")
         return redirect('liste_bons_hors_stock')
 
-    motif = get_object_or_404(MotifAnnulation, id=motif_id, entreprise=entreprise)
+    motif = get_object_or_404(MotifAnnulation, id=motif_id)
 
     try:
         BonService.annuler_bon_hors_stock(bon, motif, request.user)
@@ -253,18 +244,15 @@ def annuler_bon_hors_stock(request, bon_id):
     messages.success(request, f"✅ Bon {bon.numero_bon} annulé.")
     return redirect('liste_bons_hors_stock')
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_sorties_hors_stock')
 @magasin_requis
 @catch_errors(redirect_url='liste_bons_hors_stock')
 def apercu_bon_hors_stock(request, bon_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     bon = get_object_or_404(
         BonMouvement.objects.filter(
-            type_bon='SORTIE_HORS_STOCK',
-            magasin__entreprise=entreprise
-        ).prefetch_related(
+            type_bon='SORTIE_HORS_STOCK').prefetch_related(
             'lignes_bon__article__famille'
         ).select_related(
             'magasin', 'fournisseur', 'service_demandeur',
@@ -281,16 +269,17 @@ def apercu_bon_hors_stock(request, bon_id):
     service_poste = getattr(bon.service_demandeur, 'poste_telephone', '') if bon.service_demandeur else ''
 
     pdf_config = {}
-    if entreprise and hasattr(entreprise, 'get_pdf_config'):
+    config_hopital = ConfigurationHopital.get_instance()
+    if hasattr(config_hopital, 'get_pdf_config'):
         try:
-            pdf_config = entreprise.get_pdf_config() or {}
+            pdf_config = config_hopital.get_pdf_config() or {}
         except Exception:
             pdf_config = {}
 
     logo_url = None
-    if entreprise and entreprise.logo:
+    if config_hopital.logo:
         try:
-            logo_url = request.build_absolute_uri(entreprise.logo.url)
+            logo_url = request.build_absolute_uri(config_hopital.logo.url)
         except Exception:
             logo_url = None
 
@@ -320,41 +309,9 @@ def apercu_bon_hors_stock(request, bon_id):
         'lignes_data': lignes_data,
         'empty_lines': empty_lines,
         'service_poste': service_poste,
-        'entreprise': entreprise,
         'logo_url': logo_url,
         'date_impression': timezone.now(),
         'pdf_config': pdf_config,
     }
     return render(request, 'stock/pdf/bon_hors_stock.html', context)
 
-
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_sorties_hors_stock')
-@magasin_requis
-@catch_errors(redirect_url='liste_bons_hors_stock')
-def imprimer_bon_hors_stock(request, bon_id):
-    entreprise = request.entreprise
-    bon = get_object_or_404(
-        BonMouvement.objects.filter(
-            type_bon='SORTIE_HORS_STOCK',
-            magasin__entreprise=entreprise
-        ).prefetch_related(
-            'lignes_bon__article__famille'
-        ).select_related(
-            'magasin', 'fournisseur', 'service_demandeur', 'cree_par', 'destinataire'
-        ),
-        id=bon_id
-    )
-
-    filename = f"BSHS_{bon.numero_bon}.pdf"
-    cached = _servir_pdf_cache(bon, filename)
-    if cached:
-        return cached
-
-    gen = DocumentGenerator(request=request, entreprise=entreprise)
-    pdf_bytes = gen.bon_hors_stock(bon)
-    _sauver_pdf_cache(bon, filename, pdf_bytes)
-
-    response = HttpResponse(pdf_bytes, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="{filename}"'
-    return response

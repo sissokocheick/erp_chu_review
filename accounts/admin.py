@@ -1,104 +1,147 @@
-# accounts/admin.py — VERSION CORRIGÉE
 from django.contrib import admin
+from django.contrib.auth.models import User, Group
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
+from django.utils.html import format_html
 from .models import (
-    Entreprise, Profil, Specialite, Fonction,
-    ConfigDocument, MenuAccess, Notification,
-    JournalAudit, AuditConnexion, RoleEntreprise
+    Profil, Specialite, Fonction, ConfigDocument,
+    MenuAccess, Notification, JournalAudit, AuditConnexion,
+    ConfigSecurite,
 )
 
 
-@admin.register(Entreprise)
-class EntrepriseAdmin(admin.ModelAdmin):
-    list_display = ('nom', 'email_contact', 'telephone', 'est_active', 'date_creation')
-    search_fields = ('nom',)
-    list_filter = ('est_active',)
+# ==========================================================
+# INLINE : PROFIL DANS USER
+# ==========================================================
+class ProfilInline(admin.StackedInline):
+    model = Profil
+    fk_name = 'user'                      # ← obligatoire (plusieurs FK vers User)
+    can_delete = False
+    verbose_name_plural = 'Profil utilisateur'
+    fields = (
+        'service', 'specialite', 'contact', 'photo', 'signature',
+        'a_signature', 'fonction', 'theme_preference',
+        'magasins_autorises', 'bureau', 'domaines_intervention',
+        'est_chef_service', 'date_derniere_photo', 'nb_changements_photo'
+    )
+    filter_horizontal = ('magasins_autorises', 'domaines_intervention')
+    readonly_fields = ('date_derniere_photo', 'nb_changements_photo')
 
 
+# ==========================================================
+# USER ADMIN PERSONNALISÉ
+# ==========================================================
+class CustomUserAdmin(BaseUserAdmin):
+    inlines = (ProfilInline,)
+    list_display = ('username', 'email', 'first_name', 'last_name', 'is_staff', 'get_service')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'profil__service')
+
+    def get_service(self, obj):
+        try:
+            return obj.profil.service.nom if obj.profil.service else "—"
+        except Exception:
+            return "—"
+    get_service.short_description = "Service"
+
+
+# Désenregistrer l'admin User par défaut et réenregistrer le custom
+admin.site.unregister(User)
+admin.site.register(User, CustomUserAdmin)
+
+
+# ==========================================================
+# PROFIL ADMIN
+# ==========================================================
 @admin.register(Profil)
 class ProfilAdmin(admin.ModelAdmin):
-    list_display = ('user', 'entreprise', 'contact', 'specialite')
-    list_filter = ('entreprise',)
-    search_fields = ('user__username', 'user__first_name', 'user__last_name')
-
-    # ⚡ CORRECTION : Filtre automatique par entreprise pour non-superusers
-    # avec gestion robuste du cas profil=None
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if request.user.is_superuser:
-            return qs
-        profil = getattr(request.user, 'profil', None)
-        if profil and profil.entreprise:
-            return qs.filter(entreprise=profil.entreprise)
-        return qs.none()
+    list_display = ('user', 'service', 'specialite', 'contact', 'est_chef_service')
+    list_filter = ('service', 'est_chef_service', 'theme_preference')
+    search_fields = ('user__username', 'user__first_name', 'user__last_name', 'contact')
+    filter_horizontal = ('magasins_autorises', 'domaines_intervention')
+    readonly_fields = ('date_creation', 'date_modification', 'date_derniere_photo', 'nb_changements_photo')
 
 
+# ==========================================================
+# SPÉCIALITÉ
+# ==========================================================
 @admin.register(Specialite)
 class SpecialiteAdmin(admin.ModelAdmin):
-    list_display = ('nom', 'entreprise', 'date_creation', 'cree_par')
-    list_filter = ('entreprise',)
-    search_fields = ('nom', 'entreprise__nom')
-
-    # ⚡ CORRECTION : Filtre automatique par entreprise pour non-superusers
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if request.user.is_superuser:
-            return qs
-        profil = getattr(request.user, 'profil', None)
-        if profil and profil.entreprise:
-            return qs.filter(entreprise=profil.entreprise)
-        return qs.none()
-
-
-@admin.register(Fonction)
-class FonctionAdmin(admin.ModelAdmin):
-    list_display = ('nom', 'entreprise', 'date_creation')
-    list_filter = ('entreprise',)
+    list_display = ('nom', 'date_creation')
     search_fields = ('nom',)
 
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if request.user.is_superuser:
-            return qs
-        profil = getattr(request.user, 'profil', None)
-        if profil and profil.entreprise:
-            return qs.filter(entreprise=profil.entreprise)
-        return qs.none()
+
+# ==========================================================
+# FONCTION
+# ==========================================================
+@admin.register(Fonction)
+class FonctionAdmin(admin.ModelAdmin):
+    list_display = ('nom', 'date_creation')
+    search_fields = ('nom',)
 
 
+# ==========================================================
+# CONFIG DOCUMENT
+# ==========================================================
 @admin.register(ConfigDocument)
 class ConfigDocumentAdmin(admin.ModelAdmin):
-    list_display = ('entreprise', 'type_doc', 'code_document', 'version_doc')
-    list_filter = ('entreprise', 'type_doc')
+    list_display = ('type_doc', 'code_document', 'version_doc', 'afficher_logo', 'afficher_signatures')
+    list_filter = ('type_doc', 'afficher_logo', 'afficher_signatures')
 
 
+# ==========================================================
+# MENU ACCESS
+# ==========================================================
 @admin.register(MenuAccess)
 class MenuAccessAdmin(admin.ModelAdmin):
     list_display = ('nom', 'description')
+    search_fields = ('nom',)
 
 
+# ==========================================================
+# NOTIFICATIONS
+# ==========================================================
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):
     list_display = ('utilisateur', 'titre', 'type_notif', 'est_lue', 'date_creation')
     list_filter = ('type_notif', 'est_lue')
+    search_fields = ('titre', 'message', 'utilisateur__username')
 
 
+# ==========================================================
+# JOURNAL D'AUDIT
+# ==========================================================
 @admin.register(JournalAudit)
 class JournalAuditAdmin(admin.ModelAdmin):
-    list_display = ('date_action', 'utilisateur', 'action', 'type_action', 'entreprise')
-    list_filter = ('type_action', 'entreprise')
-    date_hierarchy = 'date_action'
+    list_display = ('date_action', 'utilisateur', 'action', 'type_action', 'modele_concerne')
+    list_filter = ('type_action', 'modele_concerne')
+    search_fields = ('action', 'utilisateur__username')
     readonly_fields = ('date_action',)
+    date_hierarchy = 'date_action'
 
 
+# ==========================================================
+# AUDIT CONNEXIONS
+# ==========================================================
 @admin.register(AuditConnexion)
 class AuditConnexionAdmin(admin.ModelAdmin):
     list_display = ('date_creation', 'utilisateur', 'type_action', 'adresse_ip')
     list_filter = ('type_action',)
-    date_hierarchy = 'date_creation'
+    search_fields = ('utilisateur__username', 'description')
     readonly_fields = ('date_creation',)
+    date_hierarchy = 'date_creation'
 
+# ==========================================================
+# CONFIG SÉCURITÉ (singleton)
+# ==========================================================
+@admin.register(ConfigSecurite)
+class ConfigSecuriteAdmin(admin.ModelAdmin):
+    list_display = ('type_mot_de_passe', 'date_modification')
+    readonly_fields = ('date_modification',)
+    fields = ('type_mot_de_passe', 'mot_de_passe_defaut', 'date_modification')
 
-@admin.register(RoleEntreprise)
-class RoleEntrepriseAdmin(admin.ModelAdmin):
-    list_display = ('groupe', 'entreprise', 'description')
-    list_filter = ('entreprise',)
+    def has_add_permission(self, request):
+        # Singleton : pas d'ajout si une ligne existe déjà
+        return not ConfigSecurite.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+

@@ -156,11 +156,11 @@ body.dark-mode .warn-box { background: #2a2510; border-color: #ffc107; color: #d
                             <input type="text" name="nouveau_mdp" id="newPwd" class="fc"
                                    placeholder="Saisissez ou générez un mot de passe"
                                    autocomplete="new-password" oninput="checkRules(this.value)">
-                            <button type="button" class="pwd-toggle" onclick="togglePwd('newPwd', this)">
+                            <button type="button" class="pwd-toggle" onclick="togglePwd('newPwd', this)" title="Afficher/masquer" aria-label="Afficher ou masquer le mot de passe">
                                 <i class="fas fa-eye"></i>
                             </button>
                         </div>
-                        <button type="button" class="btn-gen" onclick="genererMdp()">
+                        <button type="button" class="btn-gen" onclick="genererMdp()" title="Générer un mot de passe" aria-label="Générer un mot de passe">
                             <i class="fas fa-magic"></i> Aléatoire
                         </button>
                     </div>
@@ -172,7 +172,7 @@ body.dark-mode .warn-box { background: #2a2510; border-color: #ffc107; color: #d
                         <input type="text" name="confirmer_mdp" id="confirmPwd" class="fc"
                                placeholder="Répétez le mot de passe"
                                autocomplete="new-password" oninput="checkMatch()">
-                        <button type="button" class="pwd-toggle" onclick="togglePwd('confirmPwd', this)">
+                        <button type="button" class="pwd-toggle" onclick="togglePwd('confirmPwd', this)" title="Afficher/masquer" aria-label="Afficher ou masquer le mot de passe">
                             <i class="fas fa-eye"></i>
                         </button>
                     </div>
@@ -183,7 +183,6 @@ body.dark-mode .warn-box { background: #2a2510; border-color: #ffc107; color: #d
                     <div class="prule" id="rLen"><i class="fas fa-times"></i> Au moins 8 caractères</div>
                     <div class="prule" id="rUp"><i class="fas fa-times"></i> Une lettre majuscule</div>
                     <div class="prule" id="rNum"><i class="fas fa-times"></i> Un chiffre</div>
-                    <div class="prule" id="rSpe"><i class="fas fa-times"></i> Un caractère spécial (!@#$%&*)</div>
                 </div>
 
                 <div class="btn-actions">
@@ -211,29 +210,36 @@ function togglePwd(id, btn) {
 }
 
 function genererMdp() {
+    // CORRECTION : génération côté serveur via API (non implémentée ici)
+    // Fallback : utiliser crypto.getRandomValues si disponible
     var chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*';
     var mdp = '';
-    // S'assurer d'avoir au moins 1 majuscule, 1 minuscule, 1 chiffre, 1 spécial
-    mdp += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
-    mdp += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
-    mdp += '0123456789'[Math.floor(Math.random() * 10)];
-    mdp += '!@#$%&*'[Math.floor(Math.random() * 7)];
-    for (var i = 4; i < 14; i++) {
-        mdp += chars[Math.floor(Math.random() * chars.length)];
+    var cryptoObj = window.crypto || window.msCrypto;
+    if (cryptoObj && cryptoObj.getRandomValues) {
+        var arr = new Uint32Array(14);
+        cryptoObj.getRandomValues(arr);
+        mdp += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[arr[0] % 26];
+        mdp += 'abcdefghijklmnopqrstuvwxyz'[arr[1] % 26];
+        mdp += '0123456789'[arr[2] % 10];
+        mdp += '!@#$%&*'[arr[3] % 7];
+        for (var i = 4; i < 14; i++) {
+            mdp += chars[arr[i] % chars.length];
+        }
+    } else {
+        // Dernier recours (déconseillé)
+        mdp += 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[Math.floor(Math.random() * 26)];
+        mdp += 'abcdefghijklmnopqrstuvwxyz'[Math.floor(Math.random() * 26)];
+        mdp += '0123456789'[Math.floor(Math.random() * 10)];
+        mdp += '!@#$%&*'[Math.floor(Math.random() * 7)];
+        for (var i = 4; i < 14; i++) {
+            mdp += chars[Math.floor(Math.random() * chars.length)];
+        }
     }
-    // Mélanger
-    mdp = mdp.split('').sort(function(){return 0.5 - Math.random()}).join('');
-
     document.getElementById('newPwd').value = mdp;
     document.getElementById('confirmPwd').value = mdp;
     checkRules(mdp);
     checkMatch();
-
-    Swal.fire({
-        toast: true, position: 'top-end', icon: 'success',
-        title: 'Mot de passe généré : ' + mdp,
-        showConfirmButton: false, timer: 4000
-    });
+    NxUX.toast('success', 'Mot de passe généré');
 }
 
 function checkRules(val) {
@@ -242,7 +248,6 @@ function checkRules(val) {
     setRule('rLen', val.length >= 8);
     setRule('rUp', /[A-Z]/.test(val));
     setRule('rNum', /[0-9]/.test(val));
-    setRule('rSpe', /[!@#$%&*]/.test(val));
     updateSubmit();
 }
 
@@ -269,26 +274,21 @@ function checkMatch() {
 function updateSubmit() {
     var val = document.getElementById('newPwd').value;
     var p2 = document.getElementById('confirmPwd').value;
-    var ok = val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val) && /[!@#$%&*]/.test(val) && val === p2;
+    var ok = val.length >= 8 && /[A-Z]/.test(val) && /[0-9]/.test(val) && val === p2;
     document.getElementById('btnSubmit').disabled = !ok;
 }
 
 document.getElementById('form-reset').addEventListener('submit', function(e) {
     e.preventDefault();
     var form = this;
-    var mdp = document.getElementById('newPwd').value;
-    Swal.fire({
+    NxUX.confirm({
         title: 'Confirmer la réinitialisation ?',
         text: 'Le mot de passe de {{ utilisateur.get_full_name|default:utilisateur.username|escapejs }} sera définitivement remplacé.',
         icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#1c5b96',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: '<i class="fas fa-key"></i> Oui, réinitialiser',
-        cancelButtonText: 'Annuler'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({ title: 'Enregistrement...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        confirmText: '<i class="fas fa-key"></i> Oui, réinitialiser',
+        confirmColor: '#1c5b96',
+        onConfirm: function () {
+            NxUX.loading(document.getElementById('btnSubmit'), 'Enregistrement…');
             form.submit();
         }
     });

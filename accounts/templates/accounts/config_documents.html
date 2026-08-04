@@ -1,5 +1,5 @@
 {% extends "base_ui.html" %}
-{% block title %}Configuration Documents PDF — {{ entreprise.nom }}{% endblock %}
+{% block title %}Configuration Documents PDF{% endblock %}
 
 {% block contenu %}
 <div class="nx-container">
@@ -9,20 +9,18 @@
                 <i class="fas fa-file-contract" style="color: var(--primary-blue);"></i> Configuration Globale des Documents PDF
             </h2>
             <p style="margin:4px 0 0; font-size: 13px; color: var(--text-medium);">
-                Niveau Entreprise — Ces valeurs servent de base à tous les magasins. Chaque magasin peut les surcharger.
+                Configuration globale des documents PDF de l'établissement.
             </p>
         </div>
-        <a href="{% url 'accounts:parametres_entreprise' %}" class="nx-btn nx-btn-light">
-            <i class="fas fa-building"></i> Config. Entreprise (Logo & Cachet)
+        <a href="/parametres/administratifs/" class="nx-btn nx-btn-light">
+            <i class="fas fa-hospital"></i> Paramètres administratifs
         </a>
     </div>
 
     <form method="post" enctype="multipart/form-data">
         {% csrf_token %}
 
-        <!-- ═══════════════════════════════════════════════════════════════
-             SECTION 1 — IDENTITÉ VISUELLE & HIÉRARCHIE
-             ═══════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 1 — IDENTITÉ VISUELLE & HIÉRARCHIE -->
         <div class="nx-card" style="margin-bottom: 20px;">
             <div class="nx-card-header">
                 <h4><i class="fas fa-landmark" style="color: var(--primary-blue);"></i> Identité & Hiérarchie Institutionnelle</h4>
@@ -60,9 +58,7 @@
             </div>
         </div>
 
-        <!-- ═══════════════════════════════════════════════════════════════
-             SECTION 2 — PRÉFIXES DE NUMÉROTATION
-             ═══════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 2 — PRÉFIXES DE NUMÉROTATION -->
         <div class="nx-card" style="margin-bottom: 20px;">
             <div class="nx-card-header">
                 <h4><i class="fas fa-hashtag" style="color: #fd7e14;"></i> Préfixes de Numérotation</h4>
@@ -103,9 +99,7 @@
             </div>
         </div>
 
-        <!-- ═══════════════════════════════════════════════════════════════
-             SECTION 3 — LABELS DES SIGNATAIRES
-             ═══════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 3 — LABELS DES SIGNATAIRES -->
         <div class="nx-card" style="margin-bottom: 20px;">
             <div class="nx-card-header">
                 <h4><i class="fas fa-signature" style="color: #28a745;"></i> Labels des 6 Emplacements de Signature</h4>
@@ -152,15 +146,12 @@
             </div>
         </div>
 
-        <!-- ═══════════════════════════════════════════════════════════════
-             SECTION 4 — MÉTADONNÉES ISO PAR TYPE DE DOCUMENT
-             ═══════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 4 — MÉTADONNÉES ISO PAR TYPE DE DOCUMENT -->
         <div class="nx-card" style="margin-bottom: 20px;">
             <div class="nx-card-header">
                 <h4><i class="fas fa-certificate" style="color: #6f42c1;"></i> Métadonnées ISO par Type de Document</h4>
             </div>
             <div class="nx-card-body" style="padding: 0;">
-                <!-- Onglets -->
                 <div class="nx-tabs" style="padding: 16px 24px 0; border-bottom: 2px solid var(--border-light);">
                     {% for item in configs_list %}
                     <button type="button" class="nx-tab {% if forloop.first %}active{% endif %}" onclick="switchTab(this, 'tab-{{ item.code }}')">
@@ -169,7 +160,6 @@
                     {% endfor %}
                 </div>
 
-                <!-- Contenu onglets -->
                 {% for item in configs_list %}
                 <div id="tab-{{ item.code }}" class="tab-panel" style="{% if not forloop.first %}display:none;{% endif %} padding: 20px 24px;">
                     <div class="nx-row">
@@ -243,9 +233,8 @@
             </div>
         </div>
 
-        <!-- Bouton sauvegarde -->
         <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-            <a href="{% url 'accounts:parametres_entreprise' %}" class="nx-btn nx-btn-light">Annuler</a>
+            <a href="/parametres/administratifs/" class="nx-btn nx-btn-light">Annuler</a>
             <button type="submit" class="nx-btn nx-btn-primary">
                 <i class="fas fa-save"></i> Enregistrer la configuration globale
             </button>
@@ -255,10 +244,8 @@
 
 <script>
 function switchTab(btn, panelId) {
-    // Désactive tous les onglets
     document.querySelectorAll('.nx-tab').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(p => p.style.display = 'none');
-    // Active l'onglet cliqué
     btn.classList.add('active');
     document.getElementById(panelId).style.display = 'block';
 }

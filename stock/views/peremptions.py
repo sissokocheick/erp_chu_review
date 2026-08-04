@@ -24,13 +24,12 @@ from ..models import BonMouvement
 
 logger = logging.getLogger(__name__)
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_peremptions')
 @magasin_requis
 def controle_peremptions(request):
     """Vue unique : Suivi lots + Destructions + Inventaire lots (3 onglets)."""
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_id = request.session.get('magasin_actif_id')
     aujourdhui = timezone.now().date()
     onglet = request.GET.get('onglet', 'suivi')
@@ -48,14 +47,11 @@ def controle_peremptions(request):
     # ── KPIs DESTRUCTION (toujours calculés pour affichage dans les KPIs) ──
     nb_destructions_total = Mouvement.objects.filter(
         type_mouvement='SORTIE',
-        service_demandeur__code='REBUTS',
-        magasin__entreprise=entreprise
-    ).count()
+        service_demandeur__code='REBUTS').count()
     debut_mois = aujourdhui.replace(day=1)
     nb_destructions_mois = Mouvement.objects.filter(
         type_mouvement='SORTIE',
         service_demandeur__code='REBUTS',
-        magasin__entreprise=entreprise,
         date_mouvement__date__gte=debut_mois
     ).count()
 
@@ -80,9 +76,7 @@ def controle_peremptions(request):
 
         qs = Mouvement.objects.filter(
             type_mouvement='ENTREE',
-            date_peremption__isnull=False,
-            magasin__entreprise=entreprise
-        ).annotate(
+            date_peremption__isnull=False).annotate(
             qte_sortie=Coalesce(Subquery(sorties_sub), 0),
             quantite_restante=F('quantite') - F('qte_sortie'),
             stock_physique=Coalesce(Subquery(stock_physique_sub), 0)
@@ -127,9 +121,7 @@ def controle_peremptions(request):
     elif onglet == 'destruction':
         qs = Mouvement.objects.filter(
             type_mouvement='SORTIE',
-            service_demandeur__code='REBUTS',
-            magasin__entreprise=entreprise
-        ).select_related('article', 'magasin', 'utilisateur').order_by('-date_mouvement')
+            service_demandeur__code='REBUTS').select_related('article', 'magasin', 'utilisateur').order_by('-date_mouvement')
 
         if magasin_id:
             qs = qs.filter(magasin_id=magasin_id)
@@ -225,20 +217,17 @@ def controle_peremptions(request):
 
     return render(request, 'stock/controle_peremptions.html', context)
 
-
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_peremptions')
 @transaction.atomic
 @catch_errors(redirect_url='controle_peremptions')
 def retirer_lot_perime(request, mouvement_id):
-    entreprise = request.entreprise
+    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     if request.method != 'POST':
         return redirect('controle_peremptions')
 
     entree = get_object_or_404(
-        Mouvement, id=mouvement_id, type_mouvement='ENTREE',
-        magasin__entreprise=entreprise
-    )
+        Mouvement, id=mouvement_id, type_mouvement='ENTREE')
 
     sorties = Mouvement.objects.filter(
         type_mouvement='SORTIE', article=entree.article,

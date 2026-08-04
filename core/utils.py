@@ -1,8 +1,9 @@
-# core/utils.py — CORRIGÉ (v2)
+# core/utils.py — CORRIGÉ (mono-tenant v1)
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from weasyprint import HTML
 import warnings
+
 
 def generer_pdf(template_name, context_dict, filename="document.pdf"):
     """
@@ -18,8 +19,11 @@ def generer_pdf(template_name, context_dict, filename="document.pdf"):
 
     try:
         from core.pdf_service import DocumentGenerator
-        gen = DocumentGenerator()
-        # ✅ CORRECTION P0 (v2): Utiliser la méthode publique render_bytes
+        from core.models import ConfigurationHopital
+        # ✅ CORRECTION MONO-TENANT : DocumentGenerator() sans argument
+        # utilisait un fallback first() supprimé. On passe explicitement
+        # le singleton ConfigurationHopital.
+        gen = DocumentGenerator(entreprise=ConfigurationHopital.get_instance())
         return gen.render_bytes(template_name, context_dict)
     except ImportError:
         pass

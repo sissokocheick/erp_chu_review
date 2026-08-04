@@ -26,7 +26,6 @@ ARCHITECTURE_MENU = OrderedDict([
     ('📦 GESTION DES STOCKS', [
         'menu_stock',
         'menu_peremptions',
-        'menu_lots',
         'menu_destructions',
         'menu_ajustements',
         'menu_inventaires',
@@ -103,7 +102,6 @@ MENU_ITEMS_META = {
     # Gestion des Stocks
     'menu_stock':                {'icon': 'fa-search-location', 'color': '#1c5b96', 'label': 'État du Stock'},
     'menu_peremptions':          {'icon': 'fa-exclamation-triangle', 'color': '#ffda6a', 'label': 'Suivi Péremptions'},
-    'menu_lots':                 {'icon': 'fa-barcode',         'color': '#17a2b8', 'label': 'Gestion des Lots'},
     'menu_destructions':         {'icon': 'fa-trash-alt',       'color': '#ff9e9e', 'label': 'Destructions'},
     'menu_ajustements':          {'icon': 'fa-balance-scale',   'color': '#6f42c1', 'label': 'Ajustements Manuels'},
     'menu_inventaires':          {'icon': 'fa-clipboard-check', 'color': '#28a745', 'label': 'Campagnes Inventaires'},
@@ -132,6 +130,7 @@ MENU_ITEMS_META = {
     'menu_rapports':             {'icon': 'fa-file-export',     'color': '#28a745', 'label': 'Exports CSV / PDF'},
     'menu_stats_demandes':       {'icon': 'fa-chart-bar',       'color': '#0d6efd', 'label': 'Stats Demandes'},
     'menu_stats_sondages':       {'icon': 'fa-smile',           'color': '#198754', 'label': 'Stats Sondages'},
+    'menu_stats_satisfaction':   {'icon': 'fa-star-half-alt',     'color': '#6f42c1', 'label': 'Stats Satisfaction'},
 
     # Paramètres
     'menu_parametres':           {'icon': 'fa-cogs',            'color': '#6c757d', 'label': 'Configuration Système'},
@@ -143,14 +142,11 @@ MENU_ITEMS_META = {
     'menu_modeles_pdf':          {'icon': 'fa-file-pdf',        'color': '#dc3545', 'label': 'Modèles de documents PDF'},
     'menu_param_admin':          {'icon': 'fa-building',        'color': '#6c757d', 'label': 'Config. Entreprise'},
     'menu_param_logistique':     {'icon': 'fa-users',           'color': '#6f42c1', 'label': 'Bénéficiaires (Destinataires Hors Stock)'},
-    'menu_parametres_doc':       {'icon': 'fa-file-contract',   'color': '#6f42c1', 'label': 'Config. Documents PDF'},
-    'menu_fonctions':            {'icon': 'fa-briefcase',       'color': '#6f42c1', 'label': 'Fonctions & Titres'},
 
     # Sécurité
     'menu_utilisateurs':         {'icon': 'fa-users',           'color': '#1c5b96', 'label': 'Utilisateurs'},
     'menu_roles':                {'icon': 'fa-user-shield',     'color': '#0d47a1', 'label': 'Rôles & Permissions'},
     'menu_circuits_validation':  {'icon': 'fa-project-diagram', 'color': '#6f42c1', 'label': 'Circuits Validation'},
-    'menu_securite_mdp':         {'icon': 'fa-key',             'color': '#ffc107', 'label': 'Sécurité & Mots de passe'},
     'menu_journal_audit':        {'icon': 'fa-user-secret',     'color': '#dc3545', 'label': 'Journal & Audit'},
 
 }
@@ -180,10 +176,10 @@ ROLE_ARCHITECTURE_MENU = OrderedDict([
     ('🏢 PATRIMOINE & SAV', ['menu_pat_tickets', 'menu_pat_tech', 'menu_pat_dispatch', 'menu_pat_historique', 'menu_pat_registre', 'menu_pat_sas', 'menu_pat_contrats', 'menu_pat_import', 'menu_pat_inventaire', 'menu_pat_rebuts', 'menu_pat_pertes', 'menu_pat_parametres']),
     ('📈 RAPPORTS & EXPORTS', ['menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages']),
     ('⚙️ PARAMÈTRES', OrderedDict([
-        ('Administratifs', ['menu_param_admin', 'menu_services', 'menu_specialites', 'menu_fonctions']),
-        ('Logistique', ['menu_parametres', 'menu_param_logistique', 'menu_magasins', 'menu_fournisseurs', 'menu_motifs_annulation', 'menu_modeles_pdf', 'menu_parametres_doc']),
+        ('Administratifs', ['menu_param_admin', 'menu_services', 'menu_specialites', 'menu_parametres']),
+        ('Logistique', ['menu_param_logistique', 'menu_magasins', 'menu_fournisseurs', 'menu_motifs_annulation', 'menu_modeles_pdf']),
     ])),
-    ('🛡️ SÉCURITÉ & ACCÈS', ['menu_utilisateurs', 'menu_roles', 'menu_circuits_validation', 'menu_securite_mdp', 'menu_journal_audit']),
+    ('🛡️ SÉCURITÉ & ACCÈS', ['menu_utilisateurs', 'menu_roles', 'menu_circuits_validation', 'menu_journal_audit']),
 ])
 
 

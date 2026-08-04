@@ -7,26 +7,31 @@
 <style>
     @page {
         size: A4 landscape;
-        margin: 12mm 12mm 55mm 12mm;
+        margin: 12mm 12mm 18mm 12mm;
+        @bottom-center {
+            content: "{{ pdf_config.pied_de_page.texte_personnalise|default:campagne.magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+            font-size: 7pt;
+            color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+            font-weight: bold;
+            text-align: center;
+            width: 100%;
+        }
+        @bottom-right {
+            content: counter(page) " / " counter(pages);
+            font-size: 7pt;
+            color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+            font-weight: bold;
+        }
     }
     * { box-sizing: border-box; }
     body {
         margin: 0;
-        padding: 0 0 55mm 0;
+        padding: 0;
         font-family: 'Helvetica', 'Arial', sans-serif;
         font-size: 10.5pt;
         color: #000;
         line-height: 1.25;
         background: #fff;
-    }
-
-    .bottom-fixed {
-        position: fixed;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        width: 100%;
-        page-break-inside: avoid;
     }
 
     .etat-header { width: 100%; border-collapse: collapse; margin-bottom: 6px; text-align: center; font-size: 9.5px; }
@@ -62,15 +67,13 @@
     .ecart-neg { color: #1c5b96; font-weight: bold; }
     .ecart-zero { color: #28a745; }
 
-    .signatures-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; text-align: center; font-size: 9px; }
+    .signatures-table { width: 100%; border-collapse: collapse; border: 1.5px solid #000; text-align: center; font-size: 9px; margin-bottom: 6px; }
     .signatures-table th, .signatures-table td { border: 1px solid #000; padding: 4px; width: 33.33%; vertical-align: top; }
     .signatures-table th { font-weight: bold; background-color: #f4f4f4; }
     .sig-space { height: 50px; margin: 5px 0; text-align: center; }
     .sig-img { max-width: 120px; max-height: 45px; object-fit: contain; }
     .sig-empty { font-style: italic; color: #888; font-size: 8px; display: block; margin-top: 15px; }
     .sig-name { font-size: 8px; font-weight: bold; color: #1c5b96; margin-top: 3px; }
-
-    .footer-static { text-align: center; font-size: 7.5px; font-weight: bold; margin-top: 4px; border-top: 1px solid #000; padding-top: 3px; color: #555; }
 </style>
 </head>
 <body>
@@ -86,8 +89,8 @@
     <table class="cartouche-iso">
         <tr>
             <td rowspan="4" class="c-logo-box">
-                {% if pdf_config.afficher_logo and logo_url %}<img src="{{ logo_url }}" alt="Logo"><br>{% else %}<img src="/static/img/logo.jpg" alt="Logo"><br>{% endif %}
-                {{ entreprise.nom|default:"NexusERP" }}
+                {% if pdf_config.cartouche.afficher_logo and logo_url %}<img src="{{ logo_url }}" alt="Logo"><br>{% else %}<img src="/static/img/logo.jpg" alt="Logo"><br>{% endif %}
+                {{ campagne.magasin.nom|default:"NexusERP" }}
             </td>
             <td class="c-ps2">MAGASIN : {{ campagne.magasin.nom|default:"GESTION DES STOCKS"|upper }}</td>
             <td class="c-code">Code : {{ pdf_config.code_document|default:"ENR-RII/DAF-001" }}</td>
@@ -159,70 +162,63 @@
         </tbody>
     </table>
 
-    <div class="bottom-fixed">
-        <table class="signatures-table">
-            <thead>
-                <tr>
-                    <th>Le Saisisseur</th>
-                    <th>Le Vérificateur</th>
-                    <th>Vu pour exécution (Validation)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <strong>LE SAISISSEUR</strong>
-                        <div class="sig-space">
-                            {% if saisisseur_sig %}
-                                <img src="{{ saisisseur_sig }}" class="sig-img">
-                            {% else %}
-                                <div style="height:45px;"></div>
-                            {% endif %}
-                        </div>
-                        <div class="sig-name">
-                            {% if campagne.cree_par %}{{ campagne.cree_par.get_full_name|default:campagne.cree_par.username|upper }}{% else %}..................................{% endif %}
-                        </div>
-                        {% if campagne.date_creation %}<div style="font-size:8px; color:#333;">{{ campagne.date_creation|date:"d/m/Y" }}</div>{% endif %}
-                    </td>
-                    <td>
-                        <strong>LE VÉRIFICATEUR</strong>
-                        <div class="sig-space"><span class="sig-empty">À signer manuellement</span></div>
-                        <div class="sig-name">Nom & Prénom</div>
-                    </td>
-                    <td>
-                        <strong>LE VALIDATEUR</strong>
-                        <div class="sig-space">
-                            {% if valideur_sig %}
-                                <img src="{{ valideur_sig }}" class="sig-img">
-                            {% else %}
-                                <div style="height:45px;"></div>
-                            {% endif %}
-                        </div>
-                        <div class="sig-name">
-                            {% if campagne.statut == 'VALIDE' and campagne.valide_par %}
-                                {{ campagne.valide_par.get_full_name|default:campagne.valide_par.username|upper }}
-                            {% else %}
-                                ..................................
-                            {% endif %}
-                        </div>
-                        {% if campagne.statut == 'VALIDE' and campagne.valide_par %}
-                            <div style="font-size:8px; color:#333;">{{ campagne.date_validation|date:"d/m/Y" }}</div>
+    <table class="signatures-table">
+        <thead>
+            <tr>
+                <th>Le Saisisseur</th>
+                <th>Le Vérificateur</th>
+                <th>Vu pour exécution (Validation)</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <strong>LE SAISISSEUR</strong>
+                    <div class="sig-space">
+                        {% if saisisseur_sig %}
+                            <img src="{{ saisisseur_sig }}" class="sig-img">
                         {% else %}
-                            <div style="font-size:8px; color:#333;">Date : ....../....../......</div>
+                            <div style="height:45px;"></div>
                         {% endif %}
-                        {% if campagne.statut == 'VALIDE' and campagne.valide_par and campagne.valide_par.profil %}
-                            <div style="font-weight:normal; color:#555; font-size:7px;">{{ campagne.valide_par.profil.get_fonction_display }}</div>
+                    </div>
+                    <div class="sig-name">
+                        {% if campagne.cree_par %}{{ campagne.cree_par.get_full_name|default:campagne.cree_par.username|upper }}{% else %}..................................{% endif %}
+                    </div>
+                    {% if campagne.date_creation %}<div style="font-size:8px; color:#333;">{{ campagne.date_creation|date:"d/m/Y" }}</div>{% endif %}
+                </td>
+                <td>
+                    <strong>LE VÉRIFICATEUR</strong>
+                    <div class="sig-space"><span class="sig-empty">À signer manuellement</span></div>
+                    <div class="sig-name">Nom & Prénom</div>
+                </td>
+                <td>
+                    <strong>LE VALIDATEUR</strong>
+                    <div class="sig-space">
+                        {% if valideur_sig %}
+                            <img src="{{ valideur_sig }}" class="sig-img">
+                        {% else %}
+                            <div style="height:45px;"></div>
                         {% endif %}
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-
-        <div class="footer-static">
-            {{ entreprise.adresse|default:"ANGRE BESSIKOI — 28 BP 1350 ABIDJAN" }} Tel : {{ entreprise.telephone|default:"2722496400" }} CC N° : {{ entreprise.cc|default:"1821717-Q" }}<br>
-            Résultat d'inventaire généré par NexusERP — {{ date_impression|default:""|date:"d/m/Y H:i" }}
-        </div>
-    </div>
+                    </div>
+                    <div class="sig-name">
+                        {% if campagne.statut == 'VALIDE' and campagne.valide_par %}
+                            {{ campagne.valide_par.get_full_name|default:campagne.valide_par.username|upper }}
+                        {% else %}
+                            ..................................
+                        {% endif %}
+                    </div>
+                    {% if campagne.statut == 'VALIDE' and campagne.valide_par %}
+                        <div style="font-size:8px; color:#333;">{{ campagne.date_validation|date:"d/m/Y" }}</div>
+                    {% else %}
+                        <div style="font-size:8px; color:#333;">Date : ....../....../......</div>
+                    {% endif %}
+                    {% if campagne.statut == 'VALIDE' and campagne.valide_par and campagne.valide_par.profil %}
+                        <div style="font-weight:normal; color:#555; font-size:7px;">{{ campagne.valide_par.profil.get_fonction_display }}</div>
+                    {% endif %}
+                </td>
+            </tr>
+        </tbody>
+    </table>
 
 </body>
 </html>
