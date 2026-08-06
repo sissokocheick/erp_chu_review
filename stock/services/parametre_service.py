@@ -348,7 +348,6 @@ def save_config_document(request):
         config.version_doc = request.POST.get(f'version_doc_{doc_type}', '').strip()
         config.ps2_label = request.POST.get(f'ps2_label_{doc_type}', '').strip()
         config.afficher_logo = request.POST.get(f'afficher_logo_{doc_type}') == 'on'
-        config.afficher_cachet = request.POST.get(f'afficher_cachet_{doc_type}') == 'on'
         config.afficher_cc = request.POST.get(f'afficher_cc_{doc_type}') == 'on'
         config.afficher_ifu = request.POST.get(f'afficher_ifu_{doc_type}') == 'on'
         config.afficher_rccm = request.POST.get(f'afficher_rccm_{doc_type}') == 'on'

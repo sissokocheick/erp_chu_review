@@ -333,7 +333,6 @@
               <label style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-medium); margin-bottom: 8px; display: block;">Éléments affichés sur le PDF</label>
               <div class="chk-grid">
                 <label class="chk-item"><input type="checkbox" name="afficher_logo_{{ item.code }}" {% if item.config.afficher_logo %}checked{% endif %}> <span>Logo</span></label>
-                <label class="chk-item"><input type="checkbox" name="afficher_cachet_{{ item.code }}" {% if item.config.afficher_cachet %}checked{% endif %}> <span>Cachet</span></label>
                 <label class="chk-item"><input type="checkbox" name="afficher_cc_{{ item.code }}" {% if item.config.afficher_cc %}checked{% endif %}> <span>CC</span></label>
                 <label class="chk-item"><input type="checkbox" name="afficher_ifu_{{ item.code }}" {% if item.config.afficher_ifu %}checked{% endif %}> <span>IFU</span></label>
                 <label class="chk-item"><input type="checkbox" name="afficher_rccm_{{ item.code }}" {% if item.config.afficher_rccm %}checked{% endif %}> <span>RCCM</span></label>

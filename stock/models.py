@@ -885,39 +885,6 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
     objects     = BaseManager()
     all_objects = models.Manager()
 
-    def get_signataires_pdf(self, config_hopital):
-        """
-        Retourne les 6 signataires prêts pour le template PDF.
-        ✅ CORRECTION : utilise ConfigurationHopital au lieu d'Entreprise.
-        """
-        labels = config_hopital.labels_signatures if hasattr(config_hopital, 'labels_signatures') else [
-            'Émission / Demandeur', 'Vu pour exécution', 'Sortie effectuée',
-            'Réception', 'Contrôleur', 'Approbation'
-        ]
-        resultat = []
-        for i, label in enumerate(labels, start=1):
-            val = self.validations.filter(ordre=i).first()
-            if val and val.valideur:
-                resultat.append({
-                    'ordre': i,
-                    'label': label,
-                    'nom': val.valideur.get_full_name() or val.valideur.username,
-                    'fonction': val.fonction_snapshot or '',
-                    'date': val.date_validation,
-                    'signe': True,
-                    'signature_url': val.signature_image.url if val.signature_image else None,
-                })
-            else:
-                resultat.append({
-                    'ordre': i,
-                    'label': label,
-                    'nom': None,
-                    'fonction': None,
-                    'date': None,
-                    'signe': False,
-                    'signature_url': None,
-                })
-        return resultat
 
     @property
     def est_completement_valide(self):
@@ -1915,7 +1882,6 @@ class ModeleDocumentMagasin(TracabiliteModel):
             if config:
                 cfg_doc = {
                     'afficher_logo': config.afficher_logo,
-                    'afficher_cachet': config.afficher_cachet,
                     'afficher_cc': config.afficher_cc,
                     'afficher_ifu': config.afficher_ifu,
                     'afficher_rccm': config.afficher_rccm,

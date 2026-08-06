@@ -67,7 +67,6 @@ def _handle_get(request, hopital, configs):
             'version_doc': getattr(c, 'version_doc', '') if c else '',
             'ps2_label': getattr(c, 'ps2_label', '') if c else '',
             'afficher_logo': getattr(c, 'afficher_logo', True) if c else True,
-            'afficher_cachet': getattr(c, 'afficher_cachet', True) if c else True,
             'afficher_cc': getattr(c, 'afficher_cc', True) if c else True,
             'afficher_ifu': getattr(c, 'afficher_ifu', True) if c else True,
             'afficher_rccm': getattr(c, 'afficher_rccm', True) if c else True,
@@ -151,7 +150,6 @@ def _handle_post(request, hopital, configs):
                 config.ps2_label = _truncate(request.POST.get(f'{prefix}ps2_label', '').strip(), 100)
 
                 config.afficher_logo = request.POST.get(f'{prefix}afficher_logo') == 'on'
-                config.afficher_cachet = request.POST.get(f'{prefix}afficher_cachet') == 'on'
                 config.afficher_cc = request.POST.get(f'{prefix}afficher_cc') == 'on'
                 config.afficher_ifu = request.POST.get(f'{prefix}afficher_ifu') == 'on'
                 config.afficher_rccm = request.POST.get(f'{prefix}afficher_rccm') == 'on'

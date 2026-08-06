@@ -46,7 +46,6 @@ class ConfigDocument(models.Model):
 
     # Affichage conditionnel
     afficher_logo = models.BooleanField(default=True, verbose_name="Afficher le logo")
-    afficher_cachet = models.BooleanField(default=True, verbose_name="Afficher le cachet")
     afficher_cc = models.BooleanField(default=True, verbose_name="Afficher le CC")
     afficher_ifu = models.BooleanField(default=True, verbose_name="Afficher l'IFU")
     afficher_rccm = models.BooleanField(default=True, verbose_name="Afficher le RCCM")

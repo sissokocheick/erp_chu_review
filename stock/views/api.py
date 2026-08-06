@@ -124,12 +124,12 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
                     request,
                     f"⛔ Vous n'avez pas le droit de joindre un document à ce {model_name_lower}."
                 )
-                return redirect(request.META.get('HTTP_REFERER', '/'))
+                return redirect('/')
     else:
         # Pour les autres modèles
         if model_name_lower not in perm_map:
             messages.error(request, "⛔ Upload non autorisé sur ce type de document.")
-            return redirect(request.META.get('HTTP_REFERER', '/'))
+            return redirect('/')
 
         if required_perm and not (
             request.user.is_superuser or request.user.has_perm(required_perm)
@@ -138,7 +138,7 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
                 request,
                 f"⛔ Vous n'avez pas le droit de joindre un document à ce {model_name_lower}."
             )
-            return redirect(request.META.get('HTTP_REFERER', '/'))
+            return redirect('/')
 
     if request.method == 'POST' and request.FILES.get('document'):
         fichier = request.FILES['document']
@@ -147,13 +147,13 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
                 request,
                 "Format invalide ! Seuls JPG, PNG et PDF sont autorisés."
             )
-            return redirect(request.META.get('HTTP_REFERER', '/'))
+            return redirect('/')
         if fichier.size > MAX_FILE_SIZE:
             messages.error(
                 request,
                 "Fichier trop lourd ! Maximum 1 Mo."
             )
-            return redirect(request.META.get('HTTP_REFERER', '/'))
+            return redirect('/')
 
         # ═══════════════════════════════════════════════════════════════════
         # ✅ CORRECTION : Whitelist des champs autorisés pour setattr
