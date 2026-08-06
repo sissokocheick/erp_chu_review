@@ -203,10 +203,6 @@
                                 <i class="fas fa-image" style="color: var(--text-light); width: 18px; text-align: center;"></i> Logo
                             </label>
                             <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
-                                <input type="checkbox" name="config_{{ item.code }}_afficher_cachet" {% if item.afficher_cachet %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
-                                <i class="fas fa-stamp" style="color: var(--text-light); width: 18px; text-align: center;"></i> Cachet / Tampon
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
                                 <input type="checkbox" name="config_{{ item.code }}_afficher_cc" {% if item.afficher_cc %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
                                 <i class="fas fa-file-invoice" style="color: var(--text-light); width: 18px; text-align: center;"></i> Compte Contribuable (CC)
                             </label>
