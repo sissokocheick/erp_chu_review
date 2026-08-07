@@ -15,13 +15,14 @@ from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 
 from accounts.permissions import verifier_permission
+from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 from ..models import (
     Article, Magasin, StockItem, Ajustement,
     CampagneInventaire, LigneInventaire, CircuitValidation,
     FamilleArticle)
 from ..services.inventaire_service import InventaireService
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
 
 logger = logging.getLogger(__name__)
@@ -89,7 +90,7 @@ def _afficher_inventaires(request):
 def _creer_inventaire(request):
     """Branche POST : création campagne via service, redirection."""
     # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
-    magasins_autorises = get_magasins_autorises(request)
+    magasins_autorises = get_magasins_autorises(request.user)
     titre = request.POST.get('titre')
     magasin_id = request.POST.get('magasin_id')
     if magasin_id and not magasins_autorises.filter(id=magasin_id).exists():

@@ -13,13 +13,14 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.utils import timezone
 
 from accounts.permissions import verifier_permission
+from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 from ..forms import AjustementForm
 from ..models import (
     Article, Magasin, StockItem, Ajustement, CircuitValidation,
 )
 from ..services.stock_service import StockService
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
 
 logger = logging.getLogger(__name__)
@@ -96,7 +97,7 @@ def _creer_ajustement(request):
         request.session['last_ajustement_token'] = post_token
     # ════════════════════════════════════════
 
-    magasins_autorises = get_magasins_autorises(request)
+    magasins_autorises = get_magasins_autorises(request.user)
     magasin_actif_id = request.session.get('magasin_actif_id')
     if magasin_actif_id and not magasins_autorises.filter(id=magasin_actif_id).exists():
         messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")

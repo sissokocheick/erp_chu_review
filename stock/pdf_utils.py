@@ -19,12 +19,28 @@ logger = logging.getLogger(__name__)
 def get_pdf_config(magasin, type_doc_code, request):
     """
     Récupère la configuration PDF pour un magasin et un type de document.
-    Résolution : ModeleDocumentMagasin > Défaut.
-    Retourne (pdf_config_dict, logo_url).
+    
+    Hiérarchie de résolution :
+    1. ModeleDocumentMagasin (configuration spécifique au magasin)
+    2. ConfigDocument (configuration globale par type de document)
+    3. Valeurs par défaut
+    
+    Args:
+        magasin: Instance du modèle Magasin
+        type_doc_code: Code du type de document (BS, BE, BR, BSHS, BDM, BC)
+        request: Requête HTTP Django
+        
+    Returns:
+        tuple: (pdf_config_dict, logo_url)
+            - pdf_config_dict: Dictionnaire avec tous les paramètres PDF
+            - logo_url: URL absolue du logo à utiliser
     """
     from stock.models import ModeleDocumentMagasin
+    from accounts.models import ConfigDocument
 
-    # Valeurs par défaut
+    # ═══════════════════════════════════════════════════════════════════════
+    # ÉTAPE 1 : Valeurs par défaut
+    # ═══════════════════════════════════════════════════════════════════════
     pdf_config = {
         'afficher_logo': True,
         'afficher_cachet': False,
@@ -46,7 +62,31 @@ def get_pdf_config(magasin, type_doc_code, request):
 
     logo_url = None
 
-    # Récupérer le modèle de document actif pour ce magasin + type
+    # ═══════════════════════════════════════════════════════════════════════
+    # ÉTAPE 2 : Configuration globale par type de document (ConfigDocument)
+    # ═══════════════════════════════════════════════════════════════════════
+    config_globale = ConfigDocument.objects.filter(type_doc=type_doc_code).first()
+    
+    if config_globale:
+        # Appliquer la configuration globale comme base
+        pdf_config.update({
+            'afficher_logo': config_globale.afficher_logo,
+            'afficher_cachet': config_globale.afficher_cachet,
+            'afficher_cc': config_globale.afficher_cc,
+            'afficher_ifu': config_globale.afficher_ifu,
+            'afficher_rccm': config_globale.afficher_rccm,
+            'afficher_telephone': config_globale.afficher_telephone,
+            'afficher_signatures': config_globale.afficher_signatures,
+            'code_document': config_globale.code_document or type_doc_code,
+            'date_creation_doc': config_globale.date_creation_doc or '',
+            'date_revision_doc': config_globale.date_revision_doc or '',
+            'version_doc': config_globale.version_doc or '1.0',
+            'ps2_label': config_globale.ps2_label or '',
+        })
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # ÉTAPE 3 : Configuration spécifique au magasin (ModeleDocumentMagasin)
+    # ═══════════════════════════════════════════════════════════════════════
     modele = None
     if magasin:
         modele = ModeleDocumentMagasin.objects.filter(
@@ -57,45 +97,57 @@ def get_pdf_config(magasin, type_doc_code, request):
 
     if modele and modele.config:
         config = modele.config
+        # La configuration magasin écrase la configuration globale
         pdf_config.update({
-            'afficher_logo': config.get('afficher_logo', True),
-            'afficher_cachet': config.get('afficher_cachet', False),
-            'afficher_cc': config.get('afficher_cc', False),
-            'afficher_ifu': config.get('afficher_ifu', False),
-            'afficher_rccm': config.get('afficher_rccm', False),
-            'afficher_telephone': config.get('afficher_telephone', True),
-            'afficher_signatures': config.get('afficher_signatures', True),
-            'code_document': config.get('code_document', type_doc_code) or type_doc_code,
-            'date_creation_doc': config.get('date_creation_doc', '') or '',
-            'date_revision_doc': config.get('date_revision_doc', '') or '',
-            'version_doc': config.get('version_doc', '1.0') or '1.0',
-            'ps2_label': config.get('ps2_label', '') or '',
-            'couleur_principale': config.get('couleur_principale', '#1c5b96') or '#1c5b96',
-            'pied_de_page': config.get('pied_de_page', '') or '',
-            'texte_institutionnel': config.get('texte_institutionnel', '') or '',
+            'afficher_logo': config.get('afficher_logo', pdf_config['afficher_logo']),
+            'afficher_cachet': config.get('afficher_cachet', pdf_config['afficher_cachet']),
+            'afficher_cc': config.get('afficher_cc', pdf_config['afficher_cc']),
+            'afficher_ifu': config.get('afficher_ifu', pdf_config['afficher_ifu']),
+            'afficher_rccm': config.get('afficher_rccm', pdf_config['afficher_rccm']),
+            'afficher_telephone': config.get('afficher_telephone', pdf_config['afficher_telephone']),
+            'afficher_signatures': config.get('afficher_signatures', pdf_config['afficher_signatures']),
+            'code_document': config.get('code_document', pdf_config['code_document']) or pdf_config['code_document'],
+            'date_creation_doc': config.get('date_creation_doc', pdf_config['date_creation_doc']) or pdf_config['date_creation_doc'],
+            'date_revision_doc': config.get('date_revision_doc', pdf_config['date_revision_doc']) or pdf_config['date_revision_doc'],
+            'version_doc': config.get('version_doc', pdf_config['version_doc']) or pdf_config['version_doc'],
+            'ps2_label': config.get('ps2_label', pdf_config['ps2_label']) or pdf_config['ps2_label'],
+            'couleur_principale': config.get('couleur_principale', pdf_config['couleur_principale']) or pdf_config['couleur_principale'],
+            'pied_de_page': config.get('pied_de_page', pdf_config['pied_de_page']) or pdf_config['pied_de_page'],
+            'texte_institutionnel': config.get('texte_institutionnel', pdf_config['texte_institutionnel']) or pdf_config['texte_institutionnel'],
         })
         if config.get('logo'):
             try:
                 logo_url = _make_absolute_url(request, config['logo'])
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("[PDF] Erreur lecture logo config magasin: %s", e)
 
-    # Fallback logo magasin
+    # ═══════════════════════════════════════════════════════════════════════
+    # ÉTAPE 4 : Fallback logo magasin
+    # ═══════════════════════════════════════════════════════════════════════
     if not logo_url and magasin and getattr(magasin, 'logo', None):
         try:
             logo_url = _make_absolute_url(request, magasin.logo.url)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("[PDF] Erreur lecture logo magasin: %s", e)
 
-    # Fallback logo statique
+    # ═══════════════════════════════════════════════════════════════════════
+    # ÉTAPE 5 : Fallback logo statique
+    # ═══════════════════════════════════════════════════════════════════════
     if not logo_url:
-        logo_url = request.build_absolute_uri(settings.STATIC_URL + 'img/logo.png')
+        try:
+            logo_url = request.build_absolute_uri('/static/img/logo.png')
+        except Exception:
+            logo_url = None
 
-    # Pied de page fallback sur magasin
+    # ═══════════════════════════════════════════════════════════════════════
+    # ÉTAPE 6 : Pied de page fallback sur magasin
+    # ═══════════════════════════════════════════════════════════════════════
     if not pdf_config['pied_de_page'] and magasin:
         pdf_config['pied_de_page'] = getattr(magasin, 'pied_de_page', '') or ''
 
-    # Texte institutionnel fallback
+    # ═══════════════════════════════════════════════════════════════════════
+    # ÉTAPE 7 : Texte institutionnel par défaut
+    # ═══════════════════════════════════════════════════════════════════════
     if not pdf_config['texte_institutionnel']:
         pdf_config['texte_institutionnel'] = (
             "Direction des Affaires Financières / Sous-Direction de la Logistique"

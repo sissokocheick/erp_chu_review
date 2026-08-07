@@ -255,17 +255,24 @@ class Profil(models.Model):
 # ==========================================================
 # Constante partagée pour éviter la duplication entre choices et Meta.permissions
 MENU_ACCESS_PERMISSIONS = [
+    # === MODULE CORE ===
     ('menu_accueil', 'Accueil'),
     ('menu_dashboard', 'Tableau de bord'),
+    
+    # === MODULE STOCK - DEMANDES ===
     ('menu_demandes', 'Demandes'),
     ('menu_valider_demandes', 'Valider Demandes'),
     ('menu_guichet', 'Guichet'),
+    
+    # === MODULE STOCK - MOUVEMENTS ===
     ('menu_livraisons', 'Livraisons'),
     ('menu_entrees', 'Entrées en Stock'),
     ('menu_reception_commande', 'Réceptions de commandes'),
     ('menu_sorties', 'Bons de Sortie'),
     ('menu_sorties_hors_stock', 'Sorties Hors Stock'),
     ('menu_retours_services', 'Retours Services'),
+    
+    # === MODULE STOCK - GESTION STOCK ===
     ('menu_stock', 'État du Stock'),
     ('menu_peremptions', 'Péremptions'),
     ('menu_destructions', 'Destructions'),
@@ -273,39 +280,87 @@ MENU_ACCESS_PERMISSIONS = [
     ('menu_inventaires', 'Inventaires'),
     ('menu_historique', 'Historique'),
     ('menu_commandes', 'Commandes'),
+    
+    # === MODULE STOCK - CATALOGUE ===
     ('menu_articles', 'Articles'),
     ('menu_familles', 'Familles'),
-    ('menu_pat_tickets', 'Tickets SAV'),
-    ('menu_pat_tech', 'Espace Tech'),
-    ('menu_pat_dispatch', 'Dispatch'),
-    ('menu_pat_historique', 'Historique Patrimoine'),
-    ('menu_pat_registre', 'Registre'),
-    ('menu_pat_sas', 'SAS'),
-    ('menu_pat_contrats', 'Contrats'),
-    ('menu_pat_import', 'Import'),
-    ('menu_pat_inventaire', 'Inventaire Parc'),
-    ('menu_pat_rebuts', 'Rebuts'),
-    ('menu_pat_pertes', 'Pertes'),
-    ('menu_pat_parametres', 'Paramètres Patrimoine'),
+    ('menu_fournisseurs', 'Fournisseurs'),
+    ('menu_beneficiaires', 'Bénéficiaires'),
+    ('menu_motifs_annulation', 'Motifs Annulation'),
+    ('menu_magasins', 'Magasins'),
+    
+    # === MODULE STOCK - RAPPORTS ===
     ('menu_rapports', 'Rapports'),
     ('menu_stats_demandes', 'Stats Demandes'),
     ('menu_stats_sondages', 'Stats Sondages'),
-    ('menu_param_admin', 'Paramètres Admin'),
-    ('menu_param_logistique', 'Paramètres Logistique'),
+    
+    # === MODULE PATRIMOINE - REGISTRE & IMMOBILISATIONS ===
+    ('menu_pat_registre', 'Registre Patrimoine'),
+    ('menu_pat_sas', 'SAS (Zone d\'attente)'),
+    ('menu_pat_fiche_detail', 'Fiches Détaillées'),
+    ('menu_pat_modifier_immo', 'Modifier Immobilisations'),
+    ('menu_pat_mouvements', 'Mouvements Patrimoine'),
+    ('menu_pat_eclatement', 'Éclatement Biens'),
+    ('menu_pat_immatriculation', 'Immatriculation Directe'),
+    ('menu_pat_qr_codes', 'Gestion QR Codes'),
+    ('menu_pat_export_registre', 'Export Registre Excel'),
+    ('menu_pat_import_excel', 'Import Excel Patrimoine'),
+    
+    # === MODULE PATRIMOINE - CONTRATS ===
+    ('menu_pat_contrats', 'Contrats'),
+    ('menu_pat_contrat_detail', 'Détail Contrats'),
+    ('menu_pat_assigner_equipements', 'Assigner Équipements aux Contrats'),
+    
+    # === MODULE PATRIMOINE - MAINTENANCE & INTERVENTIONS ===
+    ('menu_pat_interventions', 'Interventions'),
+    ('menu_pat_intervention_detail', 'Détail Interventions'),
+    ('menu_pat_signaler_panne', 'Signaler Panne'),
+    ('menu_pat_creer_intervention', 'Créer Intervention'),
+    ('menu_pat_valider_intervention', 'Valider Intervention'),
+    ('menu_pat_portail_prestataire', 'Portail Prestataire'),
+    ('menu_pat_schema_maintenance', 'Schémas Maintenance'),
+    ('menu_pat_types_equipements', 'Types d\'Équipements'),
+    
+    # === MODULE PATRIMOINE - TICKETS & SUPPORT ===
+    ('menu_pat_tickets', 'Tickets SAV'),
+    ('menu_pat_mes_tickets', 'Mes Tickets'),
+    ('menu_pat_dispatch', 'Dispatch Interventions'),
+    ('menu_pat_tech', 'Espace Technicien'),
+    ('menu_pat_suivi_ticket', 'Suivi Ticket'),
+    ('menu_pat_bon_sortie_reparation', 'Bon Sortie Réparation'),
+    
+    # === MODULE PATRIMOINE - INVENTAIRES PARC ===
+    ('menu_pat_inventaire', 'Inventaire Parc'),
+    ('menu_pat_campagnes_inventaire', 'Campagnes Inventaire'),
+    ('menu_pat_detail_campagne', 'Détail Campagne'),
+    ('menu_pat_reconciliation', 'Réconciliation Inventaire'),
+    ('menu_pat_audit_scan', 'Audit Scan Inventaire'),
+    ('menu_pat_fiche_comptage', 'Fiche Comptage'),
+    
+    # === MODULE PATRIMOINE - REBUTS & PERTES ===
+    ('menu_pat_rebuts', 'Rebuts'),
+    ('menu_pat_pertes', 'Pertes'),
+    
+    # === MODULE PATRIMOINE - PARAMÈTRES ===
+    ('menu_pat_parametres', 'Paramètres Patrimoine'),
+    ('menu_pat_historique', 'Historique Patrimoine'),
+    
+    # === MODULE ACCOUNTS - ADMINISTRATION ===
     ('menu_utilisateurs', 'Utilisateurs'),
     ('menu_roles', 'Rôles'),
+    ('menu_param_admin', 'Paramètres Admin'),
+    ('menu_param_logistique', 'Paramètres Logistique'),
     ('menu_circuits_validation', 'Circuits Validation'),
     ('menu_securite_mdp', 'Sécurité MDP'),
     ('menu_journal_audit', 'Journal Audit'),
     ('menu_parametres', 'Paramètres Système'),
-    ('menu_magasins', 'Magasins'),
+    
+    # === MODULE ACCOUNTS - CONFIGURATION ===
     ('menu_services', 'Services'),
     ('menu_specialites', 'Spécialités'),
-    ('menu_fournisseurs', 'Fournisseurs'),
-    ('menu_motifs_annulation', 'Motifs Annulation'),
+    ('menu_fonctions', 'Fonctions & Titres'),
     ('menu_modeles_pdf', 'Modèles de documents PDF'),
     ('menu_parametres_doc', 'Configuration Documents PDF'),
-    ('menu_fonctions', 'Fonctions & Titres'),
     ('menu_lots', 'Gestion des Lots'),
 ]
 

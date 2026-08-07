@@ -13,6 +13,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.permissions import verifier_permission
+from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
@@ -20,7 +21,7 @@ from ..models import (
     Service, LivraisonPartielle, CircuitValidation)
 from ..services import NumeroGenerator, PDFService, NotificationService
 from ..services.bon_service import BonService
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
 from .common import _has_perm_bon
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
 from django.db.models import Q
@@ -36,7 +37,7 @@ logger = logging.getLogger(__name__)
 @magasin_requis
 @catch_errors(redirect_url='liste_sorties')
 def liste_sorties(request):
-    magasins_autorises = get_magasins_autorises(request)
+    magasins_autorises = get_magasins_autorises(request.user)
 
     circuit_sortie = CircuitValidation.objects.filter(
         type_document='SORTIE', est_actif=True
@@ -190,7 +191,7 @@ def annuler_sortie(request, bon_id):
     if request.method != 'POST':
         return redirect('liste_sorties')
 
-    magasins_autorises = get_magasins_autorises(request)
+    magasins_autorises = get_magasins_autorises(request.user)
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='SORTIE',
         magasin__in=magasins_autorises
