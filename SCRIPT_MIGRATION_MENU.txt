@@ -1,0 +1,90 @@
+=====================================================================
+PROCÉDURE DE MIGRATION DU MODÈLE MENUACCESS
+=====================================================================
+
+Le modèle MenuAccess a été mis à jour avec les nouveaux champs requis :
+- code (unique, default='menu_inconnu')
+- nom (default='Menu Inconnu')  
+- url, icone, ordre, actif
+- parent (relation hiérarchique)
+- groupes (ManyToMany avec auth.Group)
+
+La migration 0008_update_menuaccess_structure.py a été générée.
+
+ÉTAPES À SUIVRE SUR VOTRE MACHINE LOCALE :
+---------------------------------------------------------------------
+
+1. ASSUREZ-VOUS QUE POSTGRESQL EST EN COUR D'EXÉCUTION
+   - Sur Windows : Vérifiez que le service PostgreSQL est démarré
+   - Sur Linux/Mac : sudo systemctl start postgresql
+
+2. APPLIQUEZ LA MIGRATION
+   python manage.py migrate accounts
+
+3. CRÉEZ LES ENTRÉES DE MENU POUR LE MODULE PATRIMOINE
+   Lancez le shell Django :
+   python manage.py shell
+   
+   Copiez-collez ce script :
+   
+--- DÉBUT SCRIPT PYTHON ---
+from accounts.models import MenuAccess
+from django.contrib.auth.models import Group
+
+print("Création du menu principal PATRIMOINE...")
+parent_pat, _ = MenuAccess.objects.get_or_create(
+    code='module_patrimoine',
+    defaults={
+        'nom': 'PATRIMOINE',
+        'description': 'Module de gestion du patrimoine hospitalier',
+        'url': '#',
+        'ordre': 4,
+        'parent': None,
+        'icone': 'fa-building',
+        'actif': True
+    }
+)
+
+sous_menus = [
+    {'code': 'menu_pat_registre', 'nom': 'Registre Immobilisations', 'url': '/patrimoine/registre/', 'icone': 'fa-boxes'},
+    {'code': 'menu_pat_mouvements', 'nom': 'Mouvements', 'url': '/patrimoine/mouvements/', 'icone': 'fa-exchange-alt'},
+    {'code': 'menu_pat_interventions', 'nom': 'Interventions', 'url': '/patrimoine/interventions/', 'icone': 'fa-tools'},
+    {'code': 'menu_pat_dispatch', 'nom': 'Dispatch Panne', 'url': '/patrimoine/dispatch/', 'icone': 'fa-tasks'},
+    {'code': 'menu_pat_tickets', 'nom': 'Tickets Support', 'url': '/patrimoine/tickets/', 'icone': 'fa-ticket-alt'},
+    {'code': 'menu_pat_inventaires', 'nom': 'Inventaires Parc', 'url': '/patrimoine/inventaires/', 'icone': 'fa-clipboard-list'},
+    {'code': 'menu_pat_rebuts', 'nom': 'Rebuts & Pertes', 'url': '/patrimoine/rebuts/', 'icone': 'fa-trash'},
+    {'code': 'menu_pat_rapports', 'nom': 'Rapports Patrimoine', 'url': '/patrimoine/rapports/', 'icone': 'fa-chart-bar'},
+    {'code': 'menu_pat_parametres', 'nom': 'Paramètres Patrimoine', 'url': '/patrimoine/parametres/', 'icone': 'fa-cogs'},
+]
+
+for item in sous_menus:
+    obj, created = MenuAccess.objects.get_or_create(code=item['code'])
+    obj.nom = item['nom']
+    obj.url = item['url']
+    obj.icone = item['icone']
+    obj.parent = parent_pat
+    obj.actif = True
+    obj.save()
+    print(f"{'Créé' if created else 'Mis à jour'}: {item['nom']}")
+
+print("\n✅ Structure du menu Patrimoine prête !")
+print("⚠️ N'OUBLIEZ PAS : Allez dans l'admin Django → Groups → Cochez les permissions pour vos rôles.")
+print("⚠️ Puis déconnectez-vous et reconnectez-vous pour voir le menu apparaître.")
+--- FIN SCRIPT PYTHON ---
+
+4. ATTRIBUEZ LES PERMISSIONS AUX RÔLES VIA L'ADMIN DJANGO
+   - Accédez à http://127.0.0.1:8000/admin/
+   - Allez dans "Groups" (ou "Groupes")
+   - Sélectionnez votre rôle (ex: "Administrateur Patrimoine")
+   - Dans la section "Menus accessibles", cochez :
+     * PATRIMOINE (le parent)
+     * Tous les sous-menus souhaités (Registre, Dispatch Panne, Paramètres, etc.)
+   - Sauvegardez
+
+5. TESTEZ
+   - Déconnectez-vous complètement
+   - Fermez votre navigateur
+   - Reconnectez-vous avec un utilisateur du groupe modifié
+   - Le menu "PATRIMOINE" devrait apparaître dans la barre latérale
+
+=====================================================================
