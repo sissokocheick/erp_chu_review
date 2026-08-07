@@ -15,11 +15,12 @@ from ..models import (
     Commande, LigneCommande, BonMouvement, LigneBon,
     Fournisseur, Article, Magasin, Mouvement, CircuitValidation,
     BonDeLivraison, FamilleArticle)
+from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 from ..services import NumeroGenerator, NotificationService
 from ..services.bon_service import BonService
 from ..services.stock_transaction_service import StockTransactionService
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
 from django.urls import reverse
 from core.models import ConfigurationHopital
@@ -262,7 +263,7 @@ def receptionner_commande(request, commande_id):
             messages.error(request, "⛔ Magasin invalide ou inactif.")
             return redirect('receptionner_commande', commande_id=commande.id)
 
-        magasins_autorises = get_magasins_autorises(request)
+        magasins_autorises = get_magasins_autorises(request.user)
         if magasin not in magasins_autorises:
             messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
             return redirect('receptionner_commande', commande_id=commande.id)

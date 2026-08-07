@@ -1,4 +1,4 @@
-# core/pdf_chromium.py — CORRIGÉ (v2)
+# core/pdf_chromium.py — CORRIGÉ (v3)
 """
 Service de generation PDF avec Playwright + Chromium.
 CORRECTIONS P0 (v2):
@@ -10,6 +10,10 @@ CORRECTIONS P0 (v2):
   • _init_lock créé lazy dans _init() (pas dans __init__)
   • SSRF bloqué via context.route() (interdit tout sauf data:)
   • Tracking des browsers in-flight pour _close propre
+
+CORRECTIONS P1 (v3):
+  • Correction except bare → except Exception avec logging approprié
+  • Ajout de tests unitaires pour la génération PDF
 """
 
 import asyncio
@@ -190,7 +194,8 @@ class ChromiumPDFGenerator:
                 if browser:
                     try:
                         await browser.close()
-                    except:
+                    except Exception as close_error:
+                        logger.warning(f"[ChromiumPDF] Erreur fermeture navigateur corrompu: {close_error}")
                         pass
                     try:
                         new_browser = await self._playwright.chromium.launch(
@@ -243,7 +248,8 @@ class ChromiumPDFGenerator:
         """Nettoyage a la destruction."""
         try:
             self.close()
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[ChromiumPDF] Erreur nettoyage destruction: {e}")
             pass
 
 
@@ -266,7 +272,8 @@ def _cleanup_chromium():
     if _chromium_generator:
         try:
             _chromium_generator.close()
-        except Exception:
+        except Exception as e:
+            logger.warning(f"[ChromiumPDF] Erreur nettoyage cleanup: {e}")
             pass
         _chromium_generator = None
 

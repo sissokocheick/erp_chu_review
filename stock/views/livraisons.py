@@ -23,6 +23,7 @@ from weasyprint import HTML
 from accounts.permissions import verifier_permission
 from core.models import Service, ConfigurationHopital
 from core.pdf_service import DocumentGenerator
+from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 from ..forms import (
     SortieStockForm, EntreeStockForm, AjustementForm,
@@ -38,7 +39,7 @@ from ..models import (
 from ..services import (
     NumeroGenerator, StockService, PDFService, NotificationService
 )
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
 
 logger = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ def liste_livraisons(request):
     if magasin_id:
         qs = qs.filter(demande__magasin_cible_id=magasin_id)
     else:
-        magasins_autorises_ids = get_magasins_autorises(request).values_list('id', flat=True)
+        magasins_autorises_ids = get_magasins_autorises(request.user).values_list('id', flat=True)
         qs = qs.filter(demande__magasin_cible_id__in=magasins_autorises_ids)
 
     # ── FILTRES ──
@@ -97,7 +98,7 @@ def liste_livraisons(request):
         'total_livraisons': total_livraisons,
         'total_signees': total_signees,
         'total_attente': total_livraisons - total_signees,
-        'magasins': get_magasins_autorises(request),
+        'magasins': get_magasins_autorises(request.user),
         'per_page': per_page,
         'q_livraison': q,
         'statut_filtre': statut,

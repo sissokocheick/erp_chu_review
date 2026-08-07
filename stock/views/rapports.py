@@ -18,9 +18,10 @@ from accounts.permissions import verifier_permission
 from ..models import (
     Mouvement, StockItem, Service, DemandeMateriel, LigneDemande,
     AccuseReception, Magasin, Article, BonMouvement, Commande, LivraisonPartielle)
+from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 # from ..services import StockService, PDFService  # SUPPRIMÉ : non utilisés dans ce fichier
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
 
 logger = logging.getLogger(__name__)
 

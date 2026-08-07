@@ -22,6 +22,7 @@ from weasyprint import HTML
 
 from accounts.permissions import verifier_permission
 from core.models import Service, ConfigurationHopital
+from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 from ..forms import (
     SortieStockForm, EntreeStockForm, AjustementForm,
@@ -37,7 +38,7 @@ from ..models import (
 from ..services import (
     NumeroGenerator, StockService, PDFService, NotificationService
 )
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

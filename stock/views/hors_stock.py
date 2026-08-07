@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from accounts.permissions import verifier_permission
 from core.models import ConfigurationHopital
+from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
@@ -21,7 +22,7 @@ from ..models import (
     Fournisseur, Beneficiaire)
 from ..services import NumeroGenerator, PDFService, NotificationService
 from ..services.bon_service import BonService
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
 from .common import _has_perm_bon
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
 
@@ -40,7 +41,7 @@ def liste_bons_hors_stock(request):
 def _afficher_bons_hors_stock(request):
     """Branche GET : filtres, pagination, contexte."""
     # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
-    magasins_autorises = get_magasins_autorises(request)
+    magasins_autorises = get_magasins_autorises(request.user)
 
     onglet = request.GET.get('onglet', 'actifs')
     bons_base = BonMouvement.objects.filter(
@@ -140,7 +141,7 @@ def _creer_bon_hors_stock(request):
         messages.error(request, "❌ Aucun magasin valide assigné à votre profil.")
         return redirect('liste_bons_hors_stock')
 
-    magasins_autorises = get_magasins_autorises(request)
+    magasins_autorises = get_magasins_autorises(request.user)
     if not magasins_autorises.filter(id=int(magasin_id)).exists():
         messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
         return redirect('liste_bons_hors_stock')
@@ -221,7 +222,7 @@ def annuler_bon_hors_stock(request, bon_id):
     if request.method != 'POST':
         return redirect('liste_bons_hors_stock')
 
-    magasins_autorises = get_magasins_autorises(request)
+    magasins_autorises = get_magasins_autorises(request.user)
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='SORTIE_HORS_STOCK',
         magasin__in=magasins_autorises
@@ -261,7 +262,7 @@ def apercu_bon_hors_stock(request, bon_id):
         id=bon_id
     )
 
-    magasins_autorises = get_magasins_autorises(request)
+    magasins_autorises = get_magasins_autorises(request.user)
     if not magasins_autorises.filter(id=bon.magasin_id).exists():
         messages.error(request, "⛔ Accès non autorisé.")
         return redirect('liste_bons_hors_stock')

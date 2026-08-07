@@ -21,13 +21,7 @@ from ..services import (
 )
 from ..services.livraison_service import LivraisonService
 from ..services.parametre_service import get_or_create_logistique_config
-# ── Fallback magasin_service (créé si module inexistant) ──
-try:
-    from ..services.magasin_service import get_magasins_autorises
-except (ModuleNotFoundError, ImportError):
-    def get_magasins_autorises(request):
-        from ..models import Magasin
-        return Magasin.objects.all()
+from ..services.isolation_service import get_magasins_autorises
 
 from .catalogue import paginer
 from django.core.exceptions import ObjectDoesNotExist

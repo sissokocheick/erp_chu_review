@@ -12,6 +12,7 @@ from django.urls import reverse
 from django.utils import timezone
 
 from accounts.permissions import verifier_permission
+from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
@@ -19,7 +20,7 @@ from ..models import (
     Fournisseur, Beneficiaire)
 from ..services import NumeroGenerator, StockService, PDFService, NotificationService
 from ..services.bon_service import BonService
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
 from .common import _has_perm_bon
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
 from django.contrib.auth import get_user_model
@@ -105,7 +106,7 @@ def _creer_retour(request):
     magasin_id_effectif = magasin_post or magasin_id
 
     # ── Vérification autorisation magasin ──
-    magasins_autorises = get_magasins_autorises(request)
+    magasins_autorises = get_magasins_autorises(request.user)
     if magasin_id_effectif and not magasins_autorises.filter(id=magasin_id_effectif).exists():
         messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
         return redirect('liste_retours_services')
