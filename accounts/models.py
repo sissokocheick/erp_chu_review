@@ -366,19 +366,22 @@ MENU_ACCESS_PERMISSIONS = [
 
 
 class MenuAccess(models.Model):
-    nom = models.CharField(max_length=100, choices=MENU_ACCESS_PERMISSIONS, unique=True)
+    nom = models.CharField(max_length=100)
+    code = models.CharField(max_length=50, unique=True, help_text="Code unique pour les permissions (ex: menu_pat_registre)")
+    url = models.CharField(max_length=200, blank=True, null=True, help_text="URL de la page")
+    icone = models.CharField(max_length=50, default="fa-circle", help_text="Classe FontAwesome (ex: fa-box)")
+    ordre = models.IntegerField(default=100)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='sous_menus', help_text="Menu parent (laisser vide pour un menu racine)")
+    actif = models.BooleanField(default=True)
     description = models.TextField(blank=True, null=True)
 
     class Meta:
-        verbose_name = "Accès Menu"
-        verbose_name_plural = "Accès Menus"
-        permissions = [
-            (code, label) for code, label in MENU_ACCESS_PERMISSIONS
-        ]
+        verbose_name = "Accès Menu / Permission"
+        verbose_name_plural = "Accès Menus / Permissions"
+        ordering = ['ordre', 'nom']
 
     def __str__(self):
-        return self.get_nom_display()
-
+        return self.nom
 
 # ==========================================================
 # 🔔 NOTIFICATIONS
