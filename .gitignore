@@ -4,27 +4,37 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+*.py~
+*.py.class
 .Python
 env/
 venv/
 .venv/
-.ENV
-.ENV.local
+.env
+.env.local
+.env.*
+*.env.*
+.python-version
+.python-history
+.coverage
+.coverage.*
+.tox/
+.coverage.xml
+nosetests.xml
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
 
-# Django
+# Django/Python web frameworks
 *.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+*.sqlite3
+*.sqlite3-journal
 media/
 staticfiles/
-.coverage
-htmlcov/
-
-# Migration files (if not already tracked)
-migrations/
-!accounts/migrations/
-!accounts/migrations/*
+*.mo
+*.pot
 
 # IDE
 .vscode/
@@ -35,9 +45,4 @@ migrations/
 # OS
 .DS_Store
 Thumbs.db
-
-# Environment
-.env
-.env.local
-*.env*
 ```
