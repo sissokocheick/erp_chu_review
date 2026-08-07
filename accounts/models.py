@@ -304,7 +304,7 @@ MENU_ACCESS_PERMISSIONS = [
     ('menu_pat_immatriculation', 'Immatriculation Directe'),
     ('menu_pat_qr_codes', 'Gestion QR Codes'),
     ('menu_pat_export_registre', 'Export Registre Excel'),
-    ('menu_pat_import_excel', 'Import Excel Patrimoine'),
+    ('menu_pat_import', 'Import Excel Patrimoine'),
     
     # === MODULE PATRIMOINE - CONTRATS ===
     ('menu_pat_contrats', 'Contrats'),

@@ -173,7 +173,22 @@ ROLE_ARCHITECTURE_MENU = OrderedDict([
     ('🏪 OPÉRATIONS FLUX', ['menu_guichet', 'menu_livraisons', 'menu_entrees', 'menu_reception_commande', 'menu_sorties', 'menu_sorties_hors_stock', 'menu_retours_services']),
     ('📦 GESTION DES STOCKS', ['menu_stock', 'menu_peremptions', 'menu_lots', 'menu_destructions', 'menu_ajustements', 'menu_inventaires', 'menu_historique']),
     ('🛍️ ACHATS & CATALOGUE', ['menu_commandes', 'menu_articles', 'menu_familles']),
-    ('🏢 PATRIMOINE & SAV', ['menu_pat_tickets', 'menu_pat_tech', 'menu_pat_dispatch', 'menu_pat_historique', 'menu_pat_registre', 'menu_pat_sas', 'menu_pat_contrats', 'menu_pat_import', 'menu_pat_inventaire', 'menu_pat_rebuts', 'menu_pat_pertes', 'menu_pat_parametres']),
+    ('🏢 PATRIMOINE & SAV', OrderedDict([
+        ('SAV', ['menu_pat_tickets', 'menu_pat_tech', 'menu_pat_dispatch', 'menu_pat_historique']),
+        ('Gestion du Parc', [
+            'menu_pat_registre', 'menu_pat_sas', 'menu_pat_contrats', 'menu_pat_import',
+            'menu_pat_inventaire', 'menu_pat_rebuts', 'menu_pat_pertes', 'menu_pat_parametres',
+            'menu_pat_fiche_detail', 'menu_pat_modifier_immo', 'menu_pat_mouvements',
+            'menu_pat_eclatement', 'menu_pat_immatriculation', 'menu_pat_qr_codes',
+            'menu_pat_export_registre', 'menu_pat_contrat_detail', 'menu_pat_assigner_equipements',
+            'menu_pat_interventions', 'menu_pat_intervention_detail', 'menu_pat_signaler_panne',
+            'menu_pat_creer_intervention', 'menu_pat_valider_intervention', 'menu_pat_portail_prestataire',
+            'menu_pat_schema_maintenance', 'menu_pat_types_equipements', 'menu_pat_mes_tickets',
+            'menu_pat_suivi_ticket', 'menu_pat_bon_sortie_reparation', 'menu_pat_campagnes_inventaire',
+            'menu_pat_detail_campagne', 'menu_pat_reconciliation', 'menu_pat_audit_scan',
+            'menu_pat_fiche_comptage'
+        ]),
+    ])),
     ('📈 RAPPORTS & EXPORTS', ['menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages']),
     ('⚙️ PARAMÈTRES', OrderedDict([
         ('Administratifs', ['menu_param_admin', 'menu_services', 'menu_specialites', 'menu_parametres']),
