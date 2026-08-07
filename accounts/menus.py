@@ -191,10 +191,11 @@ ROLE_ARCHITECTURE_MENU = OrderedDict([
     ])),
     ('📈 RAPPORTS & EXPORTS', ['menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages']),
     ('⚙️ PARAMÈTRES', OrderedDict([
-        ('Administratifs', ['menu_param_admin', 'menu_services', 'menu_specialites', 'menu_parametres']),
-        ('Logistique', ['menu_param_logistique', 'menu_magasins', 'menu_fournisseurs', 'menu_motifs_annulation', 'menu_modeles_pdf']),
+        ('Administratifs', ['menu_param_admin', 'menu_services', 'menu_specialites', 'menu_fonctions', 'menu_parametres']),
+        ('Logistique', ['menu_param_logistique', 'menu_magasins', 'menu_fournisseurs', 'menu_beneficiaires', 'menu_motifs_annulation', 'menu_modeles_pdf', 'menu_parametres_doc']),
+        ('Stock', ['menu_lots']),
     ])),
-    ('🛡️ SÉCURITÉ & ACCÈS', ['menu_utilisateurs', 'menu_roles', 'menu_circuits_validation', 'menu_journal_audit']),
+    ('🛡️ SÉCURITÉ & ACCÈS', ['menu_utilisateurs', 'menu_roles', 'menu_circuits_validation', 'menu_securite_mdp', 'menu_journal_audit']),
 ])
 
 

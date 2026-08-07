@@ -1,40 +1,38 @@
 ```
 # Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-*.py~
-*.py.class
+*.py[cod]
+*$py.class
+*.so
 .Python
-env/
-venv/
-.venv/
-.env
-.env.local
-.env.*
-*.env.*
-.python-version
-.python-history
-.coverage
-.coverage.*
-.tox/
-.coverage.xml
-nosetests.xml
-coverage.xml
-htmlcov/
-.pytest_cache/
-.mypy_cache/
-.hypothesis/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
 
-# Django/Python web frameworks
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Django
 *.log
-*.sqlite3
-*.sqlite3-journal
-media/
-staticfiles/
-*.mo
-*.pot
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
 
 # IDE
 .vscode/
@@ -45,4 +43,55 @@ staticfiles/
 # OS
 .DS_Store
 Thumbs.db
+
+# Environment variables
+.env
+.env.local
+*.env.*
+
+# Coverage
+.coverage
+htmlcov/
+.coverage.*
+.coverage.xml
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Pytest
+.pytest_cache/
+
+# Mypy
+.mypy_cache/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Static files
+/staticfiles/
+collected_static/
+
+# Media files
+/media/
 ```

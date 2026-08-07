@@ -165,11 +165,7 @@
     </div>
   </div>
   {% endif %}
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
-<script>
+</div><script>
 // --- 🟢 RECHERCHE MAGIQUE ---
 document.addEventListener('DOMContentLoaded', function() {
     const searchInput = document.getElementById('magic-search');
@@ -191,7 +187,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// --- 🟢 LOGIQUE DE SCINDAGE (INCHANGÉE) ---
+// --- 🟢 LOGIQUE DE SCINDAGE (MIGRÉE NXUX) ---
 function eclaterBien(id, nom) {
     const MODELES_AUTO = {
         'ORDINATEUR DE BUREAU': ['Unité Centrale', 'Écran'],
@@ -216,21 +212,20 @@ function eclaterBien(id, nom) {
     htmlContent += `
         <div style="text-align: left; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
             <label style="font-weight: 800; font-size: 12px; color: #475569; text-transform: uppercase;">Mode de scindage :</label>
-            <select id="swal-mode" class="swal2-select" style="width: 100%; font-size: 14px; margin-top: 8px; display: block; border-radius: 6px;" onchange="toggleManual()">
+            <select id="swal-mode" class="form-control" style="width: 100%; font-size: 14px; margin-top: 8px; display: block; border-radius: 6px; padding: 8px;" onchange="toggleManual()">
                 ${optionsSelect}
             </select>
             
             <div id="swal-manual-div" style="margin-top: 15px; display: ${modeleDetecte ? 'none' : 'block'};">
                 <label style="font-weight: 800; font-size: 12px; color: #475569; text-transform: uppercase;">Nombre de parts :</label>
-                <input id="swal-nombre" type="number" class="swal2-input" value="2" min="2" max="15" style="margin-top: 8px; width: 100%; border-radius: 6px;">
+                <input id="swal-nombre" type="number" class="form-control" value="2" min="2" max="15" style="margin-top: 8px; width: 100%; border-radius: 6px; padding: 8px;">
             </div>
         </div>
     `;
 
-    Swal.fire({
+    NxUX.confirm({
         title: '<i class="fas fa-cut" style="color:#f59e0b;"></i> Scinder le bien',
         html: htmlContent,
-        showCancelButton: true,
         confirmButtonText: '<i class="fas fa-check"></i> Valider',
         cancelButtonText: 'Annuler',
         confirmButtonColor: '#10b981',
@@ -240,16 +235,13 @@ function eclaterBien(id, nom) {
                 let mode = document.getElementById('swal-mode').value;
                 document.getElementById('swal-manual-div').style.display = (mode === 'manuel') ? 'block' : 'none';
             };
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
+        },
+        onConfirm: (done) => {
             let mode = document.getElementById('swal-mode').value;
             let formData = new FormData();
             formData.append('immo_id', id);
             
-            let csrfToken = '{{ csrf_token }}';
-            let csrfInput = document.querySelector('[name=csrfmiddlewaretoken]');
-            if(csrfInput) csrfToken = csrfInput.value;
+            let csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || '{{ csrf_token }}';
             formData.append('csrfmiddlewaretoken', csrfToken);
 
             if (mode !== 'manuel') {
@@ -261,7 +253,9 @@ function eclaterBien(id, nom) {
                 formData.append('nombre', document.getElementById('swal-nombre').value);
             }
 
-            Swal.fire({ title: 'Division en cours...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+            // Afficher le loading
+            done(); // Fermer la modale de confirmation
+            NxUX.loading(true, 'Division en cours...');
 
             fetch("{% url 'patrimoine_eclater_sas' %}", {
                 method: 'POST',
@@ -269,14 +263,18 @@ function eclaterBien(id, nom) {
             })
             .then(response => response.json())
             .then(data => {
+                NxUX.loading(false); // Cacher le loading
                 if (data.success) {
-                    Swal.fire({ icon: 'success', title: 'Lot scindé !', showConfirmButton: false, timer: 1500 })
-                    .then(() => window.location.reload());
+                    NxUX.toast('success', 'Lot scindé avec succès !');
+                    setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    Swal.fire('Erreur', data.error, 'error');
+                    NxUX.toast('error', data.error || 'Une erreur est survenue');
                 }
             })
-            .catch(error => Swal.fire('Erreur réseau', "Impossible de contacter le serveur.", 'error'));
+            .catch(error => {
+                NxUX.loading(false);
+                NxUX.toast('error', 'Erreur réseau : impossible de contacter le serveur.');
+            });
         }
     });
 }

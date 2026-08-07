@@ -245,9 +245,7 @@
       var qte = parseInt(input.value) || 0;
       if (qte > qteAttendue) {
           if (typeof Swal !== 'undefined') {
-              Swal.fire({ toast:true, position:'top-end', icon:'error',
-                  title:'Maximum : ' + qteAttendue + ' unité(s)',
-                  showConfirmButton:false, timer:3500 });
+              NxUX.toast('error', 'Maximum : ');
           }
           input.value = qteAttendue; qte = qteAttendue;
       }

@@ -200,7 +200,7 @@
       <form method="GET" id="form-filtres">
         <div class="sb-section">
           <label class="sb-lbl">Recherche rapide</label>
-          <input type="text" name="q" value="{{ q|default:'' }}" class="sb-input"
+          <input type="text" name="q" value="{{ q|default:'' }}" class="sb-input" data-nx-format="text"
                  placeholder="Code, désignation, SN…" oninput="soumettreFiltres()">
         </div>
         <div class="sb-section">
@@ -692,8 +692,10 @@ function soumettreFiltres() {
 
     var vueTableau = document.getElementById('vue-tableau');
     var vueCartes = document.getElementById('vue-cartes');
-    if (vueTableau) vueTableau.style.opacity = '0.4';
-    if (vueCartes) vueCartes.style.opacity = '0.4';
+    
+    // État de chargement avec NxUX
+    if (vueTableau) { vueTableau.style.opacity = '0.4'; vueTableau.style.pointerEvents = 'none'; }
+    if (vueCartes) { vueCartes.style.opacity = '0.4'; vueCartes.style.pointerEvents = 'none'; }
 
     fetch(url)
       .then(response => response.text())
@@ -715,15 +717,16 @@ function soumettreFiltres() {
           var statsHeader = document.getElementById('stats-header');
           if (newStats && statsHeader) statsHeader.innerHTML = newStats.innerHTML;
 
-          if (vueTableau) vueTableau.style.opacity = '1';
-          if (vueCartes) vueCartes.style.opacity = '1';
+          if (vueTableau) { vueTableau.style.opacity = '1'; vueTableau.style.pointerEvents = 'auto'; }
+          if (vueCartes) { vueCartes.style.opacity = '1'; vueCartes.style.pointerEvents = 'auto'; }
 
           window.history.replaceState(null, '', url);
       })
       .catch(err => {
           console.error("Erreur de recherche:", err);
-          if (vueTableau) vueTableau.style.opacity = '1';
-          if (vueCartes) vueCartes.style.opacity = '1';
+          if (vueTableau) { vueTableau.style.opacity = '1'; vueTableau.style.pointerEvents = 'auto'; }
+          if (vueCartes) { vueCartes.style.opacity = '1'; vueCartes.style.pointerEvents = 'auto'; }
+          NxUX.toast('error', 'Impossible de rafraîchir les données.', 'Erreur de filtrage');
       });
   }, 500);
 }
@@ -767,48 +770,49 @@ function fermerQE() {
   QE_STATE = { id: null, champ: null };
 }
 
-function confirmerQE() {
-  if (!QE_STATE.id || !QE_STATE.champ) return;
-  var val = document.getElementById('qe-select').value;
-  if (!val) { Swal.fire('', 'Veuillez choisir une valeur.', 'warning'); return; }
+  function confirmerQE() {
+    if (!QE_STATE.id || !QE_STATE.champ) return;
+    var val = document.getElementById('qe-select').value;
+    if (!val) { NxUX.toast('warning', 'Veuillez choisir une valeur.'); return; }
 
-  var btn = document.querySelector('#mo-qe .btn-ok');
-  btn.disabled = true;
-  btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i> Enregistrement…';
+    var btn = document.querySelector('#mo-qe .btn-ok');
+    var ancienContenu = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-circle-notch fa-spin me-1"></i> Enregistrement…';
 
-  var fd = new FormData();
-  fd.append('champ', QE_STATE.champ);
-  fd.append('valeur', val);
-  fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    var fd = new FormData();
+    fd.append('champ', QE_STATE.champ);
+    fd.append('valeur', val);
+    fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
 
-  fetch("{% url 'patrimoine_quick_edit' 0 %}".replace('/0/', '/' + QE_STATE.id + '/'), {
-    method: 'POST', body: fd
-  })
-  .then(function(r){ return r.json(); })
-  .then(function(data) {
-    if (data.success) {
-      fermerQE();
-      var row = document.getElementById('row-' + QE_STATE.id);
-      if (row) {
-        if (QE_STATE.champ === 'statut') {
-          var badge = row.querySelector('.st-badge');
-          if (badge) { badge.className = 'st-badge st-clickable st-' + data.valeur; badge.innerHTML = data.label + ' <i class="fas fa-pencil-alt" style="font-size:10px; margin-left:4px; opacity:0.6;"></i>'; }
-        } else {
-          var badge = row.querySelector('.ac-badge');
-          if (badge) { badge.className = 'ac-badge ac-clickable ac-' + data.valeur; badge.innerHTML = data.label + ' <i class="fas fa-pencil-alt" style="font-size:10px; margin-left:4px; opacity:0.6;"></i>'; }
+    fetch("{% url 'patrimoine_quick_edit' 0 %}".replace('/0/', '/' + QE_STATE.id + '/'), {
+      method: 'POST', body: fd
+    })
+    .then(function(r){ return r.json(); })
+    .then(function(data) {
+      if (data.success) {
+        fermerQE();
+        var row = document.getElementById('row-' + QE_STATE.id);
+        if (row) {
+          if (QE_STATE.champ === 'statut') {
+            var badge = row.querySelector('.st-badge');
+            if (badge) { badge.className = 'st-badge st-clickable st-' + data.valeur; badge.innerHTML = data.label + ' <i class="fas fa-pencil-alt" style="font-size:10px; margin-left:4px; opacity:0.6;"></i>'; }
+          } else {
+            var badge = row.querySelector('.ac-badge');
+            if (badge) { badge.className = 'ac-badge ac-clickable ac-' + data.valeur; badge.innerHTML = data.label + ' <i class="fas fa-pencil-alt" style="font-size:10px; margin-left:4px; opacity:0.6;"></i>'; }
+          }
         }
+        NxUX.toast('success', 'Modifié par ' + data.modifie_par, 'Mise à jour réussie');
+      } else {
+        NxUX.toast('error', data.error || 'Une erreur est survenue.', 'Erreur');
       }
-      Swal.fire({ icon:'success', title:'Modifié !', text:'Par ' + data.modifie_par + ' — ' + data.date_modification, timer:2000, showConfirmButton:false });
-    } else {
-      Swal.fire('Erreur', data.error || 'Une erreur est survenue.', 'error');
-    }
-  })
-  .catch(function() { Swal.fire('Erreur réseau', '', 'error'); })
-  .finally(function() {
-    btn.disabled = false;
-    btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Valider la modification';
-  });
-}
+    })
+    .catch(function() { NxUX.toast('error', 'Impossible de contacter le serveur.', 'Erreur réseau'); })
+    .finally(function() {
+      btn.disabled = false;
+      btn.innerHTML = ancienContenu;
+    });
+  }
 
 document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape') fermerQE();

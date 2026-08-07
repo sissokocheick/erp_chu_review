@@ -788,10 +788,11 @@ ROLE_ARCHITECTURE_MENU = {
     },
     'RAPPORTS & EXPORTS': ['menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages', 'menu_stats_satisfaction'],
     'PARAMÈTRES': {
-        'Administratif': ['menu_param_admin', 'menu_services', 'menu_specialites', 'menu_parametres'],
-        'Logistique': ['menu_magasins', 'menu_fournisseurs', 'menu_motifs_annulation', 'menu_param_logistique', 'menu_modeles_pdf'],
+        'Administratif': ['menu_param_admin', 'menu_services', 'menu_specialites', 'menu_fonctions', 'menu_parametres'],
+        'Logistique': ['menu_magasins', 'menu_fournisseurs', 'menu_beneficiaires', 'menu_motifs_annulation', 'menu_param_logistique', 'menu_modeles_pdf', 'menu_parametres_doc'],
+        'Stock': ['menu_lots'],
     },
-    'SÉCURITÉ & ACCÈS': ['menu_utilisateurs', 'menu_roles', 'menu_circuits_validation', 'menu_journal_audit'],
+    'SÉCURITÉ & ACCÈS': ['menu_utilisateurs', 'menu_roles', 'menu_circuits_validation', 'menu_securite_mdp', 'menu_journal_audit'],
 }
 
 MODULE_ICONS = {
@@ -883,7 +884,15 @@ MENU_ITEMS_META = {
 
     'menu_stats_demandes': {'label': 'Stats Demandes', 'icon': 'fa-chart-bar', 'color': '#0d6efd'},
     'menu_stats_sondages': {'label': 'Stats Sondages', 'icon': 'fa-smile', 'color': '#198754'},
-    'menu_stats_satisfaction': {'label': 'Stats Satisfaction', 'icon': 'fa-star-half-alt', 'color': '#6f42c1'},}
+    'menu_stats_satisfaction': {'label': 'Stats Satisfaction', 'icon': 'fa-star-half-alt', 'color': '#6f42c1'},
+    
+    # Paramètres manquants
+    'menu_lots': {'label': 'Gestion des Lots', 'icon': 'fa-boxes', 'color': '#1c5b96'},
+    'menu_beneficiaires': {'label': 'Bénéficiaires', 'icon': 'fa-users', 'color': '#28a745'},
+    'menu_fonctions': {'label': 'Fonctions & Titres', 'icon': 'fa-user-tie', 'color': '#17a2b8'},
+    'menu_parametres_doc': {'label': 'Configuration Documents PDF', 'icon': 'fa-file-pdf', 'color': '#dc3545'},
+    'menu_securite_mdp': {'label': 'Sécurité MDP', 'icon': 'fa-lock', 'color': '#dc3545'},
+}
 
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_roles')
