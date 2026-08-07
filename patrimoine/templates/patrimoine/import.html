@@ -153,23 +153,20 @@ dz.addEventListener('drop', function(e){
 
 function lancerImport() {
   if (!typeSelectionne) {
-    Swal.fire('', 'Veuillez sélectionner un type d\'équipement.', 'warning');
+    NxUX.toast('warning', 'Veuillez sélectionner un type d\'équipement.');
     return;
   }
   if (!document.getElementById('fichier-input').files.length) {
-    Swal.fire('', 'Veuillez choisir un fichier Excel.', 'warning');
+    NxUX.toast('warning', 'Veuillez choisir un fichier Excel.');
     return;
   }
-  Swal.fire({
+  NxUX.confirm({
     title: 'Lancer l\'import ?',
     text: 'Les biens seront créés ou mis à jour.',
-    icon: 'question', showCancelButton: true,
-    confirmButtonColor: '#1c5b96', cancelButtonColor: '#6c757d',
-    confirmButtonText: '<i class="fas fa-rocket"></i> Importer',
-    cancelButtonText: 'Annuler'
-  }).then(function(r) {
-    if (r.isConfirmed) {
-      Swal.fire({ title: 'Import en cours…', allowOutsideClick: false, didOpen: function(){ Swal.showLoading(); } });
+    confirmText: '<i class="fas fa-rocket"></i> Importer',
+    cancelText: 'Annuler',
+    onConfirm: function() {
+      NxUX.loading(true, 'Import en cours…');
       document.getElementById('form-import').submit();
     }
   });

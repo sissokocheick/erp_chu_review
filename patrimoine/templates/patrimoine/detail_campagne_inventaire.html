@@ -169,10 +169,7 @@
             <button onclick="document.getElementById('mo-pdf').style.display='none'" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; cursor: pointer; font-weight: bold;">Fermer</button>
         </div>
     </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
+</div><script>
 function confirmerAction(action) {
     let titre = "Confirmation";
     let texte = "";
@@ -191,12 +188,14 @@ function confirmerAction(action) {
         btnColor = "#10b981";
     }
 
-    Swal.fire({
-        title: titre, text: texte, icon: 'warning',
-        showCancelButton: true, confirmButtonColor: btnColor,
-        confirmButtonText: 'Oui, confirmer', cancelButtonText: 'Annuler'
-    }).then((result) => {
-        if (result.isConfirmed) { document.getElementById('form-' + action).submit(); }
+    NxUX.confirm({
+        title: titre, 
+        text: texte, 
+        confirmText: 'Oui, confirmer', 
+        cancelText: 'Annuler',
+        onConfirm: function() { 
+            document.getElementById('form-' + action).submit(); 
+        }
     });
 }
 

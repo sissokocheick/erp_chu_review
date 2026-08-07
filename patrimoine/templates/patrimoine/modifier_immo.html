@@ -234,11 +234,7 @@ if (typeof $ !== 'undefined') {
             isUpdatingLoc = false;
             console.error("Erreur serveur AJAX :", error);
             // 🔴 ALERTE VISUELLE EN CAS DE CRASH DU SERVEUR
-            Swal.fire({
-                icon: 'error',
-                title: 'Erreur Système',
-                text: "Le serveur n'arrive pas à filtrer les lieux. Avez-vous bien mis à jour la base de données (makemigrations / migrate) ?"
-            });
+            NxUX.toast('error', "Le serveur n'arrive pas à filtrer les lieux. Avez-vous bien mis à jour la base de données (makemigrations / migrate) ?");
         });
     }
 

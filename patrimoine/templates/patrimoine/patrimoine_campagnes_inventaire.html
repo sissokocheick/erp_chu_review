@@ -212,10 +212,7 @@
   {% csrf_token %}
   <input type="hidden" name="action" id="suppr-action">
   <input type="hidden" name="item_id" id="suppr-id">
-</form>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
+</form><script>
 function confirmerSauvegarde() {
     let form = document.getElementById('form-campagne');
     
@@ -226,17 +223,12 @@ function confirmerSauvegarde() {
     }
 
     // Afficher l'alerte de confirmation
-    Swal.fire({
+    NxUX.confirm({
         title: 'Confirmer la campagne ?',
         text: "Êtes-vous sûr de vouloir enregistrer cette campagne d'inventaire ?",
-        icon: 'question',
-        showCancelButton: true,
-        confirmButtonColor: '#0f766e',
-        cancelButtonColor: '#64748b',
-        confirmButtonText: '<i class="fas fa-save"></i> Oui, enregistrer',
-        cancelButtonText: 'Annuler'
-    }).then((result) => {
-        if (result.isConfirmed) {
+        confirmText: '<i class="fas fa-save"></i> Oui, enregistrer',
+        cancelText: 'Annuler',
+        onConfirm: function() {
             form.submit(); // Si "Oui", on envoie le formulaire
         }
     });
@@ -376,21 +368,16 @@ document.addEventListener('keydown', function(e) {
 });
 
 function confirmerSuppression(action, id, nom) {
-  Swal.fire({
-    title: 'Supprimer "' + nom + '" ?',
-    text: 'Cette action est irréversible.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#dc3545',
-    cancelButtonColor: '#6c757d',
-    confirmButtonText: '<i class="fas fa-trash"></i> Supprimer',
-    cancelButtonText: 'Annuler'
-  }).then((result) => {
-    if (result.isConfirmed) {
-      document.getElementById('suppr-action').value = action;
+  NxUX.confirm({
+                title: 'Supprimer "',
+                text: 'Cette action est irréversible.',
+                icon: 'warning',
+                onConfirm: function() {
+                    document.getElementById('suppr-action').value = action;
       document.getElementById('suppr-id').value = id;
       document.getElementById('form-suppr').submit();
-    }
+                }
+            })
   });
 }
 </script>

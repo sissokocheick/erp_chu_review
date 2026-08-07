@@ -440,25 +440,28 @@
       {% endif %}
     </div>
   </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
+</div><script>
 // Fonction universelle de confirmation
 function confirmerAction(event, titre, texte, icone, texteBouton, couleurBouton) {
     event.preventDefault();
     const form = event.target.closest('form');
-    Swal.fire({
-        title: titre, text: texte, icon: icone, showCancelButton: true,
-        confirmButtonColor: couleurBouton || '#3085d6', cancelButtonColor: '#94a3b8',
-        confirmButtonText: texteBouton, cancelButtonText: 'Annuler',
-        customClass: { confirmButton: 'swal2-confirm', cancelButton: 'swal2-cancel' }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({ title: 'Sauvegarde en cours...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() } });
+    
+    NxUX.confirm({
+        title: titre,
+        text: texte,
+        icon: icone || 'question',
+        confirmText: texteBouton || 'Confirmer',
+        cancelText: 'Annuler',
+        confirmColor: couleurBouton || '#1c5b96',
+        onConfirm: function() {
+            NxUX.loading(form.querySelector('[type=submit]'), 'Sauvegarde en cours...');
             form.submit();
+        },
+        onCancel: function() {
+            // Annulation silencieuse
         }
     });
+    
     return false;
 }
 
@@ -471,7 +474,7 @@ function ajouterAuPanier(select) {
     const nom = option.getAttribute('data-nom');
 
     if (articlesDansPanier.has(articleId)) {
-        Swal.fire('Oops!', 'Cet article est déjà dans votre panier.', 'info');
+        NxUX.toast('info', 'Cet article est déjà dans votre panier.');
         select.value = ''; return;
     }
 

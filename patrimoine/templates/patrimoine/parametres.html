@@ -1100,10 +1100,7 @@
       </div>
     </form>
   </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-<script>
+</div><script>
 
 function toggleValidateurs() {
     let chk = document.getElementById('chk-val-inv');
@@ -1282,17 +1279,12 @@ document.addEventListener('keydown', function(e) {
 });
 
 function confirmerSuppression(action, id, nom) {
-  Swal.fire({
+  NxUX.confirm({
     title: 'Supprimer "' + nom + '" ?',
     text: 'Cette action est irréversible.',
-    icon: 'warning',
-    showCancelButton: true,
-    confirmButtonColor: '#dc3545',
-    cancelButtonColor: '#6c757d',
-    confirmButtonText: '<i class="fas fa-trash"></i> Supprimer',
-    cancelButtonText: 'Annuler'
-  }).then(function(r) {
-    if (r.isConfirmed) {
+    confirmText: '<i class="fas fa-trash"></i> Supprimer',
+    cancelText: 'Annuler',
+    onConfirm: function() {
       document.getElementById('suppr-action').value = action;
       document.getElementById('suppr-id').value = id;
       document.getElementById('form-suppr').submit();
@@ -1406,7 +1398,7 @@ function validerEtage() {
     majVraiNomEtage(); 
     let nom = document.getElementById('vrai_nom_etage').value.trim();
     if (!nom) {
-        Swal.fire('', 'Veuillez choisir ou taper un nom d\'étage.', 'warning');
+        NxUX.toast('warning', 'Veuillez choisir ou taper un nom d\'étage.');
         return false;
     }
     return true;
@@ -1639,7 +1631,7 @@ function soumettreSchema(e) {
 
   var valids = schemaItems.filter(function(s){ return s.key && s.label; });
   if (!valids.length && schemaItems.length) {
-    Swal.fire('','Renseignez au moins une clé et un label par champ.','warning');
+    NxUX.toast('warning', 'Renseignez au moins une clé et un label par champ.');
     return;
   }
 
@@ -1650,12 +1642,12 @@ function soumettreSchema(e) {
   fetch(document.getElementById('form-schema').action, { method: 'POST', body: fd })
     .then(function(r){ return r.text(); })
     .then(function() {
-      Swal.fire({ icon:'success', title:'Specs enregistrées !', timer:1500, showConfirmButton:false });
+      NxUX.toast('success', 'Specs enregistrées !');
       fermerSchema();
       setTimeout(function(){ window.location.reload(); }, 1600);
     })
     .catch(function() {
-      Swal.fire('Erreur réseau','','error');
+      NxUX.toast('error', 'Erreur réseau');
     });
 }
 </script>
