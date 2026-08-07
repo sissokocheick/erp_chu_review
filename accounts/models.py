@@ -366,18 +366,82 @@ MENU_ACCESS_PERMISSIONS = [
 
 
 class MenuAccess(models.Model):
-    nom = models.CharField(max_length=100, choices=MENU_ACCESS_PERMISSIONS, unique=True)
-    description = models.TextField(blank=True, null=True)
+    """Permissions personnalisées par module avec hiérarchie de menu."""
+    code = models.CharField(max_length=100, unique=True, default='menu_inconnu', verbose_name="Code permission")
+    nom = models.CharField(max_length=150, default='Menu Inconnu', verbose_name="Nom affiché")
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    url = models.CharField(max_length=255, blank=True, default='#', verbose_name="URL cible")
+    icone = models.CharField(max_length=50, blank=True, default='fa-circle', verbose_name="Icône FontAwesome")
+    ordre = models.PositiveSmallIntegerField(default=100, verbose_name="Ordre d'affichage")
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='sous_menus',
+        verbose_name="Menu parent"
+    )
+    actif = models.BooleanField(default=True, verbose_name="Actif")
+    
+    # Relation avec les groupes (roles)
+    groupes = models.ManyToManyField(
+        'auth.Group',
+        blank=True,
+        related_name='menus_accessibles',
+        verbose_name="Groupes autorisés"
+    )
 
     class Meta:
         verbose_name = "Accès Menu"
         verbose_name_plural = "Accès Menus"
+        ordering = ['ordre', 'nom']
+        # Permissions basées sur la liste existante
         permissions = [
-            (code, label) for code, label in MENU_ACCESS_PERMISSIONS
+            ('menu_pat_registre', 'Registre Patrimoine'),
+            ('menu_pat_sas', 'SAS (Zone d\'attente)'),
+            ('menu_pat_fiche_detail', 'Fiches Détaillées'),
+            ('menu_pat_modifier_immo', 'Modifier Immobilisations'),
+            ('menu_pat_mouvements', 'Mouvements Patrimoine'),
+            ('menu_pat_eclatement', 'Éclatement Biens'),
+            ('menu_pat_immatriculation', 'Immatriculation Directe'),
+            ('menu_pat_qr_codes', 'Gestion QR Codes'),
+            ('menu_pat_export_registre', 'Export Registre Excel'),
+            ('menu_pat_import_excel', 'Import Excel Patrimoine'),
+            ('menu_pat_contrats', 'Contrats'),
+            ('menu_pat_contrat_detail', 'Détail Contrats'),
+            ('menu_pat_assigner_equipements', 'Assigner Équipements aux Contrats'),
+            ('menu_pat_interventions', 'Interventions'),
+            ('menu_pat_intervention_detail', 'Détail Interventions'),
+            ('menu_pat_signaler_panne', 'Signaler Panne'),
+            ('menu_pat_creer_intervention', 'Créer Intervention'),
+            ('menu_pat_valider_intervention', 'Valider Intervention'),
+            ('menu_pat_portail_prestataire', 'Portail Prestataire'),
+            ('menu_pat_schema_maintenance', 'Schémas Maintenance'),
+            ('menu_pat_types_equipements', 'Types d\'Équipements'),
+            ('menu_pat_tickets', 'Tickets SAV'),
+            ('menu_pat_mes_tickets', 'Mes Tickets'),
+            ('menu_pat_dispatch', 'Dispatch Interventions'),
+            ('menu_pat_tech', 'Espace Technicien'),
+            ('menu_pat_suivi_ticket', 'Suivi Ticket'),
+            ('menu_pat_bon_sortie_reparation', 'Bon Sortie Réparation'),
+            ('menu_pat_inventaire', 'Inventaire Parc'),
+            ('menu_pat_campagnes_inventaire', 'Campagnes Inventaire'),
+            ('menu_pat_detail_campagne', 'Détail Campagne'),
+            ('menu_pat_reconciliation', 'Réconciliation Inventaire'),
+            ('menu_pat_audit_scan', 'Audit Scan Inventaire'),
+            ('menu_pat_fiche_comptage', 'Fiche Comptage'),
+            ('menu_pat_rebuts', 'Rebuts'),
+            ('menu_pat_pertes', 'Pertes'),
+            ('menu_pat_parametres', 'Paramètres Patrimoine'),
+            ('menu_pat_historique', 'Historique Patrimoine'),
         ]
 
     def __str__(self):
-        return self.get_nom_display()
+        return f"{self.nom} ({self.code})"
+    
+    def est_parent(self):
+        """Vérifie si ce menu a des sous-menus."""
+        return self.sous_menus.exists()
 
 
 # ==========================================================
