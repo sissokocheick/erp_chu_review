@@ -57,6 +57,25 @@ plupart des écrans de stock sont filtrés sur ce magasin.
   réinitialisation par un administrateur), il est **forcé** sur la page `/auth/forcer-mdp/`
   avant tout accès à l'application.
 
+### Mot de passe oublié — self-service (`/auth/mot-de-passe-oublie/`)
+L'utilisateur peut **réinitialiser lui-même** son mot de passe depuis la page de connexion
+(lien « Mot de passe oublié »), **à condition qu'au moins un canal de notification
+(email ou SMS) soit configuré et livrable** (voir §11 Notifications) :
+
+1. **Choix du canal** : l'utilisateur choisit « Par email » (il saisit son email **ou** son
+   identifiant) ou « Par SMS » (il saisit son numéro, formats `07XXXXXXXX` ou `+22507XXXXXXXX`
+   acceptés).
+2. **Canal indisponible** : un canal activé mais non livrable (ex. SMTP incomplet) est
+   **grisé et non proposé** — l'autre canal est présélectionné automatiquement avec le champ
+   correspondant. Le message reste **neutre** : il ne révèle jamais si un compte existe.
+3. **Envoi** : un **jeton à usage unique** (expiration ~24 h) est envoyé sur le canal choisi ;
+   si l'envoi échoue sur ce canal, **l'autre canal est tenté automatiquement** (repli).
+4. **Réinitialisation** : lien `/auth/reinitialisation/<token>/` → nouveau mot de passe
+   (validé par la politique §2).
+5. **Filet de sécurité admin** : si les canaux sont tous cassés, la réinitialisation manuelle
+   depuis la page **Utilisateurs** reste disponible (sinon aucun utilisateur ne pourrait être
+   dépanné). Dès qu'un canal redevient livrable, elle se désactive.
+
 ### Politique de mots de passe (`/auth/securite/mots-de-passe/`)
 - **Mode d'attribution** des mots de passe à la création d'un utilisateur :
   - **Aléatoire** (recommandé) : mot de passe généré, communiqué à l'administrateur.
@@ -87,7 +106,7 @@ s'affiche que si l'utilisateur (ou son rôle) possède la permission corresponda
 | **Achats & catalogue** | Commandes Fourn., Catalogue Articles, Familles d'Articles |
 | **Patrimoine & SAV** | Tickets SAV, Espace Tech, Dispatch Pannes, Historique Global, Registre Matériel, Sas Immatriculation, Contrats, Import Excel, Inventaire Parc, Registre Rebuts, Équipements Perdus, Paramètres |
 | **Rapports & exports** | Exports CSV / PDF, Stats Demandes, Stats Sondages, Stats Satisfaction |
-| **Paramètres** | Administratifs, Logistique, Modèles PDF |
+| **Paramètres** | Administratifs, Logistique, Notifications, Modèles PDF |
 | **Sécurité & accès** | Utilisateurs, Rôles & Permissions, Circuits Validation, Journal & Audit |
 
 ### Comportement responsive & menu déroulant
@@ -160,6 +179,9 @@ BROUILLON → EN_ATTENTE_VALIDATION → VALIDÉE → (livraison) → CLÔTURÉE
 
 ### Bons de Sortie (`/sorties/`)
 - Création d'un **bon de sortie (distribution)** lié à une demande validée (ou en direct).
+- **Traçabilité livraison unifiée** : toute sortie liée à une demande crée automatiquement une
+  `LivraisonPartielle` + accusé de réception (même parcours que le guichet « Traiter ») — le
+  module **Livraisons** (§6) est donc toujours alimenté, quel que soit le chemin utilisé.
 - Colonnes demandée / servie ; gestion des **livraisons partielles** (reste à livrer).
 - **Validation** : selon le circuit SORTIE (§13), le bon passe en attente puis est validé
   par les valideurs désignés ; sans circuit actif, la validation est directe.
@@ -305,6 +327,23 @@ BROUILLON → EN_ATTENTE_VALIDATION → VALIDÉE → (livraison) → CLÔTURÉE
 ### Logistique (`/parametres/logistique/`)
 - Paramètres magasins (nom, code), familles, motifs, circuits.
 
+### Notifications (`/parametres/notifications/`)
+Configuration **globale** (faite par l'administrateur, mono-tenant) des canaux d'envoi —
+**chaque utilisateur reçoit sur les canaux activés**, sans réglage individuel :
+
+| Canal | Réglages | Envoi réel |
+|---|---|---|
+| **Email** | `activer_email`, hôte SMTP, port, TLS, utilisateur/mot de passe SMTP, email expéditeur | Django `send_mail` (Gmail, Outlook, etc.) |
+| **SMS** | `activer_sms`, expéditeur (sender ID), URL d'API + clé (API générique) **ou** Twilio (SID, token, numéro, template) | HTTP POST sur l'API (ex. Twilio) ; **mode test** qui journalise au lieu d'envoyer |
+
+- **Diagnostic de livrabilité** : la page affiche des avertissements si un canal est activé
+  mais non livrable (SMTP incomplet, clé API manquante, compte Twilio en mode **trial**).
+- **Notifications importantes uniquement par SMS** : les SMS ne partent que pour les
+  notifications marquées importantes (`est_importante`) — pas pour chaque événement mineur.
+- **Cloche de notifications** (topbar) : dropdown « Aucune nouvelle notification » ou liste
+  des dernières, marquage lu, suppression, « Tout marquer lu ».
+- **Page Notifications** (`/notifications/`) : liste complète + actions (lues / effacées).
+
 ### Modèles PDF (`/magasin/<id>/modele-pdf/<TYPE>/`)
 Voir §14 — configuration complète des documents par type.
 
@@ -438,8 +477,9 @@ avec la vue `demandes_a_valider`.
   `TicketSAV`, `Intervention`, `CampagneInventairePatrimoine`.
 
 ### Tests
-- **2135 tests** répartis : `stock` (modèles, services, isolation magasin, sécurité, PDF,
-  configuration), `accounts` + `core` (politique de mot de passe, login, permissions),
+- **Plus de 2100 tests** répartis : `stock` (modèles, services, isolation magasin, sécurité,
+  PDF, configuration, recherche sans accents, responsive 375px), `accounts` + `core`
+  (politique de mot de passe, login, reset mot de passe email/SMS, notifications, permissions),
   `patrimoine` (amortissement linéaire/dégressif généré en masse, contrats, permissions).
 - Commandes utiles :
   ```bash
@@ -447,6 +487,13 @@ avec la vue `demandes_a_valider`.
   DJANGO_SETTINGS_MODULE=config.settings_test python manage.py test          # tout
   DJANGO_SETTINGS_MODULE=config.settings_test python manage.py test stock    # stock
   ```
+- **Tests E2E navigateur réel** (`stock/tests/test_e2e_playwright.py`) : 11 parcours
+  Playwright + Chromium sur `LiveServerTestCase` (connexion, erreur de login, sélection
+  magasin persistante, recherche sans accents, création d'article avec validation,
+  pagination, pages stock, cohérence hors-stock/magasin, profil). Prérequis :
+  `pip install playwright && playwright install chromium` ; lancement avec
+  `DJANGO_ALLOW_ASYNC_UNSAFE=1`. La suite est ignorée proprement si Playwright
+  n'est pas installé.
 - Scripts d'audit : `scripts/crawl_all_pages.py` (toutes les pages GET, détection 500),
   `scripts/crawl_search_pagination.py` (recherches + paginations).
 

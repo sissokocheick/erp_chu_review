@@ -288,3 +288,34 @@ class ConfigurationPDFTest(TestCase):
         # BC n'a pas de configuration, donc défauts CHU (code officiel commande)
         self.assertFalse(config['afficher_cachet'])
         self.assertEqual(config['code_document'], 'ENR-BCM/DAF-002')
+
+
+    def test_logo_repli_statique_static_img(self):
+        """Sans logo configuré, le PDF utilise le logo de stock/static/img."""
+        request = self._create_request()
+        _, logo_url = get_pdf_config(self.magasin, 'BS', request)
+
+        # Le logo doit venir du dossier statique (data URI embarquable ou URL statique)
+        self.assertIsNotNone(logo_url)
+        self.assertTrue(
+            logo_url.startswith('data:image') or '/static/img/logo.jpg' in logo_url,
+            f"URL logo inattendue : {logo_url[:80]}"
+        )
+
+    def test_logo_magasin_prioritaire_sur_static(self):
+        """Le logo du magasin prime sur le logo statique par défaut."""
+        # Simuler un logo sur le magasin (fichier minimal valide)
+        from django.core.files.uploadedfile import SimpleUploadedFile
+        self.magasin.logo = SimpleUploadedFile(
+            'logo_mag.png',
+            b'\x89PNG\r\n\x1a\n' + b'0' * 32,
+            content_type='image/png',
+        )
+        self.magasin.save()
+
+        request = self._create_request()
+        _, logo_url = get_pdf_config(self.magasin, 'BS', request)
+
+        # Le logo du magasin prime : le repli statique ne doit pas être utilisé
+        self.assertIsNotNone(logo_url)
+        self.assertNotIn('static/img/logo.jpg', logo_url)

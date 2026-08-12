@@ -311,6 +311,66 @@ class BonService:
                     bon=bon, article=article, quantite=quantite
                 )
 
+        # ── Traçabilité livraison : si le bon est lié à une demande interne,
+        #    on alimente le module Livraisons (LivraisonPartielle + lignes +
+        #    accusé de réception) pour que les deux parcours — guichet
+        #    « Traiter » (LivraisonService.traiter_demande) et création directe
+        #    d'une sortie liée à une demande — restent cohérents.
+        if demande and demande.pk:
+            from django.db.models import Sum
+            from stock.models import (
+                LivraisonPartielle, LivraisonLigne, AccuseReception, LigneDemande,
+            )
+
+            livraison = LivraisonPartielle.objects.create(
+                demande=demande,
+                livre_par=utilisateur,
+                bon_sortie=bon,
+                quantite_livree=0,
+            )
+
+            lignes_demande = {
+                ld.article_id: ld
+                for ld in LigneDemande.objects.filter(demande=demande)
+            }
+
+            total_livre = 0
+            est_partielle = False
+            for ligne_data in lignes:
+                article_id = ligne_data.get('article_id')
+                quantite = ligne_data.get('quantite')
+                if not article_id or not quantite or quantite <= 0:
+                    continue
+                article = articles_map.get(int(article_id))
+                if not article:
+                    continue
+                ld = lignes_demande.get(int(article_id))
+                qte_demandee = ld.quantite_demandee if ld else quantite
+                deja_livre = LivraisonLigne.objects.filter(
+                    livraison__demande=demande, article=article
+                ).exclude(livraison=livraison).aggregate(
+                    total=Sum('quantite_livree')
+                )['total'] or 0
+                reste_avant = max(0, qte_demandee - deja_livre)
+                reste_apres = max(0, reste_avant - quantite)
+                if reste_apres > 0:
+                    est_partielle = True
+                LivraisonLigne.objects.create(
+                    livraison=livraison,
+                    article=article,
+                    quantite_demandee=qte_demandee,
+                    reste_avant_livraison=reste_avant,
+                    quantite_livree=quantite,
+                    reste=reste_apres,
+                )
+                total_livre += quantite
+
+            livraison.quantite_livree = total_livre
+            livraison.est_partielle = est_partielle
+            livraison.save(update_fields=['quantite_livree', 'est_partielle'])
+
+            AccuseReception.objects.create(livraison=livraison, est_signe=False)
+
         # ── Snapshot : créateur = magasinier (case 3) ──
         cls._enregistrer_validation(bon, utilisateur, ordre_case=3, commentaire="Création bon de sortie")
 

@@ -31,3 +31,6 @@ webencodings==0.5.1
 wheel==0.46.3
 whitenoise==6.12.0
 zopfli==0.4.1
+
+# Tests E2E (navigateur réel) — pip install playwright && playwright install chromium
+playwright==1.62.0

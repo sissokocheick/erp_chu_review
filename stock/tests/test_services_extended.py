@@ -13,7 +13,9 @@ from django.utils import timezone
 
 from stock.models import (
     StockItem, BonMouvement, Mouvement, MotifAnnulation, Beneficiaire,
-    CampagneInventaire, LigneInventaire,
+    CampagneInventaire, LigneInventaire, Magasin,
+    DemandeMateriel, LigneDemande, LivraisonPartielle, LivraisonLigne,
+    AccuseReception,
 )
 from stock.services.compteur_service import CompteurDocumentService
 from stock.services.bon_service import BonService
@@ -361,3 +363,115 @@ class IsolationServiceTest(BaseServiceTest):
         req = self._request(self.user)
         qs = BonMouvement.objects.all()
         self.assertEqual(filtrer_par_magasins(qs, req).count(), 0)
+
+
+# ════════════════════════════════════════════════════════════════
+# Traçabilité Livraison — module Livraisons alimenté par les deux
+# parcours de création de sortie (guichet « Traiter » et sortie
+# directe liée à une demande).
+# ════════════════════════════════════════════════════════════════
+class LivraisonTracabiliteTest(TestCase):
+    """Le module Livraisons n'est pas redondant : il trace chaque
+    livraison de demande (LivraisonPartielle) + accusé de réception,
+    et doit être alimenté dès qu'une sortie est liée à une demande."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from django.contrib.auth import get_user_model
+        from core.models import Service
+        from stock.models import (
+            DemandeMateriel, LigneDemande, LivraisonPartielle,
+            AccuseReception, LivraisonLigne,
+        )
+        cls.User = get_user_model()
+
+        cls.magasin = Magasin.objects.create(nom='Magasin Livraison')
+        cls.famille = factories.creer_famille(code='FLIV', intitule='Livraisons')
+        cls.article = factories.creer_article(
+            famille=cls.famille, designation='Article Livraison', reference='LIV-1')
+        cls.article2 = factories.creer_article(
+            famille=cls.famille, designation='Article Livraison 2', reference='LIV-2')
+        factories.creer_stock(cls.article, cls.magasin, quantite=100)
+        factories.creer_stock(cls.article2, cls.magasin, quantite=100)
+
+        cls.user = cls.User.objects.create_superuser(
+            username='admin_livraison', password='admin123')
+        cls.user.profil.doit_changer_mdp = False
+        cls.user.profil.save(update_fields=['doit_changer_mdp'])
+
+        cls.service = Service.objects.create(code='S-LIV', nom='Service Livraison')
+        cls.demande = DemandeMateriel.objects.create(
+            numero_demande='BDM-LIV-001',
+            demandeur=cls.user,
+            service_demandeur=cls.service,
+            magasin_cible=cls.magasin,
+            statut='EN_ATTENTE',
+        )
+        LigneDemande.objects.create(
+            demande=cls.demande, article=cls.article, quantite_demandee=10)
+        LigneDemande.objects.create(
+            demande=cls.demande, article=cls.article2, quantite_demandee=5)
+
+    def test_sortie_avec_demande_cree_livraison_et_accuse(self):
+        """Une sortie liée à une demande alimente le module Livraisons."""
+        bon = BonService.creer_bon_sortie(
+            lignes=[{'article_id': self.article.id, 'quantite': 6},
+                    {'article_id': self.article2.id, 'quantite': 5}],
+            utilisateur=self.user,
+            magasin=self.magasin,
+            demande=self.demande,
+        )
+        self.demande.refresh_from_db()
+        self.assertEqual(self.demande.bon_sortie_lie, bon)
+
+        liv = LivraisonPartielle.objects.get(demande=self.demande, bon_sortie=bon)
+        self.assertEqual(liv.quantite_livree, 11)
+        self.assertTrue(liv.est_partielle)  # 6/10 → reste 4
+        self.assertTrue(AccuseReception.objects.filter(livraison=liv, est_signe=False).exists())
+
+        lignes = LivraisonLigne.objects.filter(livraison=liv)
+        self.assertEqual(lignes.count(), 2)
+        ligne_art1 = lignes.get(article=self.article)
+        self.assertEqual(ligne_art1.quantite_livree, 6)
+        self.assertEqual(ligne_art1.reste, 4)  # 10 - 6
+        ligne_art2 = lignes.get(article=self.article2)
+        self.assertEqual(ligne_art2.reste, 0)  # livraison complète
+
+    def test_sortie_sans_demande_pas_de_livraison(self):
+        """Une sortie directe (hors demande) ne crée pas de livraison."""
+        bon = BonService.creer_bon_sortie(
+            lignes=[{'article_id': self.article.id, 'quantite': 2}],
+            utilisateur=self.user,
+            magasin=self.magasin,
+        )
+        self.assertFalse(LivraisonPartielle.objects.filter(bon_sortie=bon).exists())
+
+    def test_stock_decremente_et_mouvement_cree(self):
+        """La sortie liée à une demande décrémente le stock et journalise."""
+        bon = BonService.creer_bon_sortie(
+            lignes=[{'article_id': self.article.id, 'quantite': 3}],
+            utilisateur=self.user,
+            magasin=self.magasin,
+            demande=self.demande,
+        )
+        stock = StockItem.objects.get(article=self.article, magasin=self.magasin)
+        self.assertEqual(stock.quantite_physique, 97)
+        self.assertTrue(Mouvement.objects.filter(
+            reference_document=bon.numero_bon, type_mouvement='SORTIE').exists())
+
+    def test_liste_livraisons_affiche_la_livraison(self):
+        """La page Livraisons liste bien les livraisons de demandes."""
+        BonService.creer_bon_sortie(
+            lignes=[{'article_id': self.article.id, 'quantite': 4}],
+            utilisateur=self.user,
+            magasin=self.magasin,
+            demande=self.demande,
+        )
+        session = self.client.session
+        session['magasin_actif_id'] = str(self.magasin.id)
+        session.save()
+        self.client.force_login(self.user)
+        resp = self.client.get('/livraisons/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'BDM-LIV-001')
+        self.assertContains(resp, 'Service Livraison')
