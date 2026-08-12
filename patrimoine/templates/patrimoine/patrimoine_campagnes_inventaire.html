@@ -125,17 +125,17 @@
                         {% endif %}
                     </td>
                 </tr>
-                {% empty %}
-                <tr class="empty-pm">
-                    <td colspan="5" style="text-align: center; padding: 50px 20px; color: #94a3b8;">
-                        <i class="fas fa-box-open fa-3x" style="margin-bottom: 15px; opacity: 0.5;"></i><br>
-                        Aucune campagne d'inventaire n'a encore été créée.
-                    </td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    
+    {% if not campagnes %}
+    <div class="empty-pm" style="text-align: center; padding: 50px 20px; color: #94a3b8;">
+        <i class="fas fa-box-open fa-3x" style="margin-bottom: 15px; opacity: 0.5;"></i><br>
+        Aucune campagne d'inventaire n'a encore été créée.
+    </div>
+    {% endif %}
     
     <div id="pag-tbody-campagnes"></div>
 </div>

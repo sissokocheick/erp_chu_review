@@ -1,5 +1,6 @@
 <!-- templates/accounts/login.html -->
 <!DOCTYPE html>
+{% load static %}
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -7,7 +8,7 @@
     <title>NexusERP - Connexion Sécurisée</title>
 
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
 
     <style>
         :root {
@@ -532,6 +533,30 @@
             to { transform: rotate(360deg); }
         }
 
+        /* Mot de passe oublié */
+        .forgot-row {
+            text-align: center;
+            margin-top: 1.25rem;
+        }
+
+        .forgot-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            color: var(--accent);
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-decoration: none;
+            padding: 0.4rem 0.75rem;
+            border-radius: 8px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .forgot-link:hover {
+            background: var(--accent-light);
+            color: var(--accent-hover);
+        }
+
         /* Footer info session */
         .session-info {
             text-align: center;
@@ -685,9 +710,17 @@
     </button>
 </form>
 
+                {% if reinit_mdp_active %}
+                <div class="forgot-row">
+                    <a href="{% url 'accounts:mot_de_passe_oublie' %}" class="forgot-link">
+                        <i class="fas fa-key"></i> Mot de passe oublié ?
+                    </a>
+                </div>
+                {% endif %}
+
                 <div class="session-info">
                     <i class="fas fa-shield-halved"></i>
-                    <span>Session sécurisée &bull; 15 minutes d'inactivité</span>
+                    <span>Session sécurisée &bull; 20 minutes d'inactivité</span>
                 </div>
             </div>
         </div>

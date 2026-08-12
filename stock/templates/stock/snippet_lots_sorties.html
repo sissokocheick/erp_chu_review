@@ -99,7 +99,7 @@
     var headers = { 'X-Requested-With': 'XMLHttpRequest' };
     if (csrfEl) headers['X-CSRFToken'] = csrfEl.value;
 
-    fetch('/stock/api/lots/' + articleId + '/' + MAGASIN_ID + '/', { headers: headers })
+    fetch('{% url "api_lots_disponibles" 0 0 %}'.replace('/0/0/', '/' + articleId + '/' + MAGASIN_ID + '/'), { headers: headers })
       .then(function(r) {
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();

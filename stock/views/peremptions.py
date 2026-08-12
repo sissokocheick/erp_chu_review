@@ -26,11 +26,10 @@ from ..models import BonMouvement
 logger = logging.getLogger(__name__)
 
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_peremptions')
+@verifier_permission('accounts.menu_peremptions', 'accounts.menu_lots')
 @magasin_requis
 def controle_peremptions(request):
     """Vue unique : Suivi lots + Destructions + Inventaire lots (3 onglets)."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_id = request.session.get('magasin_actif_id')
     aujourdhui = timezone.now().date()
     onglet = request.GET.get('onglet', 'suivi')
@@ -153,7 +152,7 @@ def controle_peremptions(request):
             messages.error(request, "⛔ Aucun magasin actif sélectionné.")
             return redirect('etat_stock')
 
-        magasins_autorises = get_magasins_autorises(request.user)
+        magasins_autorises = get_magasins_autorises(request)
         if not magasins_autorises.filter(id=magasin_id).exists():
             messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
             return redirect('etat_stock')
@@ -219,11 +218,10 @@ def controle_peremptions(request):
     return render(request, 'stock/controle_peremptions.html', context)
 
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_peremptions')
+@verifier_permission('accounts.menu_peremptions', 'accounts.menu_lots')
 @transaction.atomic
 @catch_errors(redirect_url='controle_peremptions')
 def retirer_lot_perime(request, mouvement_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     if request.method != 'POST':
         return redirect('controle_peremptions')
 

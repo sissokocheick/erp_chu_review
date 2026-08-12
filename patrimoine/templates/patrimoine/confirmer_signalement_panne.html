@@ -1,10 +1,11 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alerte envoyée</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #28a745; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; text-align: center; }
         .icon { font-size: 80px; margin-bottom: 20px; animation: pop 0.5s ease; }

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import logging
 from decimal import Decimal
 
@@ -290,6 +291,9 @@ class LivraisonService:
             magasin=entree.magasin,
             service_demandeur=service_destruction,
             cree_par=user,
+            # Le mouvement SORTIE est exécuté immédiatement ci-dessous :
+            # le bon doit être VALIDE (pas de double exécution à la validation)
+            statut_validation='VALIDE',
             commentaire=f"Destruction automatique du lot {entree.numero_lot or 'N/A'}"
         )
 

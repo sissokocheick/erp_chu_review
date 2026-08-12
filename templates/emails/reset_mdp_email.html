@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Réinitialisation de votre mot de passe</title>
+<style>
+  body { margin: 0; padding: 0; background: #f4f6f9; font-family: Arial, Helvetica, sans-serif; color: #2d3748; }
+  .wrap { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .head { background: linear-gradient(135deg, #1c5b96, #0d47a1); color: #fff; padding: 22px 28px; }
+  .head h2 { margin: 0; font-size: 18px; }
+  .body { padding: 26px 28px; font-size: 14px; line-height: 1.6; }
+  .msg { margin: 16px 0; padding: 14px 18px; background: #f8fafc; border-left: 4px solid #1c5b96; border-radius: 6px; }
+  .btn {
+    display: inline-block; margin: 20px 0 6px; padding: 13px 28px;
+    background: linear-gradient(135deg, #1c5b96, #0d47a1); color: #ffffff !important;
+    text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 14px;
+  }
+  .code { font-size: 24px; font-weight: 800; letter-spacing: 4px; color: #1c5b96; font-family: 'Courier New', monospace; }
+  .warn { margin-top: 18px; padding: 12px 16px; background: #fff8e1; border-left: 4px solid #ffc107; border-radius: 6px; font-size: 12px; color: #856404; }
+  .foot { padding: 16px 28px; border-top: 1px solid #eef2f7; font-size: 12px; color: #8492a6; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <h2><span style="font-size:16px;">&#128274;</span> Réinitialisation de votre mot de passe</h2>
+      <div style="margin-top:8px; opacity:.9; font-size:12px;">{{ utilisateur.get_full_name|default:utilisateur.username }}</div>
+    </div>
+    <div class="body">
+      <p>Bonjour <strong>{{ utilisateur.get_full_name|default:utilisateur.username }}</strong>,</p>
+      <p>Vous avez demandé la réinitialisation de votre mot de passe <strong>NexusERP</strong>.</p>
+
+      <div class="msg">
+        <p style="margin:0 0 6px;">Cliquez sur le bouton ci-dessous pour choisir votre nouveau mot de passe :</p>
+        <a href="{{ lien }}" class="btn">Réinitialiser mon mot de passe</a>
+        <p style="margin:10px 0 0; font-size:12px; color:#8492a6;">Ce lien est valable {{ duree }} minutes et ne peut être utilisé qu'une seule fois.</p>
+      </div>
+
+      {% if code %}
+      <p>Vous avez aussi reçu un <strong>code par SMS</strong>. Si le lien ci-dessus ne fonctionne pas, utilisez ce code sur la page de réinitialisation :</p>
+      <p class="code">{{ code }}</p>
+      {% endif %}
+
+      <div class="warn">
+        <strong>⚠️ Si vous n'êtes pas à l'origine de cette demande</strong>, ignorez cet email. Votre mot de passe actuel reste inchangé.
+      </div>
+    </div>
+    <div class="foot">
+      Document généré par NexusERP – Tous droits réservés.
+    </div>
+  </div>
+</body>
+</html>

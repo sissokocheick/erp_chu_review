@@ -50,7 +50,6 @@ User = get_user_model()
 @magasin_requis
 def liste_livraisons(request):
     """Vue liste des livraisons (GET uniquement)."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_id = request.session.get('magasin_actif_id')
 
     qs = LivraisonPartielle.objects.select_related(
@@ -62,7 +61,7 @@ def liste_livraisons(request):
     if magasin_id:
         qs = qs.filter(demande__magasin_cible_id=magasin_id)
     else:
-        magasins_autorises_ids = get_magasins_autorises(request.user).values_list('id', flat=True)
+        magasins_autorises_ids = get_magasins_autorises(request).values_list('id', flat=True)
         qs = qs.filter(demande__magasin_cible_id__in=magasins_autorises_ids)
 
     # ── FILTRES ──
@@ -98,7 +97,7 @@ def liste_livraisons(request):
         'total_livraisons': total_livraisons,
         'total_signees': total_signees,
         'total_attente': total_livraisons - total_signees,
-        'magasins': get_magasins_autorises(request.user),
+        'magasins': get_magasins_autorises(request),
         'per_page': per_page,
         'q_livraison': q,
         'statut_filtre': statut,
@@ -109,7 +108,6 @@ def liste_livraisons(request):
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_livraisons')
 def detail_livraisons_demande(request, demande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
         DemandeMateriel.objects.select_related(
             'service_demandeur', 'demandeur', 'magasin_cible'
@@ -160,7 +158,7 @@ def detail_livraisons_demande(request, demande_id):
         'recap_articles': recap_articles,
         'est_magasinier': est_magasinier,
         'est_demandeur': est_demandeur or est_du_service,
-        'peut_livrer': est_magasinier and demande.reste > 0 and demande.statut not in ('RECEPTIONNE', 'CLOTUREE', 'REFUSEE'),
+        'peut_livrer': est_magasinier and demande.reste > 0 and demande.statut not in ('RECEPTIONNE', 'CLOTUREE', 'REFUSEE', 'ANNULEE'),
         'peut_cloturer': est_magasinier and demande.statut in ('LIVRAISON_PARTIELLE', 'EN_COURS', 'EN_ATTENTE'),
         'peut_bon_global': demande.livraisons.exists(),
         'motifs_annulation': motifs_annulation,

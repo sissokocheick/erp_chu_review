@@ -50,7 +50,11 @@ def catch_errors(logger_ref=None, redirect_url='/', msg_generic="❌ Une erreur 
                     messages.error(request, f"⚠️ {str(e)}")
                 except Exception:
                     pass
-                return redirect(redirect_url)
+                # ✅ UX : en cas d'erreur de validation, rester sur la page d'origine
+                # (le referer) plutôt que de renvoyer à l'accueil, qui fait perdre
+                # la saisie. La conservation complète des données (form_data)
+                # reste à faire vue par vue (voir UX_POLICY §2).
+                return redirect(_referer_sur(request, redirect_url))
             except Exception as e:
                 log = logger_ref or logger
                 log.exception(f"[{view_func.__name__}] {e}")
@@ -61,3 +65,17 @@ def catch_errors(logger_ref=None, redirect_url='/', msg_generic="❌ Une erreur 
                 return redirect(redirect_url)
         return _wrapped_view
     return decorator
+
+
+def _referer_sur(request, fallback):
+    """Retourne le referer s'il est interne (même hôte), sinon le fallback."""
+    referer = request.META.get('HTTP_REFERER', '')
+    if referer:
+        try:
+            from urllib.parse import urlparse
+            hote = request.get_host()
+            if urlparse(referer).netloc == hote:
+                return referer
+        except Exception:
+            pass
+    return fallback

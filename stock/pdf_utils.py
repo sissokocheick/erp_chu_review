@@ -39,53 +39,23 @@ def get_pdf_config(magasin, type_doc_code, request):
     from accounts.models import ConfigDocument
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ÉTAPE 1 : Valeurs par défaut
+    # Cartographie code court -> type legacy attendu par get_config_complete
     # ═══════════════════════════════════════════════════════════════════════
-    pdf_config = {
-        'afficher_logo': True,
-        'afficher_cachet': False,
-        'afficher_cc': False,
-        'afficher_ifu': False,
-        'afficher_rccm': False,
-        'afficher_telephone': True,
-        'afficher_signatures': True,
-        'code_document': type_doc_code,
-        'date_creation_doc': '',
-        'date_revision_doc': '',
-        'version_doc': '1.0',
-        'ps2_label': '',
-        'couleur_principale': '#1c5b96',
-        'pied_de_page': '',
-        'texte_institutionnel': '',
-        'logo_url': None,
+    CODE_TO_LEGACY = {
+        'BS': 'BON_SORTIE',
+        'BE': 'BON_ENTREE',
+        'BR': 'BON_RETOUR',
+        'BSHS': 'BON_HS',
+        'BC': 'COMMANDE',
+        'BDM': 'DEMANDE',
     }
+    type_doc_legacy = CODE_TO_LEGACY.get(type_doc_code, type_doc_code)
 
     logo_url = None
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ÉTAPE 2 : Configuration globale par type de document (ConfigDocument)
-    # ═══════════════════════════════════════════════════════════════════════
-    config_globale = ConfigDocument.objects.filter(type_doc=type_doc_code).first()
-    
-    if config_globale:
-        # Appliquer la configuration globale comme base
-        pdf_config.update({
-            'afficher_logo': config_globale.afficher_logo,
-            'afficher_cachet': config_globale.afficher_cachet,
-            'afficher_cc': config_globale.afficher_cc,
-            'afficher_ifu': config_globale.afficher_ifu,
-            'afficher_rccm': config_globale.afficher_rccm,
-            'afficher_telephone': config_globale.afficher_telephone,
-            'afficher_signatures': config_globale.afficher_signatures,
-            'code_document': config_globale.code_document or type_doc_code,
-            'date_creation_doc': config_globale.date_creation_doc or '',
-            'date_revision_doc': config_globale.date_revision_doc or '',
-            'version_doc': config_globale.version_doc or '1.0',
-            'ps2_label': config_globale.ps2_label or '',
-        })
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # ÉTAPE 3 : Configuration spécifique au magasin (ModeleDocumentMagasin)
+    # ÉTAPE 1 : Configuration riche par défaut + config magasin
+    # (structure cartouche / tableau / signatures / sondage / metadonnees)
     # ═══════════════════════════════════════════════════════════════════════
     modele = None
     if magasin:
@@ -95,65 +65,150 @@ def get_pdf_config(magasin, type_doc_code, request):
             est_actif=True
         ).first()
 
-    if modele and modele.config:
-        config = modele.config
-        # La configuration magasin écrase la configuration globale
-        pdf_config.update({
-            'afficher_logo': config.get('afficher_logo', pdf_config['afficher_logo']),
-            'afficher_cachet': config.get('afficher_cachet', pdf_config['afficher_cachet']),
-            'afficher_cc': config.get('afficher_cc', pdf_config['afficher_cc']),
-            'afficher_ifu': config.get('afficher_ifu', pdf_config['afficher_ifu']),
-            'afficher_rccm': config.get('afficher_rccm', pdf_config['afficher_rccm']),
-            'afficher_telephone': config.get('afficher_telephone', pdf_config['afficher_telephone']),
-            'afficher_signatures': config.get('afficher_signatures', pdf_config['afficher_signatures']),
-            'code_document': config.get('code_document', pdf_config['code_document']) or pdf_config['code_document'],
-            'date_creation_doc': config.get('date_creation_doc', pdf_config['date_creation_doc']) or pdf_config['date_creation_doc'],
-            'date_revision_doc': config.get('date_revision_doc', pdf_config['date_revision_doc']) or pdf_config['date_revision_doc'],
-            'version_doc': config.get('version_doc', pdf_config['version_doc']) or pdf_config['version_doc'],
-            'ps2_label': config.get('ps2_label', pdf_config['ps2_label']) or pdf_config['ps2_label'],
-            'couleur_principale': config.get('couleur_principale', pdf_config['couleur_principale']) or pdf_config['couleur_principale'],
-            'pied_de_page': config.get('pied_de_page', pdf_config['pied_de_page']) or pdf_config['pied_de_page'],
-            'texte_institutionnel': config.get('texte_institutionnel', pdf_config['texte_institutionnel']) or pdf_config['texte_institutionnel'],
-        })
-        if config.get('logo'):
-            try:
-                logo_url = _make_absolute_url(request, config['logo'])
-            except Exception as e:
-                logger.warning("[PDF] Erreur lecture logo config magasin: %s", e)
+    if modele:
+        pdf_config = modele.get_config_complete(type_doc_legacy)
+    else:
+        # Pas de modèle magasin : défauts riches calculés à partir de ConfigDocument
+        pdf_config = ModeleDocumentMagasin._default_config_structured(
+            ModeleDocumentMagasin._freeze_dict(_config_document_flat(type_doc_code)),
+            type_doc_legacy,
+        )
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ÉTAPE 4 : Fallback logo magasin
+    # ÉTAPE 2 : Logo (config magasin -> magasin -> statique)
     # ═══════════════════════════════════════════════════════════════════════
+    if modele and modele.config and modele.config.get('logo'):
+        try:
+            logo_url = _make_absolute_url(request, modele.config['logo'])
+        except Exception as e:
+            logger.warning("[PDF] Erreur lecture logo config magasin: %s", e)
+
     if not logo_url and magasin and getattr(magasin, 'logo', None):
         try:
             logo_url = _make_absolute_url(request, magasin.logo.url)
         except Exception as e:
             logger.warning("[PDF] Erreur lecture logo magasin: %s", e)
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # ÉTAPE 5 : Fallback logo statique
-    # ═══════════════════════════════════════════════════════════════════════
+    if not logo_url:
+        logo_url = _static_logo_data_uri()
     if not logo_url:
         try:
-            logo_url = request.build_absolute_uri('/static/img/logo.png')
+            logo_url = request.build_absolute_uri('/static/img/logo.jpg')
         except Exception:
             logo_url = None
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ÉTAPE 6 : Pied de page fallback sur magasin
+    # ÉTAPE 3 : Alias « plats » pour compatibilité avec les templates
+    # qui accèdent encore pdf_config.couleur_principale, pdf_config.ps2_label…
     # ═══════════════════════════════════════════════════════════════════════
-    if not pdf_config['pied_de_page'] and magasin:
-        pdf_config['pied_de_page'] = getattr(magasin, 'pied_de_page', '') or ''
+    metadonnees = pdf_config.get('metadonnees') or {}
+    pied = pdf_config.get('pied_de_page') or {}
+    if isinstance(pied, dict):
+        pied_texte = pied.get('texte_personnalise') or ''
+    else:
+        pied_texte = pied or ''
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # ÉTAPE 7 : Texte institutionnel par défaut
-    # ═══════════════════════════════════════════════════════════════════════
-    if not pdf_config['texte_institutionnel']:
-        pdf_config['texte_institutionnel'] = (
-            "Direction des Affaires Financières / Sous-Direction de la Logistique"
-        )
+    pdf_config['couleur_principale'] = pdf_config.get('couleur_principale') or '#1c5b96'
+    pdf_config['code_document'] = metadonnees.get('code_document') or type_doc_code
+    pdf_config['date_creation_doc'] = metadonnees.get('date_creation_doc') or ''
+    pdf_config['date_revision_doc'] = metadonnees.get('date_revision_doc') or ''
+    pdf_config['version_doc'] = metadonnees.get('version_doc') or '1.0'
+    pdf_config['ps2_label'] = metadonnees.get('ps2_label') or ''
+    pdf_config['texte_institutionnel'] = (
+        pdf_config.get('texte_institutionnel')
+        or (pied_texte or '')
+        or "Direction des Affaires Financières / Sous-Direction de la Logistique"
+    )
+
+    # Alias plats pour compatibilité (accès pdf_config.afficher_*)
+    cartouche = pdf_config.get('cartouche') or {}
+    pdf_config['afficher_logo'] = cartouche.get('afficher_logo', True)
+    pdf_config['afficher_cc'] = cartouche.get('afficher_cc', True)
+    pdf_config['afficher_ifu'] = cartouche.get('afficher_ifu', True)
+    pdf_config['afficher_rccm'] = cartouche.get('afficher_rccm', True)
+    pdf_config['afficher_telephone'] = cartouche.get('afficher_telephone', True)
+    pdf_config['afficher_signatures'] = pdf_config.get('afficher_signatures', True)
+    config_globale = ConfigDocument.objects.filter(type_doc=type_doc_code).first()
+    pdf_config['afficher_cachet'] = (
+        pdf_config.get('afficher_cachet')
+        if pdf_config.get('afficher_cachet') is not None
+        else (config_globale.afficher_cachet if config_globale else False)
+    )
+
+    # Pied de page : s'assurer qu'il s'agit d'un dict (texte + options d'affichage)
+    if not isinstance(pdf_config.get('pied_de_page'), dict):
+        pdf_config['pied_de_page'] = {
+            'texte_personnalise': pied_texte,
+            'afficher_numero_page': True,
+            'afficher_date_generation': True,
+            'afficher_trait_couleur': True,
+            'trait_couleur': '#17a2b8',
+        }
+
+    # Fallback pied de page : ConfigurationHopital (identité CHU) -> magasin -> défaut
+    if not pdf_config['pied_de_page'].get('texte_personnalise'):
+        pdf_config['pied_de_page']['texte_personnalise'] = _pied_de_page_par_defaut()
+
+    pdf_config['logo_url'] = logo_url
 
     return pdf_config, logo_url
+
+
+def _pied_de_page_par_defaut():
+    """Compose le pied de page officiel du CHU à partir de ConfigurationHopital."""
+    try:
+        from core.models import ConfigurationHopital
+        cfg = ConfigurationHopital.get_instance()
+    except Exception:
+        cfg = None
+
+    if cfg:
+        adresse = (cfg.adresse or '').strip()
+        telephone = (cfg.telephone or '').strip()
+        cc = (cfg.cc or '').strip()
+        email = (cfg.email_contact or '').strip()
+        identite = (cfg.nom or 'ANGRE BESSIKOI').strip()
+        direction = (cfg.direction_label or 'Direction des Affaires Financières').strip()
+        sous_direction = (cfg.sous_direction_label or 'Sous-Direction de la Logistique').strip()
+
+        infos = []
+        if adresse:
+            infos.append(f"Adresse : {adresse}")
+        if telephone:
+            infos.append(f"Tél : {telephone}")
+        if cc:
+            infos.append(f"CC N° : {cc}")
+        if email:
+            infos.append(email)
+
+        ligne1 = identite + (f" * {' * '.join(infos)}" if infos else '')
+        ligne2 = f"{direction} * {sous_direction}"
+        # Séparateurs \\A : sauts de ligne CSS dans le pied de page (white-space: pre-line)
+        return f"{ligne1} \\A {ligne2} \\A Postes : 110 et 200"
+
+    return "Direction des Affaires Financières / Sous-Direction de la Logistique"
+
+
+def _config_document_flat(type_doc_code):
+    """Renvoie les valeurs ConfigDocument (globales) pour un type de document."""
+    from accounts.models import ConfigDocument
+    config = ConfigDocument.objects.filter(type_doc=type_doc_code).first()
+    if not config:
+        return {}
+    return {
+        'afficher_logo': config.afficher_logo,
+        'afficher_cachet': config.afficher_cachet,
+        'afficher_cc': config.afficher_cc,
+        'afficher_ifu': config.afficher_ifu,
+        'afficher_rccm': config.afficher_rccm,
+        'afficher_telephone': config.afficher_telephone,
+        'afficher_signatures': config.afficher_signatures,
+        'code_document': config.code_document or '',
+        'date_creation_doc': config.date_creation_doc or '',
+        'date_revision_doc': config.date_revision_doc or '',
+        'version_doc': config.version_doc or '',
+        'ps2_label': config.ps2_label or '',
+    }
 
 
 def _make_absolute_url(request, url):
@@ -163,6 +218,29 @@ def _make_absolute_url(request, url):
     if str(url).startswith('http'):
         return str(url)
     return request.build_absolute_uri(str(url))
+
+
+def _static_logo_data_uri():
+    """
+    Retourne le logo statique par défaut (stock/static/img/logo.jpg)
+    encodé en data URI base64 — toujours embarquable par WeasyPrint,
+    sans dépendre d'un serveur statique joignable.
+    """
+    import base64
+    import mimetypes
+    import os
+    try:
+        from django.contrib.staticfiles import finders
+        logo_path = finders.find('img/logo.jpg')
+        if not logo_path or not os.path.isfile(logo_path):
+            return None
+        mime = mimetypes.guess_type(logo_path)[0] or 'image/jpeg'
+        with open(logo_path, 'rb') as f:
+            data = base64.b64encode(f.read()).decode('ascii')
+        return f"data:{mime};base64,{data}"
+    except Exception as e:
+        logger.warning("[PDF] Logo statique non encodable : %s", e)
+        return None
 
 
 # ═════════════════════════════════════════════════════════════════════════════
@@ -226,74 +304,81 @@ def paginate_lignes(lignes_data: List[Dict], pdf_config: Dict, lignes_par_page: 
 # SIGNATURES
 # ═════════════════════════════════════════════════════════════════════════════
 
-def build_signature_cases(bon, pdf_config, request):
+# Rôles de signataires connus et utilisateur associé sur un document.
+def _role_utilisateur(doc, role):
+    """Retourne l'utilisateur associé à un rôle de signature pour un document.
+    Supporte BonMouvement (cree_par) et DemandeMateriel (demandeur).
     """
-    Construit les cases de signature pour un bon de mouvement.
-    Retourne une liste de dicts avec les infos de chaque signataire.
+    cree_par = getattr(doc, 'cree_par', None)
+    demandeur = getattr(doc, 'demandeur', None)
+    valide_par = getattr(doc, 'valide_par', None)
+    if role in ('demandeur', 'magasinier'):
+        return cree_par or demandeur
+    if role in ('responsable', 'sous_directeur', 'chef_service', 'receptionnaire'):
+        return valide_par or cree_par or demandeur
+    # economat / communication : aucune signature individuelle (cachet du service)
+    return None
+
+
+def _build_cases_depuis_config(pdf_config, bon=None, request=None):
+    """
+    Construit les cases de signature à partir de la configuration du document
+    (pdf_config['signatures'] : labels, visibilité, position, rôle).
+    Les noms/dates sont renseignés depuis le document (si fourni).
     """
     cases = []
-    afficher = pdf_config.get('afficher_signatures', True)
-    if not afficher:
+    if not pdf_config.get('afficher_signatures', True):
         return cases
-
-    # Magasinier / Créateur
-    if bon.cree_par:
+    signatures = pdf_config.get('signatures') or []
+    for sig in signatures:
+        if not sig.get('visible', True):
+            continue
+        role = sig.get('role', '')
+        user = _role_utilisateur(bon, role) if bon is not None else None
+        user_name = ''
+        fonction = sig.get('role', '')
+        date = None
+        signature_path = None
+        if user is not None:
+            user_name = user.get_full_name() or user.username
+            profil = getattr(user, 'profil', None)
+            if profil is not None and getattr(profil, 'fonction', None):
+                fonction = profil.fonction
+            valide_par = getattr(bon, 'valide_par', None)
+            date = (getattr(bon, 'date_validation', None)
+                    if user == valide_par
+                    else getattr(bon, 'date_creation', None) or getattr(bon, 'date_demande', None))
+            signature_path = _get_signature_url(request, user) if request is not None else None
         cases.append({
-            'label': 'Magasinier',
-            'sous_label': 'Service Logistique',
-            'user_name': bon.cree_par.get_full_name() or bon.cree_par.username,
-            'fonction': '',
-            'date': bon.date_creation,
-            'signature_path': _get_signature_url(request, bon.cree_par),
-            'position': 'left',
-            'style': 'ligne_pointillee',
+            'label': sig.get('label', ''),
+            'sous_label': sig.get('role', ''),
+            'role': role,
+            'user_name': user_name,
+            'fonction': fonction if user is not None else '',
+            'date': date,
+            'has_signature': user is not None and signature_path is not None,
+            'signature_path': signature_path,
+            'position': sig.get('position', 'left'),
+            'style': sig.get('style', 'ligne_pointillee'),
+            'default_text': '',
         })
-
-    # Validateur
-    if bon.valide_par:
-        cases.append({
-            'label': 'Vu pour exécution',
-            'sous_label': 'Responsable',
-            'user_name': bon.valide_par.get_full_name() or bon.valide_par.username,
-            'fonction': '',
-            'date': bon.date_validation,
-            'signature_path': _get_signature_url(request, bon.valide_par),
-            'position': 'right',
-            'style': 'ligne_pointillee',
-        })
-
     return cases
+
+
+def build_signature_cases(bon, pdf_config, request):
+    """
+    Construit les cases de signature pour un bon de mouvement,
+    à partir de la configuration du document (labels configurables).
+    """
+    return _build_cases_depuis_config(pdf_config, bon=bon, request=request)
 
 
 def build_signatures_config(pdf_config, request):
     """
-    Construit la configuration des signatures génériques (pour documents sans bon).
+    Construit la configuration des signatures génériques (pour documents sans bon),
+    à partir de la configuration du document.
     """
-    configs = []
-    if not pdf_config.get('afficher_signatures', True):
-        return configs
-
-    configs.append({
-        'label': 'Magasinier',
-        'role': 'Service Logistique',
-        'user_name': '',
-        'sous_label': '',
-        'date': None,
-        'signature_path': None,
-        'position': 'left',
-        'style': 'ligne_pointillee',
-    })
-    configs.append({
-        'label': 'Responsable',
-        'role': 'Direction',
-        'user_name': '',
-        'sous_label': '',
-        'date': None,
-        'signature_path': None,
-        'position': 'right',
-        'style': 'ligne_pointillee',
-    })
-    return configs
+    return _build_cases_depuis_config(pdf_config, bon=None, request=request)
 
 
 def _get_signature_url(request, user):

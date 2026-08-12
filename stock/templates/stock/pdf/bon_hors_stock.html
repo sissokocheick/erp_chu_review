@@ -9,7 +9,7 @@
     size: A4;
     margin: 10mm 10mm 18mm 10mm;
     @bottom-center {
-        content: "{{ pdf_config.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique'|css_string }}";
         font-size: 7pt;
         color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
         font-weight: bold;
@@ -201,69 +201,7 @@ img { max-width: 100%; height: auto; }
   </div>
 
   <div class="bloc-bas">
-    <div style="width:100%; font-size:8pt; margin-bottom:2mm; display:flex; justify-content:space-between; align-items:flex-start;">
-
-      <div style="width:30%; text-align:center;">
-        <div style="font-weight:bold; text-transform:uppercase; font-size:9pt;">Sous-Directeur de la Logistique</div>
-        <div style="height: 15mm;"></div>
-        {% if signatures_config %}
-          {% for sig in signatures_config %}
-            {% if sig.label == "Sous-Directeur Logistique" %}
-              {% if sig.user_name %}
-                <div style="font-size:8pt; font-weight:bold;">{{ sig.user_name }}</div>
-                {% if sig.sous_label %}<div style="font-size:7pt; color:#333; font-style:italic;">{{ sig.sous_label }}</div>{% endif %}
-                {% if sig.date %}<div style="font-size:7pt; color:#050505;">{{ sig.date|date:"d/m/Y" }}</div>{% endif %}
-              {% else %}
-                <div style="font-size:7pt; color:#555;">................................................</div>
-              {% endif %}
-            {% endif %}
-          {% endfor %}
-        {% else %}
-          <div style="font-size:7pt; color:#555;">................................................</div>
-        {% endif %}
-      </div>
-
-      <div style="width:30%; text-align:center;">
-        <div style="font-weight:bold; text-transform:uppercase; font-size:9pt;">Service Économique</div>
-        <div style="height: 15mm;"></div>
-        {% if signatures_config %}
-          {% for sig in signatures_config %}
-            {% if sig.label == "Service Economique" %}
-              {% if sig.user_name %}
-                <div style="font-size:8pt; font-weight:bold;">{{ sig.user_name }}</div>
-                {% if sig.sous_label %}<div style="font-size:7pt; color:#333; font-style:italic;">{{ sig.sous_label }}</div>{% endif %}
-                {% if sig.date %}<div style="font-size:7pt; color:#050505;">{{ sig.date|date:"d/m/Y" }}</div>{% endif %}
-              {% else %}
-                <div style="font-size:7pt; color:#555;">................................................</div>
-              {% endif %}
-            {% endif %}
-          {% endfor %}
-        {% else %}
-          <div style="font-size:7pt; color:#555;">................................................</div>
-        {% endif %}
-      </div>
-
-      <div style="width:30%; text-align:center;">
-        <div style="font-weight:bold; text-transform:uppercase; font-size:9pt;">Service Utilisateur</div>
-        <div style="height: 15mm;"></div>
-        {% if signatures_config %}
-          {% for sig in signatures_config %}
-            {% if sig.label == "Service Utilisateur" %}
-              {% if sig.user_name %}
-                <div style="font-size:8pt; font-weight:bold;">{{ sig.user_name }}</div>
-                {% if sig.sous_label %}<div style="font-size:7pt; color:#333; font-style:italic;">{{ sig.sous_label }}</div>{% endif %}
-                {% if sig.date %}<div style="font-size:7pt; color:#050505;">{{ sig.date|date:"d/m/Y" }}</div>{% endif %}
-              {% else %}
-                <div style="font-size:7pt; color:#555;">................................................</div>
-              {% endif %}
-            {% endif %}
-          {% endfor %}
-        {% else %}
-          <div style="font-size:7pt; color:#555;">................................................</div>
-        {% endif %}
-      </div>
-
-    </div>
+    {% include "stock/pdf/_signatures.html" %}
   </div>
 </div>
 

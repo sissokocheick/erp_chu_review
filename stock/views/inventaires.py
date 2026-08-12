@@ -43,7 +43,6 @@ def liste_inventaires(request):
 
 def _afficher_inventaires(request):
     """Branche GET : filtres, pagination, contexte."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_actif_id = request.session.get('magasin_actif_id')
 
     circuit = CircuitValidation.objects.filter(
@@ -89,8 +88,7 @@ def _afficher_inventaires(request):
 
 def _creer_inventaire(request):
     """Branche POST : création campagne via service, redirection."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
     titre = request.POST.get('titre')
     magasin_id = request.POST.get('magasin_id')
     if magasin_id and not magasins_autorises.filter(id=magasin_id).exists():
@@ -136,7 +134,6 @@ def _creer_inventaire(request):
 @magasin_requis
 @catch_errors(redirect_url='liste_inventaires')
 def saisir_inventaire(request, campagne_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     campagne = get_object_or_404(
         CampagneInventaire, id=campagne_id)
 
@@ -279,7 +276,6 @@ def api_sauvegarder_ligne_inventaire(request, campagne_id):
     Sauvegarde la quantité physique d'une seule ligne.
     Appelée en AJAX à chaque blur/change d'input.
     """
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     campagne = get_object_or_404(
         CampagneInventaire, id=campagne_id)
 

@@ -441,25 +441,10 @@ const ALL_ARTICLES = [
 ];
 
 /* ═════ MODAL PDF ═════ */
-function imprimerModal(url, titre) {
-    // ✅ CORRECTION : normaliser l'URL si elle contient /stock/bon/ (ancien path hardcodé)
-    if (url && url.includes('/stock/bon/')) {
-        url = url.replace('/stock/bon/', '/bon/');
-    }
-    var modal = document.getElementById('modal-pdf');
-    document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-print me-2"></i>' + (titre||'');
-    var loader = document.getElementById('pdf-loader');
-    var iframe = document.getElementById('pdf-iframe');
-    loader.style.display = 'flex';
-    iframe.style.display = 'none';
-    iframe.src = '';
-    modal.classList.add('open');
-    iframe.onload = function() {
-        loader.style.display = 'none';
-        iframe.style.display = 'block';
+window.imprimerModal = function(url, titre) {
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        window.open(url, '_blank');
     };
-    iframe.src = url;
-}
 
 document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('modal-pdf').addEventListener('click', function(e) {

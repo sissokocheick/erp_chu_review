@@ -90,17 +90,17 @@
                     </td>
                     
                 </tr>
-                {% empty %}
-                <tr class="empty-pm">
-                    <td colspan="4" style="text-align: center; padding: 60px 20px; color: #94a3b8;">
-                        <i class="fas fa-check-circle fa-3x" style="margin-bottom: 15px; color: #10b981; opacity: 0.5;"></i><br>
-                        <span style="font-size: 15px; color: #475569; font-weight: bold;">Parc intact !</span><br>
-                        Aucun équipement n'a été déclaré perdu dans le système.
-                    </td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
+        
+        {% if not pertes %}
+        <div class="empty-pm" style="text-align: center; padding: 60px 20px; color: #94a3b8;">
+            <i class="fas fa-check-circle fa-3x" style="margin-bottom: 15px; color: #10b981; opacity: 0.5;"></i><br>
+            <span style="font-size: 15px; color: #475569; font-weight: bold;">Parc intact !</span><br>
+            Aucun équipement n'a été déclaré perdu dans le système.
+        </div>
+        {% endif %}
         
         <div id="pag-tbody-pertes"></div>
 

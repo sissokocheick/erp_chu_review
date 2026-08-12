@@ -9,7 +9,8 @@
     size: A4;
     margin: 10mm 7mm 18mm 7mm;
     @bottom-center {
-        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
+        white-space: pre-line;
         font-size: 7pt;
         color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
         font-weight: bold;
@@ -364,28 +365,7 @@ img { max-width: 100%; height: auto; }
   </div>
 
   <div class="bloc-bas">
-    {% if signatures_config %}
-    <div class="signatures-block">
-      <div class="sig-row">
-        {% for sig in signatures_config %}
-        <div class="sig-item">
-          <div class="sig-fonction">{{ sig.label }}</div>
-          {% if sig.user_name %}
-            <div class="sig-name">{{ sig.user_name }}</div>
-            {% if sig.signature_path %}
-              <img src="{{ sig.signature_path }}" class="sig-img" alt="Signature">
-            {% endif %}
-          {% else %}
-            <div style="height:15mm;"></div>
-          {% endif %}
-          {% if sig.date %}
-            <div class="sig-date">{{ sig.date|date:"d/m/Y" }}</div>
-          {% endif %}
-        </div>
-        {% endfor %}
-      </div>
-    </div>
-    {% endif %}
+    {% include "stock/pdf/_signatures.html" %}
   </div>
 </div>
 

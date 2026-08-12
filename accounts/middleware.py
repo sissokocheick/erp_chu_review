@@ -23,7 +23,21 @@ class AntiSpamMiddleware:
             request.session['historique_requetes'] = historique
 
             if len(historique) > LIMITE_REQUETES:
-                request.session['historique_requetes'] = []
+                # Journaliser la déconnexion AVANT logout() (qui flush la session)
+                try:
+                    from accounts.views import log_audit
+                    from accounts.models import AuditConnexion
+                    from accounts.views import get_client_ip
+                    log_audit(request, f"Deconnexion de securite de {request.user.username}", type_action='LOGOUT')
+                    AuditConnexion.objects.create(
+                        utilisateur=request.user,
+                        type_action='DECONNEXION',
+                        description="Deconnexion de securite (trop de requetes rapides)",
+                        adresse_ip=get_client_ip(request),
+                        user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
+                    )
+                except Exception:
+                    pass
                 logout(request)
                 messages.error(request, "⚠️ Trop de requêtes rapides. Déconnexion de sécurité.")
                 return redirect('accounts:custom_login')
@@ -62,7 +76,7 @@ class PasswordChangeMiddleware:
 
         allowed_url_names = [
             'custom_login',
-            'logout',
+            'custom_logout',
             'changer_mdp_obligatoire',
         ]
 
@@ -109,8 +123,9 @@ class ThemeMiddleware:
 class MagasinAutoSelectMiddleware:
     """
     Comportement mono-tenant :
-    - 1 magasin  → sélection automatique (silencieuse)
-    - Plusieurs  → l'utilisateur choisit via le formulaire existant
+    - Superuser   → accès à TOUS les magasins (même règle qu'isolation_service)
+    - 1 magasin   → sélection automatique (silencieuse)
+    - Plusieurs   → l'utilisateur choisit via le formulaire existant
     - Le choix reste en session
     - Révalidation : si le magasin en session n'est plus autorisé, on le retire
     """
@@ -120,7 +135,11 @@ class MagasinAutoSelectMiddleware:
     def __call__(self, request):
         if request.user.is_authenticated:
             try:
-                magasins = request.user.profil.magasins_autorises.all()
+                from stock.models import Magasin
+                if request.user.is_superuser:
+                    magasins = Magasin.objects.all()
+                else:
+                    magasins = request.user.profil.magasins_autorises.all()
                 magasin_ids = [str(m.id) for m in magasins]
                 actif_id = request.session.get('magasin_actif_id')
 

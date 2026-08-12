@@ -1,14 +1,9 @@
 # core/models.py — MONO-TENANT v1
 """
-MIGRATION MONO-TENANT — Résumé des changements :
-1. Le champ `entreprise` est supprimé de ConfigurationHopital et Service.
-2. ConfigurationHopital absorbe TOUTE la personnalisation qui était dans
-   accounts.Entreprise (logo, cachet, couleurs, préfixes, signataires, PDF).
-   Elle devient le SINGLETON de configuration de l'établissement.
-3. TenantManager / GlobalManager ne sont plus utilisés ici.
-   ⚠️ NE PAS supprimer core/managers.py ni core/signals.py tant que le
-   module stock n'est pas migré (il les utilise encore).
-4. Les contraintes unique restent gérées manuellement en base (cf. note v5).
+Module core (mono-tenant).
+
+ConfigurationHopital est le singleton de configuration de l'établissement
+(identité visuelle, coordonnées légales, numérotation, signataires, PDF).
 """
 from django.db import models, transaction
 from django.contrib.auth.models import User
@@ -64,10 +59,10 @@ class ConfigurationHopital(TraceabiliteMixin):
 
     Regroupe :
     - les paramètres fonctionnels (mots de passe, confidentialité, délais)
-    - l'identité visuelle PDF (logo, cachet, couleur)  ← ex-Entreprise
-    - les coordonnées légales (CC, IFU, RCCM)          ← ex-Entreprise
-    - la numérotation des documents (préfixes)          ← ex-Entreprise
-    - les labels des 6 signataires                      ← ex-Entreprise
+    - l'identité visuelle PDF (logo, cachet, couleur)  ← hérité de l'ancien modèle
+    - les coordonnées légales (CC, IFU, RCCM)          ← hérité de l'ancien modèle
+    - la numérotation des documents (préfixes)          ← hérité de l'ancien modèle
+    - les labels des 6 signataires                      ← hérité de l'ancien modèle
 
     Accès : toujours passer par ConfigurationHopital.get_instance()
     """
@@ -126,7 +121,7 @@ class ConfigurationHopital(TraceabiliteMixin):
         help_text="Définit qui peut voir les demandes dans 'Mes Demandes' : seulement le demandeur, ou tous les agents du même service."
     )
 
-    # ── Identité visuelle (ex-Entreprise) ──
+    # ── Identité visuelle (hérité de l'ancien modèle) ──
     logo = models.ImageField(
         upload_to='config/logos/%Y/%m/',
         null=True, blank=True,
@@ -146,25 +141,25 @@ class ConfigurationHopital(TraceabiliteMixin):
         verbose_name="Couleur principale"
     )
 
-    # ── Coordonnées légales (ex-Entreprise) ──
+    # ── Coordonnées légales (hérité de l'ancien modèle) ──
     cc = models.CharField(max_length=50, blank=True, verbose_name="Compte Contribuable (CC)")
     ifu = models.CharField(max_length=50, blank=True, verbose_name="IFU")
     rccm = models.CharField(max_length=50, blank=True, verbose_name="RCCM")
 
-    # ── Hiérarchie affichée sur les documents (ex-Entreprise) ──
+    # ── Hiérarchie affichée sur les documents (hérité de l'ancien modèle) ──
     direction_label = models.CharField(max_length=200, default="DIRECTION DES AFFAIRES FINANCIÈRES", verbose_name="Label Direction")
     sous_direction_label = models.CharField(max_length=200, default="SOUS-DIRECTION DE LA LOGISTIQUE", verbose_name="Label Sous-Direction")
     service_label = models.CharField(max_length=200, default="SERVICE APPROVISIONNEMENT ET GESTION DES STOCKS", verbose_name="Label Service")
     pied_page_pdf = models.TextField(default="Document généré par NexusERP – Tous droits réservés.", verbose_name="Pied de page PDF")
 
-    # ── Numérotation personnalisable (ex-Entreprise) ──
+    # ── Numérotation personnalisable (hérité de l'ancien modèle) ──
     prefixe_bon_sortie = models.CharField(max_length=10, default="BS", verbose_name="Préfixe Bon de Sortie")
     prefixe_bon_entree = models.CharField(max_length=10, default="BE", verbose_name="Préfixe Bon d'Entrée")
     prefixe_bon_retour = models.CharField(max_length=10, default="BR", verbose_name="Préfixe Bon de Retour")
     prefixe_bon_hors_stock = models.CharField(max_length=10, default="BSHS", verbose_name="Préfixe Bon Hors Stock")
     prefixe_commande = models.CharField(max_length=10, default="BC", verbose_name="Préfixe Commande")
 
-    # ── Labels des 6 emplacements de signature (ex-Entreprise) ──
+    # ── Labels des 6 emplacements de signature (hérité de l'ancien modèle) ──
     label_signataire_1 = models.CharField(max_length=100, default="Le Demandeur", verbose_name="Signataire 1")
     label_signataire_2 = models.CharField(max_length=100, default="Le Magasinier", verbose_name="Signataire 2")
     label_signataire_3 = models.CharField(max_length=100, default="Le Responsable Service", verbose_name="Signataire 3")
@@ -194,7 +189,7 @@ class ConfigurationHopital(TraceabiliteMixin):
         return instance
 
     # ======================================================
-    # VALIDATIONS (ex-Entreprise.clean)
+    # VALIDATIONS (hérité de l'ancien modèle)
     # ======================================================
     def clean(self):
         import os, re
@@ -223,15 +218,13 @@ class ConfigurationHopital(TraceabiliteMixin):
                 raise ValidationError({'couleur_principale': "La couleur doit être un code hexadécimal valide (ex: #1c5b96)."})
 
     # ======================================================
-    # NUMÉROTATION DES DOCUMENTS (ex-Entreprise)
+    # NUMÉROTATION DES DOCUMENTS (hérité de l'ancien modèle)
     # ======================================================
     def generer_numero(self, type_doc, annee=None):
         """
         Génère le prochain numéro de document.
 
-        ⚠️ DÉPENDANCE : fonctionnera après migration du modèle
-        stock.CompteurDocument (le champ `entreprise` y sera supprimé
-        au module stock). Le suffixe "-E{id}" disparaît du format.
+        Génère le prochain numéro de document (format sans suffixe tenant).
         """
         from stock.models import CompteurDocument
         if annee is None:
@@ -259,7 +252,7 @@ class ConfigurationHopital(TraceabiliteMixin):
         return f"{prefixe} {compteur.dernier_numero:03d}-{annee}"
 
     # ======================================================
-    # CONFIGURATION PDF (ex-Entreprise)
+    # CONFIGURATION PDF (hérité de l'ancien modèle)
     # ======================================================
     @property
     def labels_signatures(self):
@@ -349,7 +342,7 @@ def get_config():
 # 🏢 SERVICE HOSPITALIER
 # ==========================================================
 class Service(TraceabiliteMixin):
-    """Service hospitalier (mono-tenant : plus de FK entreprise)."""
+    """Service hospitalier."""
 
     code = models.CharField(max_length=20, help_text="Ex: SA17")
     nom = models.CharField(max_length=200, help_text="Ex: CARDIOLOGIE, URGENCES")
@@ -385,3 +378,112 @@ class Service(TraceabiliteMixin):
 
     def __str__(self):
         return f"{self.code} - {self.nom}"
+
+# ==========================================================
+# 🔔 CONFIGURATION DES NOTIFICATIONS (email + SMS)
+# ==========================================================
+class ConfigurationNotification(models.Model):
+    """
+    Configuration des canaux d'envoi des notifications (mono-tenant).
+
+    Deux canaux :
+    - Email : via un serveur SMTP (Django send_mail).
+    - SMS   : via une API HTTP générique (URL + clé + expéditeur) ou Twilio,
+              avec un mode test qui journalise au lieu d'envoyer.
+
+    Accès : toujours passer par ConfigurationNotification.get_instance()
+    """
+
+    # ── Canal Email ──
+    activer_email = models.BooleanField(
+        default=False, verbose_name="Activer les notifications par email"
+    )
+    smtp_host = models.CharField(
+        max_length=200, blank=True, default="",
+        verbose_name="Serveur SMTP (hôte)", help_text="Ex: smtp.gmail.com"
+    )
+    smtp_port = models.PositiveIntegerField(default=587, verbose_name="Port SMTP")
+    smtp_user = models.CharField(
+        max_length=200, blank=True, default="", verbose_name="Utilisateur SMTP"
+    )
+    smtp_password = models.CharField(
+        max_length=200, blank=True, default="", verbose_name="Mot de passe SMTP"
+    )
+    email_expediteur = models.EmailField(
+        max_length=254, blank=True, default="",
+        verbose_name="Email expéditeur",
+        help_text="Adresse affichée comme expéditeur des notifications."
+    )
+    smtp_use_tls = models.BooleanField(
+        default=True, verbose_name="Utiliser TLS (STARTTLS)"
+    )
+
+    # ── Canal SMS ──
+    activer_sms = models.BooleanField(
+        default=False, verbose_name="Activer les notifications par SMS"
+    )
+    SMS_PROVIDER_CHOICES = [
+        ('GENERIQUE', 'API HTTP générique (URL + clé)'),
+        ('TWILIO', 'Twilio'),
+        ('TEST', 'Mode test (journal uniquement)'),
+    ]
+    sms_provider = models.CharField(
+        max_length=20, choices=SMS_PROVIDER_CHOICES, default='TEST',
+        verbose_name="Fournisseur SMS"
+    )
+    sms_api_url = models.URLField(
+        max_length=300, blank=True, default="",
+        verbose_name="URL de l'API SMS",
+        help_text="Endpoint HTTP appelé pour envoyer un SMS (méthode POST)."
+    )
+    sms_api_key = models.CharField(
+        max_length=200, blank=True, default="",
+        verbose_name="Clé API / Token",
+        help_text="Envoyée dans l'en-tête 'Authorization: Bearer <clé>'."
+    )
+    sms_expediteur = models.CharField(
+        max_length=20, blank=True, default="",
+        verbose_name="Expéditeur (sender ID)"
+    )
+    sms_twilio_template = models.CharField(
+        max_length=100, blank=True, default="",
+        verbose_name="Modèle Twilio (compte trial)",
+        help_text="Nom d'un modèle prédéfini Twilio (ex: sms_appointment_reminders). "
+                  "Obligatoire en compte trial : le texte libre est refusé (erreur 572006). "
+                  "Laisser vide en compte payant pour envoyer le vrai texte de la notification."
+    )
+    sms_param_numero = models.CharField(
+        max_length=50, default="to",
+        verbose_name="Paramètre du numéro",
+        help_text="Nom du champ JSON contenant le numéro de téléphone (ex: 'to')."
+    )
+    sms_param_message = models.CharField(
+        max_length=50, default="message",
+        verbose_name="Paramètre du message",
+        help_text="Nom du champ JSON contenant le texte du SMS (ex: 'message')."
+    )
+    sms_mode_test = models.BooleanField(
+        default=True,
+        verbose_name="Mode test",
+        help_text="Si actif, les SMS sont journalisés dans les logs au lieu d'être réellement envoyés."
+    )
+
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Configuration des notifications"
+        verbose_name_plural = "Configuration des notifications"
+
+    def __str__(self):
+        return "Configuration des notifications"
+
+    # ======================================================
+    # SINGLETON
+    # ======================================================
+    @classmethod
+    def get_instance(cls):
+        """Retourne l'unique instance de configuration (la crée si absente)."""
+        instance = cls.objects.first()
+        if instance is None:
+            instance = cls.objects.create()
+        return instance

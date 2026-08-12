@@ -1,7 +1,9 @@
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
 
+from stock.services.isolation_service import get_magasins_autorises
 from ..models import Article, StockItem
 
 @login_required(login_url='/auth/login/')
@@ -10,8 +12,7 @@ def api_lots_disponibles(request, article_id, magasin_id):
     Retourne les lots disponibles (StockItem) pour un article dans un magasin.
     Appel AJAX depuis le formulaire de sortie.
     """
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
     if not magasins_autorises.filter(id=magasin_id).exists():
         return JsonResponse({'error': 'Magasin non autorisé'}, status=403)
 

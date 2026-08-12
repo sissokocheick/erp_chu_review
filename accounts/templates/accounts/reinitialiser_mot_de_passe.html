@@ -1,0 +1,294 @@
+<!-- templates/accounts/reinitialiser_mot_de_passe.html -->
+<!DOCTYPE html>
+{% load static %}
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusERP - Nouveau mot de passe</title>
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
+    <style>
+        :root {
+            --bg-main: #f8fafc;
+            --text-primary: #0f172a;
+            --text-secondary: #64748b;
+            --border-color: #cbd5e1;
+            --input-bg: #ffffff;
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --accent-light: rgba(37, 99, 235, 0.1);
+            --alert-error-bg: #fef2f2;
+            --alert-error-text: #ef4444;
+            --alert-success-bg: #f0fdf4;
+            --alert-success-text: #22c55e;
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --card-border: rgba(255, 255, 255, 0.5);
+        }
+        body.dark-mode {
+            --bg-main: #0f172a;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --border-color: #334155;
+            --input-bg: #1e293b;
+            --accent: #3b82f6;
+            --accent-hover: #60a5fa;
+            --accent-light: rgba(59, 130, 246, 0.15);
+            --alert-error-bg: rgba(239, 68, 68, 0.1);
+            --alert-error-text: #f87171;
+            --alert-success-bg: rgba(34, 197, 94, 0.1);
+            --alert-success-text: #4ade80;
+            --card-bg: rgba(30, 41, 59, 0.85);
+            --card-border: rgba(255, 255, 255, 0.08);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            min-height: 100vh; background-color: var(--bg-main); color: var(--text-primary);
+            transition: background-color 0.5s ease, color 0.5s ease;
+        }
+        .layout-wrapper { display: flex; min-height: 100vh; }
+        .brand-panel {
+            flex: 1; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: space-between;
+            padding: 3rem 4rem; color: white;
+            background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 30%, #2563eb 50%, #1e3a8a 70%, #0f172a 100%);
+            background-size: 400% 400%;
+            animation: brandGradient 15s ease infinite;
+        }
+        @keyframes brandGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        .brand-panel .grid-overlay {
+            position: absolute; inset: 0;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+        .brand-header {
+            display: flex; align-items: center; gap: 1rem;
+            font-size: 1.5rem; font-weight: 700; position: relative; z-index: 2;
+        }
+        .brand-header svg { width: 42px; height: 42px; filter: drop-shadow(0 0 10px rgba(56,189,248,0.4)); }
+        .brand-content { position: relative; z-index: 2; max-width: 460px; }
+        .brand-content h2 { font-size: 2.6rem; font-weight: 800; line-height: 1.15; margin-bottom: 1.2rem; letter-spacing: -1px; text-shadow: 0 2px 20px rgba(0,0,0,0.2); }
+        .brand-content p { font-size: 1.05rem; color: rgba(255,255,255,0.85); line-height: 1.7; }
+        .brand-footer { position: relative; z-index: 2; opacity: 0.6; font-size: 0.85rem; }
+
+        .form-panel {
+            flex: 1; display: flex; align-items: center; justify-content: center;
+            padding: 2rem; position: relative; background: var(--bg-main);
+        }
+        .form-panel::before {
+            content: ''; position: absolute; inset: 0;
+            background-image:
+                radial-gradient(circle at 20% 50%, rgba(37,99,235,0.04) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(168,85,247,0.03) 0%, transparent 50%);
+            pointer-events: none;
+        }
+        .card {
+            width: 100%; max-width: 440px; position: relative; z-index: 1;
+            background: var(--card-bg); border: 1px solid var(--card-border);
+            border-radius: 16px; padding: 2.2rem; box-shadow: 0 10px 40px rgba(15,23,42,0.12);
+            backdrop-filter: blur(8px);
+            animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(25px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card-header { margin-bottom: 1.6rem; text-align: center; }
+        .card-header .icon-badge {
+            width: 56px; height: 56px; margin: 0 auto 1rem;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            background: var(--accent-light); color: var(--accent); font-size: 1.4rem;
+        }
+        .card-header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; }
+        .card-header p { color: var(--text-secondary); font-size: 0.9rem; margin-top: 0.4rem; line-height: 1.6; }
+
+        .alert {
+            padding: 0.9rem 1rem; border-radius: 10px; margin-bottom: 1.2rem;
+            font-size: 0.85rem; display: flex; align-items: flex-start; gap: 0.6rem;
+            border: 1px solid transparent; line-height: 1.5;
+        }
+        .alert-error { background: var(--alert-error-bg); color: var(--alert-error-text); border-color: rgba(239,68,68,0.2); }
+        .alert-success { background: var(--alert-success-bg); color: var(--alert-success-text); border-color: rgba(34,197,94,0.2); }
+
+        .form-floating { position: relative; margin-bottom: 1.4rem; }
+        .form-control {
+            width: 100%; padding: 1.25rem 1rem 0.5rem; font-size: 1rem; font-family: inherit;
+            color: var(--text-primary); background-color: var(--input-bg);
+            border: 1.5px solid var(--border-color); border-radius: 12px; outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s, background-color 0.3s;
+        }
+        .form-control:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-light); }
+        .form-floating label {
+            position: absolute; left: 1rem; top: 50%; transform: translateY(-50%);
+            color: var(--text-secondary); font-size: 1rem; pointer-events: none;
+            transition: all 0.2s ease; transform-origin: left top;
+        }
+        .form-control:focus ~ label,
+        .form-control:not(:placeholder-shown) ~ label {
+            top: 0.5rem; transform: translateY(0) scale(0.75);
+            color: var(--accent); font-weight: 600;
+        }
+        .code-wrap { text-align: center; }
+        .code-input {
+            width: 100%; max-width: 220px; text-align: center;
+            padding: 1rem; font-size: 1.6rem; font-weight: 800; letter-spacing: 0.35em;
+            font-family: 'Courier New', monospace;
+            color: var(--text-primary); background-color: var(--input-bg);
+            border: 1.5px dashed var(--border-color); border-radius: 12px; outline: none;
+            transition: border-color 0.25s, box-shadow 0.25s;
+        }
+        .code-input:focus { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-light); }
+
+        .pwd-rules {
+            background: var(--accent-light); border-radius: 10px;
+            padding: 0.8rem 1rem; margin-bottom: 1.4rem; font-size: 0.8rem;
+        }
+        .prule { color: var(--text-secondary); padding: 2px 0; display: flex; align-items: center; gap: 0.5rem; }
+        .prule.ok { color: #28a745; }
+
+        .btn-primary {
+            width: 100%; padding: 0.875rem;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+            color: white; border: none; border-radius: 12px;
+            font-size: 1rem; font-weight: 700; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+            transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(37,99,235,0.3);
+        }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(37,99,235,0.4); }
+        .btn-primary:disabled { opacity: 0.65; cursor: not-allowed; transform: none; }
+
+        .back-row { text-align: center; margin-top: 1.4rem; }
+        .back-row a {
+            color: var(--text-secondary); font-size: 0.875rem; font-weight: 600;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 0.4rem;
+            transition: color 0.2s;
+        }
+        .back-row a:hover { color: var(--accent); }
+
+        @media (max-width: 900px) {
+            .brand-panel { display: none; }
+            .form-panel { padding: 1.5rem; }
+        }
+        @media (max-width: 480px) {
+            .form-panel { padding: 1rem; }
+            .card { padding: 1.6rem; }
+        }
+    </style>
+</head>
+<body>
+    <script>
+        (function() {
+            var m = document.cookie.match('(^|;) ?theme_pref=([^;]*)(;|$)');
+            if ((m && m[2] === 'dark') || localStorage.getItem('nexuserp_dark_mode') === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+        })();
+    </script>
+
+    <div class="layout-wrapper">
+        <div class="brand-panel">
+            <div class="grid-overlay"></div>
+            <div class="brand-header">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="24" r="20" stroke="white" stroke-width="2" opacity="0.2"/>
+                    <circle cx="24" cy="24" r="8" fill="white"/>
+                    <path d="M24 4L24 16M44 24L32 24M24 44L24 32M4 24L16 24" stroke="white" stroke-width="2" opacity="0.6" stroke-linecap="round"/>
+                </svg>
+                <span>NexusERP</span>
+            </div>
+            <div class="brand-content">
+                <h2>Choisissez votre nouveau mot de passe.</h2>
+                <p>Un mot de passe fort protège votre compte et les données de l'établissement.</p>
+            </div>
+            <div class="brand-footer">&copy; 2026 Nexus Systems. Tous droits réservés.</div>
+        </div>
+
+        <div class="form-panel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="icon-badge"><i class="fas fa-lock"></i></div>
+                    <h1>Nouveau mot de passe</h1>
+                    {% if token %}
+                    <p>Vous avez cliqué sur le lien de réinitialisation envoyé par email. Choisissez un nouveau mot de passe.</p>
+                    {% else %}
+                    <p>Entrez le code reçu par SMS puis choisissez votre nouveau mot de passe.</p>
+                    {% endif %}
+                </div>
+
+                {% if erreur %}
+                <div class="alert alert-error">
+                    <i class="fas fa-circle-exclamation"></i>
+                    <span>{{ erreur }}</span>
+                </div>
+                {% endif %}
+
+                <form method="POST" novalidate autocomplete="off">
+                    {% csrf_token %}
+                    {% if token %}
+                    <input type="hidden" name="token" value="{{ token }}">
+                    {% else %}
+                    <div class="form-floating code-wrap" style="margin-bottom: 1.6rem;">
+                        <input type="text" name="code" id="id_code" class="code-input"
+                               placeholder="000000" required maxlength="8"
+                               autocomplete="one-time-code" inputmode="numeric" pattern="[0-9]*">
+                        <label for="id_code" style="display:block; position:static; transform:none; margin-bottom:0.4rem; text-align:center; color:var(--text-secondary); font-size:0.8rem; font-weight:600;">CODE REÇU PAR SMS</label>
+                    </div>
+                    {% endif %}
+
+                    <div class="form-floating">
+                        <input type="password" name="nouveau_mdp" id="id_nouveau_mdp"
+                               class="form-control" placeholder=" " required
+                               autocomplete="new-password" minlength="8">
+                        <label for="id_nouveau_mdp">Nouveau mot de passe</label>
+                    </div>
+
+                    <div class="form-floating">
+                        <input type="password" name="confirmer_mdp" id="id_confirmer_mdp"
+                               class="form-control" placeholder=" " required
+                               autocomplete="new-password" minlength="8">
+                        <label for="id_confirmer_mdp">Confirmer le mot de passe</label>
+                    </div>
+
+                    <div class="pwd-rules">
+                        <div class="prule" id="rLen"><i class="fas fa-circle" style="font-size:6px;"></i> Au moins 8 caractères</div>
+                        <div class="prule" id="rUp"><i class="fas fa-circle" style="font-size:6px;"></i> Une lettre majuscule</div>
+                        <div class="prule" id="rNum"><i class="fas fa-circle" style="font-size:6px;"></i> Un chiffre</div>
+                    </div>
+
+                    <button type="submit" class="btn-primary">
+                        <i class="fas fa-check"></i> Réinitialiser le mot de passe
+                    </button>
+                </form>
+
+                <div class="back-row">
+                    <a href="{% url 'accounts:custom_login' %}">
+                        <i class="fas fa-arrow-left"></i> Retour à la connexion
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var p1 = document.getElementById('id_nouveau_mdp');
+            var p2 = document.getElementById('id_confirmer_mdp');
+            function majRegles() {
+                var val = p1 ? p1.value : '';
+                document.getElementById('rLen').className = 'prule' + (val.length >= 8 ? ' ok' : '');
+                document.getElementById('rUp').className = 'prule' + (/[A-Z]/.test(val) ? ' ok' : '');
+                document.getElementById('rNum').className = 'prule' + (/[0-9]/.test(val) ? ' ok' : '');
+            }
+            if (p1) { p1.addEventListener('input', majRegles); }
+        });
+    </script>
+</body>
+</html>

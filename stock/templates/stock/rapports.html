@@ -199,21 +199,10 @@ $(function() {
 </style>
 
 <script>
-function imprimerModal(url, titre) {
-    var modal = document.getElementById('modal-pdf');
-    document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-print me-2"></i> ' + (titre || 'Document');
-    var loader = document.getElementById('pdf-loader');
-    var iframe = document.getElementById('pdf-iframe');
-    loader.style.display = 'flex';
-    iframe.style.display = 'none';
-    iframe.src = '';
-    modal.style.display = 'flex';
-    iframe.onload = function(){
-        loader.style.display = 'none';
-        iframe.style.display = 'block';
+window.imprimerModal = function(url, titre) {
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        window.open(url, '_blank');
     };
-    iframe.src = url;
-}
 
 function ouvrirPdfConsommation(e) {
     e.preventDefault();

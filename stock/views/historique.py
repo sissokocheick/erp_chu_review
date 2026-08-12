@@ -45,7 +45,6 @@ User = get_user_model()
 @magasin_requis
 def journal_historique(request):
     """Vue journal d'historique (GET uniquement)."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     q = request.GET.get('q', '').lower()
     date_range = request.GET.get('date_range', '')
 

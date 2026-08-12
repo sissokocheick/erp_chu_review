@@ -38,7 +38,7 @@ from ..services import (
     NumeroGenerator, StockService, PDFService, NotificationService
 )
 from .catalogue import paginer, get_magasins_autorises
-from .common_views import render_liste, get_magasin_actif, build_redirect_url
+from .common_views import render_liste, get_magasin_actif, build_redirect_url, filtrer_texte
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -48,23 +48,18 @@ User = get_user_model()
 @magasin_requis
 def etat_stock(request):
     """Vue liste de l'état du stock (GET uniquement)."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasins_autorises = get_magasins_autorises(request)
     qs = StockItem.objects.select_related(
         'article__famille', 'magasin'
     ).filter(magasin__in=magasins_autorises).order_by('article__designation')
 
-    # ── FILTRE RECHERCHE TEXTE ──
-    q = request.GET.get('q', '').strip()
-    if q:
-        qs = qs.filter(
-            Q(article__designation__icontains=q) |
-            Q(article__reference__icontains=q) |
-            Q(article__famille__intitule__icontains=q)
-        ).distinct()
-
     # ── FILTRE MAGASIN ──
+    # Par défaut : le magasin sélectionné dans l'en-tête s'applique partout.
     magasin_filter = request.GET.get('magasin', '').strip()
+    if not magasin_filter:
+        magasin_actif = get_magasin_actif(request)
+        if magasin_actif:
+            magasin_filter = str(magasin_actif.id)
     if magasin_filter:
         if magasins_autorises.filter(id=magasin_filter).exists():
             qs = qs.filter(magasin_id=magasin_filter)
@@ -73,6 +68,13 @@ def etat_stock(request):
     famille_id = request.GET.get('famille', '').strip()
     if famille_id:
         qs = qs.filter(article__famille_id=famille_id)
+
+    # ── FILTRE RECHERCHE TEXTE (insensible aux accents) ──
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = filtrer_texte(qs, q, [
+            'article__designation', 'article__reference', 'article__famille__intitule'
+        ])
 
     # ── PAGINATION ──
     stocks_pagines, per_page = paginer(qs, request)

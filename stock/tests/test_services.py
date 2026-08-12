@@ -7,14 +7,13 @@ Pour executer :
 """
 
 from decimal import Decimal
-from unittest.mock import patch, MagicMock, PropertyMock
-from datetime import date, timedelta
 
 from django.test import TestCase, Client
 from django.contrib.auth import get_user_model
-from django.utils import timezone
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.apps import apps
+
+from stock.models import Magasin, Article, FamilleArticle, StockItem, Mouvement
 
 User = get_user_model()
 
@@ -45,20 +44,18 @@ class BonServiceTest(TestCase):
             
             # Création des données de test
             self.famille = FamilleArticle.objects.create(
-                nom="Famille Test",
-                code="FAM-TEST"
+                intitule="Famille Test",
+                code="FAM-TEST",
+                type_famille='MED'
             )
             
-            self.magasin = Magasin.objects.create(
-                nom="Magasin Principal",
-                code="MP"
-            )
+            self.magasin = Magasin.objects.create(nom="Magasin Principal")
             
             self.article = Article.objects.create(
                 reference="ART-001",
                 designation="Article Test",
                 famille=self.famille,
-                unite_mesure="UNITE"
+                unite_distribution="UNITE"
             )
             
             self.stock_item = StockItem.objects.create(
@@ -82,8 +79,6 @@ class BonServiceTest(TestCase):
                 'article_id': self.article.id,
                 'quantite': 50,
                 'prix_unitaire': Decimal('12.50'),
-                'numero_lot': 'LOT-001',
-                'date_peremption': str(date.today() + timedelta(days=365))
             }
         ]
         
@@ -98,9 +93,9 @@ class BonServiceTest(TestCase):
         self.assertIsNotNone(bon.pk)
         self.assertEqual(bon.type_bon, 'ENTREE')
         self.assertEqual(bon.statut_validation, 'VALIDE')
-        self.assertEqual(bon.lignebon_set.count(), 1)
-        
-        ligne = bon.lignebon_set.first()
+        self.assertEqual(bon.lignes_bon.count(), 1)
+
+        ligne = bon.lignes_bon.first()
         self.assertEqual(ligne.quantite, 50)
         self.assertEqual(ligne.prix_unitaire, Decimal('12.50'))
         
@@ -219,38 +214,32 @@ class StockTransactionServiceTest(TestCase):
     """Tests unitaires pour StockTransactionService."""
 
     def setUp(self):
-        try:
-            # Modèles nécessaires
-            Magasin = apps.get_model('stock', 'Magasin')
-            Article = apps.get_model('stock', 'Article')
-            FamilleArticle = apps.get_model('stock', 'FamilleArticle')
-            StockItem = apps.get_model('stock', 'StockItem')
-            Mouvement = apps.get_model('stock', 'Mouvement')
-            
-            # Création des données de test
-            self.famille = FamilleArticle.objects.create(
-                nom="Famille Test",
-                code="FAM-TEST"
-            )
-            
-            self.magasin = Magasin.objects.create(
-                nom="Magasin Principal",
-                code="MP"
-            )
-            
-            self.article = Article.objects.create(
-                reference="ART-001",
-                designation="Article Test",
-                famille=self.famille,
-                unite_mesure="UNITE"
-            )
-            
-            # Import du service
-            from stock.services.stock_transaction_service import StockTransactionService
-            self.transaction_service = StockTransactionService
-            
-        except LookupError as e:
-            self.skipTest(f"Modèle manquant : {e}")
+        # Utilisateur de test (le FK Mouvement.utilisateur est obligatoire)
+        self.user = User.objects.create_user(
+            username="stockuser",
+            email="stock@example.com",
+            password="testpass123"
+        )
+
+        # Création des données de test
+        self.famille = FamilleArticle.objects.create(
+            intitule="Famille Test",
+            code="FAM-TEST",
+            type_famille='MED'
+        )
+
+        self.magasin = Magasin.objects.create(nom="Magasin Principal")
+
+        self.article = Article.objects.create(
+            reference="ART-001",
+            designation="Article Test",
+            famille=self.famille,
+            unite_distribution="UNITE"
+        )
+
+        # Import du service
+        from stock.services.stock_transaction_service import StockTransactionService
+        self.transaction_service = StockTransactionService
 
     def test_executer_mouvement_entree(self):
         """Test l'exécution d'un mouvement d'entrée."""
@@ -260,7 +249,7 @@ class StockTransactionServiceTest(TestCase):
             magasin=self.magasin,
             quantite=50,
             prix_unitaire=Decimal('10.00'),
-            utilisateur=None,
+            utilisateur=self.user,
         )
         
         resultat = self.transaction_service.executer(mouvement)
@@ -295,7 +284,7 @@ class StockTransactionServiceTest(TestCase):
             magasin=self.magasin,
             quantite=30,
             prix_unitaire=Decimal('10.00'),
-            utilisateur=None,
+            utilisateur=self.user,
         )
         
         resultat = self.transaction_service.executer(mouvement)
@@ -329,7 +318,7 @@ class StockTransactionServiceTest(TestCase):
             magasin=self.magasin,
             quantite=50,  # Plus que le stock
             prix_unitaire=Decimal('10.00'),
-            utilisateur=None,
+            utilisateur=self.user,
         )
         
         with self.assertRaises(ValidationError) as context:
@@ -346,7 +335,7 @@ class StockTransactionServiceTest(TestCase):
                 magasin=self.magasin,
                 quantite=20,
                 prix_unitaire=Decimal('10.00'),
-                utilisateur=None,
+                utilisateur=self.user,
             ),
             Mouvement(
                 type_mouvement='ENTREE',
@@ -354,7 +343,7 @@ class StockTransactionServiceTest(TestCase):
                 magasin=self.magasin,
                 quantite=30,
                 prix_unitaire=Decimal('12.00'),
-                utilisateur=None,
+                utilisateur=self.user,
             )
         ]
         
@@ -434,7 +423,7 @@ class StockTransactionServiceTest(TestCase):
             magasin=self.magasin,
             quantite=50,
             prix_unitaire=Decimal('10.00'),
-            utilisateur=None,
+            utilisateur=self.user,
         )
         
         resultat = self.transaction_service.executer(mouvement)
@@ -466,7 +455,7 @@ class StockTransactionServiceTest(TestCase):
             magasin=self.magasin,
             quantite=50,  # Plus que le stock
             prix_unitaire=Decimal('10.00'),
-            utilisateur=None,
+            utilisateur=self.user,
         )
         
         resultat = self.transaction_service.executer(mouvement)
@@ -487,35 +476,30 @@ class CMUPCalculationTest(TestCase):
     """Tests spécifiques pour le calcul du CMUP."""
 
     def setUp(self):
-        try:
-            Magasin = apps.get_model('stock', 'Magasin')
-            Article = apps.get_model('stock', 'Article')
-            FamilleArticle = apps.get_model('stock', 'FamilleArticle')
-            StockItem = apps.get_model('stock', 'StockItem')
-            Mouvement = apps.get_model('stock', 'Mouvement')
-            
-            self.famille = FamilleArticle.objects.create(
-                nom="Famille Test",
-                code="FAM-TEST"
-            )
-            
-            self.magasin = Magasin.objects.create(
-                nom="Magasin Principal",
-                code="MP"
-            )
-            
-            self.article = Article.objects.create(
-                reference="ART-001",
-                designation="Article Test",
-                famille=self.famille,
-                unite_mesure="UNITE"
-            )
-            
-            from stock.services.stock_transaction_service import StockTransactionService
-            self.transaction_service = StockTransactionService
-            
-        except LookupError as e:
-            self.skipTest(f"Modèle manquant : {e}")
+        # Utilisateur de test (le FK Mouvement.utilisateur est obligatoire)
+        self.user = User.objects.create_user(
+            username="stockuser",
+            email="stock@example.com",
+            password="testpass123"
+        )
+
+        self.famille = FamilleArticle.objects.create(
+            intitule="Famille Test",
+            code="FAM-TEST",
+            type_famille='MED'
+        )
+
+        self.magasin = Magasin.objects.create(nom="Magasin Principal")
+
+        self.article = Article.objects.create(
+            reference="ART-001",
+            designation="Article Test",
+            famille=self.famille,
+            unite_distribution="UNITE"
+        )
+
+        from stock.services.stock_transaction_service import StockTransactionService
+        self.transaction_service = StockTransactionService
 
     def test_cmup_moyenne_ponderee_entree(self):
         """Test le calcul de la moyenne pondérée pour les entrées."""
@@ -526,7 +510,7 @@ class CMUPCalculationTest(TestCase):
             magasin=self.magasin,
             quantite=100,
             prix_unitaire=Decimal('10.00'),
-            utilisateur=None,
+            utilisateur=self.user,
         )
         self.transaction_service.executer(mouvement1)
         
@@ -537,7 +521,7 @@ class CMUPCalculationTest(TestCase):
             magasin=self.magasin,
             quantite=50,
             prix_unitaire=Decimal('15.00'),
-            utilisateur=None,
+            utilisateur=self.user,
         )
         self.transaction_service.executer(mouvement2)
         
@@ -559,7 +543,7 @@ class CMUPCalculationTest(TestCase):
             magasin=self.magasin,
             quantite=100,
             prix_unitaire=Decimal('10.00'),
-            utilisateur=None,
+            utilisateur=self.user,
         )
         self.transaction_service.executer(mouvement1)
         
@@ -570,7 +554,7 @@ class CMUPCalculationTest(TestCase):
             magasin=self.magasin,
             quantite=50,
             prix_unitaire=Decimal('10.00'),
-            utilisateur=None,
+            utilisateur=self.user,
         )
         self.transaction_service.executer(mouvement2)
         

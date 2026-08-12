@@ -1,6 +1,8 @@
 from django.urls import path
 from . import views
 from . import views_fonctions
+from . import config_documents_views
+from . import views_reset
 
 app_name = 'accounts'
 
@@ -9,6 +11,13 @@ urlpatterns = [
     path('login/', views.custom_login, name='custom_login'),
     path('logout/', views.custom_logout, name='custom_logout'),
     path('forcer-mdp/', views.changer_mdp_obligatoire, name='changer_mdp_obligatoire'),
+
+    # Réinitialisation du mot de passe par l'utilisateur (mot de passe oublié)
+    path('mot-de-passe-oublie/', views_reset.mot_de_passe_oublie, name='mot_de_passe_oublie'),
+    # Étape 2 sans token : saisie du code reçu par SMS
+    path('reinitialisation/', views_reset.reinitialiser_mot_de_passe, name='reinitialiser_mot_de_passe'),
+    # Étape 2 via le lien envoyé par email (token dans l'URL)
+    path('reinitialisation/<str:token>/', views_reset.reinitialiser_mot_de_passe, name='reinitialiser_mot_de_passe_lien'),
 
     # Accueil
     path('', views.accueil_personnalise, name='accueil_personnalise'),
@@ -25,9 +34,7 @@ urlpatterns = [
     # Profil
     path('profil/', views.profil_utilisateur, name='profil_utilisateur'),
 
-    # Notifications
-    path('notifications/', views.mes_notifications, name='mes_notifications'),
-    path('notifications/<int:notif_id>/lue/', views.marquer_notification_lue, name='marquer_notification_lue'),
+    # Notifications : gérées côté stock (cloche topbar → liste_notifications)
 
     # Journal
     path('journal-audit/', views.journal_audit, name='journal_audit'),
@@ -36,16 +43,12 @@ urlpatterns = [
     path('api/save-theme/', views.save_theme_preference, name='save_theme'),
 
     # Fonctions
-    path('fonctions/', views_fonctions.page_fonctions, name='page_fonctions'),
+    # NB: la page Fonctions est gérée dans Paramètres → Administratifs (section Fonctions)
     path('fonctions/<int:fonction_id>/modifier/', views_fonctions.modifier_fonction, name='modifier_fonction'),
     path('fonctions/<int:fonction_id>/supprimer/', views_fonctions.supprimer_fonction, name='supprimer_fonction'),
     path('api/fonctions/creer/', views_fonctions.api_creer_fonction, name='api_creer_fonction'),
     path('api/fonctions/liste/', views_fonctions.api_liste_fonctions, name='api_liste_fonctions'),
 
-    # Stubs (anciennes pages multi-tenant)
-    path('entreprises/', views.page_entreprises, name='page_entreprises'),
-    path('entreprises/changer/', views.changer_entreprise_session, name='changer_entreprise_session'),
-    path('parametres/entreprise/', views.parametres_entreprise, name='parametres_entreprise'),
     path('securite/mots-de-passe/', views.parametres_securite, name='parametres_securite'),
 
 
@@ -56,4 +59,7 @@ urlpatterns = [
     path('circuits-validation/', views.circuits_validation, name='circuits_validation'),
     path('circuits-validation/creer/', views.creer_circuit, name='creer_circuit'),
     path('circuits-validation/<int:circuit_id>/modifier/', views.modifier_circuit, name='modifier_circuit'),
+
+    # Configuration des documents PDF
+    path('parametres/documents-pdf/', config_documents_views.config_documents_globaux, name='config_documents_globaux'),
 ]

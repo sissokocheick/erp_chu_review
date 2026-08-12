@@ -1,65 +1,93 @@
+# -*- coding: utf-8 -*-
 """
-Signal : quand un BonMouvement de type SORTIE est sauvegardé
-et que l'article est marqué est_immobilisable=True,
-on crée automatiquement une Immobilisation en statut EN_ATTENTE (Sas).
+Signaux Patrimoine.
+
+Quand une LigneBon d'un BonMouvement de type SORTIE / SORTIE_HORS_STOCK est
+créée et que l'article est marqué est_immobilisable=True, on crée
+automatiquement les Immobilisations en statut EN_ATTENTE (Sas).
+
+Historique : le signal était branché sur post_save de BonMouvement, mais il se
+déclenchait AVANT la création des LigneBon -> instance.lignes_bon.all() vide ->
+aucune immobilisation n'était jamais créée. Il est maintenant branché sur
+post_save de LigneBon (avec garde created=True).
 """
 
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.db import transaction
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-@receiver(post_save, sender='stock.BonMouvement')
+@receiver(post_save, sender='stock.LigneBon')
 def creer_immobilisations_depuis_bon(sender, instance, created, **kwargs):
     """
-    Après la sauvegarde d'un BonMouvement, parcourt les lignes
-    et crée une Immobilisation dans le sas pour chaque article immobilisable.
+    Après la création d'une LigneBon d'un bon de sortie,
+    crée une Immobilisation dans le sas pour chaque article immobilisable.
     """
     if not created:
         return
-    if instance.type_bon not in ('SORTIE', 'SORTIE_HORS_STOCK'):
+
+    bon = instance.bon
+    if bon.type_bon not in ('SORTIE', 'SORTIE_HORS_STOCK'):
+        return
+    if bon.est_annule:
+        return
+
+    article = instance.article
+    if not getattr(article, 'est_immobilisable', False):
         return
 
     try:
         from .models import Immobilisation, TypeEquipement
         from decimal import Decimal
 
-        for ligne in instance.lignes_bon.select_related('article__famille').all():
-            article = ligne.article
-            if not getattr(article, 'est_immobilisable', False):
-                continue
+        # Type d'équipement par défaut (premier type actif)
+        type_eq = None
+        try:
+            type_eq = TypeEquipement.objects.filter(est_actif=True).first()
+        except Exception as exc:
+            logger.warning(
+                "Recherche TypeEquipement impossible pour article %s: %s",
+                article.id, exc
+            )
 
-            # Chercher le TypeEquipement par défaut pour cet article
-            # (correspondance par famille si possible, sinon premier type dispo)
-            type_eq = None
-            try:
-                type_eq = TypeEquipement.objects.filter(est_actif=True).first()
-            except Exception:
-                pass
+        if not type_eq:
+            return  # Pas de type configuré -> on ne bloque pas
 
-            if not type_eq:
-                continue  # Pas de type configuré — on ne bloque pas
+        prix = getattr(instance, 'prix_unitaire', None) or Decimal('0.00')
 
-            # Valeur depuis la ligne du bon (prix_unitaire)
-            prix = getattr(ligne, 'prix_unitaire', None) or Decimal('0.00')
+        # Créer autant d'immobilisations que la quantité (1 bien = 1 immo)
+        quantite = int(getattr(instance, 'quantite', 1) or 1)
 
-            # Créer autant d'immobilisations que la quantité (1 bien = 1 immo)
-            quantite = int(getattr(ligne, 'quantite', 1) or 1)
-            for _ in range(quantite):
+        # Garde anti-doublon : si des immos existent déjà pour ce bon + article,
+        # ne pas en recréer (protection contre les re-sauvegardes de lignes)
+        existantes = Immobilisation.objects.filter(
+            bon_sortie_origine=bon,
+            article_stock=article,
+        ).count()
+        if existantes >= quantite:
+            return
+
+        with transaction.atomic():
+            for _ in range(quantite - existantes):
                 Immobilisation.objects.create(
                     type_equipement     = type_eq,
                     article_stock       = article,
-                    bon_sortie_origine  = instance,
-                    service_affectation = instance.service_demandeur,
+                    bon_sortie_origine  = bon,
+                    service_affectation = bon.service_demandeur,
                     valeur_acquisition  = prix,
                     prix_depuis_stock   = (prix > 0),
-                    fournisseur         = instance.fournisseur,
+                    fournisseur         = bon.fournisseur,
                     statut              = 'EN_ATTENTE',
                     nom_affichage       = article.designation,
-                    cree_par            = instance.cree_par,
+                    cree_par            = bon.cree_par,
                 )
 
     except Exception as e:
-        # On log mais on ne plante pas la sauvegarde du bon
-        import logging
-        logger = logging.getLogger(__name__)
-        logger.error(f"Erreur création immobilisation depuis bon {instance.pk}: {e}")
+        # On log mais on ne plante pas la sauvegarde de la ligne
+        logger.exception(
+            "Erreur création immobilisation depuis ligne %s (bon %s): %s",
+            getattr(instance, 'pk', '?'), getattr(bon, 'pk', '?'), e
+        )

@@ -1,39 +1,43 @@
 from django.db.models import Count, Q
 from accounts.models import Notification
-from .models import CircuitValidation, DemandeMateriel
+from .models import CircuitValidation, DemandeMateriel, Magasin
 
 
 def contexte_magasin(request):
     """
     Context processor : magasins accessibles à l'utilisateur.
-    ✅ CORRECTION : suppression de toute référence à entreprise/tenant.
+    ✅ CORRECTION : le superuser accède à TOUS les magasins (règle identique
+       à stock.services.isolation_service.get_magasins_autorises).
     ✅ Retourne mes_magasins et magasin_actif pour le template base_ui.html.
     """
     if not request.user.is_authenticated:
         return {}
 
-    try:
-        profil = request.user.profil
-        magasins = list(profil.magasins_autorises.all())
-    except Exception:
-        magasins = []
+    if request.user.is_superuser:
+        magasins = list(Magasin.objects.all())
+    else:
+        try:
+            profil = request.user.profil
+            magasins = list(profil.magasins_autorises.all())
+        except Exception:
+            magasins = []
 
-    # Sélection automatique si un seul magasin
+    # Sélection automatique UNIQUEMENT si l'utilisateur n'a qu'un seul magasin.
+    # Avec plusieurs magasins, on ne choisit JAMAIS à sa place : l'en-tête reste
+    # sans sélection et le décorateur @magasin_requis affiche l'écran de choix.
+    # (Cohérent partout : la sélection en session magasin_actif_id s'applique
+    # à toutes les pages — aucune clé périmée ne doit être écrite.)
     magasin_actif = None
     if len(magasins) == 1:
         magasin_actif = magasins[0]
+        request.session['magasin_actif_id'] = str(magasin_actif.id)
     elif len(magasins) > 1:
-        # Vérifier si un magasin est stocké en session
-        magasin_id = request.session.get('magasin_id')
+        magasin_id = request.session.get('magasin_actif_id')
         if magasin_id:
             for m in magasins:
                 if str(m.id) == str(magasin_id):
                     magasin_actif = m
                     break
-        # Sinon, prendre le premier
-        if not magasin_actif:
-            magasin_actif = magasins[0]
-            request.session['magasin_id'] = magasin_actif.id
 
     return {
         'mes_magasins': magasins,
@@ -98,22 +102,31 @@ def validation_demandes_menu(request):
 
 def menu_validation_context(request):
     """
-    Contexte pour le badge "Valider Demandes" dans le menu sidebar.
+    Contexte pour le badge "A Valider" (validations de demandes) dans le menu sidebar.
+
+    Le menu "A Valider" n'apparaît que si :
+      1. le circuit de validation DEMANDE est actif, ET
+      2. l'utilisateur est désigné comme validateur dans ce circuit.
+    (Cohérent avec la vue demandes_a_valider qui refuse tout autre cas.)
     """
     if not request.user.is_authenticated:
         return {}
 
-    from accounts.models import Profil
-    try:
-        profil = request.user.profil
-        peut_valider = profil.est_valideur or profil.est_gestionnaire or request.user.is_superuser
-    except Exception:
-        peut_valider = request.user.is_superuser
+    from .models import CircuitValidation
+    circuit = CircuitValidation.objects.filter(
+        type_document='DEMANDE', est_actif=True
+    ).first()
 
-    nb = DemandeMateriel.objects.filter(
-        statut='EN_ATTENTE_VALIDATION',
-        is_deleted=False
-    ).count()
+    peut_valider = bool(
+        circuit and circuit.valideurs.filter(id=request.user.id).exists()
+    )
+
+    nb = 0
+    if peut_valider:
+        nb = DemandeMateriel.objects.filter(
+            statut='EN_ATTENTE_VALIDATION',
+            is_deleted=False
+        ).count()
 
     return {
         'peut_valider_demandes': peut_valider,

@@ -13,6 +13,7 @@ from accounts.permissions import verifier_permission
 from ..models import Article, Mouvement, FamilleArticle, Magasin
 from ..forms import ArticleForm, FamilleArticleForm
 from ..decorators import magasin_requis, catch_errors
+from .common_views import filtrer_texte
 
 logger = logging.getLogger(__name__)
 
@@ -74,16 +75,13 @@ def liste_articles(request):
         'famille'
     ).prefetch_related('stocks__magasin').order_by('-date_creation')
 
-    query = request.GET.get('q', '')
-    if query:
-        articles = articles.filter(
-            Q(designation__icontains=query) |
-            Q(reference__icontains=query)
-        ).distinct()
-
     famille_id = request.GET.get('famille', '')
     if famille_id:
         articles = articles.filter(famille_id=famille_id)
+
+    query = request.GET.get('q', '')
+    if query:
+        articles = filtrer_texte(articles, query, ['designation', 'reference'])
 
     articles_pagines, per_page = paginer(articles, request)
 
@@ -170,9 +168,7 @@ def liste_familles(request):
 
     query = request.GET.get('q', '')
     if query:
-        familles = familles.filter(
-            Q(code__icontains=query) | Q(intitule__icontains=query)
-        ).distinct()
+        familles = filtrer_texte(familles, query, ['code', 'intitule'])
 
     familles_pagines, per_page = paginer(familles, request)
 

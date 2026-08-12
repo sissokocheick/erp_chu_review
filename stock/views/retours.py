@@ -14,6 +14,7 @@ from django.utils import timezone
 from accounts.permissions import verifier_permission
 from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
+from ..pdf_utils import get_pdf_config
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, Service,
@@ -106,7 +107,7 @@ def _creer_retour(request):
     magasin_id_effectif = magasin_post or magasin_id
 
     # ── Vérification autorisation magasin ──
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
     if magasin_id_effectif and not magasins_autorises.filter(id=magasin_id_effectif).exists():
         messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
         return redirect('liste_retours_services')
@@ -183,8 +184,7 @@ def apercu_bon_retour(request, bon_id):
     lignes_brutes = list(bon.lignes_bon.select_related('article').all())
     total_qte = sum(l.quantite for l in lignes_brutes)
 
-    pdf_config = {}
-    logo_url = None
+    pdf_config, logo_url = get_pdf_config(bon.magasin, 'BR', request)
 
     lignes_data = []
     for ligne in lignes_brutes:
@@ -219,6 +219,7 @@ def apercu_bon_retour(request, bon_id):
     context = {
         'is_apercu': True,
         'bon': bon,
+        'magasin': bon.magasin,
         'lignes': lignes_brutes,
         'lignes_data': lignes_data,
         'empty_lines': empty_lines,

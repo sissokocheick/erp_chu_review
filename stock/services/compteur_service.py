@@ -25,12 +25,11 @@ class CompteurDocumentService:
     }
 
     @classmethod
-    def generer_numero_bon(cls, type_bon, entreprise=None):
+    def generer_numero_bon(cls, type_bon):
         """
         Génère un numéro de bon au format PREFIXE-ANNEE-SEQUENCE.
         La séquence est CONTINUE (pas de réinitialisation par année).
 
-        ✅ CORRECTION MONO-TENANT : paramètre entreprise ignoré (compatibilité).
         """
         type_doc, prefix = cls.TYPE_BON_MAPPING.get(type_bon, ('BON_ENTREE', 'BE'))
 
@@ -41,7 +40,7 @@ class CompteurDocumentService:
 
         # Vérification d'unicité active via model_class et field_name
         from stock.models import BonMouvement
-        # ✅ CORRECTION MONO-TENANT : entreprise_id=1 (singleton) au lieu de entreprise.id
+        # Numérotation globale (mono-tenant)
         return CompteurDocument.generer_numero(
             type_doc, format_num,
             max_retries=10,
@@ -50,9 +49,8 @@ class CompteurDocumentService:
         )
 
     @classmethod
-    def generer_numero_commande(cls, entreprise=None):
+    def generer_numero_commande(cls):
         """Génère un numéro de commande au format BC-ANNEE-SEQUENCE.
-        ✅ CORRECTION MONO-TENANT : paramètre entreprise ignoré (compatibilité).
         """
         def format_num(compteur, annee, eid=None):
             return f"BC-{annee}-{compteur:04d}"
@@ -67,9 +65,8 @@ class CompteurDocumentService:
         )
 
     @classmethod
-    def generer_numero_demande(cls, entreprise=None):
+    def generer_numero_demande(cls):
         """Génère un numéro de demande au format BDM-ANNEE-SEQUENCE.
-        ✅ CORRECTION MONO-TENANT : paramètre entreprise ignoré (compatibilité).
         """
         def format_num(compteur, annee, eid=None):
             return f"BDM-{annee}-{compteur:04d}"

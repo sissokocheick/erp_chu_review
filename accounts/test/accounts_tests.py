@@ -285,7 +285,7 @@ class MenuAccessModelTest(TestCase):
 # GROUPES (rôles mono-tenant)
 # ==========================================================
 class GroupRoleTest(TestCase):
-    """Les rôles sont des Group Django classiques (plus de RoleEntreprise)."""
+    """Les rôles sont des Group Django classiques."""
 
     def test_create_role(self):
         g = Group.objects.create(name="RESPONSABLE LOGISTIQUE")

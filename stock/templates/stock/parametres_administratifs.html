@@ -16,7 +16,7 @@
   .pa-header h4 { margin: 0; font-size: 20px; font-weight: 700; }
   .pa-header small { opacity: .85; font-size: 12px; }
 
-  .acc-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.07); margin-bottom: 18px; overflow: hidden; border: 1px solid var(--border-light); }
+  .acc-card { background: var(--bg-card); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,.07); margin-bottom: 18px; overflow-x: auto; border: 1px solid var(--border-light); }
   .acc-head { padding: 15px 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; user-select: none; border-left: 5px solid transparent; transition: background .15s; }
   .acc-head:hover { background: var(--bg-hover); }
   .acc-head h5 { margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 10px; color: var(--text-dark); }
@@ -172,7 +172,7 @@
       <i class="fas fa-cogs"></i>
       <div>
         <h4>Paramètres Administratifs</h4>
-        <small>Services · Spécialités · Identité de l'entreprise</small>
+        <small>Services · Spécialités · Identité de l'établissement</small>
       </div>
     </div>
 
@@ -187,37 +187,37 @@
 
       <form method="post" enctype="multipart/form-data" id="form-entreprise">
         {% csrf_token %}
-        <input type="hidden" name="enregistrer_entreprise" value="1">
+        <input type="hidden" name="enregistrer_config" value="1">
 
         <div class="live-preview-box">
           <div style="font-size: 11px; color: var(--text-medium); margin-bottom: 14px; text-transform: uppercase; font-weight: 700; letter-spacing: .5px;">
             <i class="fas fa-eye"></i> Aperçu instantané du cartouche PDF
           </div>
           <div class="live-cartouche" id="liveCartouche">
-            <div style="display: flex; align-items: center; gap: 15px; border-bottom: 2px solid {{ entreprise_obj.couleur_principale|default:'#1c5b96' }}; padding-bottom: 12px; margin-bottom: 12px;">
+            <div style="display: flex; align-items: center; gap: 15px; border-bottom: 2px solid {{ config_hopital.couleur_principale|default:'#1c5b96' }}; padding-bottom: 12px; margin-bottom: 12px;">
               <div id="liveLogoBox">
-                {% if entreprise_obj.logo %}
-                  <img src="{{ entreprise_obj.logo.url }}" id="liveLogoImg" alt="Logo entreprise" style="height: 55px; max-width: 120px; object-fit: contain;">
+                {% if config_hopital.logo %}
+                  <img src="{{ config_hopital.logo.url }}" id="liveLogoImg" alt="Logo établissement" style="height: 55px; max-width: 120px; object-fit: contain;">
                 {% else %}
                   <div style="height: 55px; width: 120px; background: #eee; border-radius: 4px; display: flex; align-items: center; justify-content: center; color: #999; font-size: 11px;" id="liveLogoPlaceholder">Aucun logo</div>
                 {% endif %}
               </div>
               <div style="flex: 1;">
-                <div class="live-title" id="liveNom" style="color: {{ entreprise_obj.couleur_principale|default:'#1c5b96' }};">{{ entreprise_obj.nom|default:"NOM DE L'ENTREPRISE" }}</div>
+                <div class="live-title" id="liveNom" style="color: {{ config_hopital.couleur_principale|default:'#1c5b96' }};">{{ config_hopital.nom|default:"NOM DE L'ÉTABLISSEMENT" }}</div>
                 <div class="live-line">
-                  <div id="liveDirection">{{ entreprise_obj.direction_label|default:'DIRECTION' }}</div>
-                  <div id="liveSousDir">{{ entreprise_obj.sous_direction_label|default:'SOUS-DIRECTION' }}</div>
-                  <div id="liveService">{{ entreprise_obj.service_label|default:'SERVICE' }}</div>
+                  <div id="liveDirection">{{ config_hopital.direction_label|default:'DIRECTION' }}</div>
+                  <div id="liveSousDir">{{ config_hopital.sous_direction_label|default:'SOUS-DIRECTION' }}</div>
+                  <div id="liveService">{{ config_hopital.service_label|default:'SERVICE' }}</div>
                 </div>
               </div>
             </div>
             <div class="live-mentions" id="liveMentions">
-              {% if entreprise_obj.cc %}<span><strong>CC:</strong> <span id="liveCC">{{ entreprise_obj.cc }}</span></span>{% endif %}
-              {% if entreprise_obj.ifu %}<span><strong>IFU:</strong> <span id="liveIFU">{{ entreprise_obj.ifu }}</span></span>{% endif %}
-              {% if entreprise_obj.rccm %}<span><strong>RCCM:</strong> <span id="liveRCCM">{{ entreprise_obj.rccm }}</span></span>{% endif %}
-              {% if entreprise_obj.telephone %}<span><strong>Tél:</strong> <span id="liveTel">{{ entreprise_obj.telephone }}</span></span>{% endif %}
+              {% if config_hopital.cc %}<span><strong>CC:</strong> <span id="liveCC">{{ config_hopital.cc }}</span></span>{% endif %}
+              {% if config_hopital.ifu %}<span><strong>IFU:</strong> <span id="liveIFU">{{ config_hopital.ifu }}</span></span>{% endif %}
+              {% if config_hopital.rccm %}<span><strong>RCCM:</strong> <span id="liveRCCM">{{ config_hopital.rccm }}</span></span>{% endif %}
+              {% if config_hopital.telephone %}<span><strong>Tél:</strong> <span id="liveTel">{{ config_hopital.telephone }}</span></span>{% endif %}
             </div>
-            <div class="live-footer" id="livePied">{{ entreprise_obj.pied_page_pdf|default:'Pied de page' }}</div>
+            <div class="live-footer" id="livePied">{{ config_hopital.pied_page_pdf|default:'Pied de page' }}</div>
           </div>
         </div>
 
@@ -233,34 +233,30 @@
         <div id="tab-identite" class="sub-tab-content active">
           <div class="fg3">
             <div class="fg">
-              <label>Nom de l'entreprise *</label>
-              {{ form_entreprise.nom }}
-            </div>
-            <div class="fg">
-              <label>Slug (identifiant URL) *</label>
-              {{ form_entreprise.slug }}
+              <label>Nom de l'établissement *</label>
+              {{ form_config.nom }}
             </div>
             <div class="fg" style="display:flex; align-items:flex-end; gap:8px;">
               <div style="flex:1;">
                 <label>Couleur principale</label>
-                {{ form_entreprise.couleur_principale }}
+                {{ form_config.couleur_principale }}
               </div>
-              <div class="color-preview-box" id="colorPreviewBox" style="background:{{ entreprise_obj.couleur_principale|default:'#1c5b96' }}; margin-bottom:2px;"></div>
+              <div class="color-preview-box" id="colorPreviewBox" style="background:{{ config_hopital.couleur_principale|default:'#1c5b96' }}; margin-bottom:2px;"></div>
             </div>
           </div>
           <div class="fg2">
             <div class="fg">
               <label>Logo (affiché sur les PDF) <small style="font-weight:400; color:var(--text-medium);">PNG/JPG, max 2 Mo</small></label>
-              {{ form_entreprise.logo }}
-              {% if entreprise_obj.logo %}
-                <img src="{{ entreprise_obj.logo.url }}" class="img-preview" id="previewLogo" alt="Aperçu logo">
+              {{ form_config.logo }}
+              {% if config_hopital.logo %}
+                <img src="{{ config_hopital.logo.url }}" class="img-preview" id="previewLogo" alt="Aperçu logo">
               {% endif %}
             </div>
             <div class="fg">
               <label>Cachet / Tampon (PDF) <small style="font-weight:400; color:var(--text-medium);">PNG transparent, max 2 Mo</small></label>
-              {{ form_entreprise.cachet }}
-              {% if entreprise_obj.cachet %}
-                <img src="{{ entreprise_obj.cachet.url }}" class="img-preview" alt="Aperçu cachet">
+              {{ form_config.cachet }}
+              {% if config_hopital.cachet %}
+                <img src="{{ config_hopital.cachet.url }}" class="img-preview" alt="Aperçu cachet">
               {% endif %}
             </div>
           </div>
@@ -268,41 +264,41 @@
 
         <div id="tab-contact" class="sub-tab-content">
           <div class="fg3">
-            <div class="fg"><label>Téléphone</label>{{ form_entreprise.telephone }}</div>
-            <div class="fg"><label>Email</label>{{ form_entreprise.email_contact }}</div>
-            <div class="fg"><label>CC (Compte Contribuable)</label>{{ form_entreprise.cc }}</div>
+            <div class="fg"><label>Téléphone</label>{{ form_config.telephone }}</div>
+            <div class="fg"><label>Email</label>{{ form_config.email_contact }}</div>
+            <div class="fg"><label>CC (Compte Contribuable)</label>{{ form_config.cc }}</div>
           </div>
           <div class="fg3">
-            <div class="fg"><label>IFU</label>{{ form_entreprise.ifu }}</div>
-            <div class="fg"><label>RCCM</label>{{ form_entreprise.rccm }}</div>
-            <div class="fg"><label>Ville</label>{{ form_entreprise.ville }}</div>
+            <div class="fg"><label>IFU</label>{{ form_config.ifu }}</div>
+            <div class="fg"><label>RCCM</label>{{ form_config.rccm }}</div>
+            <div class="fg"><label>Ville</label>{{ form_config.ville }}</div>
           </div>
           <div class="fg2">
-            <div class="fg"><label>Adresse postale</label>{{ form_entreprise.adresse }}</div>
-            <div class="fg"><label>Pays</label>{{ form_entreprise.pays }}</div>
+            <div class="fg"><label>Adresse postale</label>{{ form_config.adresse }}</div>
+            <div class="fg"><label>Pays</label>{{ form_config.pays }}</div>
           </div>
         </div>
 
         <div id="tab-hierarchie" class="sub-tab-content">
           <div class="fg2">
-            <div class="fg"><label>Direction</label>{{ form_entreprise.direction_label }}</div>
-            <div class="fg"><label>Sous-Direction</label>{{ form_entreprise.sous_direction_label }}</div>
+            <div class="fg"><label>Direction</label>{{ form_config.direction_label }}</div>
+            <div class="fg"><label>Sous-Direction</label>{{ form_config.sous_direction_label }}</div>
           </div>
           <div class="fg2">
-            <div class="fg"><label>Service</label>{{ form_entreprise.service_label }}</div>
-            <div class="fg"><label>Pied de page PDF</label>{{ form_entreprise.pied_page_pdf }}</div>
+            <div class="fg"><label>Service</label>{{ form_config.service_label }}</div>
+            <div class="fg"><label>Pied de page PDF</label>{{ form_config.pied_page_pdf }}</div>
           </div>
         </div>
 
         <div id="tab-numero" class="sub-tab-content">
           <div class="fg3">
-            <div class="fg"><label>Bon de Sortie</label>{{ form_entreprise.prefixe_bon_sortie }}</div>
-            <div class="fg"><label>Bon d'Entrée</label>{{ form_entreprise.prefixe_bon_entree }}</div>
-            <div class="fg"><label>Bon de Retour</label>{{ form_entreprise.prefixe_bon_retour }}</div>
+            <div class="fg"><label>Bon de Sortie</label>{{ form_config.prefixe_bon_sortie }}</div>
+            <div class="fg"><label>Bon d'Entrée</label>{{ form_config.prefixe_bon_entree }}</div>
+            <div class="fg"><label>Bon de Retour</label>{{ form_config.prefixe_bon_retour }}</div>
           </div>
           <div class="fg2">
-            <div class="fg"><label>Bon Hors Stock</label>{{ form_entreprise.prefixe_bon_hors_stock }}</div>
-            <div class="fg"><label>Commande</label>{{ form_entreprise.prefixe_commande }}</div>
+            <div class="fg"><label>Bon Hors Stock</label>{{ form_config.prefixe_bon_hors_stock }}</div>
+            <div class="fg"><label>Commande</label>{{ form_config.prefixe_commande }}</div>
           </div>
         </div>
 
@@ -355,24 +351,24 @@
             <i class="fas fa-signature"></i> Ces labels apparaissent dans les 6 cases signature en bas de chaque document PDF.
           </div>
           <div class="fg3">
-            <div class="fg"><label>Signataire 1</label>{{ form_entreprise.label_signataire_1 }}</div>
-            <div class="fg"><label>Signataire 2</label>{{ form_entreprise.label_signataire_2 }}</div>
-            <div class="fg"><label>Signataire 3</label>{{ form_entreprise.label_signataire_3 }}</div>
+            <div class="fg"><label>Signataire 1</label>{{ form_config.label_signataire_1 }}</div>
+            <div class="fg"><label>Signataire 2</label>{{ form_config.label_signataire_2 }}</div>
+            <div class="fg"><label>Signataire 3</label>{{ form_config.label_signataire_3 }}</div>
           </div>
           <div class="fg3">
-            <div class="fg"><label>Signataire 4</label>{{ form_entreprise.label_signataire_4 }}</div>
-            <div class="fg"><label>Signataire 5</label>{{ form_entreprise.label_signataire_5 }}</div>
-            <div class="fg"><label>Signataire 6</label>{{ form_entreprise.label_signataire_6 }}</div>
+            <div class="fg"><label>Signataire 4</label>{{ form_config.label_signataire_4 }}</div>
+            <div class="fg"><label>Signataire 5</label>{{ form_config.label_signataire_5 }}</div>
+            <div class="fg"><label>Signataire 6</label>{{ form_config.label_signataire_6 }}</div>
           </div>
         </div>
 
-        {% if historique_entreprise %}
+        {% if historique_config %}
         <div class="history-box">
           <h6><i class="fas fa-history"></i> Dernières modifications de l'identité</h6>
-          {% for h in historique_entreprise %}
+          {% for h in historique_config %}
           <div class="history-item">
             <div>
-              <strong>{{ h.history_user.get_full_name|default:h.history_user.username|default:"Système" }}</strong>
+              <strong>{% if h.history_user %}{{ h.history_user.get_full_name|default:h.history_user.username }}{% else %}Système{% endif %}</strong>
               — {% if h.history_type == '+' %}Création{% elif h.history_type == '~' %}Modification{% else %}Suppression{% endif %}
             </div>
             <div>{{ h.history_date|date:"d/m/Y H:i" }}</div>
@@ -773,7 +769,7 @@ function switchDocTab(event, tabId) {
 }
 
 function updateLivePreview() {
-    var nom = document.querySelector('input[name="nom"]')?.value || "NOM DE L'ENTREPRISE";
+    var nom = document.querySelector('input[name="nom"]')?.value || "NOM DE L'ÉTABLISSEMENT";
     var couleur = document.querySelector('input[name="couleur_principale"]')?.value || '#1c5b96';
     var direction = document.querySelector('input[name="direction_label"]')?.value || 'DIRECTION';
     var sousDir = document.querySelector('input[name="sous_direction_label"]')?.value || 'SOUS-DIRECTION';

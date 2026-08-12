@@ -17,7 +17,7 @@
   .lv-header small { opacity: .85; font-size: 12px; }
   .stat-chip { background: rgba(255,255,255,.18); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; }
 
-  .card-table { background: var(--bg-card); border-radius: 10px; box-shadow: 0 2px 8px var(--shadow); overflow: hidden; margin-bottom: 20px; }
+  .card-table { background: var(--bg-card); border-radius: 10px; box-shadow: 0 2px 8px var(--shadow); overflow-x: auto; margin-bottom: 20px; }
   .tb-bar { padding: 14px 18px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: space-between; }
   .tb-filters { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 
@@ -260,6 +260,11 @@
       <tr class="empty-row"><td colspan="9">
         <i class="fas fa-dolly" style="font-size:34px;display:block;margin-bottom:10px;color:var(--border-color);"></i>
         Aucune livraison enregistrée.
+        <div style="font-size:12px;margin-top:8px;max-width:520px;margin-left:auto;margin-right:auto;line-height:1.6;">
+          Les livraisons apparaissent ici dès qu'une <strong>demande</strong> est traitée au guichet :
+          chaque livraison génère un bon de sortie et un <strong>accusé de réception</strong> à faire signer
+          par le service destinataire. Le suivi reste actif tant que la réception n'est pas signée.
+        </div>
       </td></tr>
       {% endfor %}
     </tbody>
@@ -438,20 +443,10 @@ function toggleDetail(id) {
 }
 
 /* ── MODALE PDF ── */
-function imprimerModal(url, titre) {
-    document.getElementById('pdf-modal-title').textContent = titre || 'Document';
-    var loader = document.getElementById('pdf-modal-loader');
-    var iframe = document.getElementById('pdf-modal-iframe');
-    loader.style.display = 'flex';
-    iframe.style.display = 'none';
-    iframe.src = '';
-    document.getElementById('pdf-modal').classList.add('open');
-    iframe.onload = function() {
-        loader.style.display = 'none';
-        iframe.style.display = 'block';
+window.imprimerModal = function(url, titre) {
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        window.open(url, '_blank');
     };
-    iframe.src = url;
-}
 
 function closePdfModal() {
     document.getElementById('pdf-modal').classList.remove('open');

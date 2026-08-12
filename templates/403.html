@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Accès refusé — NexusERP</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(160deg, #fdf6f0 0%, #f9ede2 100%);
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 20px; color: #3a2b1c;
+  }
+  .card {
+    background: #fff; border-radius: 16px; max-width: 520px; width: 100%;
+    padding: 48px 40px; text-align: center; box-shadow: 0 12px 40px rgba(160, 90, 20, 0.15);
+    border-top: 6px solid #d9534f;
+  }
+  .logo { font-size: 22px; font-weight: 800; letter-spacing: 2px; color: #1c5b96; margin-bottom: 24px; }
+  .logo span { color: #ffc107; }
+  .code { font-size: 84px; font-weight: 800; color: #d9534f; line-height: 1; text-shadow: 0 3px 0 rgba(217,83,79,.15); }
+  h1 { font-size: 20px; margin: 14px 0 10px; color: #3a2b1c; }
+  p { font-size: 14px; color: #7d6a5a; line-height: 1.7; margin-bottom: 26px; }
+  .btn {
+    display: inline-block; background: #1c5b96; color: #fff; text-decoration: none;
+    padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px;
+    transition: background .2s, transform .15s;
+  }
+  .btn:hover { background: #14477a; transform: translateY(-1px); }
+  .btn.secondary { background: #e8eef5; color: #1c5b96; margin-left: 10px; }
+  .btn.secondary:hover { background: #dbe6f0; }
+  .footer { margin-top: 26px; font-size: 12px; color: #93a3b5; }
+  @media (max-width: 480px) {
+    .card { padding: 36px 22px; }
+    .btn { display: block; margin: 8px 0 0; }
+    .btn.secondary { margin-left: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo">Nexus<span>ERP</span></div>
+    <div class="code">403</div>
+    <h1>Accès refusé</h1>
+    <p>Vous n'avez pas l'autorisation d'accéder à cette page.<br>Si vous pensez qu'il s'agit d'une erreur, contactez votre administrateur.</p>
+    <a class="btn" href="/">Retour à l'accueil</a>
+    <a class="btn secondary" href="javascript:history.back()">Page précédente</a>
+    <div class="footer">Suite de Gestion Intégrée — NexusERP</div>
+  </div>
+</body>
+</html>

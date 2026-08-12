@@ -172,7 +172,7 @@
     border-radius: var(--cmd-radius);
     box-shadow: var(--cmd-shadow-sm);
     border: 1px solid var(--cmd-border);
-    overflow: hidden;
+    overflow-x: auto;
   }
   .cmd-table {
     width: 100%;
@@ -581,6 +581,10 @@
     .cmd-table tbody td:last-child { border-bottom: none; justify-content: center; }
     .cmd-detail-box { margin: 8px; }
     .cmd-modal-box { max-width: 100%; width: 98%; margin: 2vh 1%; }
+    .cmd-grid-2, .cmd-grid-3 { grid-template-columns: 1fr !important; }
+    .cmd-modal-body { padding: 14px; }
+    .cmd-modal-foot { flex-direction: column; }
+    .cmd-modal-foot .cmd-btn-nok, .cmd-modal-foot .cmd-btn-ok { width: 100%; }
   }
 </style>
 
@@ -713,7 +717,7 @@
       <div class="cmd-modal-body">
 
         <!-- ══ ÉTAPE 1 : Fournisseur + Famille (obligatoires) ══ -->
-        <div class="cmd-form-sec" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="cmd-form-sec cmd-grid-2" style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
           <div>
             <label class="cmd-form-label">Fournisseur *</label>
             <select name="fournisseur" id="select-fourn" required class="cmd-form-input s2">
@@ -733,7 +737,7 @@
         </div>
 
         <!-- ══ ÉTAPE 2 : Infos complémentaires ══ -->
-        <div class="cmd-form-sec" style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px;">
+        <div class="cmd-form-sec cmd-grid-3" style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px;">
           <div>
             <label class="cmd-form-label"><i class="fas fa-bullseye me-1"></i>Objet de la commande</label>
             <input type="text" name="objet" class="cmd-form-input" placeholder="Ex: Fourniture de consommables médicaux…" maxlength="500">
@@ -794,7 +798,7 @@
         </div>
 
         <!-- ══ ÉTAPE 4 : Tableau des articles ajoutés ══ -->
-        <div class="cmd-form-sec" style="padding:0;overflow:hidden;">
+        <div class="cmd-form-sec" style="padding:0;overflow-x:auto;">
           <table class="cmd-art-table">
             <thead>
               <tr>
@@ -890,24 +894,9 @@
 
     // ── Modal PDF ──
     window.imprimerModal = function(url, titre) {
-        var modal = document.getElementById('modal-pdf');
-        var titreEl = document.getElementById('pdf-titre');
-        var loader = document.getElementById('pdf-loader');
-        var iframe = document.getElementById('pdf-iframe');
-
-        if(titreEl) titreEl.innerHTML = '<i class="fas fa-print me-2"></i>' + (titre||'');
-        if(loader) loader.style.display = 'flex';
-        if(iframe) { iframe.style.display = 'none'; iframe.src = ''; }
-        if(modal) modal.classList.add('open');
-
-        if(iframe) {
-            iframe.onload = function(){
-                if(loader) loader.style.display='none';
-                iframe.style.display='block';
-            };
-            iframe.src = url;
-        }
-    };
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        window.open(url, '_blank');
+    };;
 
     // ── Modal Création Commande ──
     var modalCmd = document.getElementById('modal-cmd');

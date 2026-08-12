@@ -24,11 +24,7 @@ class ConfigurationPDFTest(TestCase):
     def setUpTestData(cls):
         """Création des données de test une seule fois."""
         # Créer un magasin
-        cls.magasin = Magasin.objects.create(
-            nom='Magasin Central',
-            code='MC001',
-            adresse='Avenue Principale'
-        )
+        cls.magasin = Magasin.objects.create(nom='Magasin Central')
 
         # Créer un utilisateur pour les requêtes
         cls.user = User.objects.create_user(
@@ -64,14 +60,19 @@ class ConfigurationPDFTest(TestCase):
         # Vérifier les valeurs par défaut
         self.assertTrue(config['afficher_logo'])
         self.assertFalse(config['afficher_cachet'])
-        self.assertFalse(config['afficher_cc'])
-        self.assertFalse(config['afficher_ifu'])
-        self.assertFalse(config['afficher_rccm'])
+        self.assertTrue(config['afficher_cc'])
+        self.assertTrue(config['afficher_ifu'])
+        self.assertTrue(config['afficher_rccm'])
         self.assertTrue(config['afficher_telephone'])
         self.assertTrue(config['afficher_signatures'])
-        self.assertEqual(config['code_document'], 'BS')
-        self.assertEqual(config['version_doc'], '1.0')
+        # Défauts CHU (codes officiels, version 002)
+        self.assertEqual(config['code_document'], 'ENR-BSM/DAF-001')
+        self.assertEqual(config['version_doc'], '002')
         self.assertEqual(config['couleur_principale'], '#1c5b96')
+        self.assertEqual(config['metadonnees']['code_document'], 'ENR-BSM/DAF-001')
+        self.assertTrue(config['cartouche']['afficher_republique'])
+        self.assertTrue(config['cartouche']['afficher_devise'])
+        self.assertEqual(config['direction_label'], 'DIRECTION DES AFFAIRES FINANCIÈRES')
 
     # ═══════════════════════════════════════════════════════════════════════
     # TESTS : ConfigDocument (configuration globale)
@@ -131,7 +132,6 @@ class ConfigurationPDFTest(TestCase):
             type_doc='BS',
             afficher_cachet=True,
             afficher_cc=True,
-            couleur_principale='#FF0000',  # Rouge
         )
 
         # Créer modèle spécifique au magasin
@@ -179,10 +179,7 @@ class ConfigurationPDFTest(TestCase):
 
     def test_modele_magasin_autre_magasin_non_affecte(self):
         """Le modèle d'un autre magasin ne doit pas affecter ce magasin."""
-        autre_magasin = Magasin.objects.create(
-            nom='Autre Magasin',
-            code='AM001'
-        )
+        autre_magasin = Magasin.objects.create(nom='Autre Magasin')
 
         # Créer modèle seulement pour l'autre magasin
         ModeleDocumentMagasin.objects.create(
@@ -218,7 +215,6 @@ class ConfigurationPDFTest(TestCase):
             afficher_signatures=True,
             code_document='BS-GLOBAL',
             version_doc='1.5',
-            couleur_principale='#FF0000',
         )
 
         # Niveau 2 : ModeleMagasin (écrase partiellement)
@@ -265,8 +261,8 @@ class ConfigurationPDFTest(TestCase):
 
         self.assertTrue(config['afficher_cachet'])
         self.assertEqual(config['couleur_principale'], '#FFFF00')
-        # Les autres champs doivent être aux valeurs par défaut
-        self.assertFalse(config['afficher_cc'])
+        # Les autres champs doivent être aux valeurs par défaut (défauts CHU : cc affiché)
+        self.assertTrue(config['afficher_cc'])
 
     # ═══════════════════════════════════════════════════════════════════════
     # TESTS : Gestion des erreurs et fallbacks
@@ -289,6 +285,6 @@ class ConfigurationPDFTest(TestCase):
         request = self._create_request()
         config, _ = get_pdf_config(self.magasin, 'BC', request)
 
-        # BC n'a pas de configuration, donc défaut
+        # BC n'a pas de configuration, donc défauts CHU (code officiel commande)
         self.assertFalse(config['afficher_cachet'])
-        self.assertEqual(config['code_document'], 'BC')
+        self.assertEqual(config['code_document'], 'ENR-BCM/DAF-002')

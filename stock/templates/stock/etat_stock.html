@@ -415,24 +415,9 @@
     // imprimerModal global, protégé contre redéfinition
     if (typeof window.imprimerModal !== 'function') {
         window.imprimerModal = function(url, titre) {
-            var modal = document.getElementById('modal-pdf');
-            if (!modal) return;
-            var titreEl = document.getElementById('pdf-titre');
-            var loader  = document.getElementById('pdf-loader');
-            var iframe  = document.getElementById('pdf-iframe');
-
-            if (titreEl) titreEl.innerHTML = '<i class="fas fa-print me-2"></i> ' + (titre || 'Impression');
-            if (loader)  loader.style.display = 'flex';
-            if (iframe) {
-                iframe.style.display = 'none';
-                iframe.onload = function() {
-                    if (loader) loader.style.display = 'none';
-                    iframe.style.display = 'block';
-                };
-                iframe.src = url;
-            }
-            modal.classList.add('open');
-        };
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        window.open(url, '_blank');
+    };;
     }
 
     // Listeners délégués (une seule fois)

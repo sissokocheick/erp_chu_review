@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>{{ notif.titre }}</title>
+<style>
+  body { margin: 0; padding: 0; background: #f4f6f9; font-family: Arial, Helvetica, sans-serif; color: #2d3748; }
+  .wrap { max-width: 600px; margin: 24px auto; background: #ffffff; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.08); }
+  .head { background: linear-gradient(135deg, #1c5b96, #0d47a1); color: #fff; padding: 22px 28px; }
+  .head h2 { margin: 0; font-size: 18px; }
+  .body { padding: 26px 28px; font-size: 14px; line-height: 1.6; }
+  .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 11px; font-weight: bold; text-transform: uppercase; }
+  .badge.SUCCESS { background: #d4edda; color: #155724; }
+  .badge.WARNING { background: #fff3cd; color: #856404; }
+  .badge.DANGER { background: #f8d7da; color: #721c24; }
+  .badge.ERROR { background: #f8d7da; color: #721c24; }
+  .badge.INFO { background: #d1ecf1; color: #0c5460; }
+  .msg { margin: 16px 0; padding: 14px 18px; background: #f8fafc; border-left: 4px solid #1c5b96; border-radius: 6px; }
+  .foot { padding: 16px 28px; border-top: 1px solid #eef2f7; font-size: 12px; color: #8492a6; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <h2><span style="font-size:16px;">&#128276;</span> {{ notif.titre }}</h2>
+      <div style="margin-top:8px; opacity:.9; font-size:12px;">{{ utilisateur.get_full_name|default:utilisateur.username }} — {{ notif.date_creation|date:"d/m/Y H:i" }}</div>
+    </div>
+    <div class="body">
+      <span class="badge {{ notif.type_notif }}">{{ notif.get_type_notif_display }}</span>
+      <div class="msg">{{ notif.message|linebreaksbr }}</div>
+      {% if notif.url %}
+      <p style="margin:18px 0 0;">
+        <a href="{{ notif.url }}" style="display:inline-block; background:#1c5b96; color:#fff; padding:10px 22px; border-radius:6px; text-decoration:none; font-weight:bold;">Voir le détail</a>
+      </p>
+      {% endif %}
+    </div>
+    <div class="foot">
+      Ceci est un message automatique envoyé par NexusERP. Merci de ne pas y répondre.
+    </div>
+  </div>
+</body>
+</html>

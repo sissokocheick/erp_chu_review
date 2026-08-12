@@ -1,0 +1,134 @@
+{% extends "base_ui.html" %}
+{% block title %}Notifications — Configuration{% endblock %}
+
+{% block contenu %}
+<style>
+    .ntf-wrap { max-width: 860px; }
+    .ntf-card { background: var(--bg-card); border-radius: 12px; box-shadow: 0 2px 10px var(--shadow); border: 1px solid var(--border-light); margin-bottom: 22px; overflow: hidden; }
+    .ntf-head { padding: 16px 22px; display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 15px; color: #fff; }
+    .ntf-head.email { background: linear-gradient(135deg, #1c5b96, #0d47a1); }
+    .ntf-head.sms { background: linear-gradient(135deg, #0f766e, #065f56); }
+    .ntf-body { padding: 22px; }
+    .ntf-body .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 700px) { .ntf-body .row2 { grid-template-columns: 1fr; } }
+    .ntf-body label { display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-medium); margin-bottom: 5px; }
+    .ntf-body .fg { margin-bottom: 16px; }
+    .ntf-body input.form-control, .ntf-body select.form-control { width: 100%; padding: 10px 12px; border: 2px solid var(--border-color); border-radius: 8px; font-size: 13.5px; background: var(--bg-input); color: var(--text-dark); box-sizing: border-box; }
+    .ntf-body input.form-control:focus, .ntf-body select.form-control:focus { border-color: var(--primary-blue); outline: none; }
+    .ntf-check { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; padding: 12px 16px; background: var(--bg-stripe); border-radius: 8px; border: 1px solid var(--border-light); cursor: pointer; }
+    .ntf-check input { width: 18px; height: 18px; accent-color: var(--primary-blue); }
+    .ntf-check .txt strong { display: block; font-size: 13.5px; color: var(--text-dark); }
+    .ntf-check .txt span { font-size: 12px; color: var(--text-light); }
+    .ntf-info { background: #e8f0fe; border-left: 4px solid #1c5b96; border-radius: 0 8px 8px 0; padding: 12px 16px; font-size: 13px; color: #0d47a1; margin-bottom: 18px; }
+    .ntf-actions { display: flex; justify-content: flex-end; gap: 12px; }
+    .ntf-save { background: var(--primary-blue); color: #fff; border: none; padding: 12px 30px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+    .ntf-save:hover { opacity: .9; }
+</style>
+
+<div class="ntf-wrap nx-container">
+    <div class="nx-between mb-4">
+        <h4 style="margin:0; color: var(--text-dark);">
+            <i class="fas fa-bell" style="color: #ffc107; margin-right: 8px;"></i>Configuration des Notifications
+        </h4>
+        <a href="{% url 'liste_notifications' %}" class="nx-btn nx-btn-light nx-btn-sm"><i class="fas fa-inbox"></i> Mes notifications</a>
+    </div>
+
+    <form method="POST" novalidate>
+        {% csrf_token %}
+        {% if form.errors %}
+        <div class="nx-alert nx-alert-danger" style="margin-bottom:16px;">
+            Veuillez corriger les erreurs ci-dessous.
+        </div>
+        {% endif %}
+
+        {% if diagnostic %}
+        <div style="margin-bottom:18px;">
+            {% for d in diagnostic %}
+            <div class="ntf-card" style="margin-bottom:10px; box-shadow:none;">
+                <div class="ntf-body" style="padding:14px 18px; display:flex; gap:12px; align-items:flex-start; border-left:4px solid {% if d.niveau == 'danger' %}#d32f2f{% elif d.niveau == 'warning' %}#f9a825{% else %}#1c5b96{% endif %};">
+                    <i class="fas {% if d.niveau == 'danger' %}fa-exclamation-triangle{% elif d.niveau == 'warning' %}fa-exclamation-circle{% else %}fa-info-circle{% endif %}" style="color:{% if d.niveau == 'danger' %}#d32f2f{% elif d.niveau == 'warning' %}#f9a825{% else %}#1c5b96{% endif %}; margin-top:2px;"></i>
+                    <div style="font-size:13px;">
+                        <strong style="display:block; color:var(--text-dark);">{{ d.titre }}</strong>
+                        <span style="color:var(--text-medium);">{{ d.detail }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- ══ CANAL EMAIL ══ -->
+        <div class="ntf-card">
+            <div class="ntf-head email"><i class="fas fa-envelope-open-text"></i> Canal Email (SMTP)</div>
+            <div class="ntf-body">
+                <label class="ntf-check">
+                    {{ form.activer_email }}
+                    <span class="txt">
+                        <strong>Activer les notifications par email</strong>
+                        <span>Si actif, un email est envoyé à chaque utilisateur pour chaque notification (config globale — aucun choix individuel).</span>
+                    </span>
+                </label>
+                <div class="row2">
+                    <div class="fg"><label>Serveur SMTP (hôte)</label>{{ form.smtp_host }}</div>
+                    <div class="fg"><label>Port SMTP</label>{{ form.smtp_port }}</div>
+                </div>
+                <div class="row2">
+                    <div class="fg"><label>Utilisateur SMTP</label>{{ form.smtp_user }}</div>
+                    <div class="fg"><label>Mot de passe SMTP</label>{{ form.smtp_password }}</div>
+                </div>
+                <div class="fg"><label>Email expéditeur</label>{{ form.email_expediteur }}</div>
+                <label class="ntf-check">
+                    {{ form.smtp_use_tls }}
+                    <span class="txt">
+                        <strong>Utiliser TLS (STARTTLS)</strong>
+                        <span>Recommandé pour Gmail, Outlook, etc. (port 587).</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <!-- ══ CANAL SMS ══ -->
+        <div class="ntf-card">
+            <div class="ntf-head sms"><i class="fas fa-sms"></i> Canal SMS (API)</div>
+            <div class="ntf-body">
+                <div class="ntf-info">
+                    <i class="fas fa-info-circle" style="margin-right:6px;"></i>
+                    L'API est appelée en POST avec un corps JSON contenant le numéro et le message
+                    (champs configurables ci-dessous) et l'en-tête <code>Authorization: Bearer &lt;clé&gt;</code>.
+                    En <strong>mode test</strong>, les SMS sont journalisés dans les logs sans être réellement envoyés.
+                </div>
+                <label class="ntf-check">
+                    {{ form.activer_sms }}
+                    <span class="txt">
+                        <strong>Activer les notifications par SMS</strong>
+                        <span>Les SMS partent UNIQUEMENT pour les notifications importantes (alertes stock, ajustements forcés…), jamais pour les simples informations — les emails, eux, partent pour tout. Numéro = téléphone du profil (config globale, aucun choix individuel). Ce canal sert aussi à envoyer les codes de réinitialisation du mot de passe.</span>
+                    </span>
+                </label>
+                <div class="row2">
+                    <div class="fg"><label>Fournisseur SMS</label>{{ form.sms_provider }}</div>
+                    <div class="fg"><label>Expéditeur (sender ID)</label>{{ form.sms_expediteur }}</div>
+                </div>
+                <div class="fg"><label>URL de l'API SMS</label>{{ form.sms_api_url }}</div>
+                <div class="fg"><label>Clé API / Token</label>{{ form.sms_api_key }}</div>
+                <div class="fg"><label>Modèle Twilio (compte trial)</label>{{ form.sms_twilio_template }}</div>
+                <div class="row2">
+                    <div class="fg"><label>Paramètre du numéro</label>{{ form.sms_param_numero }}</div>
+                    <div class="fg"><label>Paramètre du message</label>{{ form.sms_param_message }}</div>
+                </div>
+                <label class="ntf-check">
+                    {{ form.sms_mode_test }}
+                    <span class="txt">
+                        <strong>Mode test (journal uniquement)</strong>
+                        <span>Activez pour vérifier le flux sans envoyer de vrais SMS.</span>
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <div class="ntf-actions">
+            <a href="{% url 'liste_notifications' %}" class="nx-btn nx-btn-light">Annuler</a>
+            <button type="submit" class="ntf-save"><i class="fas fa-save"></i> Enregistrer la configuration</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

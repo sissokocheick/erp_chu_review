@@ -1,4 +1,4 @@
-```
+
 # Python
 __pycache__/
 *.py[cod]
@@ -94,4 +94,6 @@ collected_static/
 
 # Media files
 /media/
-```
+
+# Freebuff (preview / logs locaux)
+.freebuff/

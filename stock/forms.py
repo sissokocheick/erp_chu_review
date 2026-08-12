@@ -358,7 +358,6 @@ class AjustementForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        kwargs.pop('entreprise', None)
         self.utilisateur = kwargs.pop('utilisateur', None)
         super().__init__(*args, **kwargs)
         self.fields['article'].queryset = Article.objects.all()
@@ -485,11 +484,11 @@ class MagasinParametresForm(forms.ModelForm):
         widgets = {
             'titre_responsable': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Pharmacien Chef', 'title': 'Ce texte apparaît dans la case "Vu pour exécution" du PDF'}),
             'responsable': forms.Select(attrs={'class': 'form-control', 'title': 'Utilisateur qui signe numériquement dans la case magasinier'}),
-            'pied_de_page': forms.TextInput(attrs={'class': 'form-control', 'title': "Texte du pied de page (laissez vide pour utiliser celui de l'entreprise)"}),
+            'pied_de_page': forms.TextInput(attrs={'class': 'form-control', 'title': "Texte du pied de page (laissez vide pour utiliser celui de l'établissement)"}),
         }
         help_texts = {
             'titre_responsable': 'Ex: Sous-Directeur de la Logistique — affiché dans la case "Vu pour exécution" du PDF.',
-            'pied_de_page': "Si vide, le pied de page de l'entreprise est utilisé automatiquement.",
+            'pied_de_page': "Si vide, le pied de page de l'établissement est utilisé automatiquement.",
         }
 
     def __init__(self, *args, **kwargs):
@@ -526,10 +525,7 @@ class BeneficiaireForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        if entreprise:
-            self.fields['service'].queryset = Service.objects.all()
-        else:
-            self.fields['service'].queryset = Service.objects.none()
+        self.fields['service'].queryset = Service.objects.all()
 
     def save(self, commit=True):
         instance = super().save(commit=False)

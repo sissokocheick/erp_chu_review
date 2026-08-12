@@ -19,11 +19,9 @@ def generer_pdf(template_name, context_dict, filename="document.pdf"):
 
     try:
         from core.pdf_service import DocumentGenerator
-        from core.models import ConfigurationHopital
-        # ✅ CORRECTION MONO-TENANT : DocumentGenerator() sans argument
-        # utilisait un fallback first() supprimé. On passe explicitement
-        # le singleton ConfigurationHopital.
-        gen = DocumentGenerator(entreprise=ConfigurationHopital.get_instance())
+        # Mono-tenant : DocumentGenerator utilise lui-même le singleton
+        # ConfigurationHopital pour la configuration de l'établissement.
+        gen = DocumentGenerator()
         return gen.render_bytes(template_name, context_dict)
     except ImportError:
         pass

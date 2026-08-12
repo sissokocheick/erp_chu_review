@@ -1,0 +1,108 @@
+<style>
+.signatures-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+    margin-bottom: 0;
+    margin-top: 0.5mm;
+    table-layout: fixed;
+}
+.signatures-table td {
+    border: 2px solid #000;
+    vertical-align: top;
+    padding: 0;
+    height: 32mm;
+    position: relative;
+}
+.sig-case-title {
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 8pt;
+    text-decoration: underline;
+    padding: 1mm 0.5mm 0 0.5mm;
+    line-height: 1.2;
+}
+.sig-case-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: calc(32mm - 7pt);
+    padding: 0 1mm 0.5mm 1mm;
+}
+.sig-name-top {
+    text-align: center;
+    font-size: 9pt;
+    font-weight: bold;
+    margin-top: 0.5mm;
+}
+.sig-image-center {
+    text-align: center;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sig-image-center img {
+    max-height: 18mm;
+    max-width: 80%;
+}
+.sig-fonction-bottom {
+    text-align: center;
+    font-size: 8pt;
+    font-style: italic;
+    margin-bottom: 0mm;
+    margin-top: 0.5mm;
+}
+.sig-default-bottom {
+    text-align: center;
+    font-size: 8pt;
+    margin-top: auto;
+    padding-bottom: 0.5mm;
+    line-height: 1.3;
+}
+.sig-empty-space {
+    flex: 1;
+}
+.sig-date {
+    text-align: center;
+    font-size: 6pt;
+    font-weight: bold;
+    color: #333;
+    margin-top: 0.5mm;
+}
+</style>
+{% if signature_cases %}
+<table class="signatures-table">
+  <tr>
+    {% for case in signature_cases %}
+    <td>
+      <div class="sig-case-title">{{ case.label }}</div>
+      <div class="sig-case-content">
+        {% if case.has_signature %}
+          <div class="sig-name-top">{{ case.user_name }}</div>
+          <div class="sig-image-center">
+            <img src="{{ case.signature_path }}">
+          </div>
+          <div class="sig-fonction-bottom">{{ case.fonction }}</div>
+        {% else %}
+          {% if case.user_name %}
+            <div class="sig-name-top">{{ case.user_name }}</div>
+          {% endif %}
+          <div class="sig-empty-space"></div>
+          {% if case.fonction %}
+            <div class="sig-fonction-bottom">{{ case.fonction }}</div>
+          {% endif %}
+          {% if case.default_text %}
+            <div class="sig-default-bottom">{{ case.default_text|safe }}</div>
+          {% endif %}
+        {% endif %}
+      </div>
+      {% if case.date %}
+      <div class="sig-date">{{ case.date|date:"d/m/Y" }}</div>
+      {% endif %}
+    </td>
+    {% endfor %}
+  </tr>
+</table>
+{% endif %}

@@ -823,7 +823,7 @@ var tousLesArticles = [];
 function chargerArticles() {
     var list = document.getElementById('article-list');
     list.innerHTML = '<div style="padding:16px;text-align:center;color:var(--text-light);font-size:12px;"><i class="fas fa-spinner fa-spin" style="margin-right:6px;"></i>Chargement…</div>';
-    fetch('/stock/api/articles/')
+    fetch('{% url "api_articles_json" %}')
         .then(r => r.json())
         .then(data => {
             tousLesArticles = data.articles || [];

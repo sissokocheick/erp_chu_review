@@ -73,8 +73,9 @@ def _colonnes_par_type(type_doc):
 
 
 def _nb_signatures_max(type_doc):
-    mapping = {'BDM': 2, 'BS': 4, 'BE': 2, 'BR': 3, 'BSHS': 2, 'BC': 2}
-    return mapping.get(type_doc, 4)
+    # Aligné sur les formats officiels CHU Angré (voir pdf/)
+    mapping = {'BDM': 2, 'BS': 6, 'BE': 2, 'BR': 2, 'BSHS': 2, 'BC': 3}
+    return mapping.get(type_doc, 6)
 
 
 def _parse_post_to_config(request_post, type_doc='BS'):
@@ -367,7 +368,6 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                     'service_poste': service_poste,
                     'signatures_config': signatures_config,
                     'espaceur_mm': 0.0,
-                    'entreprise': None,
                     'logo_url': logo_url,
                     'type_bon_label': "BON DE DEMANDE",
                     'doc_subtitle': "DE MATERIELS ET FOURNITURES",
@@ -404,7 +404,6 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                     'magasin': magasin,
                     'lignes_data': lignes_data,
                     'signatures_config': signatures_config,
-                    'entreprise': None,
                     'logo_url': logo_url,
                 }
 
@@ -436,7 +435,6 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                     'saisisseur_signature': None,
                     'saisisseur_fonction': 'Magasinier',
                     'saisisseur_date': timezone.now(),
-                    'entreprise': None,
                     'logo_url': logo_url,
                 }
 
@@ -465,7 +463,6 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                     'service_poste': service_poste,
                     'lignes_data': lignes_data,
                     'signatures_config': signatures_config,
-                    'entreprise': None,
                     'logo_url': logo_url,
                 }
 
@@ -527,7 +524,6 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                     'est_livraison_partielle': False,
                     'est_cloture': True,
                     'numero_livraison': None,
-                    'entreprise': None,
                     'logo_url': logo_url,
                 }
 

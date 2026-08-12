@@ -196,9 +196,10 @@ urlpatterns = [
     # ═══════════════════════════════════════════════════════════════════════
     path('parametres/logistique/', parametres.parametres_logistique, name='parametres_logistique'),
     path('parametres/administratifs/', parametres.parametres_administratifs, name='parametres_administratifs'),
+    path('parametres/notifications/', parametres.parametres_notifications, name='parametres_notifications'),
     path('parametres/supprimer/<str:type_entite>/<int:id_entite>/', parametres.supprimer_parametre, name='supprimer_parametre'),
-    path('parametres/logistique/motifs-annulation/', parametres.parametres_motifs, name='parametres_motifs'),
-    path('administration/circuits-validation/', parametres.page_circuits_validation, name='page_circuits_validation'),
+    # NB: motifs d'annulation, circuits de validation et journal d'audit sont gérés
+    # respectivement dans parametres_logistique et dans accounts (menu Sécurité & Accès).
     path('magasins/<int:magasin_id>/parametres/', parametres.parametres_magasin, name='parametres_magasin'),
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -228,6 +229,8 @@ urlpatterns = [
     path('notifications/', api.liste_notifications, name='liste_notifications'),
     path('notifications/api/', api.api_notifications, name='api_notifications'),
     path('notifications/<int:notif_id>/lue/', api.marquer_notification_lue, name='marquer_notification_lue'),
+    path('notifications/<int:notif_id>/supprimer/', api.supprimer_notification, name='supprimer_notification'),
+    path('notifications/tout-effacer/', api.tout_effacer_notifications, name='tout_effacer_notifications'),
     path('upload/<str:app_label>/<str:model_name>/<int:obj_id>/<str:field_name>/', api.upload_fichier_generique, name='upload_fichier_generique'),
     # API liste articles (pour inventaire personnalisé)
     path('api/articles/', api.api_articles_json, name='api_articles_json'),
@@ -235,12 +238,11 @@ urlpatterns = [
     # ═══════════════════════════════════════════════════════════════════════
     # SÉCURITÉ / AUDIT
     # ═══════════════════════════════════════════════════════════════════════
-    path('securite/journal-audit/', parametres.journal_audit_securite, name='journal_audit_securite'),
+
 
     # ═══════════════════════════════════════════════════════════════════════
     # ALIAS D'URLS ACCOUNTS (compatibilité templates stock sans namespace)
     # ═══════════════════════════════════════════════════════════════════════
-    path('parametres/entreprise/', RedirectView.as_view(url=reverse_lazy('accounts:parametres_entreprise')), name='parametres_entreprise'),
     path('accueil/', RedirectView.as_view(url=reverse_lazy('accounts:accueil_personnalise')), name='accueil_personnalise'),
 
     path('', include('stock.urls_pdf_config')),

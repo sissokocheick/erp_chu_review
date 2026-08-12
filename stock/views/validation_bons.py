@@ -66,6 +66,21 @@ def valider_bon(request, bon_id):
                 )
                 return redirect(_get_redirect_url(bon.type_bon))
 
+            # Un bon annulé ou rejeté ne peut pas être validé
+            if bon.est_annule:
+                messages.error(
+                    request,
+                    f"❌ Le bon {bon.numero_bon} est annulé et ne peut pas être validé."
+                )
+                return redirect(_get_redirect_url(bon.type_bon))
+
+            if bon.statut_validation == 'REJETE':
+                messages.error(
+                    request,
+                    f"❌ Le bon {bon.numero_bon} a été rejeté et ne peut pas être validé."
+                )
+                return redirect(_get_redirect_url(bon.type_bon))
+
             # Vérification des permissions (circuit de validation)
             mapping_circuit = {
                 'ENTREE':             'ENTREE',
@@ -129,7 +144,7 @@ def valider_bon(request, bon_id):
                         date_peremption=ligne.date_peremption)
                     StockTransactionService.executer(mouvement)
 
-                elif bon.type_bon in ('SORTIE', 'SORTIE_HORS_STOCK'):
+                elif bon.type_bon == 'SORTIE':
                     mouvement = Mouvement(
                         type_mouvement='SORTIE',
                         article=ligne.article,
@@ -140,6 +155,12 @@ def valider_bon(request, bon_id):
                         commentaire=f"Validation du bon {bon.numero_bon}",
                         numero_lot=ligne.numero_lot)
                     StockTransactionService.executer(mouvement)
+
+                elif bon.type_bon == 'SORTIE_HORS_STOCK':
+                    # Bon hors stock : aucun impact sur le stock physique.
+                    # Les mouvements HS (update_stock=False) sont créés à la
+                    # création du bon ; la validation ne fait que l'approuver.
+                    pass
 
                 elif bon.type_bon == 'RETOUR_FOURNISSEUR':
                     mouvement = Mouvement(
@@ -204,68 +225,6 @@ def valider_bon(request, bon_id):
         return redirect(_get_redirect_url(bon.type_bon))
     return redirect('liste_bons')
 
-
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_circuits_validation')
-def valider_ajustement(request, ajustement_id):
-    """Valide un ajustement de stock et applique les mouvements.
-
-    PROTECTION : select_for_update() + vérification statut AVANT ajuster_stock.
-    """
-    try:
-        with transaction.atomic():
-            # Verrouiller la ligne pour éviter les race conditions
-            ajustement = get_object_or_404(
-                Ajustement.objects.select_for_update().select_related('article', 'magasin'),
-                id=ajustement_id
-            )
-
-            # Vérifier que c'est bien en attente (bloque les doublons)
-            if ajustement.statut_validation != 'ATTENTE':
-                messages.error(request, "❌ Cet ajustement n'est pas en attente de validation.")
-                return redirect('liste_ajustements')
-
-            # Vérifier que l'utilisateur est valideur
-            peut_valider = request.user.is_superuser
-            if not peut_valider:
-                try:
-                    circuit = CircuitValidation.objects.get(
-                        type_document='AJUSTEMENT',
-                        is_deleted=False
-                    )
-                    if circuit.valideurs.filter(id=request.user.id).exists():
-                        peut_valider = True
-                except CircuitValidation.DoesNotExist:
-                    peut_valider = False
-
-            if not peut_valider:
-                messages.error(request, "❌ Vous n'êtes pas autorisé à valider les ajustements.")
-                return redirect('liste_ajustements')
-
-            # Mettre le statut à VALIDE AVANT d'appeler ajuster_stock
-            ajustement.statut_validation = 'VALIDE'
-            ajustement.valide_par = request.user
-            ajustement.date_validation = timezone.now()
-            ajustement.save(update_fields=['statut_validation', 'valide_par', 'date_validation'])
-
-            # Exécuter le mouvement de stock (idempotent : vérifie si existe déjà)
-            StockService.ajuster_stock(ajustement)
-
-        messages.success(
-            request,
-            f"✅ Ajustement validé — {ajustement.article.designation} x{ajustement.quantite}"
-        )
-        logger.info(
-            f"[AJUSTEMENT] {request.user} a validé l'ajustement #{ajustement.id}"
-        )
-    except Exception as e:
-        logger.exception("[AJUSTEMENT ERROR] %s : %s", request.user, e)
-        messages.error(
-            request,
-            "❌ Une erreur est survenue lors de la validation de l'ajustement."
-        )
-
-    return redirect('liste_ajustements')
 
 # ──────────────────────────────────────────────────────────────
 # HELPERS

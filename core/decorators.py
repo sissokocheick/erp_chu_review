@@ -4,9 +4,7 @@ Décorateurs de sécurité pour l'architecture mono-tenant.
 
 Legacy : @tenant_required est conservé pour compatibilité avec les autres
 modules (stock, patrimoine, etc.) qui l'importent, mais se comporte désormais
-comme un simple @login_required. Le code multi-tenant (set_current_tenant,
-_tenant_context, request.entreprise) a été supprimé car il provoquait un
-ImportError à l'import du module (ces symboles n'existent plus dans managers.py).
+comme un simple @login_required. Le code multi-tenant (set_current_tenant, _tenant_context) a été supprimé car il provoquait un ImportError à l'import du module (ces symboles n'existent plus dans managers.py).
 """
 from functools import wraps
 from django.contrib.auth.decorators import login_required
@@ -22,7 +20,7 @@ def tenant_required(view_func):
     @login_required
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
-        # En mono-tenant, il n'y a plus de vérification d'entreprise.
+        # En mono-tenant, il n'y a plus de vérification de tenant.
         # La configuration unique est toujours accessible via ConfigurationHopital.get_instance()
         return view_func(request, *args, **kwargs)
     return wrapper

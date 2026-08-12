@@ -24,7 +24,7 @@
   .filtres-card .search-input-q { flex: 3; min-width: 300px; }
   .filtres-card .search-input-date { flex: 1; min-width: 160px; max-width: 220px; }
   
-  .table-card { background: var(--bg-card); border-radius:10px; box-shadow: 0 2px 8px var(--shadow); overflow:hidden; }
+  .table-card { background: var(--bg-card); border-radius:10px; box-shadow: 0 2px 8px var(--shadow); overflow-x:auto; }
   .table-card table { width:100%; border-collapse:collapse; font-size:13px; }
   .table-card thead tr { background: #117a8b; color: white; }
   .table-card thead th { padding:13px 14px; font-weight:700; font-size:11px; text-transform:uppercase; border:none; text-align: left; }
@@ -752,27 +752,10 @@ function confirmerAnnulation(bonId, numero) {
 // ═══════════════════════════════════════════════════════════════════════════════
 // MODALE D'IMPRESSION PDF
 // ═══════════════════════════════════════════════════════════════════════════════
-function imprimerModal(url, titre) {
-    // ✅ CORRECTION : normaliser l'URL si elle contient /stock/bon/ (ancien path hardcodé)
-    if (url && url.includes('/stock/bon/')) {
-        url = url.replace('/stock/bon/', '/bon/');
-    }
-    var modal = document.getElementById('modal-pdf');
-    document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-print me-2"></i>' + (titre||'');
-    var loader = document.getElementById('pdf-loader');
-    var iframe = document.getElementById('pdf-iframe');
-    
-    loader.style.display = 'flex'; 
-    iframe.style.display = 'none'; 
-    iframe.src = '';
-    modal.classList.add('open');
-    
-    iframe.onload = function() {
-        loader.style.display = 'none';
-        iframe.style.display = 'block';
+window.imprimerModal = function(url, titre) {
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        window.open(url, '_blank');
     };
-    iframe.src = url;
-}
 
 // Fermeture modales (clic fond + Escape)
 document.addEventListener('DOMContentLoaded', function() {

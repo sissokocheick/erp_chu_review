@@ -1,9 +1,9 @@
 # stock/models.py — MONO-TENANT v2 (CORRIGÉ)
 # Corrections appliquées :
-#   1. Toutes les FK 'accounts.Entreprise' → SUPPRIMÉES (mono-tenant)
+#   1. Toutes les FK de tenant → SUPPRIMÉES (mono-tenant)
 #   2. TenantManager/GlobalManager remplacés par managers standard + soft-delete
 #   3. StockItem : contrainte unique (article, magasin, batch_number)
-#   4. CompteurDocument : plus de FK entreprise
+#   4. CompteurDocument : numérotation globale
 #   5. hash_preuve généré systématiquement (même update_stock=False)
 #   6. CMUP unifié : calcul dans le modèle uniquement
 #   7. simple_history ajouté sur BonMouvement, DemandeMateriel, LivraisonPartielle
@@ -166,13 +166,13 @@ class SoftDeleteModel(models.Model):
         self.deleted_at = timezone.now()
         if user:
             self.deleted_by = user
-        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'])
+        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'], update_stock=False)
 
     def restore(self):
         self.is_deleted = False
         self.deleted_at = None
         self.deleted_by = None
-        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'])
+        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'], update_stock=False)
 
 # ==========================================================
 # 1. LES ACTEURS
@@ -278,6 +278,7 @@ class Article(TracabiliteModel, SoftDeleteModel):
     all_objects = models.Manager()
 
     def save(self, *args, **kwargs):
+        kwargs.pop('update_stock', None)  # consommé par SoftDeleteModel.soft_delete()
         if not self.pk and not self.reference:
             code_famille = self.famille.code.strip() if self.famille.code else ""
             ligne_budg = self.famille.ligne_budgetaire
@@ -576,7 +577,7 @@ class Mouvement(models.Model):
             self.deleted_at = timezone.now()
             if user:
                 self.deleted_by = user
-            self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'])
+            self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by'], update_stock=False)
 
     def _reverse_stock_effect(self):
         """Annule l'effet du mouvement sur le stock."""
@@ -670,6 +671,7 @@ class Ajustement(TracabiliteModel, SoftDeleteModel):
         ✅ CORRECTION : sauvegarde standard + génération du numéro.
         Le mouvement de stock est créé UNIQUEMENT par StockService.ajuster_stock().
         """
+        kwargs.pop('update_stock', None)  # consommé par SoftDeleteModel.soft_delete()
         if not self.numero_ajustement:
             def format_num(compteur, annee):
                 return f"AJ-{annee}-{compteur:03d}"
@@ -888,7 +890,7 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
     def get_signataires_pdf(self, config_hopital):
         """
         Retourne les 6 signataires prêts pour le template PDF.
-        ✅ CORRECTION : utilise ConfigurationHopital au lieu d'Entreprise.
+        ✅ CORRECTION : utilise ConfigurationHopital.
         """
         labels = config_hopital.labels_signatures if hasattr(config_hopital, 'labels_signatures') else [
             'Émission / Demandeur', 'Vu pour exécution', 'Sortie effectuée',
@@ -962,8 +964,9 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
     def save(self, *args, **kwargs):
         """
         Sauvegarde du bon avec génération automatique du numéro.
-        ✅ CORRECTION : plus de FK entreprise, numérotation globale.
+        ✅ CORRECTION : numérotation globale (mono-tenant).
         """
+        kwargs.pop('update_stock', None)  # consommé par SoftDeleteModel.soft_delete()
         if not self.magasin_id:
             raise ValidationError("Un bon doit être rattaché à un magasin.")
 
@@ -983,28 +986,9 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
                 model_class=self.__class__, field_name='numero_bon'
             )
 
-        if not self.pk:
-            mapping_circuit = {
-                'ENTREE':             'ENTREE',
-                'SORTIE':             'SORTIE',
-                'SORTIE_HORS_STOCK':  'SORTIE',
-                'RETOUR_FOURNISSEUR': 'ENTREE',
-                'RETOUR_SERVICE':     'ENTREE',
-                'AJUSTEMENT':         'AJUSTEMENT',
-            }
-            type_circuit = mapping_circuit.get(self.type_bon)
-            if type_circuit:
-                try:
-                    circuit = CircuitValidation.objects.get(
-                        type_document=type_circuit,
-                        is_deleted=False
-                    )
-                    if not circuit.est_actif:
-                        self.statut_validation = 'VALIDE'
-                    else:
-                        self.statut_validation = 'ATTENTE'
-                except CircuitValidation.DoesNotExist:
-                    self.statut_validation = 'BROUILLON'
+        # NOTE : le statut_validation est décidé par les services/vues appelants
+        # (bon_service, livraison_service, commandes...) qui exécutent les mouvements
+        # de stock en conséquence. Un recalcul ici créerait un double mouvement.
 
         super().save(*args, **kwargs)
 
@@ -1161,6 +1145,7 @@ class Commande(SoftDeleteModel):
     all_objects = models.Manager()
 
     def save(self, *args, **kwargs):
+        kwargs.pop('update_stock', None)  # consommé par SoftDeleteModel.soft_delete()
         if not self.pk and not self.numero_commande:
             if not self.magasin_id:
                 raise ValidationError("Une commande doit être rattachée à un magasin.")
@@ -1346,7 +1331,7 @@ class DemandeMateriel(SoftDeleteModel):
         if self.statut in self.STATUTS_HISTORIQUE:
             return
 
-        nb_livraisons = self.livraisons.count()
+        nb_livraisons = self.livraisons.filter(est_annule=False).count()
         if nb_livraisons == 0:
             return
 
@@ -1470,20 +1455,27 @@ class LivraisonPartielle(models.Model):
             self.est_annule = True
             self.save(update_fields=['est_annule'])
 
-            if self.bon_sortie:
-                for ligne in self.bon_sortie.lignes_bon.all():
-                    try:
-                        Mouvement.objects.create(
-                            type_mouvement='RETOUR_SERVICE',
-                            article=ligne.article,
-                            magasin=self.bon_sortie.magasin,
-                            quantite=ligne.quantite,
-                            prix_unitaire=ligne.prix_unitaire,
-                            utilisateur=user,
-                            reference_document=f"ANNUL-{self.numero_livraison}",
-                            commentaire=f"Annulation livraison #{self.numero_livraison}"
-                        )
-                    except ValidationError as e:
+            if not self.bon_sortie:
+                # Pas de bon de sortie -> rien à restituer (magasin inconnu)
+                logger.warning(
+                    "Annulation livraison #%s sans bon de sortie : aucun retour stock",
+                    self.numero_livraison
+                )
+            for ligne in self.lignes_livraison.all():
+                if ligne.quantite_livree <= 0:
+                    continue
+                try:
+                    Mouvement.objects.create(
+                        type_mouvement='RETOUR_SERVICE',
+                        article=ligne.article,
+                        magasin=self.bon_sortie.magasin,
+                        quantite=ligne.quantite_livree,
+                        prix_unitaire=ligne.prix_unitaire,
+                        utilisateur=user,
+                        reference_document=f"ANNUL-{self.numero_livraison}",
+                        commentaire=f"Annulation livraison #{self.numero_livraison}"
+                    )
+                except ValidationError as e:
                         logger.warning(
                             "Impossible de créer le mouvement de retour pour l'annulation "
                             f"livraison #{self.numero_livraison}, article {ligne.article}: {e}"
@@ -1766,10 +1758,12 @@ class ModeleDocumentMagasin(TracabiliteModel):
 
         if type_doc == 'BON_SORTIE':
             sigs = [
-                {'ordre': 1, 'role': 'demandeur',    'label': 'Émission',          'visible': True, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 2, 'role': 'magasinier',   'label': 'Vu pour exécution', 'visible': True, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 3, 'role': 'responsable',  'label': 'Sortie effectuée',  'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 4, 'role': 'receptionnaire','label': 'Réception',        'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 1, 'role': 'demandeur',      'label': 'Émission',                           'visible': True, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'sous_directeur', 'label': 'Sous-Directeur de la Logistique',    'visible': True, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 3, 'role': 'responsable',    'label': 'Vu pour exécution',                  'visible': True, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 4, 'role': 'magasinier',     'label': 'Sortie effectuée le',                'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 5, 'role': 'receptionnaire', 'label': 'Réception',                          'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 6, 'role': 'economat',       'label': 'Le Service Economique',              'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
             ]
             colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite', 'quantite_servie']
             ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
@@ -1784,20 +1778,37 @@ class ModeleDocumentMagasin(TracabiliteModel):
             code_iso = "ENR-BEM/DAF-001"
         elif type_doc == 'COMMANDE':
             sigs = [
-                {'ordre': 1, 'role': 'sous_directeur', 'label': 'Le Sous-Directeur de la Logistique', 'visible': True, 'position': 'left',  'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 2, 'role': 'responsable',    'label': 'Le Responsable',                      'visible': True, 'position': 'right', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 1, 'role': 'chef_service',  'label': 'CHEF DE SERVICE',                         'visible': True, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'demandeur',     'label': 'Le demandeur',                             'visible': True, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 3, 'role': 'communication', 'label': 'COMMUNICATION & RELATIONS P (Signature et Cachet)', 'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
             ]
             colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite']
             ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
-            code_iso = "ENR-BDC/DAF-001"
-        else:
+            code_iso = "ENR-BCM/DAF-002"
+        elif type_doc == 'BON_HS':
             sigs = [
                 {'ordre': 1, 'role': 'demandeur',   'label': 'Demandeur',   'visible': True, 'position': 'left',  'style': 'ligne_pointillee', 'condition': 'toujours'},
                 {'ordre': 2, 'role': 'responsable', 'label': 'Responsable', 'visible': True, 'position': 'right', 'style': 'ligne_pointillee', 'condition': 'toujours'},
             ]
             colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite']
-            ps2 = ""
-            code_iso = ""
+            ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
+            code_iso = "ENR-BSHS/DAF-002"
+        elif type_doc == 'DEMANDE':
+            sigs = [
+                {'ordre': 1, 'role': 'demandeur',   'label': 'Demandeur',   'visible': True, 'position': 'left',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'responsable', 'label': 'Responsable', 'visible': True, 'position': 'right', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+            ]
+            colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite']
+            ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
+            code_iso = "ENR-BDM/DAF-001"
+        else:
+            sigs = [
+                {'ordre': 1, 'role': 'economat',  'label': 'Le Service Economique', 'visible': True, 'position': 'left',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'demandeur', 'label': 'Le demandeur',          'visible': True, 'position': 'right', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+            ]
+            colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite']
+            ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
+            code_iso = "ENR-BRM/DAF-003"
 
         all_colonnes = [
             {'code': 'numero',         'label': 'N°',          'visible': 'numero' in colonnes_defaut,         'largeur': '5%',  'obligatoire': True},
@@ -1855,11 +1866,11 @@ class ModeleDocumentMagasin(TracabiliteModel):
                 'trait_couleur': '#17a2b8',
             },
             'metadonnees': {
-                'code_document':      cfg_doc.get('code_document', code_iso),
-                'date_creation_doc':  cfg_doc.get('date_creation_doc', '10/06/2024'),
-                'date_revision_doc':  cfg_doc.get('date_revision_doc', '19/05/2025'),
-                'version_doc':        cfg_doc.get('version_doc', '002'),
-                'ps2_label':          cfg_doc.get('ps2_label', ps2),
+                'code_document':      cfg_doc.get('code_document') or code_iso,
+                'date_creation_doc':  cfg_doc.get('date_creation_doc') or '10/06/2024',
+                'date_revision_doc':  cfg_doc.get('date_revision_doc') or '19/05/2025',
+                'version_doc':        cfg_doc.get('version_doc') or '002',
+                'ps2_label':          cfg_doc.get('ps2_label') or ps2,
             },
             'direction_label':      "DIRECTION DES AFFAIRES FINANCIÈRES",
             'sous_direction_label': "SOUS-DIRECTION DE LA LOGISTIQUE",

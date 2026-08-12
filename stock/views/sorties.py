@@ -37,7 +37,7 @@ logger = logging.getLogger(__name__)
 @magasin_requis
 @catch_errors(redirect_url='liste_sorties')
 def liste_sorties(request):
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
 
     circuit_sortie = CircuitValidation.objects.filter(
         type_document='SORTIE', est_actif=True
@@ -50,6 +50,12 @@ def liste_sorties(request):
     sorties_bons = BonMouvement.objects.filter(
         type_bon='SORTIE', magasin__in=magasins_autorises
     ).select_related('magasin', 'service_demandeur', 'cree_par', 'valide_par').order_by('-date_bon')
+
+    # Le magasin sélectionné dans l'en-tête s'applique partout :
+    # la liste ne montre que le magasin actif de la session.
+    magasin_actif = get_magasin_actif(request)
+    if magasin_actif:
+        sorties_bons = sorties_bons.filter(magasin=magasin_actif)
 
     q = request.GET.get('q', '')
     date_range = request.GET.get('date_range', '')
@@ -71,7 +77,7 @@ def liste_sorties(request):
             Q(service_demandeur__nom__icontains=q) |
             Q(reference_externe__icontains=q) |
             Q(magasin__nom__icontains=q) |
-            Q(lignes__article__designation__icontains=q)
+            Q(lignes_bon__article__designation__icontains=q)
         ).distinct()
 
     sorties_bons_pagines, per_page = paginer(sorties_bons, request)
@@ -191,7 +197,7 @@ def annuler_sortie(request, bon_id):
     if request.method != 'POST':
         return redirect('liste_sorties')
 
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='SORTIE',
         magasin__in=magasins_autorises

@@ -100,7 +100,7 @@
 
                 {% if circuit_sortie and est_valideur and bon.statut_validation == 'ATTENTE' and not bon.est_annule %}
                 <button type="button" 
-                        onclick="confirmerValidationBon({{ bon.id }}, '{{ bon.numero_bon|escapejs }}', '{{ bon.service_demandeur.nom|default:"N/A"|escapejs }}', {{ bon.lignes_bon.count }}, '/stock/sorties/valider/{{ bon.id }}/')" 
+                        onclick="confirmerValidationBon({{ bon.id }}, '{{ bon.numero_bon|escapejs }}', '{{ bon.service_demandeur.nom|default:"N/A"|escapejs }}', {{ bon.lignes_bon.count }}, '{% url "valider_bon_sortie" bon.id %}')" 
                         style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" 
                         title="Valider le bon" aria-label="Valider le bon {{ bon.numero_bon }}">
                     <i class="fas fa-stamp"></i>
@@ -116,7 +116,7 @@
                     </button>
 
                     {% if peut_annuler %}
-                    <form action="/stock/sorties/remplacer-scan/{{ bon.id }}/" method="POST" enctype="multipart/form-data" style="margin: 0;">
+                    <form action="{% url 'remplacer_scan_sortie' bon.id %}" method="POST" enctype="multipart/form-data" style="margin: 0;">
                         {% csrf_token %}
                         <label for="replace-sortie-{{ bon.id }}" style="background: #ffc107; color: #856404; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-block; margin: 0;" title="Remplacer le scan" aria-label="Remplacer le scan">
                             <i class="fas fa-sync-alt"></i>
@@ -127,7 +127,7 @@
 
                 {% else %}
                     {% if peut_annuler %}
-                    <form action="/stock/sorties/remplacer-scan/{{ bon.id }}/" method="POST" enctype="multipart/form-data" style="margin: 0;">
+                    <form action="{% url 'remplacer_scan_sortie' bon.id %}" method="POST" enctype="multipart/form-data" style="margin: 0;">
                         {% csrf_token %}
                         <label for="upload-sortie-{{ bon.id }}" style="background: #17a2b8; color: white; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-block; margin: 0;" title="Joindre un scan" aria-label="Joindre un scan">
                             <i class="fas fa-upload"></i>
@@ -148,7 +148,7 @@
                         title="Annuler" aria-label="Annuler le bon {{ bon.numero_bon }}">
                             <i class="fas fa-ban"></i>
                         </button>
-                        <form id="form-annuler-sortie-{{ bon.id }}" method="POST" action="/stock/sorties/annuler/{{ bon.id }}/" style="display: none;">
+                        <form id="form-annuler-sortie-{{ bon.id }}" method="POST" action="{% url 'annuler_sortie' bon.id %}" style="display: none;">
                             {% csrf_token %}
                         </form>
                     {% endif %}

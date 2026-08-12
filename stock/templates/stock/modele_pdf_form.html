@@ -353,6 +353,16 @@
         <span class="badge-type">{{ type_doc }}</span>
     </div>
 
+    <!-- Sélecteur de type de document : chaque format a sa propre configuration -->
+    <div class="nx-tabs" style="margin-top: 4px;">
+        <a href="{% url 'modele_pdf_config' magasin.id 'BS' %}" class="nx-tab {% if type_doc == 'BS' %}active{% endif %}" data-title="Sortie">Bon de Sortie</a>
+        <a href="{% url 'modele_pdf_config' magasin.id 'BE' %}" class="nx-tab {% if type_doc == 'BE' %}active{% endif %}" data-title="Entrée">Bon d'Entrée</a>
+        <a href="{% url 'modele_pdf_config' magasin.id 'BR' %}" class="nx-tab {% if type_doc == 'BR' %}active{% endif %}" data-title="Retour">Bon de Retour</a>
+        <a href="{% url 'modele_pdf_config' magasin.id 'BSHS' %}" class="nx-tab {% if type_doc == 'BSHS' %}active{% endif %}" data-title="Hors stock">Sortie Hors Stock</a>
+        <a href="{% url 'modele_pdf_config' magasin.id 'BC' %}" class="nx-tab {% if type_doc == 'BC' %}active{% endif %}" data-title="Commande">Bon de Commande</a>
+        <a href="{% url 'modele_pdf_config' magasin.id 'BDM' %}" class="nx-tab {% if type_doc == 'BDM' %}active{% endif %}" data-title="Demande">Bon de Demande</a>
+    </div>
+
     <!-- Messages Django -->
     {% if messages %}
     <div class="messages">

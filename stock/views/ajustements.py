@@ -97,7 +97,7 @@ def _creer_ajustement(request):
         request.session['last_ajustement_token'] = post_token
     # ════════════════════════════════════════
 
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
     magasin_actif_id = request.session.get('magasin_actif_id')
     if magasin_actif_id and not magasins_autorises.filter(id=magasin_actif_id).exists():
         messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")

@@ -14,9 +14,11 @@ from ...services.parametre_service import (
     safe_delete_entity,
     save_specialite,
     save_service,
-    save_magasin_admin
+    save_magasin_admin,
+    save_config_document
 )
-from core.models import Service
+from core.models import Service, ConfigurationHopital
+from core.forms import ConfigurationHopitalForm
 from stock.models import Magasin
 from stock.forms import ServiceForm, MagasinForm, SpecialiteForm
 from accounts.models import Specialite, ConfigDocument, Fonction
@@ -82,6 +84,33 @@ def _handle_get(request):
     edit_fonction_id = request.GET.get('edit_fonction', '').strip()
     instance_fonction = get_object_or_404(Fonction, id=edit_fonction_id) if edit_fonction_id else None
 
+    # --- Configuration de l'établissement ---
+    config = ConfigurationHopital.get_instance()
+    form_config = ConfigurationHopitalForm(instance=config)
+    historique_config = config.history.all()[:10] if hasattr(config, 'history') else []
+
+    configs_list = []
+    for code, label in ConfigDocument.TYPE_DOC_CHOICES:
+        cd = ConfigDocument.objects.filter(type_doc=code).first()
+        configs_list.append({
+            'code': code,
+            'label': label,
+            'config': {
+                'code_document': cd.code_document if cd else '',
+                'version_doc': cd.version_doc if cd else '',
+                'date_creation_doc': cd.date_creation_doc if cd else '',
+                'date_revision_doc': cd.date_revision_doc if cd else '',
+                'ps2_label': cd.ps2_label if cd else '',
+                'afficher_logo': cd.afficher_logo if cd else True,
+                'afficher_cachet': cd.afficher_cachet if cd else True,
+                'afficher_cc': cd.afficher_cc if cd else True,
+                'afficher_ifu': cd.afficher_ifu if cd else True,
+                'afficher_rccm': cd.afficher_rccm if cd else True,
+                'afficher_telephone': cd.afficher_telephone if cd else True,
+                'afficher_signatures': cd.afficher_signatures if cd else True,
+            },
+        })
+
     context = {
         'services': services_pagines,
         'q_service': q_service,
@@ -115,6 +144,11 @@ def _handle_get(request):
         'peut_annuler_magasins': request.user.has_perm('accounts.menu_magasins') or request.user.is_superuser,
         'peut_annuler_specialites': request.user.has_perm('accounts.menu_specialites') or request.user.is_superuser,
         'peut_annuler_fonctions': request.user.has_perm('accounts.menu_fonctions') or request.user.is_superuser,
+        # Configuration de l'établissement
+        'config_hopital': config,
+        'form_config': form_config,
+        'configs_list': configs_list,
+        'historique_config': historique_config,
     }
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -124,6 +158,8 @@ def _handle_get(request):
 
 def _handle_post(request):
     dispatch = {
+        'enregistrer_config': _post_config,
+        'enregistrer_config_doc': _post_config_doc,
         'enregistrer_specialite': _post_specialite,
         'enregistrer_fonction': _post_fonction,
         'enregistrer_service': _post_service,
@@ -143,6 +179,23 @@ def _handle_post(request):
         return _post_supprimer_service(request)
 
     return redirect('parametres_administratifs')
+
+
+def _post_config(request):
+    """Enregistre la configuration de l'établissement."""
+    config = ConfigurationHopital.get_instance()
+    form = ConfigurationHopitalForm(request.POST, request.FILES, instance=config)
+    if form.is_valid():
+        form.save()
+        return JsonResponse({'success': True, 'message': "✅ Configuration de l'établissement enregistrée."})
+    erreurs = [f"{champ}: {' '.join(msgs)}" for champ, msgs in form.errors.items()]
+    return JsonResponse({'success': False, 'message': "❌ " + ' | '.join(erreurs)})
+
+
+def _post_config_doc(request):
+    """Enregistre les métadonnées ISO d'un type de document PDF (AJAX)."""
+    success, message, _ = save_config_document(request)
+    return JsonResponse({'success': success, 'message': message})
 
 
 def _ajax_response(request, ok, msg, errors=None):
@@ -167,7 +220,7 @@ def _post_specialite(request):
         except Specialite.DoesNotExist:
             instance = None
 
-    # Note : save_specialite doit aussi être adapté (plus de paramètre entreprise)
+    # Note : save_specialite doit aussi être adapté (plus de paramètre tenant)
     ok, msg, _ = save_specialite(request.POST, instance, request.user)
     if ok:
         messages.success(request, msg)

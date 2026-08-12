@@ -3,6 +3,7 @@ Helpers pour standardiser les vues fonctionnelles (FBV) du module stock.
 À importer dans chaque fichier de vues pour remplacer le copier/coller répété.
 """
 from datetime import datetime
+import unicodedata
 from django.db.models import Q
 from django.core.paginator import Paginator
 from django.shortcuts import render
@@ -10,14 +11,62 @@ from ..models import Magasin
 from django.urls import reverse
 from urllib.parse import urlencode
 
+
+def normaliser_texte(texte):
+    """Normalise un texte pour la recherche : minuscules, sans accents,
+    sans apostrophes (droites ou typographiques) ni espaces superflus."""
+    normalise = ''.join(
+        c for c in unicodedata.normalize('NFD', str(texte))
+        if unicodedata.category(c) != 'Mn'
+    ).lower()
+    return normalise.replace("'", '').replace('\u2019', '').replace('\u2018', '')
+
+
+def _get_valeurs(obj, chemin):
+    """Résout un chemin 'a__b__c' en une liste de valeurs, en gérant les relations
+    multiples (related managers) via .all()."""
+    valeurs = [obj]
+    for partie in chemin.split('__'):
+        nouvelles = []
+        for v in valeurs:
+            if v is None:
+                continue
+            attr = getattr(v, partie, None)
+            if hasattr(attr, 'all'):
+                nouvelles.extend(list(attr.all()))
+            else:
+                nouvelles.append(attr)
+        valeurs = nouvelles
+    return [v for v in valeurs if v is not None]
+
+
+def filtrer_texte(qs, q, champs):
+    """
+    Filtre un queryset/une liste en ignorant les accents.
+    champs : chemins de champs, ex : ['designation', 'reference', 'article__designation'].
+    Retourne une liste (compatible Paginator).
+    """
+    if not q:
+        return qs
+    q_norm = normaliser_texte(q)
+    if not q_norm:
+        return qs
+    if hasattr(qs, 'all'):
+        qs = list(qs)
+    resultats = []
+    for obj in qs:
+        for champ in champs:
+            if any(q_norm in normaliser_texte(v) for v in _get_valeurs(obj, champ)):
+                resultats.append(obj)
+                break
+    return resultats
+
 def get_magasin_actif(request):
     """Retourne le magasin actif de la session si autorisé."""
     magasin_id = request.session.get('magasin_actif_id')
-    # if magasin_id and None  # SUPPRIMÉ (mono-tenant)
     return Magasin.objects.filter(
         id=magasin_id
     ).first()
-    return None
 
 def paginer(qs, request, per_page_key='per_page', default=15, max_all=500):
     """Pagination identique à catalogue.paginer()."""
@@ -53,15 +102,13 @@ def filtrer_par_date(qs, request, date_field='date_creation'):
 
 def filtrer_par_texte(qs, request, champs, param='q'):
     """
-    Applique un filtre Q() OR sur plusieurs champs.
+    Applique un filtre OR sur plusieurs champs, insensible aux accents.
     champs: liste de strings, ex: ['numero_bon__icontains', 'fournisseur__raison_sociale__icontains']
     """
     q = request.GET.get(param, '')
     if q and champs:
-        q_filter = Q()
-        for champ in champs:
-            q_filter |= Q(**{champ: q})
-        qs = qs.filter(q_filter).distinct()
+        chemins = [c.split('__icontains')[0].split('__contains')[0] for c in champs]
+        qs = filtrer_texte(qs, q, chemins)
     return qs, q
 
 def build_redirect_url(base_name, query=None, per_page=None, default_per_page='15'):

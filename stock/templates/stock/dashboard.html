@@ -56,7 +56,7 @@
   .atab.surstock.active, .atab.surstock:hover { background: #5dade2; color: white; }
   .atab .badge-n { background: rgba(255,255,255,.35); padding: 1px 7px; border-radius: 10px; font-size: 11px; }
 
-  .alert-panel { display: none; }
+  .alert-panel { display: none; overflow-x: auto; }
   .alert-panel.active { display: block; }
 
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
@@ -320,10 +320,10 @@
     <div class="card-body" style="max-height:280px;overflow-y:auto;">
       {% for j in journal_activites %}
       <div class="jrn-row">
-        <div class="jrn-dot" style="background:{% if 'Creation' in j.action %}#27ae60{% elif 'Modification' in j.action %}#3498db{% else %}#e74c3c{% endif %};"></div>
+        <div class="jrn-dot" style="background:{% if 'Création' in j.action %}#27ae60{% elif 'Modification' in j.action %}#3498db{% else %}#e74c3c{% endif %};"></div>
         <div style="flex:1;min-width:0;">
           <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-            {{ j.action }} <strong>{{ j.modele }}</strong> — {{ j.element|truncatechars:20 }}
+            {{ j.action|safe }} <strong>{{ j.modele }}</strong> — {{ j.element|truncatechars:20 }}
           </div>
           <div class="jrn-time">{{ j.date|date:"d/m/Y H:i" }} — {{ j.utilisateur }}</div>
         </div>
@@ -331,9 +331,7 @@
       {% empty %}<div class="empty-sm"><i class="fas fa-history"></i> Aucune activite recente</div>{% endfor %}
     </div>
   </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</div><!-- Chart.js déjà chargé dans base_ui.html -->
 <script>
 document.getElementById('dateDash').textContent = new Date().toLocaleDateString('fr-FR', {weekday:'long',year:'numeric',month:'long',day:'numeric'});
 

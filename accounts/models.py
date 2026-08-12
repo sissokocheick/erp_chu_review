@@ -1,15 +1,10 @@
 # accounts/models.py — MONO-TENANT v1
 """
-MIGRATION MONO-TENANT — Résumé des changements :
-1. ❌ Modèle Entreprise SUPPRIMÉ → toute sa personnalisation (logo, cachet,
-   préfixes, signataires, PDF) est désormais dans core.ConfigurationHopital.
-2. ❌ Modèle RoleEntreprise SUPPRIMÉ → les Group Django redeviennent globaux.
-   ⚠️ Les views qui utilisent `groupe.roleentreprise` ou `nom_affiche`
-   devront être adaptées (étape views).
-3. ConfigDocument, Specialite, Fonction, Profil, JournalAudit :
-   champ `entreprise` supprimé.
-4. ✅ Le signal creer_profil_utilisateur est RÉACTIVÉ : le Profil n'ayant
-   plus de FK entreprise obligatoire, il peut être créé automatiquement.
+Module accounts (mono-tenant).
+
+La personnalisation de l'établissement (logo, cachet, préfixes, signataires,
+PDF) vit dans core.ConfigurationHopital ; les rôles sont des Group Django
+globaux et les profils sont créés automatiquement par signal.
 """
 from django.db import models
 from django.conf import settings
@@ -34,8 +29,8 @@ class ConfigDocument(models.Model):
     ]
 
     type_doc = models.CharField(max_length=10, choices=TYPE_DOC_CHOICES, unique=True)
-    # 💡 Après déduplication éventuelle des données (si plusieurs entreprises
-    #    existaient en base), tu pourras passer type_doc en unique=True.
+    # 💡 Après déduplication éventuelle des données historiques,
+    #    tu pourras passer type_doc en unique=True.
 
     # Métadonnées ISO
     code_document = models.CharField(max_length=50, blank=True, verbose_name="Code document")
@@ -116,7 +111,7 @@ class Fonction(models.Model):
 # 👤 PROFIL UTILISATEUR
 # ==========================================================
 class Profil(models.Model):
-    """Profil étendu d'un User Django (mono-tenant : plus de FK entreprise)."""
+    """Profil étendu d'un User Django."""
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profil')
 
     # Informations professionnelles
@@ -293,6 +288,7 @@ MENU_ACCESS_PERMISSIONS = [
     ('menu_rapports', 'Rapports'),
     ('menu_stats_demandes', 'Stats Demandes'),
     ('menu_stats_sondages', 'Stats Sondages'),
+    ('menu_stats_satisfaction', 'Stats Satisfaction'),
     
     # === MODULE PATRIMOINE - REGISTRE & IMMOBILISATIONS ===
     ('menu_pat_registre', 'Registre Patrimoine'),
@@ -362,6 +358,7 @@ MENU_ACCESS_PERMISSIONS = [
     ('menu_modeles_pdf', 'Modèles de documents PDF'),
     ('menu_parametres_doc', 'Configuration Documents PDF'),
     ('menu_lots', 'Gestion des Lots'),
+    ('menu_notifications_config', 'Configuration Notifications'),
 ]
 
 
@@ -379,6 +376,10 @@ class MenuAccess(models.Model):
         verbose_name = "Accès Menu / Permission"
         verbose_name_plural = "Accès Menus / Permissions"
         ordering = ['ordre', 'nom']
+        # ✅ Déclarer toutes les permissions menu_* pour qu'elles soient créées en base par migrate
+        permissions = tuple(
+            (code, label) for code, label in MENU_ACCESS_PERMISSIONS
+        )
 
     def __str__(self):
         return self.nom
@@ -395,16 +396,35 @@ class Notification(models.Model):
         ('DANGER', 'Danger'),
     ]
 
+    CATEGORIE_CHOICES = [
+        ('DEMANDE', 'Demandes'),
+        ('STOCK', 'Stock'),
+        ('ACHAT', 'Achats'),
+        ('PATRIMOINE', 'Patrimoine & SAV'),
+        ('SECURITE', 'Sécurité & Comptes'),
+        ('SYSTEME', 'Système'),
+    ]
+
     utilisateur = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
     titre = models.CharField(max_length=200)
     message = models.TextField()
-    type_notif = models.CharField(max_length=20, choices=TYPE_CHOICES, default='INFO')
+    type_notif = models.CharField(max_length=20, choices=TYPE_CHOICES, default='INFO', db_index=True)
+    categorie = models.CharField(
+        max_length=20, choices=CATEGORIE_CHOICES, default='SYSTEME', db_index=True,
+        verbose_name="Catégorie",
+        help_text="Regroupe les notifications par module (Demandes, Stock, …)."
+    )
     url = models.URLField(blank=True, null=True, help_text="Lien de redirection au clic")
-    est_lue = models.BooleanField(default=False)
+    est_lue = models.BooleanField(default=False, db_index=True)
     date_creation = models.DateTimeField(auto_now_add=True, db_index=True)
     date_lecture = models.DateTimeField(null=True, blank=True)
     icon = models.CharField(max_length=50, default='fa-bell')
     color = models.CharField(max_length=7, default='#1c5b96')
+    est_importante = models.BooleanField(
+        default=False,
+        verbose_name="Notification importante",
+        help_text="Si activée, la notification est aussi envoyée par SMS. Les notifications ordinaires ne partent que par email et dans la cloche (les SMS coûtent de l'argent : réservés aux cas importants)."
+    )
 
     class Meta:
         verbose_name = "Notification"
@@ -418,6 +438,19 @@ class Notification(models.Model):
         self.est_lue = True
         self.date_lecture = timezone.now()
         self.save(update_fields=['est_lue', 'date_lecture'])
+
+    @classmethod
+    def marquer_toutes_lues(cls, utilisateur):
+        """Marque TOUTES les notifications non lues de l'utilisateur comme lues."""
+        now = timezone.now()
+        return cls.objects.filter(
+            utilisateur=utilisateur, est_lue=False
+        ).update(est_lue=True, date_lecture=now)
+
+    @classmethod
+    def tout_effacer(cls, utilisateur):
+        """Supprime toutes les notifications de l'utilisateur."""
+        return cls.objects.filter(utilisateur=utilisateur).delete()
 
 
 # ==========================================================
@@ -483,6 +516,47 @@ class AuditConnexion(models.Model):
 
 
 # ==========================================================
+# 🔑 JETON DE RÉINITIALISATION DU MOT DE PASSE (MOT DE PASSE OUBLIÉ)
+# ==========================================================
+class MotDePasseResetToken(models.Model):
+    """Jeton à usage unique pour la réinitialisation du mot de passe par l'utilisateur.
+
+    Créé quand l'utilisateur clique « Mot de passe oublié » :
+    - le lien complet (token) est envoyé par email,
+    - le code court (6 chiffres) est envoyé par SMS.
+    Les deux mènent au même formulaire de nouveau mot de passe.
+    """
+    DUREE_VALIDITE_MINUTES = 30
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
+        related_name='tokens_reset_mdp'
+    )
+    token = models.CharField(max_length=64, unique=True)
+    code = models.CharField(max_length=8, db_index=True, verbose_name="Code SMS")
+    cree_le = models.DateTimeField(auto_now_add=True)
+    expire_le = models.DateTimeField(verbose_name="Expiration")
+    utilise = models.BooleanField(default=False, verbose_name="Déjà utilisé")
+
+    class Meta:
+        verbose_name = "Jeton de réinitialisation de mot de passe"
+        verbose_name_plural = "Jetons de réinitialisation de mot de passe"
+        ordering = ['-cree_le']
+
+    def __str__(self):
+        return f"Token {self.user.username} — {self.cree_le:%d/%m/%Y %H:%M}"
+
+    @property
+    def est_valide(self):
+        """Vrai si le jeton n'est ni utilisé ni expiré."""
+        return not self.utilise and timezone.now() <= self.expire_le
+
+    def invalider(self):
+        self.utilise = True
+        self.save(update_fields=['utilise'])
+
+
+# ==========================================================
 # 🔄 SIGNAL : CRÉER LE PROFIL À LA CRÉATION D'UN USER
 # ==========================================================
 
@@ -531,8 +605,6 @@ from django.dispatch import receiver
 
 @receiver(post_save, sender=User)
 def creer_profil_utilisateur(sender, instance, created, **kwargs):
-    """✅ RÉACTIVÉ en mono-tenant : le Profil n'a plus de FK entreprise
-    obligatoire, il peut donc être créé automatiquement sans risque
-    de profil orphelin. get_or_create par sécurité."""
+    """Le Profil est créé automatiquement à la création d'un User (get_or_create par sécurité)."""
     if created:
         Profil.objects.get_or_create(user=instance)

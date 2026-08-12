@@ -140,7 +140,8 @@ MENU_ITEMS_META = {
     'menu_fournisseurs':         {'icon': 'fa-truck-loading',   'color': '#fd7e14', 'label': 'Fournisseurs'},
     'menu_motifs_annulation':    {'icon': 'fa-ban',             'color': '#dc3545', 'label': 'Motifs Annulation'},
     'menu_modeles_pdf':          {'icon': 'fa-file-pdf',        'color': '#dc3545', 'label': 'Modèles de documents PDF'},
-    'menu_param_admin':          {'icon': 'fa-building',        'color': '#6c757d', 'label': 'Config. Entreprise'},
+    'menu_notifications_config': {'icon': 'fa-bell',            'color': '#ffc107', 'label': 'Notifications (Email / SMS)'},
+    'menu_param_admin':          {'icon': 'fa-building',        'color': '#6c757d', 'label': 'Config. Établissement'},
     'menu_param_logistique':     {'icon': 'fa-users',           'color': '#6f42c1', 'label': 'Bénéficiaires (Destinataires Hors Stock)'},
 
     # Sécurité
@@ -169,33 +170,19 @@ MODULE_ICONS = {
 # ==========================================================
 ROLE_ARCHITECTURE_MENU = OrderedDict([
     ('🏠 ACCUEIL & DASHBOARD', ['menu_accueil', 'menu_dashboard']),
-    ('🛒 DEMANDES', ['menu_demandes', 'menu_valider_demandes']),
-    ('🏪 OPÉRATIONS FLUX', ['menu_guichet', 'menu_livraisons', 'menu_entrees', 'menu_reception_commande', 'menu_sorties', 'menu_sorties_hors_stock', 'menu_retours_services']),
-    ('📦 GESTION DES STOCKS', ['menu_stock', 'menu_peremptions', 'menu_lots', 'menu_destructions', 'menu_ajustements', 'menu_inventaires', 'menu_historique']),
+    ('🛒 DEMANDES', ['menu_demandes', 'menu_guichet', 'menu_valider_demandes']),
+    ('🏪 MOUVEMENTS DE STOCK', ['menu_entrees', 'menu_sorties', 'menu_sorties_hors_stock', 'menu_retours_services', 'menu_livraisons', 'menu_reception_commande']),
+    ('📦 GESTION DES STOCKS', ['menu_stock', 'menu_ajustements', 'menu_inventaires', 'menu_lots', 'menu_peremptions', 'menu_historique']),
     ('🛍️ ACHATS & CATALOGUE', ['menu_commandes', 'menu_articles', 'menu_familles']),
-    ('🏢 PATRIMOINE & SAV', OrderedDict([
-        ('SAV', ['menu_pat_tickets', 'menu_pat_tech', 'menu_pat_dispatch', 'menu_pat_historique']),
-        ('Gestion du Parc', [
-            'menu_pat_registre', 'menu_pat_sas', 'menu_pat_contrats', 'menu_pat_import',
-            'menu_pat_inventaire', 'menu_pat_rebuts', 'menu_pat_pertes', 'menu_pat_parametres',
-            'menu_pat_fiche_detail', 'menu_pat_modifier_immo', 'menu_pat_mouvements',
-            'menu_pat_eclatement', 'menu_pat_immatriculation', 'menu_pat_qr_codes',
-            'menu_pat_export_registre', 'menu_pat_contrat_detail', 'menu_pat_assigner_equipements',
-            'menu_pat_interventions', 'menu_pat_intervention_detail', 'menu_pat_signaler_panne',
-            'menu_pat_creer_intervention', 'menu_pat_valider_intervention', 'menu_pat_portail_prestataire',
-            'menu_pat_schema_maintenance', 'menu_pat_types_equipements', 'menu_pat_mes_tickets',
-            'menu_pat_suivi_ticket', 'menu_pat_bon_sortie_reparation', 'menu_pat_campagnes_inventaire',
-            'menu_pat_detail_campagne', 'menu_pat_reconciliation', 'menu_pat_audit_scan',
-            'menu_pat_fiche_comptage'
-        ]),
-    ])),
-    ('📈 RAPPORTS & EXPORTS', ['menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages']),
+    ('🏢 PATRIMOINE & SAV', ['menu_pat_tickets', 'menu_pat_tech', 'menu_pat_dispatch', 'menu_pat_historique', 'menu_pat_registre', 'menu_pat_sas', 'menu_pat_contrats', 'menu_pat_import', 'menu_pat_inventaire', 'menu_pat_rebuts', 'menu_pat_pertes', 'menu_pat_parametres']),
+    ('📈 RAPPORTS & EXPORTS', ['menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages', 'menu_stats_satisfaction']),
     ('⚙️ PARAMÈTRES', OrderedDict([
-        ('Administratifs', ['menu_param_admin', 'menu_services', 'menu_specialites', 'menu_fonctions', 'menu_parametres']),
-        ('Logistique', ['menu_param_logistique', 'menu_magasins', 'menu_fournisseurs', 'menu_beneficiaires', 'menu_motifs_annulation', 'menu_modeles_pdf', 'menu_parametres_doc']),
-        ('Stock', ['menu_lots']),
+        ('Administratifs', ['menu_param_admin']),
+        ('Logistique', ['menu_param_logistique']),
+        ('Documents', ['menu_modeles_pdf']),
+        ('Notifications', ['menu_notifications_config']),
     ])),
-    ('🛡️ SÉCURITÉ & ACCÈS', ['menu_utilisateurs', 'menu_roles', 'menu_circuits_validation', 'menu_securite_mdp', 'menu_journal_audit']),
+    ('🛡️ SÉCURITÉ & ACCÈS', ['menu_utilisateurs', 'menu_roles', 'menu_circuits_validation', 'menu_journal_audit']),
 ])
 
 

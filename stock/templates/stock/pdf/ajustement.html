@@ -1,3 +1,4 @@
+{% load static custom_filters %}
 <!DOCTYPE html>
 <html lang="fr" style="height:100%;">
 <head>
@@ -8,7 +9,8 @@
             size: A4 portrait;
             margin: 8mm 8mm 18mm 8mm;
             @bottom-center {
-                content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' }}";
+                content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
+        white-space: pre-line;
                 font-size: 7pt;
                 color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
                 font-weight: bold;
@@ -280,50 +282,7 @@
     <tr>
         <td class="cell-footer">
 
-            <div class="signatures-table">
-                <div class="signature-left">
-                    <div class="sig-title">Le Magasinier</div>
-                    {% if signataires %}
-                        {% for sig in signataires %}
-                            {% if sig.role == 'magasinier' %}
-                                {% if sig.signature_path %}
-                                    <img src="{{ sig.signature_path }}" class="sign-img" alt="Signature">
-                                {% else %}
-                                    <div style="height:50px;"></div>
-                                {% endif %}
-                                <div class="sig-name">{{ sig.nom|default:"" }}</div>
-                        {% if sig.fonction %}<div class="sig-line" style="font-size:9px; color:#555;">{{ sig.fonction }}</div>{% endif %}
-                        {% if sig.sous_label %}<div class="sig-line">{{ sig.sous_label }}</div>{% endif %}
-                        {% if sig.date %}<div class="sig-line" style="font-size:9pt; margin-top:4px;">{{ sig.date|date:"d/m/Y" }}</div>{% endif %}
-                            {% endif %}
-                        {% endfor %}
-                    {% else %}
-                        <div style="height:50px;"></div>
-                        <div class="sig-name">..................................</div>
-                    {% endif %}
-                </div>
-                <div class="signature-right">
-                    <div class="sig-title">Le Superviseur (Validation)</div>
-                    {% if signataires %}
-                        {% for sig in signataires %}
-                            {% if sig.role == 'responsable' %}
-                                {% if sig.signature_path %}
-                                    <img src="{{ sig.signature_path }}" class="sign-img" alt="Signature">
-                                {% else %}
-                                    <div style="height:50px;"></div>
-                                {% endif %}
-                                <div class="sig-name">{{ sig.nom|default:"" }}</div>
-                        {% if sig.fonction %}<div class="sig-line" style="font-size:9px; color:#555;">{{ sig.fonction }}</div>{% endif %}
-                        {% if sig.sous_label %}<div class="sig-line">{{ sig.sous_label }}</div>{% endif %}
-                        {% if sig.date %}<div class="sig-line" style="font-size:9pt; margin-top:4px;">{{ sig.date|date:"d/m/Y" }}</div>{% endif %}
-                            {% endif %}
-                        {% endfor %}
-                    {% else %}
-                        <div style="height:50px;"></div>
-                        <div class="sig-name">..................................</div>
-                    {% endif %}
-                </div>
-            </div>
+    {% include "stock/pdf/_signatures.html" %}
 
         </td>
     </tr>

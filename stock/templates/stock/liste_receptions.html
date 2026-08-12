@@ -98,7 +98,7 @@
     border-radius: var(--rec-radius);
     box-shadow: var(--rec-shadow-sm);
     border: 1px solid var(--rec-border);
-    overflow: hidden;
+    overflow-x: auto;
     margin-bottom: 20px;
   }
 
@@ -1217,25 +1217,10 @@ function toggleLignes(id) {
 }
 
 // ── Modal impression PDF ──
-function imprimerModal(url, titre) {
-    var modal = document.getElementById('modal-pdf');
-    var titreEl = document.getElementById('pdf-titre');
-    var loader = document.getElementById('pdf-loader');
-    var iframe = document.getElementById('pdf-iframe');
-    
-    if(titreEl) titreEl.innerHTML = '<i class="fas fa-print me-2"></i>' + (titre||'');
-    if(loader) loader.style.display = 'flex';
-    if(iframe) { iframe.style.display = 'none'; iframe.src = ''; }
-    if(modal) modal.classList.add('open');
-    
-    if(iframe) {
-        iframe.onload = function(){
-            if(loader) loader.style.display = 'none';
-            iframe.style.display = 'block';
-        };
-        iframe.src = url;
-    }
-}
+window.imprimerModal = function(url, titre) {
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        window.open(url, '_blank');
+    };
 
 // ── Auto-open bon après réception ──
 (function(){
@@ -1277,7 +1262,7 @@ function ouvrirModalRemplacer(bonId, cmdNumero) {
     var form = document.getElementById('form-remplacer-bl');
     var info = document.getElementById('remplacer-cmd-info');
     if(info) info.textContent = cmdNumero;
-    if(form) form.action = '/stock/receptions/remplacer-bl/' + bonId + '/';
+    if(form) form.action = '{% url "remplacer_bon_livraison" 0 %}'.replace('/0/', '/' + bonId + '/');
     
     var input = document.getElementById('file-up-remplacer');
     if(input) input.value = '';

@@ -1,3 +1,2 @@
-from django.db import models
-
-# Create your models here.
+# App fleet  aucun modèle actif (en attente d'implémentation)
+# from django.db import models

@@ -91,16 +91,16 @@
                     </td>
                     
                 </tr>
-                {% empty %}
-                <tr class="empty-pm">
-                    <td colspan="4" style="text-align: center; padding: 50px 20px; color: #94a3b8;">
-                        <i class="fas fa-trash-restore fa-3x" style="margin-bottom: 15px; opacity: 0.3;"></i><br>
-                        Aucun équipement n'a été mis au rebut pour le moment.
-                    </td>
-                </tr>
                 {% endfor %}
             </tbody>
         </table>
+        
+        {% if not rebuts %}
+        <div class="empty-pm" style="text-align: center; padding: 50px 20px; color: #94a3b8;">
+            <i class="fas fa-trash-restore fa-3x" style="margin-bottom: 15px; opacity: 0.3;"></i><br>
+            Aucun équipement n'a été mis au rebut pour le moment.
+        </div>
+        {% endif %}
         
         <div id="pag-tbody-rebuts"></div>
 

@@ -1,9 +1,10 @@
+# -*- coding: utf-8 -*-
 import logging
 # stock/services/bon_service.py
 from django.db import transaction
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.utils import timezone
-from stock.models import BonMouvement, Mouvement, StockItem, LigneBon
+from stock.models import BonMouvement, Mouvement, StockItem, LigneBon, DemandeMateriel
 from stock.services.stock_transaction_service import StockTransactionService
 
 logger = logging.getLogger(__name__)
@@ -62,7 +63,7 @@ class BonService:
     @staticmethod
     def _get_articles_en_bulk(article_ids):
         """✅ CORRECTION : Récupère les articles en une seule requête pour éviter N+1.
-        Utilise _base_manager pour contourner tout filtre entreprise implicite.
+        Utilise _base_manager pour contourner tout filtre implicite.
         Convertit les IDs en int car in_bulk() retourne des clés int."""
         from stock.models import Article
         ids_int = [int(aid) for aid in article_ids if aid is not None]
@@ -267,8 +268,8 @@ class BonService:
         if demande:
             from stock.models import DemandeMateriel
             if isinstance(demande, DemandeMateriel):
-                bon.demande_origine = demande
-                bon.save(update_fields=['demande_origine'])
+                demande.bon_sortie_lie = bon
+                demande.save(update_fields=['bon_sortie_lie'])
 
         # Si pas de circuit, exécuter immédiatement
         if statut == 'VALIDE':
@@ -509,7 +510,7 @@ class BonService:
         if bon.statut_validation == 'REJETE':
             raise ValueError("Bon rejeté, impossible de valider.")
 
-        # ✅ CORRECTION : vérifier entreprise
+        # ✅ CORRECTION : vérifier utilisateur/magasin
         cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
 
         # ✅ CORRECTION : revérifier le stock AVANT validation (le stock a pu changer)
@@ -559,14 +560,14 @@ class BonService:
         if bon.est_annule:
             raise ValueError("Bon déjà annulé.")
 
-        # ✅ CORRECTION : vérifier entreprise
+        # ✅ CORRECTION : vérifier utilisateur/magasin
         cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
 
         # ✅ CORRECTION : gérer motif comme string ou objet
         motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
 
         mouvements = Mouvement.objects.filter(
-            reference_document=bon.numero_bon,
+            reference_document__startswith=bon.numero_bon,
             type_mouvement='ENTREE'
         )
 
@@ -619,7 +620,8 @@ class BonService:
                                     f"Motif : {motif_libelle}"
                                 ),
                                 url=f"/stock/bons/{bon.id}/",
-                                type_notif="ALERTE_STOCK"
+                                type_notif="ALERTE_STOCK",
+                                est_importante=True
                             )
                     except Exception:
                         logger.exception("Échec notification ajustement forcé")
@@ -643,25 +645,21 @@ class BonService:
         if bon.est_annule:
             raise ValueError("Bon déjà annulé.")
 
-        # ✅ CORRECTION : vérifier entreprise
+        # ✅ CORRECTION : vérifier utilisateur/magasin
         cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
 
         # ✅ CORRECTION : vérifier si une demande est liée et mettre à jour son statut
         motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
 
-        if bon.demande_origine_id:
-            from stock.models import DemandeMateriel
-            try:
-                demande = DemandeMateriel.objects.get(pk=bon.demande_origine_id)
-                if demande.statut not in ('ANNULEE', 'CLOTUREE'):
-                    demande.statut = 'EN_ATTENTE'
-                    demande.bon_sortie_lie = None
-                    demande.save(update_fields=['statut', 'bon_sortie_lie'])
-            except DemandeMateriel.DoesNotExist:
-                pass
+        demande_liee = DemandeMateriel.objects.filter(bon_sortie_lie=bon).first() if hasattr(bon, 'pk') else None
+        if demande_liee:
+            if demande_liee.statut not in ('ANNULEE', 'CLOTUREE'):
+                demande_liee.statut = 'EN_ATTENTE'
+                demande_liee.bon_sortie_lie = None
+                demande_liee.save(update_fields=['statut', 'bon_sortie_lie'])
 
         mouvements = Mouvement.objects.filter(
-            reference_document=bon.numero_bon,
+            reference_document__startswith=bon.numero_bon,
             type_mouvement='SORTIE'
         )
 
@@ -688,7 +686,7 @@ class BonService:
         if bon.est_annule:
             raise ValueError("Bon déjà annulé.")
 
-        # ✅ CORRECTION : vérifier entreprise
+        # ✅ CORRECTION : vérifier utilisateur/magasin
         cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
 
         # ✅ CORRECTION : soft delete des mouvements hors stock (pas de hard delete)
@@ -698,7 +696,7 @@ class BonService:
         )
         for mvt in mouvements_hs:
             mvt.est_annule = True
-            mvt.save(update_fields=['est_annule'])
+            mvt.save(update_fields=['est_annule'], update_stock=False)
 
         bon.est_annule = True
         if hasattr(motif, 'pk'):

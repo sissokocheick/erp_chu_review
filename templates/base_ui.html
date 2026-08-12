@@ -1,32 +1,34 @@
 <!DOCTYPE html>
+{% load static %}
 <html lang="fr">
 <head>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none';">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}NexusERP{% endblock %}</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <script src="https://cdn.jsdelivr.net/jquery/latest/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs" crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" integrity="sha384-d3UHjPdzJkZuk5H3qKYMLRyWLAQBJbby2yr2Q58hXXtAGF8RSNO9jpLDlKKPv5v3" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-    <!-- ═══════════════════════════════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          NEXUS ERP — Design System UX (NxUX) v2.0
          Fichier externalisé pour uniformisation across tous les modules
-         ═══════════════════════════════════════════════════════════════ -->
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <script src="/static/js/nx-ux.js"></script>
 
-    <!-- ═══════════════════════════════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          COMPATIBILITÉ : Anciennes fonctions dépréciées (redirect vers NxUX)
-         ═══════════════════════════════════════════════════════════════ -->
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <script>
     // Wrapper pour compatibilité ascendante - sera supprimé dans future version
     window.formatPhone = function(el) { if (window.NxUX) NxUX.formatField(el); };
     </script>
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
 
-    <!-- 🌙 ANTI-FLASH : lit le cookie serveur AVANT tout CSS -->
+    <!-- ðŸŒ™ ANTI-FLASH : lit le cookie serveur AVANT tout CSS -->
     <script>
         (function() {
             var m = document.cookie.match('(^|;) ?theme_pref=([^;]*)(;|$)');
@@ -34,7 +36,7 @@
             if (isDark) {
                 document.documentElement.classList.add('html-dark-preload');
             }
-            // ── Anti-flash sidebar réduite ──
+            // â”€â”€ Anti-flash sidebar réduite â”€â”€
             var isClosed = localStorage.getItem('nexuserp_sidebar_closed') === 'true';
             if (isClosed && window.innerWidth > 768) {
                 document.documentElement.classList.add('sidebar-preload-closed');
@@ -53,11 +55,11 @@
     </style>
 
     <style>
-        /* ═══════════════════════════════════════════════════════════════
+        /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
            NEXUSERP DESIGN SYSTEM  —  base_ui.html
-           ═══════════════════════════════════════════════════════════════ */
+           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
 
-        /* ── 1. TOKENS ── */
+        /* â”€â”€ 1. TOKENS â”€â”€ */
         :root {
             --primary-blue: #1c5b96;
             --primary-blue-dark: #0d3b6e;
@@ -101,7 +103,7 @@
             --thead-bg: #0f172a;
         }
 
-        /* ── 2. RESET & BASE ── */
+        /* â”€â”€ 2. RESET & BASE â”€â”€ */
         * { box-sizing: border-box; }
         body {
             margin: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -109,7 +111,7 @@
             overflow-x: hidden; color: var(--text-dark);
         }
 
-        /* ── 3. LAYOUT ── */
+        /* â”€â”€ 3. LAYOUT â”€â”€ */
         .nx-container { padding: 20px; }
         .nx-row { display: flex; gap: 16px; flex-wrap: wrap; }
         .nx-col { flex: 1; min-width: 0; }
@@ -117,7 +119,7 @@
         .nx-between { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
         .nx-center { display: flex; align-items: center; justify-content: center; }
 
-        /* ── 4. CARD ── */
+        /* â”€â”€ 4. CARD â”€â”€ */
         .nx-card {
             background: var(--bg-card); border-radius: var(--radius-lg);
             box-shadow: 0 2px 10px var(--shadow); overflow: hidden;
@@ -135,7 +137,7 @@
             background: var(--bg-hover); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;
         }
 
-        /* ── 5. TABLE ── */
+        /* â”€â”€ 5. TABLE â”€â”€ */
         .nx-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .nx-table thead th {
             background: var(--bg-hover); padding: 12px 14px;
@@ -153,7 +155,7 @@
         }
         .nx-empty i { font-size: 34px; display: block; margin-bottom: 12px; opacity: .4; }
 
-        /* ── 6. BADGES ── */
+        /* â”€â”€ 6. BADGES â”€â”€ */
         .nx-badge {
             display: inline-flex; align-items: center; gap: 5px;
             padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; white-space: nowrap;
@@ -176,7 +178,7 @@
         body.dark-mode .nx-badge-purple { background: rgba(179,136,255,0.15); color: #b388ff; }
         body.dark-mode .nx-badge-cyan   { background: rgba(128,222,234,0.15); color: #80deea; }
 
-        /* ── 7. BUTTONS ── */
+        /* â”€â”€ 7. BUTTONS â”€â”€ */
         .nx-btn {
             display: inline-flex; align-items: center; gap: 6px;
             padding: 8px 16px; border-radius: var(--radius); font-size: 13px;
@@ -198,7 +200,7 @@
         .nx-btn-print   { background: var(--bg-hover); color: var(--primary-blue); border: 1px solid var(--border-color); }
         .nx-btn-print:hover { background: var(--primary-blue); color: white; border-color: var(--primary-blue); }
 
-        /* ── 8. FORMS ── */
+        /* â”€â”€ 8. FORMS â”€â”€ */
         .nx-form-group { margin-bottom: 16px; }
         .nx-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-medium); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .3px; }
         .nx-input, .nx-select, .nx-textarea {
@@ -210,6 +212,11 @@
         .nx-input:focus, .nx-select:focus, .nx-textarea:focus {
             border-color: var(--primary-blue); box-shadow: 0 0 0 3px rgba(28,91,150,0.1);
         }
+        /* Accessibilité : indicateur de focus clavier visible sur tous les éléments interactifs */
+        a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible,
+        textarea:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #ffc107; outline-offset: 2px; border-radius: 3px;
+        }
         .nx-input::placeholder { color: var(--text-light); }
         .nx-input[readonly] { background: var(--bg-hover); cursor: pointer; }
         .nx-select { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 4 5'%3E%3Cpath fill='%23666' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 30px; }
@@ -219,7 +226,7 @@
         .nx-search-wrap i { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-light); font-size: 13px; pointer-events: none; }
         .nx-search-wrap input { padding-left: 32px; }
 
-        /* ── 9. TOOLBAR / FILTERS ── */
+        /* â”€â”€ 9. TOOLBAR / FILTERS â”€â”€ */
         .nx-toolbar {
             display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
             padding: 14px 18px; background: var(--bg-hover);
@@ -227,7 +234,7 @@
         }
         .nx-toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-light); }
 
-        /* ── 10. KPI ── */
+        /* â”€â”€ 10. KPI â”€â”€ */
         .nx-kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 22px; }
         .nx-kpi {
             background: var(--bg-card); border-radius: var(--radius-lg); padding: 18px 20px;
@@ -261,7 +268,7 @@
         body.dark-mode .nx-kpi-red    .nx-kpi-icon { background: rgba(239,154,154,0.2); }
         body.dark-mode .nx-kpi-purple .nx-kpi-icon { background: rgba(179,136,255,0.2); }
 
-        /* ── 11. PAGINATION ── */
+        /* â”€â”€ 11. PAGINATION â”€â”€ */
         .nx-pag { display: flex; gap: 4px; }
         .nx-pag a, .nx-pag span {
             padding: 5px 10px; border: 1px solid var(--border-color); border-radius: 5px;
@@ -271,14 +278,14 @@
         .nx-pag a:hover { background: var(--bg-hover); color: var(--primary-blue); border-color: var(--primary-blue); }
         .nx-pag .active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); font-weight: 700; }
 
-        /* ── 12. ACCORDION ── */
+        /* â”€â”€ 12. ACCORDION â”€â”€ */
         .nx-chevron { transition: transform .2s; display: inline-block; }
         .nx-chevron.open { transform: rotate(90deg); }
         .nx-detail-row { display: none; background: var(--bg-stripe); }
         .nx-detail-row.show { display: table-row; }
         .nx-detail-box { background: var(--bg-card); padding: 20px; border-radius: var(--radius); box-shadow: 0 2px 8px var(--shadow); border: 1px solid var(--border-light); }
 
-        /* ── 13. ALERTS / COMMENTS ── */
+        /* â”€â”€ 13. ALERTS / COMMENTS â”€â”€ */
         .nx-alert { padding: 12px 16px; border-radius: var(--radius); font-size: 13px; margin-bottom: 15px; border-left: 4px solid transparent; }
         .nx-alert-yellow { background: rgba(255,193,7,0.1); color: #856404; border-left-color: #ffc107; }
         .nx-alert-red    { background: rgba(220,53,69,0.1); color: #721c24; border-left-color: #dc3545; }
@@ -290,7 +297,7 @@
         body.dark-mode .nx-alert-green  { background: rgba(129,199,132,0.1); color: #a5d6a7; }
         body.dark-mode .nx-alert-blue   { background: rgba(93,173,226,0.1); color: #74b9ff; }
 
-        /* ── 14. TABS ── */
+        /* â”€â”€ 14. TABS â”€â”€ */
         .nx-tabs { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; border-bottom: 2px solid var(--border-light); }
         .nx-tab {
             padding: 10px 20px; font-weight: 700; font-size: 14px; text-decoration: none;
@@ -302,7 +309,7 @@
         .nx-tab.active { color: var(--primary-blue); border-bottom-color: var(--primary-blue); }
         body.dark-mode .nx-tab.active { color: #5dade2; border-bottom-color: #5dade2; }
 
-        /* ── 15. MODAL PDF (unique globale avec Z-INDEX corrigé) ── */
+        /* â”€â”€ 15. MODAL PDF (unique globale avec Z-INDEX corrigé) â”€â”€ */
         .nx-modal {
             display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
             z-index: 1000000; align-items: flex-start; justify-content: center;
@@ -342,16 +349,16 @@
             display: flex; justify-content: flex-end; gap: 10px; background: var(--bg-hover);
         }
 
-        /* ── 16. PRINT ── */
+        /* â”€â”€ 16. PRINT â”€â”€ */
         @media print {
             .no-print, .sidebar, .topbar, .nx-toolbar, .nx-pag { display: none !important; }
             .nx-card { box-shadow: none; border: 1px solid #ccc; }
             body { background: white; }
         }
 
-        /* ═══════════════════════════════════════════════════════════════
+        /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
            SIDEBAR & TOPBAR
-           ═══════════════════════════════════════════════════════════════ */
+           â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• */
         .sidebar {
             width: 265px; background-color: var(--primary-blue); color: white;
             display: flex; flex-direction: column; overflow-y: auto; z-index: 999999;
@@ -376,7 +383,7 @@
         /* Masque l'infobulle si le titre est actif */
         .sidebar.desktop-closed .module-title.active::after { display: none !important; }
 
-        /* ── Accordéon vertical en mode réduit (icônes seules) ── */
+        /* â”€â”€ Accordéon vertical en mode réduit (icônes seules) â”€â”€ */
         .sidebar.desktop-closed .submenu.active {
             max-height: 800px;
             position: static !important;
@@ -427,7 +434,10 @@
             background-color: rgba(0,0,0,0.05);
         }
         .submenu.active {
-            max-height: 800px;
+            /* Déploiement complet : la sidebar est l'unique conteneur de scroll
+               (pas de double scrollbar), le contenu trop long défile avec le menu */
+            max-height: none;
+            overflow: visible;
         }
 
         .menu-item {
@@ -502,6 +512,15 @@
             .mobile-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999998; backdrop-filter: blur(2px); }
             .mobile-overlay.show { display: block; }
             .topbar-right-actions { display: none; }
+            /* Topbar compacte sur mobile : on garde les icônes, on masque les libellés */
+            .topbar > div { gap: 6px !important; }
+            .topbar-right { gap: 6px !important; }
+            .topbar-user-name, .topbar-logout-text { display: none !important; }
+            .topbar .selector-magasin { padding: 4px 8px !important; max-width: 110px; }
+            .topbar .selector-magasin select { max-width: 62px; font-size: 11px; text-overflow: ellipsis; }
+            .topbar .selector-magasin i.fa-chevron-down { display: none; }
+            .topbar form button { padding: 5px 6px !important; }
+            .main-content { padding: 8px; }
         }
 
         /* Skeleton Loader */
@@ -552,7 +571,7 @@
         body.dark-mode .daterangepicker .cancelBtn { background: var(--bg-hover); color: var(--text-medium); border-color: var(--border-color); }
     </style>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
 
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
@@ -561,9 +580,9 @@
 
     <div class="mobile-overlay" id="mobile-overlay" onclick="toggleSidebarMobile(event)"></div>
 
-    <!-- ═══════════════════════════════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          SIDEBAR
-         ═══════════════════════════════════════════════════════════════ -->
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div class="sidebar" id="sidebar-main" data-turbo-permanent>
         <a href="{% if perms.accounts.menu_accueil %}{% url 'accounts:accueil_personnalise' %}{% else %}/{% endif %}"
            class="sidebar-header"
@@ -609,7 +628,7 @@
         {% endif %}
 
         <!-- DEMANDES -->
-        {% if perms.accounts.menu_demandes or perms.accounts.menu_guichet or peut_valider_demandes %}
+        {% if perms.accounts.menu_demandes or perms.accounts.menu_guichet or perms.accounts.menu_valider_demandes or peut_valider_demandes %}
         <div class="module-title" onclick="toggleMenu('menu-demandes')" data-title="Demandes">
             <span style="display:flex;align-items:center;"><i class="fas fa-clipboard-list nav-icon" style="color:#17a2b8;"></i><span class="nav-text">Demandes</span></span>
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-demandes"></i>
@@ -621,7 +640,7 @@
             {% if perms.accounts.menu_guichet %}
             <a href="{% url 'gestion_demandes' %}" class="menu-item" data-title="Guichet"><i class="fas fa-inbox nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Traiter (Guichet)</span></a>
             {% endif %}
-            {% if peut_valider_demandes %}
+            {% if perms.accounts.menu_valider_demandes and peut_valider_demandes %}
             <a href="{% url 'demandes_a_valider' %}" class="menu-item" data-title="Valider">
                 <i class="fas fa-clipboard-check nav-icon" style="color:#ffc107;"></i><span class="nav-text">A Valider</span>
                 {% if nb_demandes_a_valider > 0 %}
@@ -661,7 +680,7 @@
         {% endif %}
 
         <!-- GESTION DES STOCKS -->
-        {% if perms.accounts.menu_stock or perms.accounts.menu_peremptions or perms.accounts.menu_destructions or perms.accounts.menu_ajustements or perms.accounts.menu_inventaires or perms.accounts.menu_historique %}
+        {% if perms.accounts.menu_stock or perms.accounts.menu_peremptions or perms.accounts.menu_destructions or perms.accounts.menu_ajustements or perms.accounts.menu_inventaires or perms.accounts.menu_historique or perms.accounts.menu_lots %}
         <div class="module-title" onclick="toggleMenu('menu-gestion-stocks')" data-title="Stocks">
             <span style="display:flex;align-items:center;"><i class="fas fa-boxes nav-icon" style="color:#1c5b96;"></i><span class="nav-text">Gestion des Stocks</span></span>
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-gestion-stocks"></i>
@@ -675,6 +694,9 @@
             {% endif %}
             {% if perms.accounts.menu_inventaires %}
             <a href="{% url 'liste_inventaires' %}" class="menu-item" data-title="Inventaires"><i class="fas fa-clipboard-check nav-icon" style="color:#28a745;"></i><span class="nav-text">Campagnes Inventaires</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_lots %}
+            <a href="{% url 'liste_lots' %}" class="menu-item" data-title="Lots"><i class="fas fa-boxes nav-icon" style="color:#ffc107;"></i><span class="nav-text">Gestion des Lots</span></a>
             {% endif %}
             {% if perms.accounts.menu_peremptions %}
             <a href="{% url 'controle_peremptions' %}" class="menu-item" data-title="Peremptions"><i class="fas fa-exclamation-triangle nav-icon" style="color:#ffda6a;"></i><span class="nav-text">Suivi Peremptions</span></a>
@@ -774,20 +796,27 @@
         {% endif %}
 
         <!-- PARAMETRES -->
-        {% if perms.accounts.menu_parametres or perms.accounts.menu_param_admin or perms.accounts.menu_services or perms.accounts.menu_specialites or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation %}
+        {% if perms.accounts.menu_parametres or perms.accounts.menu_param_admin or perms.accounts.menu_services or perms.accounts.menu_specialites or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation or perms.accounts.menu_parametres_doc or perms.accounts.menu_modeles_pdf or perms.accounts.menu_fonctions or perms.accounts.menu_beneficiaires or perms.accounts.menu_lots or perms.accounts.menu_notifications_config %}
         <div class="module-title" onclick="toggleMenu('menu-parametres')" data-title="Parametres">
             <span style="display:flex;align-items:center;"><i class="fas fa-cogs nav-icon" style="color:#6c757d;"></i><span class="nav-text">Parametres</span></span>
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-parametres"></i>
         </div>
         <div class="submenu" id="menu-parametres">
-            {% if perms.accounts.menu_param_admin or perms.accounts.menu_services or perms.accounts.menu_specialites %}
+            {% if perms.accounts.menu_param_admin or perms.accounts.menu_services or perms.accounts.menu_specialites or perms.accounts.menu_fonctions or perms.accounts.menu_parametres %}
             <a href="{% url 'parametres_administratifs' %}" class="menu-item" data-title="Admin"><i class="fas fa-hospital-user nav-icon" style="color:#1c5b96;"></i><span class="nav-text">Administratifs</span></a>
             {% endif %}
-            {% if perms.accounts.menu_parametres or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation %}
+            {% if perms.accounts.menu_parametres or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation or perms.accounts.menu_beneficiaires %}
             <a href="{% url 'parametres_logistique' %}" class="menu-item" data-title="Logistique"><i class="fas fa-truck nav-icon" style="color:#fd7e14;"></i><span class="nav-text">Logistique</span></a>
             {% endif %}
-            {% if perms.accounts.menu_modeles_pdf and magasin_actif %}
+            {% if perms.accounts.menu_modeles_pdf or perms.accounts.menu_parametres_doc %}
+            {% if magasin_actif %}
             <a href="{% url 'modele_pdf_config' magasin_actif.id 'BS' %}" class="menu-item" data-title="PDF"><i class="fas fa-file-pdf nav-icon" style="color:#dc3545;"></i><span class="nav-text">Modeles PDF</span></a>
+            {% else %}
+            <a href="{% url 'accounts:config_documents_globaux' %}" class="menu-item" data-title="PDF"><i class="fas fa-file-pdf nav-icon" style="color:#dc3545;"></i><span class="nav-text">Modeles PDF</span></a>
+            {% endif %}
+            {% endif %}
+            {% if perms.accounts.menu_notifications_config %}
+            <a href="{% url 'parametres_notifications' %}" class="menu-item" data-title="Notifications"><i class="fas fa-bell nav-icon" style="color:#ffc107;"></i><span class="nav-text">Notifications</span></a>
             {% endif %}
         </div>
         {% endif %}
@@ -816,9 +845,9 @@
 
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          MAIN CONTENT
-         ═══════════════════════════════════════════════════════════════ -->
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div class="main-content">
         <div class="topbar">
             <div style="display: flex; align-items: center; justify-content: space-between; width: 100%; gap: 15px;">
@@ -827,23 +856,7 @@
                         <i class="fas fa-bars" style="color: var(--text-medium); font-size: 20px;"></i>
                     </div>
                 </div>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    {% if user.is_superuser and entreprises_nav %}
-                        <form method="POST" action="{% url 'accounts:changer_entreprise_session' %}" style="margin: 0;">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
-                            <div class="selector-entreprise" style="background: #fff3cd; padding: 6px 15px; border-radius: 20px; border: 1px solid #ffc107; display: flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-building" style="color: #856404;"></i>
-                                <select name="entreprise_id" onchange="this.form.submit()" style="background: transparent; border: none; color: #856404; font-weight: bold; font-size: 13px; cursor: pointer; outline: none;">
-                                    {% for e in entreprises_nav %}
-                                        <option value="{{ e.id }}" {% if e.id == request.session.entreprise_id %}selected{% endif %}>{{ e.nom|upper }} {% if not e.est_active %}(Inactive){% endif %}</option>
-                                    {% endfor %}
-                                </select>
-                                <i class="fas fa-chevron-down" style="color: #856404; font-size: 10px;"></i>
-                            </div>
-                        </form>
-                    {% endif %}
-
+                <div class="topbar-right" style="display: flex; align-items: center; gap: 15px;">
                     {% if mes_magasins %}
                         {% if mes_magasins|length > 1 %}
                             <form method="POST" action="{% url 'changer_magasin' %}" style="margin: 0;">
@@ -851,6 +864,7 @@
                                 <div class="selector-magasin" style="background: #e3f2fd; padding: 6px 15px; border-radius: 20px; border: 1px solid #1c5b96; display: flex; align-items: center; gap: 8px;">
                                     <i class="fas fa-warehouse" style="color: #1c5b96;"></i>
                                     <select name="magasin_id" onchange="this.form.submit()" style="background: transparent; border: none; color: #1c5b96; font-weight: bold; font-size: 13px; cursor: pointer; outline: none;">
+                                        {% if not magasin_actif %}<option value="" disabled selected>— Sélectionner —</option>{% endif %}
                                         {% for m in mes_magasins %}
                                             <option value="{{ m.id }}" {% if magasin_actif and magasin_actif.id == m.id %}selected{% endif %}>{{ m.nom|upper }}</option>
                                         {% endfor %}
@@ -875,9 +889,12 @@
                             <span id="notif-badge" style="position: absolute; top: 2px; right: 2px; background: #dc3545; color: white; font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 50%; display: none;"></span>
                         </div>
                         <div id="notif-dropdown" style="display: none; position: absolute; right: 0; top: 40px; background: var(--bg-card); width: 340px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); border-radius: 8px; z-index: 999999; border: 1px solid var(--border-light); overflow: hidden;">
-                            <div style="padding: 12px 15px; border-bottom: 1px solid var(--border-light); font-weight: bold; font-size: 13px; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center;">
+                            <div style="padding: 12px 15px; border-bottom: 1px solid var(--border-light); font-weight: bold; font-size: 13px; color: var(--text-dark); display: flex; justify-content: space-between; align-items: center; gap: 10px;">
                                 <span><i class="fas fa-bell"></i> Notifications</span>
-                                <a href="{% url 'liste_notifications' %}" style="font-size: 11px; font-weight: normal; color: var(--primary-blue);">Tout voir</a>
+                                <span style="display: flex; gap: 12px;">
+                                    <a href="{% url 'liste_notifications' %}?marquer_lues=1" style="font-size: 11px; font-weight: normal; color: var(--text-medium);"><i class="fas fa-check-double"></i> Tout marquer lu</a>
+                                    <a href="{% url 'liste_notifications' %}" style="font-size: 11px; font-weight: normal; color: var(--primary-blue);">Tout voir</a>
+                                </span>
                             </div>
                             <div id="notif-list" style="max-height: 350px; overflow-y: auto;">
                                 <div style="padding: 20px; text-align: center; color: var(--text-light); font-size: 12px;">Chargement…</div>
@@ -885,19 +902,19 @@
                         </div>
                     </div>
 
-                    <a href="/accounts/profil/" title="Mon profil" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--primary-blue); font-weight: 600; font-size: 13px; padding: 5px 8px; border-radius: 6px; transition: background .15s;">
+                    <a href="{% url 'accounts:profil_utilisateur' %}" title="Mon profil" style="display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--primary-blue); font-weight: 600; font-size: 13px; padding: 5px 8px; border-radius: 6px; transition: background .15s;">
                         {% if request.user.profil and request.user.profil.photo %}
                             <img src="{{ request.user.profil.photo.url }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 2px solid #1c5b96;">
                         {% else %}
                             <i class="fas fa-user-circle" style="font-size: 24px; color: #1c5b96;"></i>
                         {% endif %}
-                        <span>{{ request.user.get_full_name|default:request.user.username }}</span>
+                        <span class="topbar-user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
                     </a>
 
                     <form method="post" action="{% url 'accounts:custom_logout' %}" style="margin: 0;" data-turbo="false">
                         {% csrf_token %}
                         <button type="submit" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 14px; font-weight: bold; padding: 5px 10px; border-radius: 6px; transition: 0.2s; display: flex; align-items: center; gap: 5px;">
-                            <i class="fas fa-sign-out-alt"></i> Déconnexion
+                            <i class="fas fa-sign-out-alt"></i> <span class="topbar-logout-text">Déconnexion</span>
                         </button>
                     </form>
                 </div>
@@ -932,9 +949,9 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          MODAL PDF GLOBALE
-         ═══════════════════════════════════════════════════════════════ -->
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div class="nx-modal" id="nx-modal-pdf">
         <div class="nx-modal-box">
             <div class="nx-modal-header">
@@ -959,9 +976,9 @@
 
     {% block modals %}{% endblock %}
 
-    <!-- ═══════════════════════════════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          SCRIPT : MISE À JOUR DU MENU ACTIF & RESTAURATION D'ÉTAT
-         ═══════════════════════════════════════════════════════════════ -->
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <script>
     (function() {
         'use strict';
@@ -1054,11 +1071,11 @@
     })();
     </script>
 
-    <!-- ═══════════════════════════════════════════════════════════════
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
          SCRIPTS GLOBAUX
-         ═══════════════════════════════════════════════════════════════ -->
+         â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <script>
-        // ── Sidebar : Gestion de l'ouverture et mémorisation ──
+        // â”€â”€ Sidebar : Gestion de l'ouverture et mémorisation â”€â”€
         function toggleMenu(menuId) {
             var menu = document.getElementById(menuId);
             var icon = document.getElementById('icon-' + menuId);
@@ -1070,6 +1087,23 @@
             if (!isActive && menu) {
                 menu.classList.add('active');
                 if (icon) { icon.classList.remove('fa-chevron-down'); icon.classList.add('fa-chevron-up'); }
+                // Ramène le début du sous-menu dans la zone visible de la SIDEBAR
+                // (l'unique conteneur de scroll) : utile quand le menu est long et
+                // que le clic a lieu en bas. On attend la fin de la transition.
+                var sb = document.getElementById('sidebar-main');
+                setTimeout(function() {
+                    try {
+                        if (sb) {
+                            var menuTop = menu.offsetTop;
+                            var headerH = sb.querySelector('.sidebar-header') ? sb.querySelector('.sidebar-header').offsetHeight : 0;
+                            if (menuTop < sb.scrollTop + headerH || menuTop > sb.scrollTop + sb.clientHeight - 60) {
+                                sb.scrollTo({ top: Math.max(0, menuTop - headerH - 8), behavior: 'smooth' });
+                            }
+                        } else {
+                            menu.scrollIntoView({ block: 'nearest' });
+                        }
+                    } catch (e) {}
+                }, 320);
             }
         }
 
@@ -1088,7 +1122,7 @@
             }
         }
 
-        // ── Messages auto-dismiss ──
+        // â”€â”€ Messages auto-dismiss â”€â”€
         setTimeout(function() {
             let messages = document.querySelectorAll('.auto-dismiss');
             messages.forEach(function(msg) {
@@ -1098,7 +1132,7 @@
             });
         }, 5000);
 
-        // ── Notifications ──
+        // â”€â”€ Notifications â”€â”€
         function toggleNotifDropdown() {
             const dd = document.getElementById('notif-dropdown');
             const isOpen = dd.style.display === 'block';
@@ -1166,7 +1200,7 @@
         });
         document.addEventListener('DOMContentLoaded', updateNotifBadge);
 
-        // ── Mode Sombre ──
+        // â”€â”€ Mode Sombre â”€â”€
         function toggleDarkMode() {
             document.body.classList.toggle('dark-mode');
             var icon = document.getElementById('darkModeIcon');
@@ -1216,7 +1250,7 @@
         
         document.addEventListener('DOMContentLoaded', applyDarkMode);
 
-        // ── Modal PDF Globale ──
+        // â”€â”€ Modal PDF Globale â”€â”€
         function nxOpenPdfModal(url, title) {
             var modal = document.getElementById('nx-modal-pdf');
             document.getElementById('nx-pdf-title').innerHTML = '<i class="fas fa-print me-2"></i> ' + (title || 'Impression');
@@ -1232,6 +1266,18 @@
             };
             iframe.src = url;
         }
+        // Alias global : toutes les pages appellent imprimerModal(url, titre)
+        // et doivent passer par la modale PDF unique de base_ui.
+        window.imprimerModal = function(url, titre) {
+            if (url && url.indexOf('/stock/bon/') !== -1) {
+                url = url.replace('/stock/bon/', '/bon/');
+            }
+            if (window.nxOpenPdfModal) {
+                nxOpenPdfModal(url, titre);
+                return;
+            }
+            window.open(url, '_blank');
+        };
         function nxClosePdfModal() {
             document.getElementById('nx-modal-pdf').classList.remove('open');
         }
@@ -1242,7 +1288,7 @@
             if (e.key === 'Escape') nxClosePdfModal();
         });
 
-        // ── Accordéon Global ──
+        // â”€â”€ Accordéon Global â”€â”€
         function nxToggleAccordion(btn, targetId) {
             var row = document.getElementById(targetId);
             if (!row) return;
@@ -1260,7 +1306,7 @@
             }
         }
 
-        // ── Confirmations (compatibilité + NxUX) ──
+        // â”€â”€ Confirmations (compatibilité + NxUX) â”€â”€
         function confirmerSuppression(arg1, message) {
             if (arg1 && typeof arg1.preventDefault === 'function') {
                 arg1.preventDefault();
@@ -1285,14 +1331,14 @@
             });
         }
 
-        // ── Select2 global ──
+        // â”€â”€ Select2 global â”€â”€
         $(document).ready(function() {
             $('select.form-control').select2({ width: '100%', placeholder: "Cliquez et tapez pour rechercher...", allowClear: true });
         });
     </script>
 
     <script>
-        // ── FORCER NAVIGATION NORMALE ──
+        // â”€â”€ FORCER NAVIGATION NORMALE â”€â”€
         document.addEventListener('click', function(e) {
             var a = e.target.closest('a');
             if (!a) return;
@@ -1317,6 +1363,7 @@
                 <p style="font-size: 13px; color: var(--text-medium); margin-bottom: 20px; text-align: center;">Vous avez accès à plusieurs magasins. Veuillez sélectionner celui dans lequel vous souhaitez travailler aujourd'hui.</p>
                 <form method="POST" action="{% url 'changer_magasin' %}">
                     {% csrf_token %}
+                    <input type="hidden" name="next" value="{{ request.path }}">
                     <label style="font-weight: bold; font-size: 12px; color: #dc3545; display: block; margin-bottom: 8px;">Sélectionnez votre magasin : *</label>
                     <select name="magasin_id" required class="nx-select" style="margin-bottom: 20px;">
                         <option value="">-- Choisir un magasin --</option>

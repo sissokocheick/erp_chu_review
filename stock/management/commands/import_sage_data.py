@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # stock/management/commands/import_sage_data.py
 # -*- coding: utf-8 -*-
 """
@@ -5,7 +6,7 @@ Commande d'importation des données Sage 100 Gestion Commerciale
 vers le module Stock de l'ERP CHU Angré.
 
 Usage :
-    python manage.py import_sage_data --entreprise-id 1 [--dry-run] [--skip-articles]
+    python manage.py import_sage_data [--dry-run] [--skip-articles] [--skip-services]
 """
 
 import logging
@@ -13,7 +14,6 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from stock.models import FamilleArticle, Article, Fournisseur
 from core.models import Service
-from accounts.models import Entreprise
 
 logger = logging.getLogger(__name__)
 
@@ -793,8 +793,8 @@ class Command(BaseCommand):
         parser.add_argument(
             '--entreprise-id',
             type=int,
-            required=True,
-            help="ID de l'entreprise (tenant) cible"
+            required=False,
+            help="(Ignoré — mode mono-tenant, conservé pour compatibilité)"
         )
         parser.add_argument(
             '--dry-run',
@@ -811,22 +811,21 @@ class Command(BaseCommand):
             action='store_true',
             help="Ignore l'import des services"
         )
-
     def handle(self, *args, **options):
-        entreprise_id = options['entreprise_id']
+        # Robustesse console Windows (cp1252 ne sait pas encoder ▶, é...)
+        try:
+            import sys
+            sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
         dry_run = options['dry_run']
         skip_articles = options['skip_articles']
         skip_services = options['skip_services']
 
-        self.stdout.write(self.style.NOTICE(f"Entreprise cible : {entreprise_id}"))
+        self.stdout.write(self.style.NOTICE("Mode mono-tenant : import global (paramètre --entreprise-id ignoré)"))
         if dry_run:
             self.stdout.write(self.style.WARNING("MODE DRY-RUN — Aucune écriture en base"))
-
-        try:
-            entreprise = Entreprise.objects.get(pk=entreprise_id)
-        except Entreprise.DoesNotExist:
-            self.stdout.write(self.style.ERROR(f"Entreprise {entreprise_id} introuvable."))
-            return
 
         stats = {"familles": 0, "fournisseurs": 0, "services": 0, "articles": 0, "erreurs": 0}
 
@@ -839,7 +838,6 @@ class Command(BaseCommand):
             try:
                 if not dry_run:
                     famille, created = FamilleArticle.objects.get_or_create(
-                        entreprise=entreprise,
                         code=data["code"],
                         defaults={
                             "intitule": data["intitule"],
@@ -870,7 +868,6 @@ class Command(BaseCommand):
             try:
                 if not dry_run:
                     _, created = Fournisseur.objects.get_or_create(
-                        entreprise=entreprise,
                         code=data["code"],
                         defaults={
                             "raison_sociale": data["raison_sociale"],
@@ -898,7 +895,6 @@ class Command(BaseCommand):
                 try:
                     if not dry_run:
                         service, created = Service.objects.get_or_create(
-                            entreprise=entreprise,
                             code=data["code"],
                             defaults={
                                 "nom": data["nom"],
@@ -930,7 +926,7 @@ class Command(BaseCommand):
 
                     if not dry_run:
                         article, created = Article.objects.get_or_create(
-                            entreprise=entreprise,
+
                             reference=ref,
                             defaults={
                                 "famille": famille,

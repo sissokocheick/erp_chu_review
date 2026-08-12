@@ -33,7 +33,7 @@ def page_circuits_validation(request):
             messages.error(request, "❌ Identifiant du circuit invalide.")
             return redirect('page_circuits_validation')
 
-        # Vérifier que le circuit appartient à l'entreprise
+        # Récupérer le circuit de validation
         circuit = get_object_or_404(
             CircuitValidation,
             id=circuit_id

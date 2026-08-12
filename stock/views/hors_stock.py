@@ -16,6 +16,7 @@ from accounts.permissions import verifier_permission
 from core.models import ConfigurationHopital
 from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
+from ..pdf_utils import get_pdf_config
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, Service,
@@ -40,8 +41,7 @@ def liste_bons_hors_stock(request):
 
 def _afficher_bons_hors_stock(request):
     """Branche GET : filtres, pagination, contexte."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
 
     onglet = request.GET.get('onglet', 'actifs')
     bons_base = BonMouvement.objects.filter(
@@ -51,6 +51,12 @@ def _afficher_bons_hors_stock(request):
     ).prefetch_related(
         'lignes_bon__article'
     ).order_by('-date_bon')
+
+    # Le magasin sélectionné dans l'en-tête s'applique partout :
+    # la liste ne montre que le magasin actif de la session.
+    magasin_actif = get_magasin_actif(request)
+    if magasin_actif:
+        bons_base = bons_base.filter(magasin=magasin_actif)
 
     if onglet == 'historique':
         qs = bons_base.filter(est_annule=True)
@@ -86,13 +92,6 @@ def _afficher_bons_hors_stock(request):
     per_page = request.GET.get('per_page', '15')
     bons, _ = paginer(qs, request, per_page_key='per_page', default=15)
 
-    # Récupérer le magasin actif de l'utilisateur
-    magasin_actif = None
-    try:
-        magasin_actif = request.user.profil.magasins_autorises.first()
-    except Exception:
-        pass
-
     context = {
         'bons': bons,
         'counts': counts,
@@ -114,7 +113,6 @@ def _afficher_bons_hors_stock(request):
 
 def _creer_bon_hors_stock(request):
     """Branche POST : validation, création via service, redirection."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     action = request.POST.get('action')
     if action == 'creer_beneficiaire':
         nom = request.POST.get('nom_complet', '').strip()
@@ -141,7 +139,7 @@ def _creer_bon_hors_stock(request):
         messages.error(request, "❌ Aucun magasin valide assigné à votre profil.")
         return redirect('liste_bons_hors_stock')
 
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
     if not magasins_autorises.filter(id=int(magasin_id)).exists():
         messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
         return redirect('liste_bons_hors_stock')
@@ -218,11 +216,10 @@ def _creer_bon_hors_stock(request):
 @magasin_requis
 @catch_errors(redirect_url='liste_bons_hors_stock')
 def annuler_bon_hors_stock(request, bon_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     if request.method != 'POST':
         return redirect('liste_bons_hors_stock')
 
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='SORTIE_HORS_STOCK',
         magasin__in=magasins_autorises
@@ -250,7 +247,6 @@ def annuler_bon_hors_stock(request, bon_id):
 @magasin_requis
 @catch_errors(redirect_url='liste_bons_hors_stock')
 def apercu_bon_hors_stock(request, bon_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     bon = get_object_or_404(
         BonMouvement.objects.filter(
             type_bon='SORTIE_HORS_STOCK').prefetch_related(
@@ -262,27 +258,14 @@ def apercu_bon_hors_stock(request, bon_id):
         id=bon_id
     )
 
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
     if not magasins_autorises.filter(id=bon.magasin_id).exists():
         messages.error(request, "⛔ Accès non autorisé.")
         return redirect('liste_bons_hors_stock')
 
     service_poste = getattr(bon.service_demandeur, 'poste_telephone', '') if bon.service_demandeur else ''
 
-    pdf_config = {}
-    config_hopital = ConfigurationHopital.get_instance()
-    if hasattr(config_hopital, 'get_pdf_config'):
-        try:
-            pdf_config = config_hopital.get_pdf_config() or {}
-        except Exception:
-            pdf_config = {}
-
-    logo_url = None
-    if config_hopital.logo:
-        try:
-            logo_url = request.build_absolute_uri(config_hopital.logo.url)
-        except Exception:
-            logo_url = None
+    pdf_config, logo_url = get_pdf_config(bon.magasin, 'BSHS', request)
 
     lignes_data = []
     for ligne in bon.lignes_bon.select_related('article').all():
@@ -306,6 +289,7 @@ def apercu_bon_hors_stock(request, bon_id):
     context = {
         'is_apercu': True,
         'bon': bon,
+        'magasin': bon.magasin,
         'lignes': list(bon.lignes_bon.all()),
         'lignes_data': lignes_data,
         'empty_lines': empty_lines,

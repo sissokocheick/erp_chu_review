@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.utils.http import url_has_allowed_host_and_scheme
+from stock.services.isolation_service import get_magasins_autorises
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ def changer_magasin(request):
     if request.method == 'POST':
         mag_id = request.POST.get('magasin_id')
         if mag_id:
-            magasins_autorises = get_magasins_autorises(request.user)
+            magasins_autorises = get_magasins_autorises(request)
             magasin = magasins_autorises.filter(id=mag_id).first()
 
             if magasin:

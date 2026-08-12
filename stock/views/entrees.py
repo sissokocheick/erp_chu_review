@@ -15,6 +15,7 @@ from django.utils import timezone
 from accounts.permissions import verifier_permission
 from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
+from ..pdf_utils import get_pdf_config
 from ..forms import EntreeStockForm
 from ..models import (
     Mouvement, BonMouvement, LigneBon, MotifAnnulation,
@@ -57,7 +58,7 @@ def _afficher_entrees(request):
         qs = qs.filter(magasin_id=magasin_actif_id)
 
     extra = {
-        'magasins': get_magasins_autorises(request.user).order_by('nom'),
+        'magasins': get_magasins_autorises(request).order_by('nom'),
         'fournisseurs': Fournisseur.objects.all().order_by('raison_sociale'),
         'articles': Article.objects.all().prefetch_related(
             'stocks__magasin'
@@ -85,7 +86,7 @@ def _afficher_entrees(request):
 
 def _creer_entree(request):
     """Branche POST : validation, création via service, upload scan, redirection."""
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
 
     magasin_id = request.POST.get('magasin')
     if not magasin_id or not magasins_autorises.filter(id=magasin_id).exists():
@@ -210,7 +211,7 @@ def annuler_entree(request, bon_id):
     if request.method != 'POST':
         return redirect('liste_entrees')
 
-    magasins_autorises = get_magasins_autorises(request.user)
+    magasins_autorises = get_magasins_autorises(request)
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='ENTREE',
         magasin__in=magasins_autorises
@@ -261,8 +262,7 @@ def apercu_bon_entree(request, bon_id):
         type_bon='ENTREE',
     )
 
-    pdf_config = {}
-    logo_url = None
+    pdf_config, logo_url = get_pdf_config(bon.magasin, 'BE', request)
 
     # Signatures
     sig_magasinier_url = None
@@ -288,6 +288,7 @@ def apercu_bon_entree(request, bon_id):
     context = {
         'is_apercu': True,
         'bon': bon,
+        'magasin': bon.magasin,
         'lignes': list(bon.lignes_bon.all()),
         'total_qte': total_qte,
         'logo_url': logo_url,

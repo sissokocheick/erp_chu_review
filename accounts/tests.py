@@ -272,20 +272,21 @@ class AuditConnexionModelTest(TestCase):
 # ==========================================================
 class MenuAccessModelTest(TestCase):
     def test_creation(self):
-        ma = MenuAccess.objects.create(nom='menu_utilisateurs')
+        ma = MenuAccess.objects.create(nom="Utilisateurs", code='menu_utilisateurs')
         self.assertEqual(str(ma), "Utilisateurs")
 
-    def test_unique_nom(self):
-        MenuAccess.objects.create(nom='menu_roles')
+    def test_unique_code(self):
+        """L'unicité est portée par `code`, pas par `nom`."""
+        MenuAccess.objects.create(nom="Rôles", code='menu_roles')
         with self.assertRaises(Exception):
-            MenuAccess.objects.create(nom='menu_roles')
+            MenuAccess.objects.create(nom="Autre libellé", code='menu_roles')
 
 
 # ==========================================================
 # GROUPES (rôles mono-tenant)
 # ==========================================================
 class GroupRoleTest(TestCase):
-    """Les rôles sont des Group Django classiques (plus de RoleEntreprise)."""
+    """Les rôles sont des Group Django classiques."""
 
     def test_create_role(self):
         g = Group.objects.create(name="RESPONSABLE LOGISTIQUE")
@@ -296,3 +297,201 @@ class GroupRoleTest(TestCase):
         g = Group.objects.create(name="VALIDATEUR")
         user.groups.add(g)
         self.assertTrue(user.groups.filter(name="VALIDATEUR").exists())
+
+
+# ==========================================================
+# MAGASIN AUTO-SELECT (middleware)
+# ==========================================================
+class MagasinAutoSelectMiddlewareTest(TestCase):
+    """Régression : le superuser doit conserver son magasin sélectionné."""
+
+    def _request_avec_magasin(self, user, magasin_id):
+        from django.test import RequestFactory
+        from django.contrib.sessions.middleware import SessionMiddleware
+        from accounts.middleware import MagasinAutoSelectMiddleware
+        request = RequestFactory().get('/')
+        request.user = user
+        SessionMiddleware(lambda r: None).process_request(request)
+        request.session['magasin_actif_id'] = str(magasin_id)
+        MagasinAutoSelectMiddleware(lambda r: None)(request)
+        return request.session.get('magasin_actif_id')
+
+    def test_superuser_garde_son_magasin(self):
+        from stock.models import Magasin
+        magasin1 = Magasin.objects.create(nom="Magasin A")
+        Magasin.objects.create(nom="Magasin B")
+        admin = User.objects.create_superuser(username="admin_mag", password="pass")
+        self.assertEqual(
+            self._request_avec_magasin(admin, magasin1.id),
+            str(magasin1.id),
+        )
+
+    def test_user_autorise_garde_son_magasin(self):
+        from stock.models import Magasin
+        magasin = Magasin.objects.create(nom="Magasin A")
+        user = User.objects.create_user(username="user_mag", password="pass")
+        user.profil.magasins_autorises.add(magasin)
+        self.assertEqual(
+            self._request_avec_magasin(user, magasin.id),
+            str(magasin.id),
+        )
+
+    def test_magasin_non_autorise_retire(self):
+        from stock.models import Magasin
+        magasin_autorise = Magasin.objects.create(nom="Magasin A")
+        magasin_interdit = Magasin.objects.create(nom="Magasin B")
+        user = User.objects.create_user(username="user_mag2", password="pass")
+        user.profil.magasins_autorises.add(magasin_autorise)
+        # Le magasin en session n'est pas autorisé → retiré (et seul magasin autorisé re-sélectionné)
+        self.assertEqual(
+            self._request_avec_magasin(user, magasin_interdit.id),
+            str(magasin_autorise.id),
+        )
+
+    def test_magasin_non_autorise_sans_autoselect(self):
+        """Avec plusieurs magasins autorisés, un magasin non autorisé est simplement retiré."""
+        from stock.models import Magasin
+        magasin_a = Magasin.objects.create(nom="Magasin A")
+        magasin_b = Magasin.objects.create(nom="Magasin B")
+        magasin_interdit = Magasin.objects.create(nom="Magasin C")
+        user = User.objects.create_user(username="user_mag3", password="pass")
+        user.profil.magasins_autorises.add(magasin_a, magasin_b)
+        self.assertIsNone(self._request_avec_magasin(user, magasin_interdit.id))
+
+
+# ==========================================================
+# SÉCURITÉ LOGIN (rate-limiting + timing oracle)
+# ==========================================================
+class LoginSecuriteTest(TestCase):
+    """Régression : blocage après 5 échecs, login valide toujours possible."""
+
+    def test_username_inexistant_ne_plante_pas(self):
+        """Un username inexistant doit renvoyer le formulaire (timing oracle neutralisé)."""
+        from django.test import Client
+        resp = Client().post(
+            '/auth/login/',
+            {'username': 'utilisateur_inexistant', 'password': 'motdepasse'},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('Identifiants incorrects', resp.content.decode('utf-8', errors='ignore'))
+
+    def test_blocage_apres_cinq_echecs(self):
+        """La 6e tentative d'une même IP doit être bloquée."""
+        from django.test import Client
+        client = Client()
+        for _ in range(5):
+            client.post(
+                '/auth/login/',
+                {'username': 'utilisateur_inexistant', 'password': 'mauvais'},
+            )
+        resp = client.post(
+            '/auth/login/',
+            {'username': 'utilisateur_inexistant', 'password': 'mauvais'},
+        )
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn('bloquée', resp.content.decode('utf-8', errors='ignore'))
+
+    def test_login_valide_toujours_possible(self):
+        """Un bon mot de passe connecte l'utilisateur."""
+        from django.test import Client
+        user = User.objects.create_user(username="login_ok", password="Motdepasse2026!")
+        user.profil.doit_changer_mdp = False
+        user.profil.save()
+        resp = Client().post(
+            '/auth/login/',
+            {'username': 'login_ok', 'password': 'Motdepasse2026!'},
+        )
+        # Redirection après connexion (accueil ou changement MDP)
+        self.assertIn(resp.status_code, (200, 302))
+
+# ==========================================================
+# CRÉATION / MODIFICATION UTILISATEUR : FORMAT EMAIL + TÉLÉPHONE
+# ==========================================================
+class CreationUtilisateurValidationTest(TestCase):
+    """Régression : le formulaire utilisateur exige un email valide et un téléphone à 10 chiffres."""
+
+    @classmethod
+    def setUpTestData(cls):
+        from stock.tests.factories import creer_magasin
+        creer_magasin(nom='Magasin Tests')
+        cls.admin = User.objects.create_superuser(
+            username='admin_uv', password='Motdepasse2026!', email='admin@chu.ci'
+        )
+        cls.admin.profil.doit_changer_mdp = False
+        cls.admin.profil.save()
+
+    def setUp(self):
+        self.client.force_login(self.admin)
+
+    def _post_utilisateur(self, **overrides):
+        data = {
+            'enregistrer_user': '1',
+            'username': 'nouveau',
+            'first_name': 'Jean',
+            'last_name': 'Kouassi',
+            'email': 'jean.kouassi@chu.ci',
+            'contact': '0708091011',
+            'groupe': '',
+            'service': '',
+            'specialite': '',
+            'fonction': '',
+        }
+        data.update(overrides)
+        return self.client.post('/auth/utilisateurs/', data)
+
+    def test_creation_email_invalide_refuse(self):
+        resp = self._post_utilisateur(email='mauvais-email')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Adresse email invalide')
+        self.assertFalse(User.objects.filter(username='nouveau').exists())
+
+    def test_creation_email_sans_domaine_refuse(self):
+        resp = self._post_utilisateur(email='jean@')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Adresse email invalide')
+        self.assertFalse(User.objects.filter(username='nouveau').exists())
+
+    def test_creation_telephone_9_chiffres_refuse(self):
+        resp = self._post_utilisateur(contact='070809101')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'exactement 10 chiffres')
+        self.assertFalse(User.objects.filter(username='nouveau').exists())
+
+    def test_creation_valide_ok(self):
+        resp = self._post_utilisateur()
+        self.assertEqual(resp.status_code, 302)
+        user = User.objects.get(username='nouveau')
+        self.assertEqual(user.email, 'jean.kouassi@chu.ci')
+        self.assertEqual(user.profil.contact, '0708091011')
+
+    def test_modification_email_invalide_refuse(self):
+        user = User.objects.create_user(
+            username='deja_la', password='Motdepasse2026!', email='valide@chu.ci'
+        )
+        resp = self._post_utilisateur(user_id=str(user.id), username='deja_la', email='pas-ok')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Adresse email invalide')
+        user.refresh_from_db()
+        self.assertEqual(user.email, 'valide@chu.ci')
+
+    def test_modification_telephone_invalide_refuse(self):
+        user = User.objects.create_user(
+            username='deja_la2', password='Motdepasse2026!', email='valide2@chu.ci'
+        )
+        resp = self._post_utilisateur(user_id=str(user.id), username='deja_la2', contact='0123')
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'exactement 10 chiffres')
+        user.refresh_from_db()
+        self.assertEqual(user.profil.contact or '', '')
+
+    def test_api_email_format_invalide(self):
+        resp = self.client.get('/auth/api/utilisateurs/verifier/', {'type': 'email', 'value': 'pas-un-email'})
+        self.assertEqual(resp.status_code, 200)
+        data = resp.json()
+        self.assertFalse(data['available'])
+        self.assertIn('invalide', data['message'])
+
+    def test_api_email_format_valide_disponible(self):
+        resp = self.client.get('/auth/api/utilisateurs/verifier/', {'type': 'email', 'value': 'libre@chu.ci'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.json()['available'])

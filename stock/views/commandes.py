@@ -21,7 +21,7 @@ from ..services import NumeroGenerator, NotificationService
 from ..services.bon_service import BonService
 from ..services.stock_transaction_service import StockTransactionService
 from .catalogue import paginer
-from .common_views import render_liste, get_magasin_actif, build_redirect_url
+from .common_views import render_liste, get_magasin_actif, build_redirect_url, filtrer_texte
 from django.urls import reverse
 from core.models import ConfigurationHopital
 from django.db.models import Sum, Count, Case, When, Value, IntegerField
@@ -59,7 +59,6 @@ def _safe_delete(obj, user=None):
 @magasin_requis
 @catch_errors(redirect_url='liste_commandes')
 def liste_commandes(request):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_actif_id = request.session.get('magasin_actif_id')
 
     commandes = Commande.objects.select_related(
@@ -83,17 +82,16 @@ def liste_commandes(request):
     articles = Article.objects.all().select_related('famille').order_by('designation')
     familles = FamilleArticle.objects.all().order_by('intitule')
 
-    q = request.GET.get('q', '')
-    if q:
-        commandes = commandes.filter(
-            Q(numero_commande__icontains=q) |
-            Q(fournisseur__raison_sociale__icontains=q) |
-            Q(lignes_commande__article__designation__icontains=q)
-        ).distinct()
-
     statut_filtre = request.GET.get('statut', '')
     if statut_filtre:
         commandes = commandes.filter(statut=statut_filtre)
+
+    q = request.GET.get('q', '')
+    if q:
+        commandes = filtrer_texte(commandes, q, [
+            'numero_commande', 'fournisseur__raison_sociale',
+            'lignes_commande__article__designation'
+        ])
     fournisseur_filtre = request.GET.get('fournisseur', '')
     if fournisseur_filtre:
         commandes = commandes.filter(fournisseur_id=fournisseur_filtre)
@@ -228,7 +226,6 @@ def liste_commandes(request):
 @magasin_requis
 @catch_errors(redirect_url='liste_commandes')
 def receptionner_commande(request, commande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
         Commande.objects.prefetch_related('lignes_commande__article'),
         id=commande_id)
@@ -263,7 +260,7 @@ def receptionner_commande(request, commande_id):
             messages.error(request, "⛔ Magasin invalide ou inactif.")
             return redirect('receptionner_commande', commande_id=commande.id)
 
-        magasins_autorises = get_magasins_autorises(request.user)
+        magasins_autorises = get_magasins_autorises(request)
         if magasin not in magasins_autorises:
             messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
             return redirect('receptionner_commande', commande_id=commande.id)
@@ -292,13 +289,19 @@ def receptionner_commande(request, commande_id):
         try:
             with transaction.atomic():
                 numero_livraison = BonService.calculer_numero_livraison(commande)
+                # Statut décidé ici (plus de recalcul dans BonMouvement.save())
+                circuit_validation = CircuitValidation.objects.filter(
+                    type_document='ENTREE', est_actif=True, is_deleted=False
+                ).first()
+                statut_bon = 'ATTENTE' if circuit_validation else 'VALIDE'
                 bon = BonMouvement(
                     type_bon='ENTREE', magasin_id=magasin_id,
                     fournisseur=commande.fournisseur,
                     reference_externe=reference_bl,
                     cree_par=request.user, modifie_par=request.user,
                     commande_liee=commande,
-                    numero_livraison=numero_livraison
+                    numero_livraison=numero_livraison,
+                    statut_validation=statut_bon
                 )
                 bon.save()
 
@@ -386,7 +389,6 @@ def receptionner_commande(request, commande_id):
 @magasin_requis
 @catch_errors(redirect_url='liste_commandes')
 def valider_commande(request, commande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
         Commande, id=commande_id)
     
@@ -438,7 +440,6 @@ def valider_commande(request, commande_id):
 @magasin_requis
 @catch_errors(redirect_url='liste_commandes')
 def supprimer_commande(request, commande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
         Commande, id=commande_id)
     # Vérification des dépendances avant suppression
@@ -477,7 +478,6 @@ def supprimer_commande(request, commande_id):
 @transaction.atomic
 @catch_errors(redirect_url='liste_commandes')
 def modifier_commande(request, commande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
         Commande.objects.select_related('famille'),
         id=commande_id)
@@ -576,7 +576,6 @@ def modifier_commande(request, commande_id):
 @require_POST
 @catch_errors(redirect_url='liste_commandes')
 def solder_commande(request, commande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
         Commande, id=commande_id)
     if commande.statut in ['EN_ATTENTE', 'LIVRE_PARTIEL']:
@@ -603,7 +602,6 @@ def solder_commande(request, commande_id):
 @catch_errors(redirect_url='liste_commandes')
 def liste_receptions(request):
     """Vue liste des réceptions (GET uniquement, POST géré par receptionner_commande)."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_actif_id = request.session.get('magasin_actif_id')
 
     onglet = request.GET.get('onglet', 'en_cours')
@@ -616,16 +614,15 @@ def liste_receptions(request):
     if magasin_actif_id:
         qs = qs.filter(magasin_id=magasin_actif_id)
 
-    q = request.GET.get('q', '')
-    if q:
-        qs = qs.filter(
-            Q(numero_commande__icontains=q) |
-            Q(fournisseur__raison_sociale__icontains=q) |
-            Q(lignes_commande__article__designation__icontains=q)
-        ).distinct()
-
     if request.GET.get('fournisseur'):
         qs = qs.filter(fournisseur_id=request.GET.get('fournisseur'))
+
+    q = request.GET.get('q', '')
+    if q:
+        qs = filtrer_texte(qs, q, [
+            'numero_commande', 'fournisseur__raison_sociale',
+            'lignes_commande__article__designation'
+        ])
 
     commandes_pagines, per_page = paginer(qs, request)
 
@@ -715,7 +712,6 @@ def liste_receptions(request):
 @require_POST
 @catch_errors(redirect_url='liste_receptions')
 def joindre_bon_livraison(request, commande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     commande = get_object_or_404(
         Commande, id=commande_id)
 
@@ -770,7 +766,6 @@ def joindre_bon_livraison(request, commande_id):
 @require_POST
 @catch_errors(redirect_url='liste_receptions')
 def remplacer_bon_livraison(request, bon_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     bon = get_object_or_404(
         BonDeLivraison,
         id=bon_id)
@@ -821,7 +816,6 @@ def remplacer_bon_livraison(request, bon_id):
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_reception_commande')
 def voir_bon_livraison(request, bon_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     bon = get_object_or_404(
         BonDeLivraison,
         id=bon_id)

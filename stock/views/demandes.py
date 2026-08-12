@@ -24,6 +24,7 @@ from ..services.parametre_service import get_or_create_logistique_config
 from ..services.isolation_service import get_magasins_autorises
 
 from .catalogue import paginer
+from .common_views import filtrer_texte
 from django.core.exceptions import ObjectDoesNotExist
 from stock.pdf_utils import render_pdf_to_bytes, get_pdf_config, build_signature_cases, sauver_pdf_cache
 from django.core.files.base import ContentFile
@@ -64,7 +65,6 @@ def mes_demandes(request):
 
 def _afficher_mes_demandes(request):
     """Branche GET : liste des demandes de l'utilisateur."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     service_user = _get_service_user(request)
 
     # ═══════════════════════════════════════════════════════════════════════
@@ -111,21 +111,20 @@ def _afficher_mes_demandes(request):
         except ValueError:
             pass
 
-    # ── Filtre recherche texte ──
-    q = request.GET.get('q', '').strip()
-    if q:
-        qs = qs.filter(
-            Q(numero_demande__icontains=q) |
-            Q(lignes_demande__article__designation__icontains=q) |
-            Q(nom__icontains=q)
-        ).distinct()
-
     # ── Split actives / historique ──
     STATUTS_HISTORIQUE = ['RECEPTIONNE', 'CLOTUREE', 'REFUSEE', 'ANNULEE']
     if statut_filtre == 'historique':
         qs = qs.filter(statut__in=STATUTS_HISTORIQUE).exclude(a_livraison_non_signee=True)
     else:
         qs = qs.filter(~Q(statut__in=STATUTS_HISTORIQUE) | Q(a_livraison_non_signee=True))
+
+    # ── Filtre recherche texte (insensible aux accents) ──
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = filtrer_texte(qs, q, [
+            'numero_demande', 'lignes_demande__article__designation',
+            'service_demandeur__nom'
+        ])
 
     demandes_pagines, per_page = paginer(qs, request, per_page_key='per_page', default=10)
 
@@ -162,7 +161,6 @@ def _afficher_mes_demandes(request):
 
 def _traiter_mes_demandes_post(request):
     """Branche POST : clôture ou création d'une demande."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     action = request.POST.get('action')
 
     if action == 'cloturer_demande':
@@ -184,7 +182,6 @@ def _cloturer_ma_demande(request):
 
 def _creer_ma_demande(request):
     """POST : creation d une nouvelle demande."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     service_user = _get_service_user(request)
 
     if not service_user:
@@ -249,7 +246,7 @@ def _creer_ma_demande(request):
 
     # ── Génération du Bon de Demande PDF ──
     try:
-        pdf_config, logo_url = get_pdf_config(demande.magasin, 'DEMANDE', request)
+        pdf_config, logo_url = get_pdf_config(demande.magasin_cible, 'DEMANDE', request)
         context = {
             'demande': demande,
             'lignes': demande.lignes.all(),
@@ -279,7 +276,6 @@ def gestion_demandes(request):
 
 def _afficher_gestion_demandes(request):
     """Branche GET : liste des demandes à traiter pour le magasin actif."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     magasin_id = request.session.get('magasin_actif_id')
 
     if not magasin_id:
@@ -325,18 +321,17 @@ def _afficher_gestion_demandes(request):
             Q(statut__in=STATUTS_ATTENTE_SIGNATURE) & Q(a_livraison_non_signee=True)
         )
 
-    q = request.GET.get('q', '').strip()
-    if q:
-        qs = qs.filter(
-            Q(numero_demande__icontains=q) |
-            Q(service_demandeur__nom__icontains=q) |
-            Q(demandeur__username__icontains=q) |
-            Q(lignes_demande__article__designation__icontains=q)
-        ).distinct()
     if request.GET.get('statut'):
         qs = qs.filter(statut=request.GET.get('statut'))
     if request.GET.get('service'):
         qs = qs.filter(service_demandeur_id=request.GET.get('service'))
+
+    q = request.GET.get('q', '').strip()
+    if q:
+        qs = filtrer_texte(qs, q, [
+            'numero_demande', 'service_demandeur__nom',
+            'demandeur__username', 'lignes_demande__article__designation'
+        ])
 
     demandes_pagines, per_page = paginer(qs, request, per_page_key='per_page', default=10)
 
@@ -394,7 +389,6 @@ def _afficher_gestion_demandes(request):
 @magasin_requis
 @catch_errors(redirect_url='gestion_demandes')
 def valider_traitement_demande(request, demande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     if request.method != 'POST':
         return redirect('gestion_demandes')
 
@@ -406,7 +400,7 @@ def valider_traitement_demande(request, demande_id):
         messages.error(request, "⛔ Accès refusé.")
         return redirect('gestion_demandes')
 
-    if demande.statut in ('RECEPTIONNE', 'CLOTUREE', 'REFUSEE'):
+    if demande.statut in ('RECEPTIONNE', 'CLOTUREE', 'REFUSEE', 'ANNULEE'):
         messages.error(request, "⛔ Cette demande est déjà terminée.")
         return redirect('gestion_demandes')
 
@@ -532,7 +526,6 @@ def valider_traitement_demande(request, demande_id):
 @login_required(login_url='/auth/login/')
 @magasin_requis
 def api_statut_demande(request, demande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
         DemandeMateriel, id=demande_id)
 
@@ -573,7 +566,6 @@ def api_statut_demande(request, demande_id):
 @magasin_requis
 @catch_errors(redirect_url='gestion_demandes')
 def cloturer_demande(request, demande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
         DemandeMateriel, id=demande_id)
     magasin_id = request.session.get('magasin_actif_id')
@@ -582,7 +574,7 @@ def cloturer_demande(request, demande_id):
         messages.error(request, "⛔ Accès refusé.")
         return redirect('gestion_demandes')
 
-    if demande.statut in ('RECEPTIONNE', 'CLOTUREE', 'REFUSEE'):
+    if demande.statut in ('RECEPTIONNE', 'CLOTUREE', 'REFUSEE', 'ANNULEE'):
         messages.error(request, "Cette demande est déjà terminée.")
         return redirect('gestion_demandes')
 
@@ -609,7 +601,6 @@ def cloturer_demande(request, demande_id):
 
 @login_required(login_url='/auth/login/')
 def signer_accuse_reception(request, accuse_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     accuse = get_object_or_404(
         AccuseReception.objects.select_related(
             'livraison__demande__service_demandeur',
@@ -620,7 +611,7 @@ def signer_accuse_reception(request, accuse_id):
     demande = accuse.livraison.demande
     livraison = accuse.livraison
 
-    # Mono-tenant : vérification entreprise supprimée
+    # Mono-tenant : vérification supprimée
 
     def get_bon_sortie_id():
         if hasattr(livraison, 'bon_sortie') and livraison.bon_sortie:
@@ -775,7 +766,6 @@ def demandes_a_valider(request):
     Seuls les valideurs du circuit voient les demandes EN_ATTENTE_VALIDATION
     de leur propre service.
     """
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     # ── 1. Vérification du circuit DEMANDE ──
     circuit = CircuitValidation.objects.filter(
         type_document='DEMANDE', est_actif=True
@@ -934,12 +924,10 @@ def demandes_a_valider(request):
         demandes = demandes_base.filter(statut='EN_ATTENTE_VALIDATION')
 
     if q:
-        demandes = demandes.filter(
-            Q(numero_demande__icontains=q) |
-            Q(demandeur__username__icontains=q) |
-            Q(demandeur__first_name__icontains=q) |
-            Q(demandeur__last_name__icontains=q)
-        ).distinct()
+        demandes = filtrer_texte(demandes, q, [
+            'numero_demande', 'demandeur__username',
+            'demandeur__first_name', 'demandeur__last_name'
+        ])
 
     demandes_pagines, per_page = paginer(demandes, request)
 
@@ -961,7 +949,6 @@ def demandes_a_valider(request):
 @login_required(login_url='/auth/login/')
 @catch_errors(redirect_url='mes_demandes')
 def annuler_demande(request, demande_id):
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
         DemandeMateriel, id=demande_id)
 
@@ -1009,7 +996,6 @@ def annuler_demande(request, demande_id):
 @login_required(login_url='/auth/login/')
 def api_detail_demande(request, demande_id):
     """Renvoie le HTML du detail d une demande pour l accordéon."""
-    # entreprise = None  # request.entreprise SUPPRIMÉ  # SUPPRIMÉ (mono-tenant)
     demande = get_object_or_404(
         DemandeMateriel.objects.select_related('service_demandeur').prefetch_related(
             'lignes_demande__article', 'livraisons__accuse', 'livraisons__bon_sortie'

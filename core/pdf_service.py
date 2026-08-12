@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # core/pdf_service.py — CORRIGÉ (mono-tenant v1)
 import functools
 import os
@@ -8,6 +9,10 @@ from decimal import Decimal
 
 from django.template.loader import render_to_string
 from django.utils import timezone
+try:
+    from stock.models import ParametrePDF
+except ImportError:
+    ParametrePDF = None
 
 from weasyprint import HTML
 
@@ -21,18 +26,12 @@ logger = logging.getLogger(__name__)
 
 
 class DocumentGenerator:
-    def __init__(self, request=None, entreprise=None):
+    def __init__(self, request=None):
         self.request = request
-        self.entreprise = entreprise
-        if not self.entreprise and request and hasattr(request, 'entreprise'):
-            self.entreprise = request.entreprise
-        # ✅ CORRECTION MONO-TENANT : fallback sur le singleton ConfigurationHopital
-        # au lieu de planter. Le paramètre 'entreprise' est conservé pour
-        # compatibilité avec le code existant, mais en mono-tenant il désigne
-        # toujours l'unique ConfigurationHopital.
-        if not self.entreprise:
-            from core.models import ConfigurationHopital
-            self.entreprise = ConfigurationHopital.get_instance()
+        # Mono-tenant : la configuration est toujours l'unique singleton
+        # ConfigurationHopital (ex-modèle de tenant supprimé).
+        from core.models import ConfigurationHopital
+        self.config = ConfigurationHopital.get_instance()
 
     @staticmethod
     @functools.lru_cache(maxsize=128)
@@ -62,15 +61,24 @@ class DocumentGenerator:
 
 
     def _get_logo_url(self):
-        """Retourne le logo depuis ParametrePDF (prioritaire) ou entreprise (fallback)."""
+        """Retourne le logo depuis ParametrePDF (prioritaire) ou établissement (fallback)."""
         # Priorité 1 : ParametrePDF (logo uploadé via l'interface web)
         if self.request:
             logo_url = ParametrePDF.get_logo_url(self.request)
             if logo_url:
                 return logo_url
-        # Priorité 2 : logo de l'entreprise (ConfigurationHopital)
-        if self.entreprise and hasattr(self.entreprise, 'logo') and self.entreprise.logo:
-            return self._img_url(self.entreprise.logo)
+        # Priorité 2 : logo de l'établissement (ConfigurationHopital)
+        if self.config and hasattr(self.config, 'logo') and self.config.logo:
+            return self._img_url(self.config.logo)
+        # Priorité 3 : logo statique par défaut (stock/static/img/logo.jpg)
+        try:
+            from django.contrib.staticfiles import finders
+            logo_path = finders.find('img/logo.jpg')
+            if logo_path:
+                mtime = os.path.getmtime(logo_path)
+                return self._img_url_cached(logo_path, mtime)
+        except Exception as e:
+            logger.debug(f"[PDF] Logo statique par défaut introuvable : {e}")
         return None
     def _img_url(self, image_field):
         if not image_field:
@@ -116,12 +124,12 @@ class DocumentGenerator:
         return self._deep_merge(result, override)
 
     def _get_pdf_config(self, type_doc='BON_SORTIE', magasin=None):
-        cfg_entreprise = {}
-        if self.entreprise and hasattr(self.entreprise, 'get_pdf_config'):
+        cfg_etablissement = {}
+        if self.config and hasattr(self.config, 'get_pdf_config'):
             try:
-                cfg = self.entreprise.get_pdf_config(type_doc=type_doc)
+                cfg = self.config.get_pdf_config(type_doc=type_doc)
                 if isinstance(cfg, dict):
-                    cfg_entreprise = cfg
+                    cfg_etablissement = cfg
             except Exception as e:
                 logger.warning(f"[PDF] get_pdf_config failed: {e}")
 
@@ -130,11 +138,11 @@ class DocumentGenerator:
             cfg_magasin = self._get_magasin_config(magasin, type_doc)
 
         if not cfg_magasin:
-            cfg_magasin = self._legacy_to_configurable(cfg_entreprise, type_doc)
+            cfg_magasin = self._legacy_to_configurable(cfg_etablissement, type_doc)
 
         defaults = self._default_config()
         result = copy.deepcopy(defaults)
-        result = self._deep_merge(result, cfg_entreprise)
+        result = self._deep_merge(result, cfg_etablissement)
         result = self._deep_merge(result, cfg_magasin)
         return result
 
@@ -189,7 +197,7 @@ class DocumentGenerator:
 
     def _base_context(self, extra=None):
         ctx = {
-            'entreprise': self.entreprise,
+            'entreprise': self.config,
             'date_impression': timezone.now(),
         }
         if extra:
@@ -493,7 +501,7 @@ class DocumentGenerator:
             'pdf_config': config,
             'espaceur_mm': espaceur_mm,
             'logo_url': self._get_logo_url(),
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
+            'cachet_url': self._img_url(self.config.cachet) if self.config and hasattr(self.config, 'cachet') and self.config.cachet else None,
             'service_poste': getattr(bon.service_demandeur, 'poste', '') if bon.service_demandeur else '',
         })
         if extra_context:
@@ -562,7 +570,7 @@ class DocumentGenerator:
             'pdf_config': config,
             'espaceur_mm': espaceur_mm,
             'logo_url': self._get_logo_url(),
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
+            'cachet_url': self._img_url(self.config.cachet) if self.config and hasattr(self.config, 'cachet') and self.config.cachet else None,
             'type_bon_label': "BON DE DEMANDE",
             'doc_subtitle': "DE MATERIELS ET FOURNITURES",
             'service_poste': getattr(demande.service_demandeur, 'poste', '') if demande.service_demandeur else '',
@@ -682,7 +690,7 @@ class DocumentGenerator:
             'pdf_config': config,
             'type_bon_label': "BON D'ENTRÉE",
             'logo_url': self._get_logo_url(),
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
+            'cachet_url': self._img_url(self.config.cachet) if self.config and hasattr(self.config, 'cachet') and self.config.cachet else None,
             'signatures_config': signatures_config,
             'est_reception_partielle': est_reception_partielle,
             'espaceur_mm': espaceur_mm,
@@ -781,7 +789,7 @@ class DocumentGenerator:
             'type_bon_label': "BON DE RETOUR",
             'doc_subtitle': "DE MATERIELS ET FOURNITURES",
             'logo_url': self._get_logo_url(),
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
+            'cachet_url': self._img_url(self.config.cachet) if self.config and hasattr(self.config, 'cachet') and self.config.cachet else None,
             'service_poste': getattr(bon.service_demandeur, 'poste', '') if bon.service_demandeur else '',
             'espaceur_mm': espaceur_mm,
         })
@@ -884,14 +892,14 @@ class DocumentGenerator:
 
         config = self._get_pdf_config(type_doc='COMMANDE', magasin=getattr(commande, 'magasin', None))
 
-        e = self.entreprise
-        nom_entreprise = (
+        e = self.config
+        nom_etablissement = (
             getattr(e, 'raison_sociale', None)
             or getattr(e, 'nom', None)
             or getattr(e, 'designation', None)
             or ""
         )
-        footer_line1 = nom_entreprise.upper() if e else ""
+        footer_line1 = nom_etablissement.upper() if e else ""
 
         parts = []
         if e:
@@ -975,7 +983,7 @@ class DocumentGenerator:
             'pdf_config': config,
             'type_bon_label': "ÉTAT DU STOCK",
             'logo_url': self._get_logo_url(),
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
+            'cachet_url': self._img_url(self.config.cachet) if self.config and hasattr(self.config, 'cachet') and self.config.cachet else None,
         })
         if extra_context:
             ctx.update(extra_context)
@@ -1018,7 +1026,7 @@ class DocumentGenerator:
             'pdf_config': config,
             'type_bon_label': "BON D'AJUSTEMENT DE STOCK",
             'logo_url': self._get_logo_url(),
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
+            'cachet_url': self._img_url(self.config.cachet) if self.config and hasattr(self.config, 'cachet') and self.config.cachet else None,
         })
         if extra_context:
             ctx.update(extra_context)
@@ -1034,7 +1042,7 @@ class DocumentGenerator:
             'pdf_config': config,
             'type_bon_label': f"HISTORIQUE – {article.designation}",
             'logo_url': self._get_logo_url(),
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
+            'cachet_url': self._img_url(self.config.cachet) if self.config and hasattr(self.config, 'cachet') and self.config.cachet else None,
         })
         if extra_context:
             ctx.update(extra_context)
@@ -1053,7 +1061,7 @@ class DocumentGenerator:
             'pdf_config': config,
             'type_bon_label': f"FICHE DE COMPTAGE – {campagne.titre}",
             'logo_url': self._get_logo_url(),
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
+            'cachet_url': self._img_url(self.config.cachet) if self.config and hasattr(self.config, 'cachet') and self.config.cachet else None,
             'imprimeur_sig': imprimeur_sig,
         })
         if extra_context:
@@ -1076,7 +1084,7 @@ class DocumentGenerator:
             'pdf_config': config,
             'type_bon_label': f"RÉSULTAT INVENTAIRE – {campagne.titre}",
             'logo_url': self._get_logo_url(),
-            'cachet_url': self._img_url(self.entreprise.cachet) if self.entreprise and hasattr(self.entreprise, 'cachet') and self.entreprise.cachet else None,
+            'cachet_url': self._img_url(self.config.cachet) if self.config and hasattr(self.config, 'cachet') and self.config.cachet else None,
             'saisisseur_sig': saisisseur_sig,
             'valideur_sig': valideur_sig,
         })

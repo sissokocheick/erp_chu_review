@@ -411,18 +411,22 @@ def supprimer_entite(type_entite, pk, user):
 
 @transaction.atomic
 def update_circuit(circuit_id, est_actif, valideurs_ids):
-    from ..models import CircuitValidation
+    from ..models import CircuitValidation, CircuitValidateur
     from django.contrib.auth.models import User
 
     circuit = get_object_or_404(CircuitValidation, id=circuit_id)
     circuit.est_actif = est_actif
     circuit.save()
 
+    # M2M avec through explicite (CircuitValidateur) : .set()/.clear() interdits
+    # -> gérer les lignes through directement, avec ordre incrémental
+    CircuitValidateur.objects.filter(circuit=circuit).delete()
     if valideurs_ids:
         utilisateurs = User.objects.filter(id__in=valideurs_ids, is_active=True)
-        circuit.valideurs.set(utilisateurs)
-    else:
-        circuit.valideurs.clear()
+        CircuitValidateur.objects.bulk_create([
+            CircuitValidateur(circuit=circuit, valideur=u, ordre=i + 1)
+            for i, u in enumerate(utilisateurs)
+        ])
     return circuit
 
 

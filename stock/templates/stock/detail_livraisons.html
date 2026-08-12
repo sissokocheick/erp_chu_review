@@ -249,20 +249,10 @@
 
 <script>
 /* ── MODALE PDF ── */
-function imprimerModal(url, titre) {
-    document.getElementById('pdf-modal-title').textContent = titre || 'Document';
-    var loader = document.getElementById('pdf-modal-loader');
-    var iframe = document.getElementById('pdf-modal-iframe');
-    loader.style.display = 'flex';
-    iframe.style.display = 'none';
-    iframe.src = '';
-    document.getElementById('pdf-modal').classList.add('open');
-    iframe.onload = function() {
-        loader.style.display = 'none';
-        iframe.style.display = 'block';
+window.imprimerModal = function(url, titre) {
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        window.open(url, '_blank');
     };
-    iframe.src = url;
-}
 
 function closePdfModal() {
     document.getElementById('pdf-modal').classList.remove('open');

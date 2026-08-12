@@ -8,10 +8,9 @@ DATABASES = {
     }
 }
 
-# Désactiver les migrations problématiques pour SQLite
-MIGRATION_MODULES = {
-    'stock': None,  # Skip stock migrations for tests
-}
+# Les migrations stock sont compatibles SQLite : on les garde actives.
+# (Désactiver stock cassait le graphe : accounts.0001 dépend de stock.0001)
+MIGRATION_MODULES = {}
 
 # Simplifier pour les tests
 USE_I18N = False

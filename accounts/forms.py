@@ -14,7 +14,6 @@ from stock.models import Magasin
 class UtilisateurForm(forms.ModelForm):
     """
     Formulaire de création/modification d'utilisateur.
-    ✅ CORRECTION : suppression de toute référence à entreprise/tenant.
     """
     password = forms.CharField(
         widget=forms.PasswordInput(attrs={'class': 'form-control'}),
@@ -80,7 +79,6 @@ class UtilisateurForm(forms.ModelForm):
 
     def clean_username(self):
         """
-        ✅ CORRECTION : plus de suffixe @entreprise.
         Le username est saisi tel quel (en minuscules, sans espaces).
         """
         username = self.cleaned_data.get('username', '').strip().lower().replace(' ', '')

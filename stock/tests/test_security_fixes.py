@@ -27,7 +27,7 @@ class SecurityTestCase(TestCase):
     def setUp(self):
         self.client = Client()
 
-        # ✅ CORRECTION MONO-TENANT : plus de modèle Entreprise.
+        # ✅ CORRECTION MONO-TENANT : modèle de tenant supprimé.
         # On utilise ConfigurationHopital.get_instance() si besoin de config globale.
         from core.models import ConfigurationHopital
         self.config_hopital = ConfigurationHopital.get_instance()
@@ -46,7 +46,7 @@ class SecurityTestCase(TestCase):
             password="testpass123"
         )
 
-        # Profils (sans entreprise)
+        # Profils (sans tenant)
         Profil = apps.get_model('accounts', 'Profil')
         Profil.objects.get_or_create(user=self.admin_a, defaults={})
         Profil.objects.get_or_create(user=self.user_a, defaults={})
@@ -102,7 +102,7 @@ class TestRaceConditionValidation(SecurityTestCase):
             self.CircuitValidation = self.get_model('stock', 'CircuitValidation')
             self.FamilleArticle = self.get_model('stock', 'FamilleArticle')
 
-            # ✅ CORRECTION MONO-TENANT : plus d'entreprise
+            # ✅ CORRECTION MONO-TENANT : plus de tenant
             self.magasin_a = self.Magasin.objects.create(nom="Magasin A")
 
             self.famille = self.FamilleArticle.objects.create(intitule="Famille Test")
@@ -179,7 +179,7 @@ class TestFailClosed(SecurityTestCase):
             self.CircuitValidation = self.get_model('stock', 'CircuitValidation')
             self.FamilleArticle = self.get_model('stock', 'FamilleArticle')
 
-            # ✅ CORRECTION MONO-TENANT : plus d'entreprise
+            # ✅ CORRECTION MONO-TENANT : plus de tenant
             self.magasin_a = self.Magasin.objects.create(nom="Magasin A")
 
             self.famille = self.FamilleArticle.objects.create(intitule="Famille Test")
@@ -229,7 +229,7 @@ class TestFailClosed(SecurityTestCase):
 
 
 # ==========================================================
-# OPEN REDIRECT (partiellement conservé — isolation entreprise supprimée)
+# OPEN REDIRECT (partiellement conservé — isolation de tenant supprimée)
 # ==========================================================
 
 class TestOpenRedirect(SecurityTestCase):
@@ -239,7 +239,7 @@ class TestOpenRedirect(SecurityTestCase):
         super().setUp()
         try:
             self.Magasin = self.get_model('stock', 'Magasin')
-            # ✅ CORRECTION MONO-TENANT : plus d'entreprise
+            # ✅ CORRECTION MONO-TENANT : plus de tenant
             self.magasin_a = self.Magasin.objects.create(nom="Magasin A")
         except LookupError as e:
             self.skipTest(f"Modele manquant : {e}")
@@ -262,8 +262,8 @@ class TestOpenRedirect(SecurityTestCase):
         if response.status_code == 302:
             self.assertNotIn('evil.com', response.url)
 
-    # ✅ SUPPRESSION MONO-TENANT : test_redirect_magasin_autre_entreprise_bloque
-    # En mono-tenant, il n'y a plus de concept de "magasin d'une autre entreprise".
+    # ✅ SUPPRESSION MONO-TENANT : test_redirect_magasin_autre_tenant_bloque
+    # En mono-tenant, il n'y a plus de concept de "magasin d'un autre tenant".
     # Tous les magasins appartiennent au même hôpital.
 
 
@@ -282,7 +282,7 @@ class TestPaginationSQL(SecurityTestCase):
             self.Mouvement = self.get_model('stock', 'Mouvement')
             self.FamilleArticle = self.get_model('stock', 'FamilleArticle')
 
-            # ✅ CORRECTION MONO-TENANT : plus d'entreprise
+            # ✅ CORRECTION MONO-TENANT : plus de tenant
             self.magasin_a = self.Magasin.objects.create(nom="Magasin A")
 
             self.famille = self.FamilleArticle.objects.create(intitule="Famille Test")
@@ -342,7 +342,7 @@ class TestPrecisionDecimal(SecurityTestCase):
             self.StockItem = self.get_model('stock', 'StockItem')
             self.FamilleArticle = self.get_model('stock', 'FamilleArticle')
 
-            # ✅ CORRECTION MONO-TENANT : plus d'entreprise
+            # ✅ CORRECTION MONO-TENANT : plus de tenant
             self.magasin_a = self.Magasin.objects.create(nom="Magasin A")
 
             self.famille = self.FamilleArticle.objects.create(intitule="Famille Test")
@@ -382,7 +382,7 @@ class TestPermissionsGranulaires(SecurityTestCase):
         super().setUp()
         try:
             self.Magasin = self.get_model('stock', 'Magasin')
-            # ✅ CORRECTION MONO-TENANT : plus d'entreprise
+            # ✅ CORRECTION MONO-TENANT : plus de tenant
             self.magasin_a = self.Magasin.objects.create(nom="Magasin A")
         except LookupError as e:
             self.skipTest(f"Modele manquant : {e}")
@@ -411,5 +411,5 @@ class TestPermissionsGranulaires(SecurityTestCase):
 # ==========================================================
 # CLASSES SUPPRIMEES EN MONO-TENANT
 # ==========================================================
-# TestIsolationEntreprise     -> supprime (isolation entreprise inexistante)
-# TestConditionEntreprisePDF  -> supprime (isolation entreprise inexistante)
+# TestIsolationEntreprise     -> supprimé (isolation de tenant inexistante)
+# TestConditionEntreprisePDF  -> supprimé (isolation de tenant inexistante)

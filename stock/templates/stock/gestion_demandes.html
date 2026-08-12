@@ -29,7 +29,7 @@
   .btn-reset:hover { background:#dde3ea; }
 
   /* ── TABLEAU PRINCIPAL ── */
-  .table-card { background:white; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow:hidden; transition: opacity .2s; }
+  .table-card { background:white; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow-x:auto; transition: opacity .2s; }
   .table-card table { width:100%; border-collapse:collapse; font-size:13px; }
   .table-card thead tr { background: #117a8b; color: white; }
   .table-card thead th { padding:13px 14px; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.5px; border:none; white-space:nowrap; text-align: left; }
@@ -909,23 +909,10 @@ function confirmerAnnulerDemande(url, numero, nbLivraisons, qteServie, qteDemand
     });
 }
 
-function imprimerModal(url, titre) {
-    var modal = document.getElementById('modal-pdf');
-    document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-print me-2"></i>' + (titre || '');
-    var loader = document.getElementById('pdf-loader');
-    var iframe = document.getElementById('pdf-iframe');
-
-    loader.style.display = 'flex'; 
-    iframe.style.display = 'none'; 
-    iframe.src = '';
-    modal.classList.add('open');
-
-    iframe.onload = function() {
-        loader.style.display = 'none';
-        iframe.style.display = 'block';
+window.imprimerModal = function(url, titre) {
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        window.open(url, '_blank');
     };
-    iframe.src = url;
-}
 
 
 // ── Écouteurs délégués pour data-action ──
