@@ -140,6 +140,61 @@ def dashboard_directeur(request):
     ).order_by('-total')
 
     # ═══════════════════════════════════════════════════════════════════════
+    # TAUX DE ROTATION 30 JOURS PAR FAMILLE
+    # Rotation = sorties 30j ÷ stock actuel ; couverture = 30 ÷ rotation
+    # ═══════════════════════════════════════════════════════════════════════
+    sorties_familles_30j = {
+        row['article__famille__intitule']: row['total_sorti']
+        for row in mouvements_scope.filter(
+            type_mouvement='SORTIE',
+            date_mouvement__date__gte=trente_jours_avant
+        ).values('article__famille__intitule').annotate(
+            total_sorti=Sum('quantite')
+        )
+    }
+    stock_par_famille = {
+        row['article__famille__intitule']: row['stock_actuel']
+        for row in stocks_base.values('article__famille__intitule').annotate(
+            stock_actuel=Sum('quantite_physique')
+        )
+    }
+
+    rotation_par_famille = []
+    for fam in set(sorties_familles_30j) | set(stock_par_famille):
+        sorties = sorties_familles_30j.get(fam, 0) or 0
+        stock = stock_par_famille.get(fam, 0) or 0
+        if stock > 0:
+            taux = round(float(sorties) / float(stock), 2)
+            couverture = round(30 / taux, 1) if taux > 0 else None
+        else:
+            taux = None
+            couverture = 0 if sorties > 0 else None
+        rotation_par_famille.append({
+            'famille': fam or 'Général',
+            'sorties': sorties,
+            'stock': stock,
+            'taux': taux,
+            'couverture': couverture,
+        })
+
+    # Tri : rotation décroissante (les familles les plus rapides d'abord)
+    rotation_par_famille.sort(
+        key=lambda x: (x['taux'] is None, -(x['taux'] or 0)))
+    # Tri couverture : la plus courte (la plus urgente) d'abord
+    rotation_par_couverture = sorted(
+        rotation_par_famille,
+        key=lambda x: (x['couverture'] is None,
+                       x['couverture'] if x['couverture'] is not None else float('inf')))
+
+    total_sorties_30j = sum(sorties_familles_30j.values())
+    stock_moyen_total = sum(stock_par_famille.values())
+    if stock_moyen_total > 0:
+        rotation_globale_30j = round(
+            float(total_sorties_30j) / float(stock_moyen_total), 2)
+    else:
+        rotation_globale_30j = None
+
+    # ═══════════════════════════════════════════════════════════════════════
     # VALORISATION CMUP (scopée au magasin actif)
     # ═══════════════════════════════════════════════════════════════════════
     resultat_valeur = stocks_base.aggregate(
@@ -269,5 +324,8 @@ def dashboard_directeur(request):
         'chart_familles_data': json.dumps([float(i['total']) for i in valeur_par_famille]),
         'valeur_par_famille': valeur_par_famille,
         'valeur_par_magasin': valeur_par_magasin,
+        'rotation_globale_30j': rotation_globale_30j,
+        'rotation_par_famille': rotation_par_famille,
+        'rotation_par_couverture': rotation_par_couverture,
     }
     return render(request, 'stock/dashboard.html', context)

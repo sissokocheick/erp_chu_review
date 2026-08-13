@@ -95,7 +95,9 @@ class TestDashboardKPIs(DashboardBase):
         body = resp.content.decode('utf-8')
         for marqueur in ('chartFlux', 'chartFamilles', 'chartEntrees',
                          'Valeur du stock par magasin', 'Top 5 Entrées',
-                         'Flux entrées / sorties'):
+                         'Flux entrées / sorties',
+                         'Taux de rotation par famille',
+                         'Couverture de stock', 'Rotation stock'):
             self.assertIn(marqueur, body, f'Marqueur absent : {marqueur}')
 
     def test_kpi_entrees_sorties_jour(self):
@@ -152,6 +154,62 @@ class TestDashboardKPIs(DashboardBase):
         self.assertEqual(magasins['Magasin Principal'], Decimal(50 * 95 + 100 * 240))
         self.assertEqual(magasins['Annexe'], Decimal(2 * 95))
 
+    def test_rotation_globale_30j(self):
+        """Rotation globale = Σ sorties 30j ÷ Σ stock actuel."""
+        resp = self.client.get(self._url())
+        # Sorties : 7 × 2 (gants) = 14 ; stock total : 50+2+100 = 152
+        self.assertEqual(resp.context['rotation_globale_30j'], 0.09)
+
+    def test_rotation_par_famille(self):
+        resp = self.client.get(self._url())
+        rotations = {
+            r['famille']: r for r in resp.context['rotation_par_famille']}
+        self.assertIn('Materiel', rotations)
+        self.assertIn('Medicaments', rotations)
+        # Materiel : 14 sorties / 100 en stock = 0.14× → 214,3 j de couverture
+        self.assertEqual(rotations['Materiel']['sorties'], 14)
+        self.assertEqual(rotations['Materiel']['stock'], 100)
+        self.assertEqual(rotations['Materiel']['taux'], 0.14)
+        self.assertEqual(rotations['Materiel']['couverture'], 214.3)
+        # Medicaments : aucune sortie → taux 0, pas de couverture
+        self.assertEqual(rotations['Medicaments']['taux'], 0)
+        self.assertIsNone(rotations['Medicaments']['couverture'])
+
+    def test_rotation_triee_par_taux_decroissant(self):
+        resp = self.client.get(self._url())
+        familles = [r['famille'] for r in resp.context['rotation_par_famille']]
+        # Materiel (0.14×) devant Medicaments (0×)
+        self.assertEqual(familles, ['Materiel', 'Medicaments'])
+
+    def test_couverture_triee_par_urgence(self):
+        resp = self.client.get(self._url())
+        couvertures = [
+            r['couverture'] for r in resp.context['rotation_par_couverture']
+            if r['couverture'] is not None]
+        self.assertEqual(couvertures, sorted(couvertures))
+
+    def test_rotation_stock_epuise(self):
+        """Famille avec sorties mais stock à zéro → pas de taux, couverture 0 j."""
+        famille_urg = FamilleArticle.objects.create(
+            code='URG', intitule='Urgence')
+        art = Article.objects.create(
+            designation='Seringue 5ml', famille=famille_urg,
+            reference='DASH-URG-001')
+        StockItem.objects.create(
+            article=art, magasin=self.mag_a, quantite_physique=0)
+        m = Mouvement(
+            article=art, magasin=self.mag_a, type_mouvement='SORTIE',
+            quantite=30, date_mouvement=self.maintenant,
+            utilisateur=self.user)
+        m.save(update_stock=False)  # stock déjà à 0 : on ne touche pas au stock
+        resp = self.client.get(self._url())
+        urg = next(r for r in resp.context['rotation_par_famille']
+                   if r['famille'] == 'Urgence')
+        self.assertEqual(urg['sorties'], 30)
+        self.assertEqual(urg['stock'], 0)
+        self.assertIsNone(urg['taux'])
+        self.assertEqual(urg['couverture'], 0)  # épuisé : le plus urgent
+
     def test_top_entrees_present(self):
         import json
         resp = self.client.get(self._url())
@@ -205,6 +263,18 @@ class TestDashboardIsolationMagasin(DashboardBase):
         self.assertEqual(json.loads(resp.context['flux_entrees'])[-1], 99)
         self.assertEqual(json.loads(resp.context['flux_sorties'])[-1], 0)
 
+    def test_rotation_scopee_magasin_actif(self):
+        """Magasin B actif : seuls ses stocks/sorties comptent."""
+        self._activer_magasin(self.mag_b)
+        resp = self.client.get(self._url())
+        rotations = {
+            r['famille']: r for r in resp.context['rotation_par_famille']}
+        self.assertEqual(rotations['Medicaments']['stock'], 2)
+        self.assertEqual(rotations['Medicaments']['sorties'], 0)
+        self.assertNotIn('Materiel', rotations)
+        # Aucune sortie sur le magasin B → rotation globale 0
+        self.assertEqual(resp.context['rotation_globale_30j'], 0)
+
 
 class TestDashboardSansMagasin(DashboardBase):
     """Aucun magasin actif → les données de tous les magasins sont montrées."""
@@ -223,3 +293,7 @@ class TestDashboardSansMagasin(DashboardBase):
         self.assertEqual(resp.context['valeur_stock_total'], 0)
         self.assertEqual(json.loads(resp.context['flux_entrees'])[-1], 0)
         self.assertEqual(resp.context['chart_familles_labels'], '[]')
+        # Rotation : aucun stock → indicateur neutre, tableaux vides
+        self.assertIsNone(resp.context['rotation_globale_30j'])
+        self.assertEqual(resp.context['rotation_par_famille'], [])
+        self.assertEqual(resp.context['rotation_par_couverture'], [])

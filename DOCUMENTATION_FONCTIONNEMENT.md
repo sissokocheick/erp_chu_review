@@ -140,7 +140,8 @@ s'affiche que si l'utilisateur (ou son rôle) possède la permission corresponda
 
 ### Tableau de bord (`/`)
 - **Indicateurs (KPI)** : articles catalogués, entrées / sorties du jour,
-  stocks critiques, **valeur totale du stock (CMUP)**.
+  stocks critiques, **valeur totale du stock (CMUP)**, **taux de rotation du
+  stock sur 30 jours** (Σ sorties 30 j ÷ Σ stock actuel).
 - **Alertes de stock** : 3 onglets (Critique / Alerte / Surstock) avec niveaux visuels.
 - **Graphiques** (Chart.js) :
   - Top 5 articles consommés (30 j) et Top 5 services demandeurs (30 j) ;
@@ -148,6 +149,10 @@ s'affiche que si l'utilisateur (ou son rôle) possède la permission corresponda
   - **Valeur du stock par famille** (donut) ;
   - **Top 5 entrées** (30 j) ;
   - **Valeur du stock par magasin** (tableau).
+- **Rotation du stock par famille (30 j)** : tableau « Taux de rotation »
+  (sorties 30 j ÷ stock actuel, trié du plus rapide au plus lent) et tableau
+  « Couverture de stock » (jours de stock restants = 30 ÷ taux, trié du plus
+  urgent au plus long — rouge < 15 j, orange ≤ 30 j, vert au-delà).
 - **Péremptions** : lots périmés (rouge) et lots expirant sous 90 jours (orange).
 - **Journal des derniers mouvements** avec pastilles vertes (entrées) / rouges (sorties).
 - **Isolation par magasin actif** : si un magasin est sélectionné dans l'en-tête,
