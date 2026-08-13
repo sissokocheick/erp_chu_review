@@ -390,3 +390,102 @@ class E2EBase(LiveServerTestCase):
             "getComputedStyle(document.querySelector('.nx-table-loading')).display === 'none'")
         self.assertTrue(overlay_gone, "L'overlay de chargement doit disparaître après la recherche")
         self.page.unroute('**/articles/?*')
+
+    # ──────────────────────────────────────────────────────────────────
+    # Charge réaliste : 200 articles, recherche, tri, pagination
+    # ──────────────────────────────────────────────────────────────────
+    def test_charge_200_articles_recherche_tri_pagination(self):
+        """Simule l'utilisation réelle avec 200 articles :
+        - le chargement de la page reste fluide (< 3 s)
+        - la recherche filtre instantanément (AJAX + debounce)
+        - le tri par défaut (plus récent d'abord) est respecté
+        - la pagination navigue sur plusieurs pages sans erreur
+        """
+        from datetime import timedelta
+        from django.utils import timezone
+        from stock.models import Article as ArticleModel
+
+        # 200 articles supplémentaires
+        articles = [
+            ArticleModel(
+                designation=f'Article charge E2E {i:03d}',
+                famille=self.famille,
+                reference=f'E2E-CHG-{i:03d}',
+                unite_distribution='Boîte',
+                cree_par=self.user,
+            )
+            for i in range(200)
+        ]
+        ArticleModel.objects.bulk_create(articles)
+        # date_creation est auto_now_add : on la décale explicitement via
+        # update() (qui ne passe pas par save()) pour tester le tri
+        # « plus récent d'abord » de façon déterministe.
+        now = timezone.now()
+        for i in range(200):
+            ArticleModel.objects.filter(reference=f'E2E-CHG-{i:03d}').update(
+                date_creation=now - timedelta(minutes=200 - i))
+
+        # 1) Chargement fluide : la navigation complète (DOM + rendu)
+        #    répond en moins de 3 s avec 200 articles
+        self._se_connecter('/articles/', magasin=self.mag_a)
+        import time as _time
+        start = _time.monotonic()
+        self.page.goto(
+            self.live_server_url + '/articles/', wait_until='domcontentloaded')
+        self._attendre(600)
+        elapsed = (_time.monotonic() - start) * 1000
+        self.assertLess(
+            elapsed, 3000,
+            f"Chargement trop lent avec 200 articles : {elapsed:.0f} ms",
+        )
+        body = self.page.inner_text('body')
+        self.assertNotIn('Traceback', body)
+        self.assertNotIn('Internal Server Error', body)
+
+        # 2) Compteur : 200 articles + celui du setUp = 201
+        self.assertIn('sur', body)
+        self.assertIn('201', self.page.inner_text('.pagination-info'))
+
+        # 3) Tri par défaut : le plus récent (Article charge E2E 199) en premier
+        premieres_lignes = self.page.inner_text('#tbody-articles')
+        self.assertIn('Article charge E2E 199', premieres_lignes)
+        self.assertNotIn('Article charge E2E 000', premieres_lignes)
+
+        # 4) Pagination sur plusieurs pages
+        page2 = self.page.locator('a.page-btn[href*="page=2"]')
+        self.assertGreater(page2.count(), 0, 'Lien page 2 absent')
+        page2.first.click()
+        self._attendre(900)
+        self.assertIn('page=2', self.page.url)
+        lignes_p2 = self.page.inner_text('#tbody-articles')
+        self.assertIn('Article charge E2E 184', lignes_p2)
+        self.assertNotIn('Article charge E2E 199', lignes_p2)
+
+        # Dernière page (201 articles / 15 par page = 14 pages)
+        last = self.page.locator('a.page-btn[href*="page=14"]')
+        self.assertGreater(last.count(), 0, 'Lien page 14 absent')
+        last.first.click()
+        self._attendre(900)
+        self.assertIn('page=14', self.page.url)
+        self.assertIn(
+            'Article charge E2E 000', self.page.inner_text('#tbody-articles'))
+
+        # 5) Recherche AJAX : filtre précis et rapide
+        self.page.click('#search-q')
+        self.page.fill('#search-q', 'charge E2E 042')
+        self.page.press('#search-q', 'Enter')
+        self._attendre(900)
+        self.assertIn(
+            'Article charge E2E 042', self.page.inner_text('#tbody-articles'))
+        # Un seul résultat → compteur « 1 - 1 sur 1 »
+        info = self.page.inner_text('.pagination-info')
+        self.assertIn('1 - 1', info)
+        self.assertIn('sur 1', info)
+
+        # 6) Recherche large : 200 résultats attendus (le préfixe « charge E2E »)
+        self.page.click('#search-q')
+        self.page.fill('#search-q', 'charge E2E')
+        self.page.press('#search-q', 'Enter')
+        self._attendre(900)
+        info2 = self.page.inner_text('.pagination-info')
+        self.assertIn('sur 200', info2)
