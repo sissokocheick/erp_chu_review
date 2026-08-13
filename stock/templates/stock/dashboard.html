@@ -120,6 +120,7 @@
     </h4>
     <small style="color:var(--text-light);">CHU Angré &nbsp;|&nbsp;
       <span id="dateDash"></span>
+      {% if magasin_actif %}&nbsp;|&nbsp;<span style="color:var(--primary-blue);font-weight:700;"><i class="fas fa-warehouse"></i> {{ magasin_actif.nom }}</span>{% endif %}
     </small>
   </div>
   <button onclick="location.reload()" style="background:var(--bg-hover);border:none;padding:8px 14px;border-radius:8px;font-size:12px;cursor:pointer;color:var(--text-medium);">
@@ -266,6 +267,50 @@
   </div>
 </div>
 
+<div class="row2">
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-chart-line" style="color:#1c5b96;"></i> Flux entrées / sorties (14 jours)</h6></div>
+    <div class="card-body">
+      <canvas id="chartFlux" height="90"></canvas>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-chart-pie" style="color:#8e44ad;"></i> Valeur du stock par famille</h6></div>
+    <div class="card-body">
+      {% if chart_familles_labels %}<canvas id="chartFamilles"></canvas>
+      {% else %}<div class="empty-sm"><i class="fas fa-chart-pie"></i> Aucune valorisation disponible</div>{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="row2">
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-chart-bar" style="color:#27ae60;"></i> Top 5 Entrées (30j)</h6></div>
+    <div class="card-body">
+      {% if chart_entrees_labels %}<canvas id="chartEntrees"></canvas>
+      {% else %}<div class="empty-sm"><i class="fas fa-chart-bar"></i> Pas encore de donnees d'entree</div>{% endif %}
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-head"><h6><i class="fas fa-coins" style="color:#fd7e14;"></i> Valeur du stock par magasin</h6></div>
+    <div class="card-body" style="max-height:280px;overflow-y:auto;">
+      {% if valeur_par_magasin %}
+      <table class="mtbl">
+        <thead><tr><th>Magasin</th><th style="text-align:right;">Valeur</th></tr></thead>
+        <tbody>
+        {% for vm in valeur_par_magasin %}
+        <tr>
+          <td><strong>{{ vm.magasin__nom }}</strong></td>
+          <td style="text-align:right;white-space:nowrap;">{{ vm.total|floatformat:0 }} F</td>
+        </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      {% else %}<div class="empty-sm"><i class="fas fa-coins"></i> Aucun stock valorisable</div>{% endif %}
+    </div>
+  </div>
+</div>
+
 <div class="row3">
   <div class="card">
     <div class="card-head">
@@ -362,6 +407,40 @@ new Chart(document.getElementById('chartServices'), {
     datasets: [{ data: {{ chart_services_data|safe }}, backgroundColor: ['#27ae60','#2ecc71','#1abc9c','#16a085','#0e6655'], borderWidth: 2, borderColor: 'var(--bg-card)' }]
   },
   options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, color: 'var(--text-dark)' } } } }
+});
+{% endif %}
+
+new Chart(document.getElementById('chartFlux'), {
+  type: 'line',
+  data: {
+    labels: {{ flux_labels|safe }},
+    datasets: [
+      { label: 'Entrées', data: {{ flux_entrees|safe }}, borderColor: '#27ae60', backgroundColor: 'rgba(39,174,96,0.15)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3 },
+      { label: 'Sorties', data: {{ flux_sorties|safe }}, borderColor: '#e74c3c', backgroundColor: 'rgba(231,76,60,0.12)', fill: true, tension: 0.3, borderWidth: 2, pointRadius: 3 }
+    ]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, color: 'var(--text-dark)' } } }, scales: { y: { beginAtZero: true, grid: { color: 'var(--border-light)' } }, x: { grid: { display: false } } } }
+});
+
+{% if chart_familles_labels %}
+new Chart(document.getElementById('chartFamilles'), {
+  type: 'doughnut',
+  data: {
+    labels: {{ chart_familles_labels|safe }},
+    datasets: [{ data: {{ chart_familles_data|safe }}, backgroundColor: ['#1c5b96','#2980b9','#3498db','#5dade2','#85c1e9','#8e44ad','#a569bd','#bb8fce'], borderWidth: 2, borderColor: 'var(--bg-card)' }]
+  },
+  options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 8, color: 'var(--text-dark)' } }, tooltip: { callbacks: { label: function(ctx) { return ' ' + ctx.label + ' : ' + ctx.parsed.toLocaleString('fr-FR') + ' F'; } } } } }
+});
+{% endif %}
+
+{% if chart_entrees_labels %}
+new Chart(document.getElementById('chartEntrees'), {
+  type: 'bar',
+  data: {
+    labels: {{ chart_entrees_labels|safe }},
+    datasets: [{ label: 'Quantite entree', data: {{ chart_entrees_data|safe }}, backgroundColor: ['#27ae60','#2ecc71','#1abc9c','#16a085','#0e6655'], borderRadius: 6 }]
+  },
+  options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'var(--border-light)' } }, x: { grid: { display: false } } } }
 });
 {% endif %}
 </script>

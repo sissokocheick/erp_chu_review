@@ -139,10 +139,20 @@ s'affiche que si l'utilisateur (ou son rôle) possède la permission corresponda
 - Chaque tuile ouvre la page correspondante.
 
 ### Tableau de bord (`/`)
-- **Indicateurs (KPI)** : demandes en attente, stocks, mouvements récents, etc.
-- **Graphiques** (Chart.js) : évolution des entrées/sorties.
+- **Indicateurs (KPI)** : articles catalogués, entrées / sorties du jour,
+  stocks critiques, **valeur totale du stock (CMUP)**.
+- **Alertes de stock** : 3 onglets (Critique / Alerte / Surstock) avec niveaux visuels.
+- **Graphiques** (Chart.js) :
+  - Top 5 articles consommés (30 j) et Top 5 services demandeurs (30 j) ;
+  - **Flux entrées / sorties sur 14 jours** (courbes) ;
+  - **Valeur du stock par famille** (donut) ;
+  - **Top 5 entrées** (30 j) ;
+  - **Valeur du stock par magasin** (tableau).
+- **Péremptions** : lots périmés (rouge) et lots expirant sous 90 jours (orange).
 - **Journal des derniers mouvements** avec pastilles vertes (entrées) / rouges (sorties).
-- **Raccourcis** vers les actions courantes.
+- **Isolation par magasin actif** : si un magasin est sélectionné dans l'en-tête,
+  tous les indicateurs et graphiques sont filtrés sur ce magasin ; sinon, toutes
+  les données de tous les magasins sont affichées.
 
 ---
 

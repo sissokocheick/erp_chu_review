@@ -16,22 +16,66 @@ from ..models import (
 from ..decorators import catch_errors
 
 
+def _magasin_actif(request):
+    """Magasin sélectionné en session (ou None si aucun choix)."""
+    magasin_id = request.session.get('magasin_actif_id')
+    if magasin_id:
+        return Magasin.objects.filter(id=magasin_id).first()
+    return None
+
+
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_dashboard')
 @catch_errors(redirect_url='/auth/accueil/')
 def dashboard_directeur(request):
     aujourdhui = timezone.now().date()
+
+    # ── Isolation par magasin actif (cohérent avec les autres pages) ──
+    magasin_actif = _magasin_actif(request)
+    magasins_ids = ([magasin_actif.id] if magasin_actif
+                    else list(Magasin.objects.values_list('id', flat=True)))
+
     total_articles = Article.objects.all().count()
-    sorties_jour = Mouvement.objects.filter(
+    mouvements_scope = Mouvement.objects.filter(magasin_id__in=magasins_ids)
+    sorties_jour = mouvements_scope.filter(
         type_mouvement='SORTIE',
         date_mouvement__date=aujourdhui
     ).count()
-    entrees_jour = Mouvement.objects.filter(
+    entrees_jour = mouvements_scope.filter(
         type_mouvement='ENTREE',
         date_mouvement__date=aujourdhui
     ).count()
 
-    stocks_base = StockItem.objects.select_related('article', 'article__famille', 'magasin')
+    stocks_base = StockItem.objects.select_related('article', 'article__famille', 'magasin').filter(
+        magasin_id__in=magasins_ids
+    )
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # FLUX 14 JOURS (entrées vs sorties) pour le graphique
+    # ═══════════════════════════════════════════════════════════════════════
+    flux_par_jour = {}
+    date_debut_flux = aujourdhui - timedelta(days=13)
+    for m in mouvements_scope.filter(
+        date_mouvement__date__gte=date_debut_flux
+    ).values('date_mouvement__date', 'type_mouvement').annotate(
+        total=Sum('quantite')
+    ):
+        jour = m['date_mouvement__date']
+        flux_par_jour.setdefault(jour, {'E': 0, 'S': 0})
+        if m['type_mouvement'] == 'ENTREE':
+            flux_par_jour[jour]['E'] += m['total']
+        elif m['type_mouvement'] == 'SORTIE':
+            flux_par_jour[jour]['S'] += m['total']
+
+    labels_flux = []
+    entrees_flux = []
+    sorties_flux = []
+    for i in range(13, -1, -1):
+        jour = (aujourdhui - timedelta(days=i))
+        labels_flux.append(jour.strftime('%d/%m'))
+        data = flux_par_jour.get(jour, {'E': 0, 'S': 0})
+        entrees_flux.append(data['E'])
+        sorties_flux.append(data['S'])
 
     # ═══════════════════════════════════════════════════════════════════════
     # ALERTES STOCK
@@ -53,14 +97,21 @@ def dashboard_directeur(request):
     ).order_by('-quantite_physique')
 
     trente_jours_avant = aujourdhui - timedelta(days=30)
-    top_articles = Mouvement.objects.filter(
+    top_articles = mouvements_scope.filter(
         type_mouvement='SORTIE',
         date_mouvement__date__gte=trente_jours_avant
     ).values('article__designation').annotate(
         total_sorti=Sum('quantite')
     ).order_by('-total_sorti')[:5]
 
-    top_services = Mouvement.objects.filter(
+    top_entrees = mouvements_scope.filter(
+        type_mouvement='ENTREE',
+        date_mouvement__date__gte=trente_jours_avant
+    ).values('article__designation').annotate(
+        total_entree=Sum('quantite')
+    ).order_by('-total_entree')[:5]
+
+    top_services = mouvements_scope.filter(
         type_mouvement='SORTIE',
         date_mouvement__date__gte=trente_jours_avant,
         service_demandeur__isnull=False
@@ -68,22 +119,31 @@ def dashboard_directeur(request):
         total_sorti=Sum('quantite')
     ).order_by('-total_sorti')[:5]
 
-    mouvements_recents = Mouvement.objects.select_related(
+    mouvements_recents = mouvements_scope.select_related(
         'article', 'utilisateur'
     ).order_by('-date_mouvement')[:8]
 
     # ═══════════════════════════════════════════════════════════════════════
-    # VALORISATION CMUP
+    # VALEUR DU STOCK PAR FAMILLE / PAR MAGASIN
     # ═══════════════════════════════════════════════════════════════════════
-    resultat_valeur = StockItem.objects.aggregate(
-        total=Sum(
-            F('quantite_physique') * Case(
-                When(valeur_cmup__gt=0, then=F('valeur_cmup')),
-                default=Coalesce(F('article__prix_reference'), Value(0, output_field=DecimalField())),
-                output_field=DecimalField()
-            ),
-            output_field=DecimalField()
-        )
+    valeur_case = Case(
+        When(valeur_cmup__gt=0, then=F('valeur_cmup')),
+        default=Coalesce(F('article__prix_reference'), Value(0, output_field=DecimalField())),
+        output_field=DecimalField()
+    )
+    valeur_par_famille = stocks_base.values('article__famille__intitule').annotate(
+        total=Sum(F('quantite_physique') * valeur_case, output_field=DecimalField())
+    ).order_by('-total')[:8]
+
+    valeur_par_magasin = stocks_base.values('magasin__nom').annotate(
+        total=Sum(F('quantite_physique') * valeur_case, output_field=DecimalField())
+    ).order_by('-total')
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # VALORISATION CMUP (scopée au magasin actif)
+    # ═══════════════════════════════════════════════════════════════════════
+    resultat_valeur = stocks_base.aggregate(
+        total=Sum(F('quantite_physique') * valeur_case, output_field=DecimalField())
     )
     valeur_stock_total = resultat_valeur['total'] or 0
 
@@ -104,7 +164,6 @@ def dashboard_directeur(request):
         history_date__date__gte=date_limite_historique
     ).order_by('-history_date')[:12]
 
-    magasins_ids = list(Magasin.objects.values_list('id', flat=True))
     if magasins_ids:
         h_mouvements = Mouvement.history.filter(
             magasin_id__in=magasins_ids,
@@ -196,9 +255,19 @@ def dashboard_directeur(request):
         'journal_activites': journal_activites,
         'lots_en_alerte': lots_en_alerte,
         'lots_perimes': lots_perimes,
+        'magasin_actif': magasin_actif,
         'chart_articles_labels': json.dumps([i['article__designation'] for i in top_articles]),
         'chart_articles_data': json.dumps([i['total_sorti'] for i in top_articles]),
+        'chart_entrees_labels': json.dumps([i['article__designation'] for i in top_entrees]),
+        'chart_entrees_data': json.dumps([i['total_entree'] for i in top_entrees]),
         'chart_services_labels': json.dumps([i['service_demandeur__nom'] for i in top_services]),
         'chart_services_data': json.dumps([i['total_sorti'] for i in top_services]),
+        'flux_labels': json.dumps(labels_flux),
+        'flux_entrees': json.dumps(entrees_flux),
+        'flux_sorties': json.dumps(sorties_flux),
+        'chart_familles_labels': json.dumps([i['article__famille__intitule'] or 'Général' for i in valeur_par_famille]),
+        'chart_familles_data': json.dumps([float(i['total']) for i in valeur_par_famille]),
+        'valeur_par_famille': valeur_par_famille,
+        'valeur_par_magasin': valeur_par_magasin,
     }
     return render(request, 'stock/dashboard.html', context)
