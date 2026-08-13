@@ -489,3 +489,106 @@ class E2EBase(LiveServerTestCase):
         self._attendre(900)
         info2 = self.page.inner_text('.pagination-info')
         self.assertIn('sur 200', info2)
+
+    # ──────────────────────────────────────────────────────────────────
+    # Dashboard : rendu des nouveaux graphiques avec données réelles
+    # ──────────────────────────────────────────────────────────────────
+    def test_dashboard_graphiques_rendus_avec_donnees(self):
+        """Le dashboard initialise les 5 graphiques (Chart.js) avec de
+        vraies données : flux 14j, valeur par famille, top entrées,
+        top articles et top services."""
+        from datetime import timedelta
+        from decimal import Decimal
+        from django.utils import timezone
+        from stock.models import Article as Art, StockItem, Mouvement, Service
+
+        # Articles valorisés (CMUP renseignée)
+        art1 = Art.objects.create(
+            designation='Dashboard Graph A', famille=self.famille,
+            reference='E2E-GRAPH-A', prix_reference=Decimal('100'))
+        art2 = Art.objects.create(
+            designation='Dashboard Graph B', famille=self.famille,
+            reference='E2E-GRAPH-B', prix_reference=Decimal('250'))
+        StockItem.objects.create(
+            article=art1, magasin=self.mag_a,
+            quantite_physique=50, valeur_cmup=Decimal('95'))
+        StockItem.objects.create(
+            article=art2, magasin=self.mag_a,
+            quantite_physique=100, valeur_cmup=Decimal('240'))
+
+        # Mouvements répartis sur 14 jours (flux) — update_stock=False
+        # pour ne pas altérer les valeurs CMUP déclarées ci-dessus.
+        now = timezone.now()
+        for jour in range(14):
+            date = now - timedelta(days=jour)
+            for _ in range(3):
+                Mouvement(
+                    article=art1, magasin=self.mag_a, type_mouvement='ENTREE',
+                    quantite=5, date_mouvement=date,
+                    utilisateur=self.user).save(update_stock=False)
+            for _ in range(2):
+                Mouvement(
+                    article=art2, magasin=self.mag_a, type_mouvement='SORTIE',
+                    quantite=2, date_mouvement=date,
+                    utilisateur=self.user).save(update_stock=False)
+
+        # Service demandeur pour le top services
+        svc = Service.objects.create(
+            code='E2E-SVC', nom='Service Graph E2E')
+        for _ in range(5):
+            Mouvement(
+                article=art2, magasin=self.mag_a, type_mouvement='SORTIE',
+                quantite=3, date_mouvement=now - timedelta(days=1),
+                service_demandeur=svc,
+                utilisateur=self.user).save(update_stock=False)
+
+        # Dashboard à la racine — pas de magasin actif → toutes les données
+        self._se_connecter('/')
+
+        # Chart.js (CDN) doit être chargé avant d'interroger les instances
+        self.page.wait_for_function(
+            "typeof window.Chart !== 'undefined'", timeout=15000)
+        self._attendre(600)
+
+        # 1) Les 5 canvas existent
+        for cid in ('chartFlux', 'chartFamilles', 'chartEntrees',
+                    'chartArticles', 'chartServices'):
+            self.assertGreater(
+                self.page.locator(f'#{cid}').count(), 0,
+                f'Canvas #{cid} absent du dashboard')
+
+        # 2) Chart.js les a initialisés avec le bon type
+        types = self.page.evaluate("""() => {
+            const ids = ['chartFlux','chartFamilles','chartEntrees',
+                         'chartArticles','chartServices'];
+            const out = {};
+            for (const id of ids) {
+                const canvas = document.getElementById(id);
+                const chart = canvas && window.Chart.getChart
+                    ? Chart.getChart(canvas) : null;
+                out[id] = chart ? chart.config.type : null;
+            }
+            return out;
+        }""")
+        self.assertEqual(types['chartFlux'], 'line')
+        self.assertEqual(types['chartFamilles'], 'doughnut')
+        self.assertEqual(types['chartEntrees'], 'bar')
+        self.assertEqual(types['chartArticles'], 'bar')
+        self.assertEqual(types['chartServices'], 'doughnut')
+
+        # 3) Données réelles injectées dans le flux (14 jours, entrées non nulles)
+        flux_labels = self.page.evaluate(
+            "Chart.getChart(document.getElementById('chartFlux')).data.labels.length")
+        self.assertEqual(flux_labels, 14)
+        flux_entrees_total = self.page.evaluate(
+            "Chart.getChart(document.getElementById('chartFlux'))"
+            ".data.datasets[0].data.reduce((a,b)=>a+b,0)")
+        self.assertGreater(
+            flux_entrees_total, 0,
+            "Le flux d'entrées doit contenir des quantités réelles")
+
+        # 4) KPI valeur du stock affiché (50×95 + 100×240 = 28750 F).
+        # Le libellé est rendu en MAJUSCULES par le CSS (.kpi-lbl).
+        body = self.page.inner_text('body')
+        self.assertIn('VALEUR STOCK CMUP', body.upper())
+        self.assertIn('28750', body.replace('\u202f', '').replace(' ', ''))
