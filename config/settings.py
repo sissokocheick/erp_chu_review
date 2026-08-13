@@ -197,3 +197,9 @@ AUTHENTICATION_BACKENDS = [
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
+
+# ── Sécurité ─────────────────────────────────────────────────────────
+# Activer UNIQUEMENT si l'application est derrière un reverse proxy qui
+# écrase X-Forwarded-For (nginx, traefik…). Sinon, rester False : un
+# client peut spoof cet en-tête pour contourner l'anti brute-force IP.
+USE_X_FORWARDED_FOR = False

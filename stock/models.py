@@ -1542,16 +1542,34 @@ class AccuseReception(models.Model):
     def signer(self, user, est_satisfait=None, texte_observations=""):
         """
         Signe l'accusé de réception.
-        ✅ CORRECTION : vérifie que l'utilisateur est le demandeur ou superuser.
+        Autorisation alignée sur la vue (défense en profondeur) :
+        demandeur, membre du service destinataire, magasinier (guichet)
+        ou superutilisateur. La vue fait déjà cette vérification pour le
+        chemin AJAX — le modèle doit accepter exactement le même périmètre,
+        sinon les flux légitimes (service destinataire, dashboard magasinier)
+        échouent en ValidationError.
         """
         from django.utils import timezone
         import os
         from django.core.files import File
 
         demandeur = self.livraison.demande.demandeur
-        if user != demandeur and not user.is_superuser:
+        profil = getattr(user, 'profil', None)
+        est_du_service = bool(
+            profil
+            and profil.service_id
+            and profil.service_id == self.livraison.demande.service_demandeur_id
+        )
+        est_magasinier = user.has_perm('accounts.menu_guichet')
+        if (
+            user != demandeur
+            and not est_du_service
+            and not est_magasinier
+            and not user.is_superuser
+        ):
             raise ValidationError(
-                "Seul le demandeur ou un superutilisateur peut signer l'accusé de réception."
+                "Seul le demandeur, un membre du service destinataire, un "
+                "magasinier ou un superutilisateur peut signer l'accusé de réception."
             )
 
         self.receptionne_par = user

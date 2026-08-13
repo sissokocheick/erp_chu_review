@@ -172,7 +172,18 @@
     border-radius: var(--cmd-radius);
     box-shadow: var(--cmd-shadow-sm);
     border: 1px solid var(--cmd-border);
-    overflow-x: auto;
+    overflow: auto;
+    max-height: calc(100vh - 340px);
+    position: relative;
+  }
+  .cmd-table-wrap .cmd-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+  @media (max-width: 768px) {
+    .cmd-table-wrap { max-height: none; }
+    .cmd-table-wrap .cmd-table thead th { position: static; }
   }
   .cmd-table {
     width: 100%;

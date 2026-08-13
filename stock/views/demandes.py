@@ -1,4 +1,6 @@
 import logging
+logger = logging.getLogger(__name__)
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -643,8 +645,28 @@ def signer_accuse_reception(request, accuse_id):
             messages.error(request, msg)
             return redirect('mes_demandes')
 
+    # ── Autorisation (identique pour les deux flux, AJAX et classique) ──
+    # L'utilisateur doit être : le demandeur, membre du service destinataire,
+    # magasinier (guichet), ou superuser. (IDOR : le POST AJAX contournait
+    # cette vérification — n'importe quel utilisateur connecté pouvait signer
+    # un accusé qui ne le concernait pas.)
+    profil = getattr(request.user, 'profil', None)
+    service_user = profil.service if profil else None
+    est_magasinier = request.user.has_perm('accounts.menu_guichet')
+    est_autorise = (
+        request.user.is_superuser
+        or demande.demandeur_id == request.user.id
+        or est_magasinier
+        or (service_user and service_user.id == demande.service_demandeur_id)
+    )
+
     if _is_ajax(request):
         if request.method == 'POST':
+            if not est_autorise:
+                return JsonResponse(
+                    {'success': False, 'error': "⛔ Vous n'appartenez pas au service destinataire de cette demande."},
+                    status=403
+                )
             if accuse.est_signe:
                 return JsonResponse(
                     {'success': False, 'error': "Cet accusé a déjà été signé."},

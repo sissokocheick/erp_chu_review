@@ -233,19 +233,23 @@ def get_client_ip(request):
 
 
 
-    x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+    """IP réelle du client.
 
+    Ne fait confiance à HTTP_X_FORWARDED_FOR que si le déploiement est
+    explicitement derrière un proxy (config.USE_X_FORWARDED_FOR=True) :
+    sinon l'en-tête est spoofable et permet de contourner l'anti brute-force
+    par IP. Derrière un proxy, on prend l'entrée la plus à droite (celle
+    ajoutée par le proxy de confiance le plus proche de l'application).
+    """
 
-
-    if x_forwarded:
-
-
-
-        return x_forwarded.split(',')[0].strip()
-
-
-
-    return request.META.get('REMOTE_ADDR')
+    from django.conf import settings
+    if getattr(settings, 'USE_X_FORWARDED_FOR', False):
+        x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded:
+            ips = [ip.strip() for ip in x_forwarded.split(',') if ip.strip()]
+            if ips:
+                return ips[-1]
+    return request.META.get('REMOTE_ADDR', '')
 
 
 
@@ -701,6 +705,7 @@ def custom_login(request):
 
 
 
+@require_POST
 def custom_logout(request):
 
 

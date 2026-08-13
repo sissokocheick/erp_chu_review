@@ -38,11 +38,20 @@
 
     .table-card {
         background: var(--bg-card); border-radius: 10px;
-        box-shadow: 0 2px 10px var(--shadow); overflow-x: auto;
+        box-shadow: 0 2px 10px var(--shadow); overflow: auto;
+        max-height: calc(100vh - 320px);
         border: 1px solid var(--border-light); transition: opacity 0.3s;
+        position: relative;
     }
     .table-card table { width: 100%; border-collapse: collapse; font-size: 14px; }
     .table-card thead tr { background: var(--thead-bg); }
+    .table-card thead th { position: sticky; top: 0; z-index: 3; background: var(--thead-bg); box-shadow: 0 1px 0 rgba(0,0,0,.08); }
+    .table-card .pagination-bar { position: sticky; bottom: 0; z-index: 3; margin-top: 0; background: var(--bg-stripe); }
+    @media (max-width: 768px) {
+        .table-card { max-height: none; }
+        .table-card thead th { position: static; }
+        .table-card .pagination-bar { position: static; }
+    }
     .table-card thead th {
         padding: 13px 15px; color: white; font-weight: 600;
         font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px;
@@ -332,12 +341,12 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
         const container = document.getElementById('tableArticles');
         const perPage = document.getElementById('search-per-page').value;
         const famille = document.getElementById('search-famille').value;
-        if (container) container.style.opacity = '0.4';
 
         _searchTimer = setTimeout(() => {
             let url = '{% url "liste_articles" %}?q=' + encodeURIComponent(query)
                     + '&per_page=' + encodeURIComponent(perPage);
             if (famille) url += '&famille=' + encodeURIComponent(famille);
+            if (window.NxUX) NxUX.setTableLoading(container, true);
 
             fetch(url, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -349,8 +358,8 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
             .then(html => {
                 if (container) {
                     container.innerHTML = html;
-                    container.style.opacity = '1';
                 }
+                if (window.NxUX) NxUX.setTableLoading(container, false);
                 let newUrl = window.location.pathname + '?q=' + encodeURIComponent(query)
                            + '&per_page=' + encodeURIComponent(perPage);
                 if (famille) newUrl += '&famille=' + encodeURIComponent(famille);
@@ -358,7 +367,7 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
             })
             .catch(err => {
                 console.error('Erreur recherche:', err);
-                if (container) container.style.opacity = '1';
+                if (window.NxUX) NxUX.setTableLoading(container, false);
             });
         }, 400);
     }

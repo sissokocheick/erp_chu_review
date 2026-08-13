@@ -122,6 +122,11 @@
     table-layout: fixed;
   }
   .es-table thead tr { background: var(--bg-hover); }
+  #es-scroll .es-table thead th { position: sticky; top: 0; z-index: 3; background: var(--bg-hover); box-shadow: 0 1px 0 rgba(0,0,0,.08); }
+  @media (max-width: 768px) {
+    #es-scroll { max-height: none; }
+    #es-scroll .es-table thead th { position: static; }
+  }
   .es-table thead th {
     padding: 11px 13px;
     font-weight: 700;
@@ -305,7 +310,7 @@
     </form>
   </div>
 
-  <div style="overflow-x:auto;">
+  <div style="overflow:auto;max-height:calc(100vh - 340px);position:relative;" id="es-scroll">
     <table class="es-table">
       <thead>
         <tr>
@@ -499,13 +504,14 @@
 
         function doSearch() {
             clearTimeout(_esTimer);
-            if (tbody) tbody.style.opacity = '.4';
+            var scrollEl = document.getElementById('es-scroll');
             if (_currentAbortController) { _currentAbortController.abort(); }
             _currentAbortController = new AbortController();
 
             _esTimer = setTimeout(function() {
                 if (!form) return;
                 var params = new URLSearchParams(new FormData(form)).toString();
+                if (window.NxUX) NxUX.setTableLoading(scrollEl, true);
                 fetch(window.location.pathname + '?' + params, {
                     headers: { 'X-Requested-With': 'XMLHttpRequest' },
                     signal: _currentAbortController.signal
@@ -514,12 +520,12 @@
                 .then(function(html) {
                     if (tbody) {
                         tbody.innerHTML = html;
-                        tbody.style.opacity = '1';
                         syncCheckboxes();
                     }
+                    if (window.NxUX) NxUX.setTableLoading(scrollEl, false);
                 })
                 .catch(function(err) {
-                    if (err.name !== 'AbortError' && tbody) tbody.style.opacity = '1';
+                    if (err.name !== 'AbortError' && window.NxUX) NxUX.setTableLoading(scrollEl, false);
                 });
             }, 400);
         }

@@ -24,3 +24,12 @@ USE_TZ = False
 PASSWORD_HASHERS = [
     'django.contrib.auth.hashers.MD5PasswordHasher',
 ]
+
+# ── E2E (Playwright) ────────────────────────────────────────────────
+# LiveServerTestCase sert les statiques depuis STATIC_ROOT (le dossier
+# « collecté ») — vide sans collectstatic préalable. On pointe donc
+# STATIC_ROOT vers le dossier source pour que les tests E2E exercent les
+# vrais fichiers statiques (nx-ux.js, CSS…) sans étape supplémentaire.
+STATIC_ROOT = BASE_DIR / 'static'
+STATICFILES_DIRS = []
+

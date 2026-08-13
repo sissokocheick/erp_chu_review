@@ -120,6 +120,16 @@ s'affiche que si l'utilisateur (ou son rôle) possède la permission corresponda
   « Déconnexion » sont masqués (icônes conservées) et le sélecteur de magasin est compacté
   pour éviter tout débordement horizontal.
 
+### UX grandes listes (beaucoup de données)
+- **En-têtes de tableau collants** : sur les listes lourdes (articles, état du stock, entrées,
+  sorties, commandes, demandes), le tableau défile dans un conteneur à hauteur bornée
+  (`max-height`) avec l'en-tête **sticky** — les colonnes restent lisibles sur des centaines de lignes.
+- **Pagination collante** : la barre de pagination reste visible en bas du conteneur de scroll.
+- **État de chargement** : pendant une recherche AJAX, un **overlay spinner** (« Chargement… »)
+  est affiché par `NxUX.setTableLoading()` (debounce 400 ms conservé) puis masqué à la réponse.
+- **Responsive** : en mobile (< 768 px), le conteneur de scroll est désactivé et les tableaux
+  basculent en cartes (comportement inchangé).
+
 ---
 
 ## 4. Accueil & Tableau de bord

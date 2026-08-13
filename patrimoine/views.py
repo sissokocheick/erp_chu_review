@@ -1142,6 +1142,7 @@ def creer_immatriculation_directe(request):
     nouvelle_immo = Immobilisation.objects.create(nom_affichage="Nouveau Matériel (Saisie Directe)", statut='EN_ATTENTE', valeur_acquisition=0, cree_par=request.user)
     return redirect('patrimoine_valider_sas', pk=nouvelle_immo.id)
 
+@login_required(login_url='/auth/login/')
 def scan_mobile(request, code):
     immo = get_object_or_404(Immobilisation, code_patrimoine=code)
     return render(request, 'patrimoine/scan_mobile.html', {'immo': immo})

@@ -315,3 +315,78 @@ class E2EBase(LiveServerTestCase):
         body = self.page.inner_text('body')
         self.assertNotIn('Traceback', body)
         self.assertIn('profil', body.lower())
+
+    # ──────────────────────────────────────────────────────────────────
+    # UX grandes listes (sticky header + état de chargement)
+    # ──────────────────────────────────────────────────────────────────
+    def test_sticky_header_et_loading_sur_liste_articles(self):
+        """Avec beaucoup d'articles, le header du tableau reste sticky et
+        la recherche affiche un overlay de chargement (NxUX.setTableLoading)."""
+        from stock.models import Article as ArticleModel
+        # 40 articles pour rendre le tableau scrollable
+        for i in range(40):
+            ArticleModel.objects.create(
+                designation=f'Article UX {i:03d}', famille=self.famille,
+                reference=f'E2E-UX-{i:03d}')
+
+        self._se_connecter('/articles/', magasin=self.mag_a)
+
+        # 1) Header sticky dans le conteneur de scroll
+        sticky = self.page.evaluate(
+            "getComputedStyle(document.querySelector('#tableArticles thead th')).position"
+        )
+        self.assertEqual(sticky, 'sticky')
+
+        # 2) Conteneur avec hauteur bornée (scroll vertical)
+        maxh = self.page.evaluate(
+            "getComputedStyle(document.querySelector('#tableArticles')).maxHeight")
+        self.assertTrue(maxh and maxh != 'none', f"max-height attendu, obtenu : {maxh}")
+
+        # 3) La recherche affiche l'overlay de chargement puis le retire.
+        # On retarde la réponse du fetch (1,5 s) pour que l'overlay reste
+        # visible le temps de l'observer (le fetch local est sinon instantané).
+        import time
+
+        def _delay_search(route):
+            time.sleep(1.5)
+            route.continue_()
+
+        # Le design system (NxUX) doit être servi : la config E2E sert les
+        # statiques depuis le dossier source (STATIC_ROOT en settings_test).
+        diag = self.page.evaluate("""async () => ({
+            nxux: typeof window.NxUX,
+            nxux_status: await fetch('/static/js/nx-ux.js').then(function(r){ return r.status; }).catch(function(){ return 'err'; })
+        })""")
+        self.assertEqual(diag['nxux'], 'object', f"NxUX non chargé : {diag}")
+        self.assertEqual(diag['nxux_status'], 200, f"nx-ux.js non servi : {diag}")
+
+        # 3) La recherche affiche l'overlay de chargement puis le retire.
+        # On retarde la réponse du fetch (1,5 s) pour que l'overlay reste
+        # visible le temps de l'observer (le fetch local est sinon instantané).
+        import time
+
+        def _delay_search(route):
+            time.sleep(1.5)
+            route.continue_()
+
+        self.page.route('**/articles/?*', _delay_search)
+        self.page.click('#search-q')  # le champ est readonly jusqu'au focus
+        self.page.fill('#search-q', 'Article UX 0')
+        states = {}
+        for ms in (300, 500, 700, 900, 1200):
+            self._attendre(ms - (states.get('last', 0)))
+            states['last'] = ms
+            states[ms] = self.page.evaluate(
+                "document.querySelector('.nx-table-loading') ? "
+                "getComputedStyle(document.querySelector('.nx-table-loading')).display : 'absent'")
+        self.assertTrue(
+            any(v == 'flex' for v in states.values()),
+            f"L'overlay de chargement doit apparaître pendant la recherche. États : {states}",
+        )
+        # après la réponse retardée : overlay masqué
+        self._attendre(2500)
+        overlay_gone = self.page.evaluate(
+            "!document.querySelector('.nx-table-loading') || "
+            "getComputedStyle(document.querySelector('.nx-table-loading')).display === 'none'")
+        self.assertTrue(overlay_gone, "L'overlay de chargement doit disparaître après la recherche")
+        self.page.unroute('**/articles/?*')

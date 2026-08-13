@@ -123,6 +123,28 @@ window.NxUX = (function () {
   }
 
   /**
+   * Affiche/masque un état de chargement sur un conteneur de tableau
+   * (overlay spinner centré) pendant une recherche AJAX.
+   * @param {HTMLElement} container - Le conteneur du tableau (table-card…)
+   * @param {boolean} on - true = afficher, false = masquer
+   */
+  function setTableLoading(container, on) {
+    if (!container) return;
+    var overlay = container.querySelector('.nx-table-loading');
+    if (on) {
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'nx-table-loading';
+        overlay.innerHTML = '<span class="nx-spinner"></span><span class="nx-table-loading-label">Chargement…</span>';
+        container.appendChild(overlay);
+      }
+      overlay.style.display = 'flex';
+    } else if (overlay) {
+      overlay.style.display = 'none';
+    }
+  }
+
+  /**
    * Applique un formatage spécifique à un champ input
    * Détecte automatiquement le type via data-nx-format ou le pattern
    * @param {HTMLElement} input - L'élément input
@@ -254,6 +276,31 @@ window.NxUX = (function () {
         background: rgba(0,0,0,0.1);
         border-radius: inherit;
       }
+      .nx-table-loading {
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: rgba(248,250,252,0.72);
+        backdrop-filter: blur(1px);
+        z-index: 20;
+        border-radius: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-medium, #475569);
+        pointer-events: none;
+      }
+      body.dark-mode .nx-table-loading {
+        background: rgba(15,23,42,0.72);
+      }
+      .nx-table-loading .nx-spinner {
+        width: 18px;
+        height: 18px;
+        border-color: rgba(17,122,139,0.3);
+        border-top-color: #117a8b;
+      }
     `;
     document.head.appendChild(style);
   })();
@@ -285,6 +332,7 @@ window.NxUX = (function () {
     confirmDelete: confirmDelete,
     loading: loading,
     stopLoading: stopLoading,
+    setTableLoading: setTableLoading,
     formatField: formatField,
     initFormatting: initFormatting,
     handleError: handleError,
