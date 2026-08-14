@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+jobs:
+  tests:
+    name: Tests (suite complète)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # Navigateur requis par les tests E2E Playwright (LiveServerTestCase)
+          python -m playwright install --with-deps chromium
+
+      - name: Migrations à jour (makemigrations --check)
+        run: |
+          DJANGO_SETTINGS_MODULE=config.settings_test python manage.py makemigrations --check --dry-run
+
+      - name: Suite de tests complète (2351 tests, dont E2E)
+        env:
+          DJANGO_SETTINGS_MODULE: config.settings_test
+          DJANGO_ALLOW_ASYNC_UNSAFE: '1'
+          PYTHONIOENCODING: utf-8
+        run: python manage.py test
+
+  security:
+    name: Sécurité (pip-audit + check --deploy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pip-audit
+
+      - name: pip-audit (dépendances applicatives)
+        run: pip-audit -r requirements.txt
+
+      - name: Django check --deploy (mode production)
+        env:
+          DJANGO_DEBUG: 'False'
+          DJANGO_SECRET_KEY: 'ci-only-dummy-key-0123456789abcdef0123456789abcdef0123456789abcdef'
+          DB_PASSWORD: 'ci-only'
+          DJANGO_ALLOWED_HOSTS: 'ci.example.org'
+        run: python manage.py check --deploy
+
+      - name: collectstatic (dry-run)
+        env:
+          DJANGO_DEBUG: 'True'
+        run: python manage.py collectstatic --noinput --dry-run
