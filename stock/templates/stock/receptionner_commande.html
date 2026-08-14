@@ -315,6 +315,27 @@
           return;
       }
 
+      // ⚠️ Contrôle sanitaire : aucun lot déjà périmé ne peut entrer en stock
+      var perimes = [];
+      var aujourdhui = new Date();
+      aujourdhui.setHours(0, 0, 0, 0);
+      document.querySelectorAll('input[name="peremptions[]"]').forEach(function(inp) {
+          if (!inp.value) return;
+          var d = new Date(inp.value + 'T00:00:00');
+          if (!isNaN(d.getTime()) && d < aujourdhui) {
+              perimes.push(inp.value);
+          }
+      });
+      if (perimes.length > 0) {
+          var msg = "Impossible de réceptionner : " + perimes.length + " ligne(s) avec une péremption déjà dépassée (" + perimes.join(', ') + "). Un produit périmé ne peut pas entrer en stock.";
+          if (typeof Swal !== 'undefined') {
+              Swal.fire({ icon:'error', title:'Lot(s) périmé(s) refusé(s)', text: msg, confirmButtonColor:'#e74c3c' });
+          } else {
+              alert(msg);
+          }
+          return;
+      }
+
       var hasPartiel = false;
       document.querySelectorAll('.input-qte-rec').forEach(function(input) {
           if ((parseInt(input.value)||0) < parseInt(input.getAttribute('max'))) hasPartiel = true;

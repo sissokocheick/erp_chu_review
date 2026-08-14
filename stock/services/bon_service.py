@@ -93,6 +93,19 @@ class BonService:
         # ✅ CORRECTION MONO-TENANT : vérification utilisateur
         cls._verifier_utilisateur_actif(utilisateur, magasin)
 
+        # ✅ CORRECTION SANITAIRE : bloquer les lots déjà périmés à l'entrée,
+        # AVANT toute écriture (défense en profondeur : la vue contrôle déjà,
+        # le service est le point de vérité utilisé par les tests).
+        article_ids = sorted([l.get('article_id') for l in lignes if l.get('article_id')])
+        articles_map = cls._get_articles_en_bulk(article_ids)
+        for ligne in lignes:
+            erreur = cls._verifier_peremption(
+                articles_map.get(int(ligne['article_id'])) if ligne.get('article_id') else None,
+                ligne.get('date_peremption'),
+            )
+            if erreur:
+                raise ValidationError(erreur)
+
         bon_kwargs = {
             'type_bon': 'ENTREE',
             'magasin': magasin,
@@ -108,10 +121,6 @@ class BonService:
             bon_kwargs['fournisseur'] = fournisseur
 
         bon = BonMouvement.objects.create(**bon_kwargs)
-
-        # ✅ CORRECTION : récupérer tous les articles en une requête
-        article_ids = sorted([l.get('article_id') for l in lignes if l.get('article_id')])
-        articles_map = cls._get_articles_en_bulk(article_ids)
 
         # ✅ CORRECTION : verrouiller tous les StockItem concernés AVANT la boucle pour éviter deadlocks
         # Tri par article_id garantit un ordre de verrouillage cohérent entre threads
@@ -183,6 +192,41 @@ class BonService:
         cls._enregistrer_validation(bon, utilisateur, ordre_case=3, commentaire="Création bon d'entrée")
 
         return bon
+
+    @staticmethod
+    def _verifier_peremption(article, date_peremption):
+        """Retourne un message d'erreur si la date de péremption est déjà passée.
+
+        Règle sanitaire : un produit périmé ne peut pas entrer en stock.
+        - ``date_peremption`` accepte str ('YYYY-MM-DD' ou 'DD/MM/YYYY') ou date.
+        - Retourne None si la date est absente, illisible ou future/aujourd'hui.
+        """
+        if not date_peremption:
+            return None
+        from datetime import date as date_cls
+
+        peremp = date_peremption
+        if isinstance(peremp, str):
+            peremp = peremp.strip()
+            parsed = None
+            for fmt in ('%Y-%m-%d', '%d/%m/%Y'):
+                try:
+                    parsed = timezone.datetime.strptime(peremp, fmt).date()
+                    break
+                except ValueError:
+                    continue
+            if parsed is None:
+                return None  # format inconnu : la validation du modèle s'en charge
+            peremp = parsed
+
+        if peremp < date_cls.today():
+            designation = getattr(article, 'designation', '') or 'cet article'
+            return (
+                f"⛔ Réception refusée : le lot de '{designation}' est déjà périmé "
+                f"(péremption {peremp:%d/%m/%Y}). Un produit périmé ne peut pas "
+                f"entrer en stock."
+            )
+        return None
 
     # ═══════════════════════════════════════════════════════════════════════
     # BON DE SORTIE

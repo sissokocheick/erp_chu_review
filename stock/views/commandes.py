@@ -280,6 +280,26 @@ def receptionner_commande(request, commande_id):
         while len(peremptions) < len(ligne_ids):
             peremptions.append('')
 
+        # ✅ CORRECTION SANITAIRE : bloquer les lots déjà périmés AVANT toute écriture
+        ids = [int(l) for l in ligne_ids if l.strip().isdigit()]
+        lc_map = {lc.id: lc for lc in LigneCommande.objects.filter(id__in=ids).select_related('article')}
+        erreurs_peremption = []
+        for lid, peremp in zip(ligne_ids, peremptions):
+            if not (peremp and peremp.strip()):
+                continue
+            lc = lc_map.get(int(lid)) if lid.strip().isdigit() else None
+            erreur = BonService._verifier_peremption(
+                lc.article if lc else None, peremp
+            )
+            if erreur:
+                erreurs_peremption.append(erreur)
+        if erreurs_peremption:
+            for e in erreurs_peremption[:5]:
+                messages.error(request, e)
+            if len(erreurs_peremption) > 5:
+                messages.error(request, f"… et {len(erreurs_peremption) - 5} autre(s) ligne(s).")
+            return redirect('receptionner_commande', commande_id=commande.id)
+
         total_reception = sum(
             int(q) for q in quantites if q.strip().isdigit()
         )

@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.db import IntegrityError
 from django.http import HttpResponse
@@ -158,6 +159,15 @@ def _creer_entree(request):
                     )
                     return redirect('liste_entrees')
 
+            # ═══ BLOCAGE SANITAIRE : lot déjà périmé refusé à l'entrée ═══
+            if peremp and peremp.strip():
+                erreur = BonService._verifier_peremption(
+                    Article.objects.filter(id=aid).first(), peremp
+                )
+                if erreur:
+                    messages.error(request, erreur)
+                    return redirect('liste_entrees')
+
             lignes.append({
                 'article_id': aid,
                 'quantite': int(qte),
@@ -174,6 +184,9 @@ def _creer_entree(request):
             fournisseur=fournisseur,
             reference_externe=ref_ext
         )
+    except ValidationError as e:
+        messages.error(request, str(e))
+        return redirect('liste_entrees')
     except IntegrityError as e:
         logger.exception("[ENTREE] IntegrityError création bon : %s", e)
         messages.error(request, "⛔ Erreur lors de la création du bon. Vérifiez la console pour le détail.")

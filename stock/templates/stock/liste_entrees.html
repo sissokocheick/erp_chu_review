@@ -478,6 +478,27 @@ window.imprimerModal = function(url, titre) {
                 return;
             }
 
+            // ⚠️ Contrôle sanitaire : aucun lot déjà périmé ne peut entrer en stock
+            var perimes = [];
+            var aujourdhui = new Date();
+            aujourdhui.setHours(0, 0, 0, 0);
+            document.querySelectorAll('input[name="peremptions[]"]').forEach(function(inp) {
+                if (!inp.value) return;
+                var d = new Date(inp.value + 'T00:00:00');
+                if (!isNaN(d.getTime()) && d < aujourdhui) {
+                    perimes.push(inp.value);
+                }
+            });
+            if (perimes.length > 0) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Lot(s) périmé(s) refusé(s)',
+                    html: "Impossible d'enregistrer : <b>" + perimes.length + "</b> ligne(s) avec une péremption déjà dépassée (<b>" + perimes.join(', ') + "</b>).<br>Un produit périmé ne peut pas entrer en stock.",
+                    confirmButtonColor: '#e74c3c'
+                });
+                return;
+            }
+
             const formElement = this;
             Swal.fire({
                 title: 'Confirmer la réception ?',
