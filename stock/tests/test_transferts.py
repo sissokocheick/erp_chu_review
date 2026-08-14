@@ -182,6 +182,11 @@ class TransfertVuesTest(TestCase):
         cls.famille = creer_famille()
         cls.article = creer_article(famille=cls.famille, reference="TRF-VUE")
         creer_stock(cls.article, cls.src, quantite=30, valeur_cmup=Decimal('7.00'))
+        cls.article_lot = creer_article(
+            famille=cls.famille, reference="TRF-VUE-LOT",
+            designation="Sérum en lot", gere_lots_peremption=True)
+        creer_stock(cls.article_lot, cls.src, quantite=10, valeur_cmup=Decimal('4.00'),
+                    batch_number="LOT-A", expiry_date=date.today() + timedelta(days=10))
 
     def setUp(self):
         self.client.force_login(self.user)
@@ -250,3 +255,24 @@ class TransfertVuesTest(TestCase):
         )
         resp = self.client.get(reverse('imprimer_bon_multi_lignes', args=[bon.id]))
         self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        # Le template dédié au transfert est utilisé (et pas le bon de sortie)
+        self.assertTemplateUsed(resp, 'stock/pdf/bon_transfert.html')
+        self.assertTemplateNotUsed(resp, 'stock/pdf/bon_sortie.html')
+
+    def test_impression_bon_transfert_avec_lots(self):
+        """Les colonnes lot/péremption apparaissent quand des lignes ont des lots."""
+        bon = TransfertService.creer_transfert(
+            utilisateur=self.user,
+            magasin_source=self.src,
+            magasin_destination=self.dst,
+            lignes=[{'article': self.article_lot, 'quantite': 3}],
+        )
+        # Article géré en lot : le FEFO consomme LOT-A (péremption la plus
+        # proche) → la ligne du bon porte le n° de lot
+        ligne = bon.lignes_bon.first()
+        self.assertIsNotNone(ligne.numero_lot)
+        self.assertEqual(ligne.numero_lot, 'LOT-A')
+        resp = self.client.get(reverse('imprimer_bon_multi_lignes', args=[bon.id]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')

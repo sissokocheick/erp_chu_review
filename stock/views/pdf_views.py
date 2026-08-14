@@ -38,7 +38,7 @@ def imprimer_bon_multi_lignes(request, bon_id):
     from stock.models import BonMouvement
 
     bon = get_object_or_404(
-        BonMouvement.objects.prefetch_related('lignes_bon__article').select_related('magasin', 'fournisseur', 'service_demandeur'),
+        BonMouvement.objects.prefetch_related('lignes_bon__article').select_related('magasin', 'magasin_destination', 'fournisseur', 'service_demandeur'),
         id=bon_id
     )
 
@@ -66,6 +66,7 @@ def imprimer_bon_multi_lignes(request, bon_id):
             'numero_lot': getattr(ligne, 'numero_lot', None),
             'date_peremption': getattr(ligne, 'date_peremption', None),
         })
+    a_lots = any(l['numero_lot'] for l in lignes_data)
 
     pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18)
     pages = [{'lignes': page} for page in pagination.pages]
@@ -98,6 +99,7 @@ def imprimer_bon_multi_lignes(request, bon_id):
         'pdf_config': pdf_config,
         'logo_url': logo_url,
         'signature_cases': build_signature_cases(bon, pdf_config, request),
+        'a_lots': a_lots,
     }
 
     template_map = {
@@ -105,6 +107,7 @@ def imprimer_bon_multi_lignes(request, bon_id):
         'SORTIE': 'stock/pdf/bon_sortie.html',
         'RETOUR_SERVICE': 'stock/pdf/bon_retour.html',
         'RETOUR_FOURNISSEUR': 'stock/pdf/bon_retour.html',
+        'TRANSFERT': 'stock/pdf/bon_transfert.html',
     }
     template = template_map.get(bon.type_bon, 'stock/pdf/bon_sortie.html')
     filename = f"{bon.type_bon}_{bon.numero_bon}.pdf"

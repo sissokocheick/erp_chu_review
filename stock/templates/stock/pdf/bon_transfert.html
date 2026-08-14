@@ -1,0 +1,606 @@
+{% load static custom_filters %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Bon de Transfert {{ bon.numero_bon }}</title>
+<style>
+@page {
+    size: A4;
+    margin: 10mm 7mm 18mm 7mm;
+    @bottom-center {
+        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:pdf_config.texte_institutionnel|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
+        white-space: pre-line;
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+        text-align: center;
+        width: 100%;
+    }
+    @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-size: 7pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+    }
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 10pt;
+    line-height: 1.35;
+    color: #000;
+}
+
+.page {
+    width: 100%;
+}
+
+.page-flex {
+    display: flex;
+    flex-direction: column;
+    min-height: 262mm;
+}
+
+.content-main {
+    flex: 1 1 auto;
+}
+
+.bloc-bas {
+    width: 100%;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-top: auto;
+    padding-bottom: 0;
+}
+
+.page-flex .bloc-bas {
+    width: 100%;
+    page-break-inside: avoid;
+    break-inside: avoid;
+    margin-top: auto;
+    padding-bottom: 0;
+}
+
+.en-tete-etatique {
+    width: 100%;
+    font-size: 10pt;
+    margin-bottom: 1mm;
+}
+.en-tete-etatique td {
+    vertical-align: middle;
+}
+
+.cartouche {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1mm;
+}
+.cartouche td {
+    border: 1px solid #000;
+    padding: 1mm;
+    vertical-align: middle;
+}
+
+.service-infos {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1mm;
+    font-size: 8pt;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10pt;
+    margin-bottom: 0;
+    table-layout: fixed;
+}
+.data-table thead {
+    display: table-header-group;
+}
+.data-table thead tr,
+.data-table tbody tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.data-table th,
+.data-table td {
+    border: 1px solid #000;
+    padding: 0.5mm 1mm;
+    vertical-align: middle;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+.data-table th {
+    text-align: center;
+    font-weight: bold;
+    background-color: #f0f0f0;
+}
+
+.sondage-box {
+    border: 2px solid #000;
+    padding: 1mm 2mm;
+    font-size: 8pt;
+    margin-bottom: 0.5mm;
+}
+.sondage-title {
+    font-weight: bold;
+    margin-bottom: 0.5mm;
+}
+.sondage-title span {
+    text-decoration: underline;
+}
+.sondage-note {
+    font-style: italic;
+    margin-bottom: 1mm;
+}
+
+.signatures-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 8pt;
+    margin-bottom: 0;
+    margin-top: 0.5mm;
+    table-layout: fixed;
+}
+.signatures-table td {
+    width: 25%;
+    border: 2px solid #000;
+    vertical-align: top;
+    padding: 0;
+    height: 32mm;
+    position: relative;
+}
+
+.sig-case-title {
+    font-weight: bold;
+    text-align: center;
+    text-transform: uppercase;
+    font-size: 8pt;
+    text-decoration: underline;
+    padding: 1mm 0.5mm 0 0.5mm;
+    line-height: 1.2;
+}
+
+.sig-case-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: calc(32mm - 7pt);
+    padding: 0 1mm 0.5mm 1mm;
+}
+
+.sig-name-top {
+    text-align: center;
+    font-size: 9pt;
+    font-weight: bold;
+    margin-top: 0.5mm;
+}
+
+.sig-image-center {
+    text-align: center;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.sig-image-center img {
+    max-height: 18mm;
+    max-width: 80%;
+}
+
+.sig-fonction-bottom {
+    text-align: center;
+    font-size: 8pt;
+    font-style: italic;
+    margin-bottom: 0mm;
+    margin-top: 0.5mm;
+}
+
+.sig-default-bottom {
+    text-align: center;
+    font-size: 8pt;
+    margin-top: auto;
+    padding-bottom: 0.5mm;
+    line-height: 1.3;
+}
+
+.sig-empty-space {
+    flex: 1;
+}
+
+.sig-date {
+    text-align: center;
+    font-size: 6pt;
+    font-weight: bold;
+    color: #333;
+    margin-top: 0.5mm;
+}
+
+.pied-trait {
+    border: none;
+    margin: 0;
+}
+
+.page-break {
+    page-break-before: always;
+}
+
+img { max-width: 100%; height: auto; }
+</style>
+<base target="_blank">
+</head>
+<body>
+
+{% if not est_multi_page %}
+<div class="page page-flex">
+
+  <div class="content-main">
+
+    <div>
+      {% if pdf_config.cartouche.afficher_republique or pdf_config.cartouche.afficher_devise %}
+<table class="en-tete-etatique">
+  <tr>
+    <td style="width:50%; vertical-align:middle; text-align:left;">
+      <div style="display:inline-block; text-align:center;">
+        <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
+      </div>
+    </td>
+
+    <td style="width:50%; vertical-align:middle; text-align:right;">
+      <div style="display:inline-block; text-align:center;">
+
+        {% if pdf_config.cartouche.afficher_republique %}
+          <strong>République de Côte d'Ivoire</strong><br>
+        {% endif %}
+
+        {% if pdf_config.cartouche.afficher_devise %}
+          <em>Union - Discipline - Travail</em>
+        {% endif %}
+
+      </div>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+      <table class="cartouche">
+        <tr>
+          <td style="width:25%; text-align:center; vertical-align:middle;">
+            {% if pdf_config.cartouche.afficher_logo and logo_url %}
+              <img src="{{ logo_url }}" style="max-height:18mm;">
+            {% endif %}
+          </td>
+          <td style="width:50%; text-align:center; vertical-align:middle; border-left:none; padding:0;">
+    {% if pdf_config.metadonnees.ps2_label %}
+      <div style="font-size:10pt; font-weight:bold; padding:1mm 1mm 0 1mm;">{{ pdf_config.metadonnees.ps2_label }}</div>
+      <div style="border-top:1px solid #000; margin:0;"></div>
+    {% endif %}
+    <div style="font-size:15pt; font-weight:bold; text-transform:uppercase; padding:1mm 1mm 0 1mm;">BON DE TRANSFERT</div>
+    <div style="font-size:13pt; font-weight:bold; text-transform:uppercase; padding:0 1mm 1mm 1mm;">INTER-MAGASINS</div>
+</td>
+          <td style="width:25%; vertical-align:top; text-align:left; border-left:none; font-size:10pt; font-weight:bold;">
+            {% if pdf_config.metadonnees.code_document %}Code : {{ pdf_config.metadonnees.code_document }}<br>{% endif %}
+            {% if pdf_config.metadonnees.date_creation_doc %}Cree le : {{ pdf_config.metadonnees.date_creation_doc }}<br>{% endif %}
+            {% if pdf_config.metadonnees.date_revision_doc %}Revise le : {{ pdf_config.metadonnees.date_revision_doc }}<br>{% endif %}
+            {% if pdf_config.metadonnees.version_doc %}Version : {{ pdf_config.metadonnees.version_doc }}{% endif %}
+          </td>
+        </tr>
+      </table>
+
+      <table class="service-infos">
+        <tr>
+          <td style="width:50%; vertical-align:top;">
+            <div style="border:2px solid #000; padding:2mm; display:inline-block; min-width:85%;">
+              <div style="font-size:9pt; font-weight:bold; text-align:left; text-transform:uppercase;">MAGASIN SOURCE</div>
+              <div style="font-size:11pt; font-weight:bold; text-align:left; margin-top:0.5mm;">{{ bon.magasin.nom }}</div>
+              <div style="font-size:9pt; text-align:left; margin-top:0.5mm;">
+                <em>Sortie N&deg; :</em> {{ bon.numero_bon }}
+              </div>
+            </div>
+          </td>
+          <td style="width:50%; vertical-align:top;">
+            <div style="border:2px solid #000; padding:2mm; display:inline-block; min-width:85%;">
+              <div style="font-size:9pt; font-weight:bold; text-align:left; text-transform:uppercase;">MAGASIN DESTINATION</div>
+              <div style="font-size:11pt; font-weight:bold; text-align:left; margin-top:0.5mm;">{{ bon.magasin_destination.nom }}</div>
+              <div style="font-size:9pt; text-align:left; margin-top:0.5mm;">
+                <em>Entr&eacute;e N&deg; :</em> {{ bon.numero_bon }}
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="width:50%; vertical-align:top; text-align:left; font-size:9pt; padding-top:1mm;">
+            <strong><em>BON N&deg; : <span style="font-size:11pt;">{{ bon.numero_bon }}</span></em></strong><br>
+            <strong><em>Date : {{ bon.date_bon|date:"d/m/Y" }}</em></strong>
+            {% if bon.commentaire %}<br><em>Observations :</em> {{ bon.commentaire }}{% endif %}
+          </td>
+          <td style="width:50%; vertical-align:top; text-align:right; font-size:9pt; padding-top:1mm;">
+            {% if bon.cree_par %}<em>Etabli par :</em> {{ bon.cree_par.get_full_name|default:bon.cree_par.username }}{% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th rowspan="2" style="width:8%;">N&deg;</th>
+            <th rowspan="2" style="width:13%;">R&eacute;f.</th>
+            <th rowspan="2" style="width:{% if a_lots %}36{% else %}55{% endif %}%;">D&eacute;signations</th>
+            <th rowspan="2" style="width:8%;">Unit&eacute;</th>
+            <th rowspan="2" style="width:10%;">Quantit&eacute;</th>
+            {% if a_lots %}
+            <th rowspan="2" style="width:14%;">N&deg; Lot</th>
+            <th rowspan="2" style="width:11%;">P&eacute;remption</th>
+            {% endif %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for ligne in pages.0.lignes %}
+          <tr>
+            <td style="text-align:center;">{{ ligne.idx }}</td>
+            <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+            <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
+            <td style="text-align:center;">{{ ligne.unite }}</td>
+            <td style="text-align:center;">{{ ligne.quantite }}</td>
+            {% if a_lots %}
+            <td style="text-align:center;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+            <td style="text-align:center;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <div class="bloc-bas">
+    {% if bon.commentaire %}
+    <div class="sondage-box">
+      <div class="sondage-title"><span>OBSERVATIONS</span></div>
+      <div>{{ bon.commentaire }}</div>
+    </div>
+    {% endif %}
+
+    {% if pdf_config.sondage.trait_separation %}<hr class="pied-trait" style="border-top:3px solid #000;">{% endif %}
+
+        {% include "stock/pdf/_signatures.html" %}
+
+  </div>
+
+</div>
+
+{% else %}
+
+{% for page in pages %}
+
+  {% if forloop.first %}
+  <div class="page">
+
+    <div>
+      {% if pdf_config.cartouche.afficher_republique or pdf_config.cartouche.afficher_devise %}
+      <table class="en-tete-etatique">
+        <tr>
+          <td style="width:50%; vertical-align:middle; text-align:left;">
+            {% if pdf_config.cartouche.afficher_republique %}
+              <div style="display:inline-block; text-align:center;">
+                <strong>Ministere de la Sante, de l'Hygiene Publique<br>et de la Couverture Maladie Universelle</strong>
+              </div>
+            {% endif %}
+          </td>
+          <td style="width:50%; vertical-align:middle; text-align:right;">
+            {% if pdf_config.cartouche.afficher_republique %}
+              <div style="display:inline-block; text-align:center;">
+                <strong>Republique de Cote d'Ivoire</strong><br>
+                <em>Union - Discipline - Travail</em>
+              </div>
+            {% endif %}
+          </td>
+        </tr>
+      </table>
+      {% endif %}
+
+      <table class="cartouche">
+        <tr>
+          <td style="width:25%; text-align:center; vertical-align:middle;">
+            {% if pdf_config.cartouche.afficher_logo and logo_url %}
+              <img src="{{ logo_url }}" style="max-height:18mm;">
+            {% endif %}
+          </td>
+          <td style="width:50%; text-align:center; vertical-align:middle; border-left:none; padding:0;">
+    {% if pdf_config.metadonnees.ps2_label %}
+      <div style="font-size:10pt; font-weight:bold; padding:1mm 1mm 0 1mm;">{{ pdf_config.metadonnees.ps2_label }}</div>
+      <div style="border-top:1px solid #000; margin:0;"></div>
+    {% endif %}
+    <div style="font-size:15pt; font-weight:bold; text-transform:uppercase; padding:1mm 1mm 0 1mm;">BON DE TRANSFERT</div>
+    <div style="font-size:13pt; font-weight:bold; text-transform:uppercase; padding:0 1mm 1mm 1mm;">INTER-MAGASINS</div>
+</td>
+          <td style="width:25%; vertical-align:top; text-align:left; border-left:none; font-size:10pt; font-weight:bold;">
+            {% if pdf_config.metadonnees.code_document %}Code : {{ pdf_config.metadonnees.code_document }}<br>{% endif %}
+            {% if pdf_config.metadonnees.date_creation_doc %}Cree le : {{ pdf_config.metadonnees.date_creation_doc }}<br>{% endif %}
+            {% if pdf_config.metadonnees.date_revision_doc %}Revise le : {{ pdf_config.metadonnees.date_revision_doc }}<br>{% endif %}
+            {% if pdf_config.metadonnees.version_doc %}Version : {{ pdf_config.metadonnees.version_doc }}{% endif %}
+          </td>
+        </tr>
+      </table>
+
+      <table class="service-infos">
+        <tr>
+          <td style="width:50%; vertical-align:top;">
+            <div style="border:2px solid #000; padding:2mm; display:inline-block; min-width:85%;">
+              <div style="font-size:9pt; font-weight:bold; text-align:left; text-transform:uppercase;">MAGASIN SOURCE</div>
+              <div style="font-size:11pt; font-weight:bold; text-align:left; margin-top:0.5mm;">{{ bon.magasin.nom }}</div>
+              <div style="font-size:9pt; text-align:left; margin-top:0.5mm;">
+                <em>Sortie N&deg; :</em> {{ bon.numero_bon }}
+              </div>
+            </div>
+          </td>
+          <td style="width:50%; vertical-align:top;">
+            <div style="border:2px solid #000; padding:2mm; display:inline-block; min-width:85%;">
+              <div style="font-size:9pt; font-weight:bold; text-align:left; text-transform:uppercase;">MAGASIN DESTINATION</div>
+              <div style="font-size:11pt; font-weight:bold; text-align:left; margin-top:0.5mm;">{{ bon.magasin_destination.nom }}</div>
+              <div style="font-size:9pt; text-align:left; margin-top:0.5mm;">
+                <em>Entr&eacute;e N&deg; :</em> {{ bon.numero_bon }}
+              </div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="width:50%; vertical-align:top; text-align:left; font-size:9pt; padding-top:1mm;">
+            <strong><em>BON N&deg; : <span style="font-size:11pt;">{{ bon.numero_bon }}</span></em></strong><br>
+            <strong><em>Date : {{ bon.date_bon|date:"d/m/Y" }}</em></strong>
+            {% if bon.commentaire %}<br><em>Observations :</em> {{ bon.commentaire }}{% endif %}
+          </td>
+          <td style="width:50%; vertical-align:top; text-align:right; font-size:9pt; padding-top:1mm;">
+            {% if bon.cree_par %}<em>Etabli par :</em> {{ bon.cree_par.get_full_name|default:bon.cree_par.username }}{% endif %}
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div>
+      <table class="data-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width:8%;">N&deg;</th>
+              <th rowspan="2" style="width:13%;">R&eacute;f.</th>
+              <th rowspan="2" style="width:{% if a_lots %}36{% else %}55{% endif %}%;">D&eacute;signations</th>
+              <th rowspan="2" style="width:8%;">Unit&eacute;</th>
+              <th rowspan="2" style="width:10%;">Quantit&eacute;</th>
+              {% if a_lots %}
+              <th rowspan="2" style="width:14%;">N&deg; Lot</th>
+              <th rowspan="2" style="width:11%;">P&eacute;remption</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for ligne in page.lignes %}
+            <tr>
+              <td style="text-align:center;">{{ ligne.idx }}</td>
+              <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+              <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
+              <td style="text-align:center;">{{ ligne.unite }}</td>
+              <td style="text-align:center;">{{ ligne.quantite }}</td>
+              {% if a_lots %}
+              <td style="text-align:center;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+              <td style="text-align:center;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+
+  </div>
+
+
+  {% elif page.est_derniere_page %}
+  {% with nb_lignes=page.lignes|length %}
+  {% if nb_lignes >= 15 %}
+  <div class="page page-break page-flex">
+  {% else %}
+  <div class="page page-break">
+  {% endif %}
+
+    <div class="content-main">
+      <div>
+        <table class="data-table">
+            <thead>
+              <tr>
+                <th rowspan="2" style="width:8%;">N&deg;</th>
+                <th rowspan="2" style="width:13%;">R&eacute;f.</th>
+                <th rowspan="2" style="width:{% if a_lots %}36{% else %}55{% endif %}%;">D&eacute;signations</th>
+                <th rowspan="2" style="width:8%;">Unit&eacute;</th>
+                <th rowspan="2" style="width:10%;">Quantit&eacute;</th>
+                {% if a_lots %}
+                <th rowspan="2" style="width:14%;">N&deg; Lot</th>
+                <th rowspan="2" style="width:11%;">P&eacute;remption</th>
+                {% endif %}
+              </tr>
+            </thead>
+            <tbody>
+              {% for ligne in page.lignes %}
+              <tr>
+                <td style="text-align:center;">{{ ligne.idx }}</td>
+                <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+                <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
+                <td style="text-align:center;">{{ ligne.unite }}</td>
+                <td style="text-align:center;">{{ ligne.quantite }}</td>
+                {% if a_lots %}
+                <td style="text-align:center;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+                <td style="text-align:center;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+                {% endif %}
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+      </div>
+    </div>
+
+    <div class="bloc-bas">
+      {% if bon.commentaire %}
+      <div class="sondage-box">
+        <div class="sondage-title"><span>OBSERVATIONS</span></div>
+        <div>{{ bon.commentaire }}</div>
+      </div>
+      {% endif %}
+
+      {% if pdf_config.sondage.trait_separation %}<hr class="pied-trait" style="border-top:3px solid #000;">{% endif %}
+
+          {% include "stock/pdf/_signatures.html" %}
+
+    </div>
+
+  </div>
+  {% endwith %}
+
+
+  {% else %}
+  <div class="page page-break">
+    <div>
+      <table class="data-table">
+          <thead>
+            <tr>
+              <th rowspan="2" style="width:8%;">N&deg;</th>
+              <th rowspan="2" style="width:13%;">R&eacute;f.</th>
+              <th rowspan="2" style="width:{% if a_lots %}36{% else %}55{% endif %}%;">D&eacute;signations</th>
+              <th rowspan="2" style="width:8%;">Unit&eacute;</th>
+              <th rowspan="2" style="width:10%;">Quantit&eacute;</th>
+              {% if a_lots %}
+              <th rowspan="2" style="width:14%;">N&deg; Lot</th>
+              <th rowspan="2" style="width:11%;">P&eacute;remption</th>
+              {% endif %}
+            </tr>
+          </thead>
+          <tbody>
+            {% for ligne in page.lignes %}
+            <tr>
+              <td style="text-align:center;">{{ ligne.idx }}</td>
+              <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+              <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
+              <td style="text-align:center;">{{ ligne.unite }}</td>
+              <td style="text-align:center;">{{ ligne.quantite }}</td>
+              {% if a_lots %}
+              <td style="text-align:center;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+              <td style="text-align:center;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+              {% endif %}
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+    </div>
+  </div>
+
+  {% endif %}
+
+{% endfor %}
+{% endif %}
+
+</body>
+</html>
