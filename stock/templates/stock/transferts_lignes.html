@@ -1,0 +1,40 @@
+{% for t in transferts %}
+<tr>
+    <td data-label="N° Bon"><strong>{{ t.numero_bon }}</strong></td>
+    <td data-label="Date">{{ t.date_bon|date:"d/m/Y H:i" }}</td>
+    <td data-label="Source → Destination">
+        <span class="badge badge-ok">{{ t.magasin.nom }}</span>
+        <i class="fas fa-arrow-right" style="margin:0 6px;color:var(--text-light);"></i>
+        <span class="badge" style="background:rgba(184,134,11,0.15);color:#7a5c08;">{{ t.magasin_destination.nom }}</span>
+    </td>
+    <td data-label="Articles">
+        {% for ligne in t.lignes_bon.all %}
+            {{ ligne.article.designation }} ({{ ligne.quantite }}){% if not forloop.last %}, {% endif %}
+        {% empty %}—{% endfor %}
+    </td>
+    <td data-label="Créé par">{{ t.cree_par.get_full_name|default:t.cree_par.username|default:"—" }}</td>
+    <td data-label="Statut">
+        {% if t.est_annule %}
+            <span class="badge badge-annule">Annulé</span>
+        {% else %}
+            <span class="badge badge-ok">Effectué</span>
+        {% endif %}
+    </td>
+    <td data-label="Actions" style="text-align:right;white-space:nowrap;">
+        <a href="{% url 'imprimer_bon_multi_lignes' t.id %}" target="_blank" class="btn-action btn-print" title="Imprimer le bon de transfert">
+            <i class="fas fa-print"></i> Imprimer
+        </a>
+        {% if not t.est_annule %}
+        <button class="btn-action btn-cancel" onclick="annulerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Annuler le transfert (le stock revient au magasin source)">
+            <i class="fas fa-ban"></i> Annuler
+        </button>
+        {% endif %}
+    </td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="7" style="text-align:center;padding:40px;color:var(--text-light);">
+        Aucun transfert trouvé.
+    </td>
+</tr>
+{% endfor %}

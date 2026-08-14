@@ -1,0 +1,30 @@
+{% for lot in lots_a_expirer %}
+<tr>
+    <td>
+        <strong>{{ lot.article.designation }}</strong>
+        <div style="font-size:11px;color:var(--text-light);">{{ lot.article.reference }}</div>
+    </td>
+    <td>
+        <span class="nx-badge nx-badge-grey"><i class="fas fa-barcode"></i> {{ lot.numero_lot }}</span>
+    </td>
+    <td>{{ lot.date_peremption|date:"d/m/Y" }}</td>
+    <td style="text-align:center;">
+        {% if lot.jours_restants <= 15 %}
+            <span class="nx-badge nx-badge-red">{{ lot.jours_restants }} j</span>
+        {% elif lot.jours_restants <= 30 %}
+            <span class="nx-badge nx-badge-orange">{{ lot.jours_restants }} j</span>
+        {% else %}
+            <span class="nx-badge nx-badge-yellow">{{ lot.jours_restants }} j</span>
+        {% endif %}
+    </td>
+    <td style="text-align:center;"><strong>{{ lot.quantite_restante }}</strong></td>
+    <td>{{ lot.magasin.nom }}</td>
+</tr>
+{% empty %}
+<tr>
+    <td colspan="6" class="nx-empty">
+        <i class="fas fa-check-circle" style="color:#28a745;"></i>
+        Aucun lot n'expire dans les {{ seuil_expiration|default:30 }} prochains jours.
+    </td>
+</tr>
+{% endfor %}

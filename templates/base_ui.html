@@ -652,7 +652,7 @@
         {% endif %}
 
         <!-- MOUVEMENTS DE STOCK -->
-        {% if perms.accounts.menu_entrees or perms.accounts.menu_sorties or perms.accounts.menu_retours_services or perms.accounts.menu_sorties_hors_stock or perms.accounts.menu_livraisons or perms.accounts.menu_reception_commande %}
+        {% if perms.accounts.menu_entrees or perms.accounts.menu_sorties or perms.accounts.menu_retours_services or perms.accounts.menu_sorties_hors_stock or perms.accounts.menu_livraisons or perms.accounts.menu_reception_commande or perms.accounts.menu_transferts %}
         <div class="module-title" onclick="toggleMenu('menu-mouvements')" data-title="Mouvements">
             <span style="display:flex;align-items:center;"><i class="fas fa-exchange-alt nav-icon" style="color:#28a745;"></i><span class="nav-text">Mouvements de Stock</span></span>
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-mouvements"></i>
@@ -669,6 +669,9 @@
             {% endif %}
             {% if perms.accounts.menu_retours_services %}
             <a href="{% url 'liste_retours_services' %}" class="menu-item" data-title="Retours"><i class="fas fa-undo-alt nav-icon" style="color:#8be0ee;"></i><span class="nav-text">Retours Services</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_transferts %}
+            <a href="{% url 'liste_transferts' %}" class="menu-item" data-title="Transferts"><i class="fas fa-arrows-alt-h nav-icon" style="color:#ffd166;"></i><span class="nav-text">Transferts inter-Magasins</span></a>
             {% endif %}
             {% if perms.accounts.menu_livraisons %}
             <a href="{% url 'liste_livraisons' %}" class="menu-item" data-title="Livraisons"><i class="fas fa-dolly nav-icon" style="color:#cfabff;"></i><span class="nav-text">Livraisons</span></a>
@@ -756,6 +759,7 @@
             {% endif %}
             {% if perms.accounts.menu_pat_contrats %}
             <a href="{% url 'patrimoine_contrats' %}" class="menu-item" data-title="Contrats"><i class="fas fa-file-contract nav-icon" style="color:#17a2b8;"></i><span class="nav-text">Contrats</span></a>
+            <a href="{% url 'patrimoine_echeancier_maintenance' %}" class="menu-item" data-title="Echeancier Maint."><i class="fas fa-calendar-check nav-icon" style="color:#28a745;"></i><span class="nav-text">Échéancier Maintenance</span></a>
             {% endif %}
             {% if perms.accounts.menu_pat_import %}
             <a href="{% url 'patrimoine_import' %}" class="menu-item" data-title="Import"><i class="fas fa-file-import nav-icon" style="color:#28a745;"></i><span class="nav-text">Import Excel</span></a>

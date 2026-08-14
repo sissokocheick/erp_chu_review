@@ -18,7 +18,7 @@ ROLE_DEFS = {
             'menu_demandes', 'menu_guichet',
             'menu_entrees', 'menu_reception_commande',
             'menu_sorties', 'menu_sorties_hors_stock', 'menu_retours_services',
-            'menu_livraisons',
+            'menu_transferts', 'menu_livraisons',
             'menu_stock', 'menu_peremptions', 'menu_destructions',
             'menu_ajustements', 'menu_inventaires', 'menu_historique',
             'menu_articles', 'menu_familles', 'menu_fournisseurs',

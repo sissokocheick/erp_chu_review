@@ -165,13 +165,13 @@ class StockService:
         filtre_entrees = {
             'article': article,
             'magasin': magasin,
-            'type_mouvement__in': ['ENTREE', 'AJUSTEMENT_POS', 'RETOUR_SERVICE'],
+            'type_mouvement__in': ['ENTREE', 'AJUSTEMENT_POS', 'RETOUR_SERVICE', 'TRANSFERT_ENTREE'],
             'date_mouvement__lte': date_reference,
         }
         filtre_sorties = {
             'article': article,
             'magasin': magasin,
-            'type_mouvement__in': ['SORTIE', 'AJUSTEMENT_NEG', 'RETOUR_FOURNISSEUR'],
+            'type_mouvement__in': ['SORTIE', 'AJUSTEMENT_NEG', 'RETOUR_FOURNISSEUR', 'TRANSFERT_SORTIE'],
             'date_mouvement__lte': date_reference,
         }
 

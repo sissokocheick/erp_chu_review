@@ -9,6 +9,11 @@ os.environ.setdefault('DJANGO_DEBUG', 'True')
 # Désactive la journalisation des requêtes lentes (pas d'écriture disque
 # dans les tests, et le logger django.db.backends resterait silencieux).
 os.environ['TEST_MODE'] = '1'
+# Les tests E2E Playwright (sync_api) font tourner leur propre boucle
+# d'événements : Django l'interprète comme un contexte async et lève
+# SynchronousOnlyOperation. On autorise l'accès sync aux objets ORM
+# (limité à l'exécution des tests).
+os.environ.setdefault('DJANGO_ALLOW_ASYNC_UNSAFE', '1')
 
 from .settings import *
 

@@ -290,9 +290,29 @@ Rotation du comptage **par famille / par zone** au lieu d'une campagne complète
 - Accès : menu **Gestion des stocks → Inventaire Tournant** (permission `menu_inventaires`).
 - La page liste est **filtrée par le magasin actif** sélectionné dans l'en-tête.
 
+### Transferts inter-Magasins (`/transferts/`)
+- **Déplacement de stock entre deux magasins** (ex. pharmacie centrale → unité de soins)
+  sans passer par un fournisseur ni un service.
+- Création via modale : magasin **source** (autorisé) → magasin **destination**, lignes
+  d'articles + quantités, commentaire.
+- **Tracé par deux mouvements liés** (TRANSFERT_SORTIE côté source, TRANSFERT_ENTREE
+  côté destination) partageant le même numéro de bon — chaque magasin voit le flux
+  dans son historique.
+- **FEFO côté source** : les articles gérés en lot partent par péremption la plus
+  proche ; les lots **périmés sont bloqués** (destruction requise). Le lot et la date
+  de péremption sont **conservés à l'arrivée**, ainsi que la valeur CMUP.
+- Impression du bon de transfert (PDF) et **annulation** : le stock revient au magasin
+  source (contre-mouvements automatiques).
+- Entrée au menu **Mouvements de Stock** (permission `accounts.menu_transferts`).
+
 ### Gestion des Lots (`/lots/`) & Suivi Péremptions (`/stock/peremptions/`)
 - Lots (n° de lot, dates de péremption) des articles « gérés en lot ».
 - Liste des **péremptions proches ou dépassées** (alerte visuelle).
+- Onglet **« À expirer »** : liste les lots dont la péremption tombe dans les
+  prochains jours, avec **seuil paramétrable (30 / 60 / 90 / 180 j)** — idéal pour
+  planifier les destructions préventives ou prioriser une consommation.
+  Quantité restante calculée après sorties, jours restants affichés
+  (rouge ≤ 15 j, orange ≤ 30 j, jaune sinon).
 
 ### Historique Mouvements (`/administration/historique/`)
 - Journal complet des mouvements de stock (entrées, sorties, retours, ajustements,
@@ -352,6 +372,16 @@ Rotation du comptage **par famille / par zone** au lieu d'une campagne complète
 ### Contrats (`/patrimoine/contrats/`)
 - Contrats de maintenance : fournisseur, équipements couverts, dates, montant.
 - Détail d'un contrat ; **assigner des équipements** à un contrat.
+
+### Échéancier Maintenance Préventive (`/patrimoine/echeancier-maintenance/`)
+- Planifie les **maintenances préventives** par contrat actif : chaque contrat a une
+  **fréquence** (en mois, ex. 12 = annuelle, 6 = semestrielle, 3 = trimestrielle).
+- La **prochaine échéance** est calculée depuis la dernière intervention préventive
+  réalisée (date de fin + fréquence) ; à défaut, depuis la date de début du contrat.
+- **KPIs** : contrats actifs, maintenances **en retard**, à prévoir sous 30 jours.
+- Les contrats en retard (échéance dépassée sans préventive) sont remontés en tête
+  avec le nombre de jours de retard ; chaque ligne indique le prestataire, la dernière
+  préventive, les équipements couverts et le coût annuel.
 
 ### Interventions / SAV
 - **Signaler une panne** sur un bien (`/patrimoine/signaler/<id>/`) → crée un **ticket SAV**.

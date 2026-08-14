@@ -1,0 +1,462 @@
+{% extends "base_ui.html" %}
+
+{% block contenu %}
+<style>
+    .page-header-bar {
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 2px solid var(--border-color);
+        padding-bottom: 15px; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+    }
+    .page-header-bar h2 { color: var(--text-dark); margin: 0; font-size: 20px; }
+
+    .btn-new {
+        background: #ffd166; color: #212529; border: none;
+        padding: 10px 15px; border-radius: 8px; font-weight: 700; font-size: 14px;
+        transition: 0.2s; box-shadow: 0 2px 8px rgba(255,209,102,0.4);
+        cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-new:hover { background: #f5c04c; transform: translateY(-1px); }
+
+    .search-bar {
+        display: flex; gap: 15px; margin-bottom: 15px;
+        background: var(--bg-stripe); padding: 15px;
+        border-radius: 10px; border: 1px solid var(--border-light); flex-wrap: wrap;
+    }
+    .search-bar input {
+        padding: 10px; border: 2px solid var(--border-color);
+        border-radius: 8px; font-size: 13px; outline: none;
+        background: var(--bg-input); color: var(--text-dark); transition: 0.2s;
+        flex: 3; min-width: 260px;
+    }
+    .search-bar input:focus { border-color: #ffd166; box-shadow: 0 0 0 3px rgba(255,209,102,0.2); }
+    .btn-reset {
+        color: #dc3545; background: #ffebeb; padding: 10px 20px; border-radius: 8px;
+        text-decoration: none; font-weight: 700; font-size: 13px; display: inline-flex;
+        align-items: center; gap: 8px; border: 1px solid #f5c6cb; transition: 0.2s;
+    }
+    .btn-reset:hover { background: #f8d7da; }
+
+    .per-page-bar { display: flex; justify-content: flex-end; margin-bottom: 15px; }
+    .per-page-bar select {
+        padding: 5px 10px; border-radius: 8px; border: 1px solid var(--border-color);
+        cursor: pointer; background: var(--bg-card); color: var(--text-dark);
+    }
+
+    .table-card {
+        background: var(--bg-card); border-radius: 10px;
+        box-shadow: 0 2px 10px var(--shadow); overflow: auto;
+        max-height: calc(100vh - 300px);
+        border: 1px solid var(--border-light); position: relative;
+    }
+    .table-card table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .table-card table.main-table thead tr { background: #b8860b; }
+    .table-card table.main-table thead th {
+        position: sticky; top: 0; z-index: 3; background: #b8860b;
+        padding: 13px 15px; color: white; font-weight: 600;
+        font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; border: none;
+    }
+    .table-card table.main-table tbody tr { border-bottom: 1px solid var(--border-light); transition: background 0.2s; }
+    .table-card table.main-table tbody tr:hover { background: var(--bg-hover); }
+    .table-card table.main-table tbody td { padding: 13px 15px; vertical-align: middle; color: var(--text-dark); }
+    .table-card .pagination-bar, .table-card .tb-bar { position: sticky; bottom: 0; z-index: 3; }
+    @media (max-width: 768px) {
+        .table-card { max-height: none; }
+        .table-card table.main-table thead th { position: static; }
+        .table-card table.main-table thead { display: none; }
+        .table-card table.main-table tbody tr {
+            display: block; border: 1px solid var(--border-light);
+            border-radius: 8px; margin-bottom: 10px; padding: 10px;
+        }
+        .table-card table.main-table tbody td {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 6px; border: none; font-size: 13px;
+        }
+        .table-card table.main-table tbody td::before {
+            content: attr(data-label); font-weight: 700; font-size: 11px;
+            text-transform: uppercase; color: var(--text-medium);
+        }
+    }
+
+    .badge { padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+    .badge-ok { background: rgba(40,167,69,0.15); color: #155724; }
+    .badge-annule { background: rgba(220,53,69,0.15); color: #721c24; }
+
+    .btn-action {
+        display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px;
+        border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer;
+        border: 1px solid transparent; text-decoration: none; transition: 0.2s;
+    }
+    .btn-print { background: rgba(23,162,184,0.12); color: #0c7d8a; border-color: rgba(23,162,184,0.3); }
+    .btn-print:hover { background: rgba(23,162,184,0.25); }
+    .btn-cancel { background: rgba(220,53,69,0.1); color: #a71d2a; border-color: rgba(220,53,69,0.3); }
+    .btn-cancel:hover { background: rgba(220,53,69,0.22); }
+
+    /* Modal */
+    .modal-overlay {
+        display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(0,0,0,0.55); z-index: 2147483647; align-items: flex-start;
+        justify-content: center; backdrop-filter: blur(3px); padding-top: 5vh; overflow-y: auto;
+    }
+    .modal-box {
+        background: var(--bg-card); width: 95%; max-width: 1000px;
+        border-radius: 12px; box-shadow: 0 20px 50px var(--shadow);
+        display: flex; flex-direction: column; margin-bottom: 5vh;
+    }
+    .modal-header {
+        background: linear-gradient(135deg, #8a6d1a, #b8860b); color: white;
+        padding: 18px 25px; border-radius: 12px 12px 0 0; display: flex;
+        justify-content: space-between; align-items: center; font-weight: 700;
+    }
+    .modal-header .mc { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; }
+    .modal-body { padding: 25px; background: var(--bg-stripe); }
+    .vd-section {
+        background: var(--bg-card); padding: 20px; border-radius: 10px;
+        box-shadow: 0 2px 8px var(--shadow); margin-bottom: 20px;
+        border: 1px solid var(--border-light);
+    }
+    .vd-label { font-size: 12px; font-weight: 700; color: var(--text-medium); text-transform: uppercase; margin-bottom: 8px; display: block; }
+    .vd-input {
+        width: 100%; padding: 10px 12px; border: 2px solid var(--border-color);
+        border-radius: 8px; font-size: 14px; box-sizing: border-box; transition: 0.2s;
+        background: var(--bg-input); color: var(--text-dark);
+    }
+    .vd-input:focus { border-color: #b8860b; outline: none; box-shadow: 0 0 0 3px rgba(184,134,11,0.15); }
+    .vd-header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .vd-table { width: 100%; border-collapse: collapse; }
+    .vd-table-header { background: var(--thead-bg); color: white; font-size: 13px; text-transform: uppercase; }
+    .vd-table th { padding: 12px; font-weight: 600; }
+    .vd-table td { padding: 12px; border-bottom: 1px solid var(--border-light); font-size: 14px; vertical-align: middle; color: var(--text-dark); }
+    .modal-footer {
+        padding: 20px 25px; background: var(--bg-stripe); border-top: 1px solid var(--border-light);
+        display: flex; justify-content: flex-end; gap: 15px; border-radius: 0 0 12px 12px;
+        flex-wrap: wrap;
+    }
+    @media (max-width: 768px) {
+        .modal-body { padding: 14px; }
+        .modal-box { width: 98%; }
+        .vd-header-grid { grid-template-columns: 1fr !important; }
+        .modal-footer { flex-direction: column; }
+        .modal-footer .btn-cancel, .modal-footer .btn-submit { width: 100%; }
+    }
+    .btn-cancel { background: var(--bg-card); color: var(--text-medium); border: 1px solid var(--border-color); padding: 10px 25px; border-radius: 8px; cursor: pointer; font-weight: 700; }
+    .btn-submit { background: #b8860b; color: white; border: none; padding: 10px 30px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 15px; box-shadow: 0 4px 10px rgba(184,134,11,0.4); }
+    .btn-submit:hover { background: #9a7209; }
+
+    .btn-add-ligne {
+        background: rgba(23,162,184,0.12); color: #0c7d8a; border: 1px dashed rgba(23,162,184,0.5);
+        padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 13px;
+    }
+    .btn-add-ligne:hover { background: rgba(23,162,184,0.22); }
+    .btn-del-ligne { background: rgba(220,53,69,0.1); color: #a71d2a; border: none; width: 32px; height: 32px; border-radius: 6px; cursor: pointer; }
+
+    /* Modal PDF */
+    .mo-pdf {
+        display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+        z-index: 99999; align-items: flex-start; justify-content: center;
+        backdrop-filter: blur(3px); padding-top: 4vh; overflow-y: auto;
+    }
+    .mo-pdf.open { display: flex; }
+    .mb-pdf { background: var(--bg-card); border-radius: 12px; width: 90%; max-width: 900px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); animation: si .2s ease; margin-bottom: 4vh; }
+    @keyframes si { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .mh-pdf { background: linear-gradient(135deg, #8a6d1a, #b8860b); color: white; padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; justify-content: space-between; }
+    .mc-pdf { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; font-size: 16px; cursor: pointer; transition: .2s; display: inline-flex; align-items: center; justify-content: center; }
+    .mc-pdf:hover { background: rgba(255,255,255,0.4); }
+    .mfoot-pdf { padding: 14px 24px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 10px; background: var(--bg-stripe); border-radius: 0 0 12px 12px; }
+    .btn-ok-pdf { background: linear-gradient(135deg, #8a6d1a, #b8860b); color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; transition: .2s; }
+    .btn-ok-pdf:hover { opacity: 0.9; }
+    .btn-nok-pdf { background: var(--bg-hover); color: var(--text-medium); border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: .2s; }
+    .btn-nok-pdf:hover { background: var(--border-color); }
+
+    .swal2-container { z-index: 2147483647 !important; }
+    body.dark-mode .page-header-bar h2 { color: var(--text-light, #f1f5f9); }
+    body.dark-mode .table-card table.main-table tbody tr:hover { background: var(--bg-hover, #334155); }
+    body.dark-mode .table-card table.main-table tbody td { color: var(--text-dark, #cbd5e1); }
+    body.dark-mode .search-bar { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
+    body.dark-mode .search-bar input { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+    body.dark-mode .modal-box { background: var(--bg-card, #1e293b); }
+    body.dark-mode .modal-body { background: var(--bg-hover, #334155); }
+    body.dark-mode .vd-section { background: var(--bg-card, #1e293b); }
+    body.dark-mode .vd-table td { color: var(--text-dark, #cbd5e1); }
+</style>
+
+<div class="page-header-bar">
+    <h2><i class="fas fa-arrows-alt-h" style="color:#b8860b;"></i> Transferts inter-Magasins</h2>
+    <button class="btn-new" onclick="document.getElementById('modal-transfert').style.display='flex'">
+        <i class="fas fa-exchange-alt"></i> Nouveau Transfert
+    </button>
+</div>
+
+<form method="get" class="search-bar">
+    <input type="text" name="q" value="{{ q_transfert }}" placeholder="🔍 Rechercher par n° de bon, article, magasin…" class="search-input-q">
+    <a href="{% url 'liste_transferts' %}" class="btn-reset"><i class="fas fa-undo-alt"></i> Réinitialiser</a>
+</form>
+
+<div class="per-page-bar">
+    <form method="get" style="display:flex;align-items:center;gap:8px;">
+        {% if q_transfert %}<input type="hidden" name="q" value="{{ q_transfert }}">{% endif %}
+        <label style="font-size:13px;color:var(--text-medium);">Afficher :</label>
+        <select name="per_page" onchange="this.form.submit()">
+            <option value="15" {% if per_page == 15 %}selected{% endif %}>15</option>
+            <option value="25" {% if per_page == 25 %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page == 50 %}selected{% endif %}>50</option>
+            <option value="100" {% if per_page == 100 %}selected{% endif %}>100</option>
+        </select>
+    </form>
+</div>
+
+<div class="table-card">
+    <table class="main-table">
+        <thead>
+            <tr>
+                <th>N° Bon</th>
+                <th>Date</th>
+                <th>Source → Destination</th>
+                <th>Articles (Qté)</th>
+                <th>Créé par</th>
+                <th>Statut</th>
+                <th style="text-align:right;">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for t in transferts %}
+            <tr>
+                <td data-label="N° Bon"><strong>{{ t.numero_bon }}</strong></td>
+                <td data-label="Date">{{ t.date_bon|date:"d/m/Y H:i" }}</td>
+                <td data-label="Source → Destination">
+                    <span class="badge badge-ok">{{ t.magasin.nom }}</span>
+                    <i class="fas fa-arrow-right" style="margin:0 6px;color:var(--text-light);"></i>
+                    <span class="badge" style="background:rgba(184,134,11,0.15);color:#7a5c08;">{{ t.magasin_destination.nom }}</span>
+                </td>
+                <td data-label="Articles">
+                    {% for ligne in t.lignes_bon.all %}
+                        {{ ligne.article.designation }} ({{ ligne.quantite }}){% if not forloop.last %}, {% endif %}
+                    {% empty %}—{% endfor %}
+                </td>
+                <td data-label="Créé par">{{ t.cree_par.get_full_name|default:t.cree_par.username|default:"—" }}</td>
+                <td data-label="Statut">
+                    {% if t.est_annule %}
+                        <span class="badge badge-annule">Annulé</span>
+                    {% else %}
+                        <span class="badge badge-ok">Effectué</span>
+                    {% endif %}
+                </td>
+                <td data-label="Actions" style="text-align:right;white-space:nowrap;">
+                    <a href="{% url 'imprimer_bon_multi_lignes' t.id %}" target="_blank" class="btn-action btn-print" title="Imprimer le bon de transfert">
+                        <i class="fas fa-print"></i> Imprimer
+                    </a>
+                    {% if not t.est_annule %}
+                    <button class="btn-action btn-cancel" onclick="annulerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Annuler le transfert (le stock revient au magasin source)">
+                        <i class="fas fa-ban"></i> Annuler
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="7" style="text-align:center;padding:40px;color:var(--text-light);">
+                    <i class="fas fa-arrows-alt-h" style="font-size:30px;display:block;margin-bottom:10px;"></i>
+                    Aucun transfert trouvé.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+{% if transferts.has_other_pages %}
+<div class="pagination-bar" style="display:flex;justify-content:center;gap:8px;padding:15px;">
+    {% if transferts.has_previous %}
+        <a class="btn-action btn-print" href="?page={{ transferts.previous_page_number }}{% if q_transfert %}&q={{ q_transfert }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}">← Précédent</a>
+    {% endif %}
+    <span style="align-self:center;font-size:13px;color:var(--text-medium);">
+        Page {{ transferts.number }} / {{ transferts.paginator.num_pages }} ({{ transferts.paginator.count }} transfert(s))
+    </span>
+    {% if transferts.has_next %}
+        <a class="btn-action btn-print" href="?page={{ transferts.next_page_number }}{% if q_transfert %}&q={{ q_transfert }}{% endif %}{% if per_page %}&per_page={{ per_page }}{% endif %}">Suivant →</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ═════ MODAL IMPRESSION PDF ═════ -->
+<div class="mo-pdf" id="modal-pdf">
+  <div class="mb-pdf">
+    <div class="mh-pdf">
+      <h5 style="margin:0; font-size:16px; font-weight:600;"><i class="fas fa-print me-2"></i> Impression — Bon de Transfert</h5>
+      <button class="mc-pdf" onclick="document.getElementById('modal-pdf').classList.remove('open')"><i class="fas fa-times"></i></button>
+    </div>
+    <div style="padding:10px; min-height:300px; background:#525659;">
+      <div id="pdf-loader" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:50px; gap:14px;">
+        <div style="width:40px; height:40px; border:4px solid #e0e0e0; border-top-color:#b8860b; border-radius:50%; animation:spin .8s linear infinite;"></div>
+        <span style="color:white; font-size:13px;">Génération du document en cours…</span>
+      </div>
+      <iframe id="pdf-iframe" style="display:none; width:100%; height:72vh; border:none; border-radius:0 0 8px 8px;"></iframe>
+    </div>
+    <div class="mfoot-pdf">
+      <button class="btn-nok-pdf" onclick="document.getElementById('modal-pdf').classList.remove('open')">Fermer</button>
+      <button class="btn-ok-pdf" onclick="document.getElementById('pdf-iframe').contentWindow.print()">
+        <i class="fas fa-print me-1"></i> Imprimer
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═════ MODALE SAISIE TRANSFERT ═════ -->
+<div id="modal-transfert" class="modal-overlay">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span><i class="fas fa-exchange-alt me-2"></i> Nouveau Transfert inter-Magasins</span>
+            <button class="mc" onclick="document.getElementById('modal-transfert').style.display='none'"><i class="fas fa-times"></i></button>
+        </div>
+        <form method="post" id="form-transfert">
+            {% csrf_token %}
+            <div class="modal-body">
+                <div class="vd-section">
+                    <div class="vd-header-grid">
+                        <div>
+                            <label class="vd-label">Magasin source *</label>
+                            <select name="magasin_source" class="vd-input" required>
+                                {% for m in magasins_sources %}
+                                <option value="{{ m.id }}" {% if m.id == request.session.magasin_actif_id %}selected{% endif %}>{{ m.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div>
+                            <label class="vd-label">Magasin destination *</label>
+                            <select name="magasin_destination" class="vd-input" required>
+                                {% for m in magasins_destinations %}
+                                <option value="{{ m.id }}">{{ m.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div style="margin-top:15px;">
+                        <label class="vd-label">Commentaire</label>
+                        <input type="text" name="commentaire" class="vd-input" placeholder="Motif du transfert (optionnel)…">
+                    </div>
+                </div>
+
+                <div class="vd-section">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                        <label class="vd-label" style="margin:0;">Articles à transférer *</label>
+                        <button type="button" class="btn-add-ligne" onclick="ajouterLigne()"><i class="fas fa-plus"></i> Ajouter un article</button>
+                    </div>
+                    <table class="vd-table">
+                        <thead class="vd-table-header">
+                            <tr>
+                                <th style="width:60%;">Article</th>
+                                <th style="width:25%;">Quantité</th>
+                                <th style="width:15%;"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="lignes-transfert">
+                            <tr class="ligne-transfert">
+                                <td>
+                                    <select name="articles[]" class="vd-input" required>
+                                        <option value="">— Sélectionner un article —</option>
+                                        {% for a in articles %}
+                                        <option value="{{ a.id }}">{{ a.designation }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </td>
+                                <td><input type="number" name="quantites[]" min="1" value="1" class="vd-input" required></td>
+                                <td style="text-align:center;"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <p style="font-size:12px;color:var(--text-light);margin-top:10px;">
+                        <i class="fas fa-info-circle"></i> Pour les articles gérés en lot, la sortie se fait en FEFO (lots les plus proches de péremption d'abord, lots périmés bloqués). Le lot et la péremption sont conservés à l'arrivée.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="document.getElementById('modal-transfert').style.display='none'">Annuler</button>
+                <button type="submit" class="btn-submit"><i class="fas fa-exchange-alt me-1"></i> Effectuer le transfert</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% if request.GET.print_bon %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const urlImpression = "{% url 'imprimer_bon_multi_lignes' request.GET.print_bon %}";
+        imprimerModal(urlImpression, "Bon de Transfert — {{ request.GET.print_bon }}");
+    });
+</script>
+{% endif %}
+
+<script>
+    const CSRF_TOKEN = '{{ csrf_token }}';
+
+    window.imprimerModal = function(url, titre) {
+        if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
+        var modal = document.getElementById('modal-pdf');
+        var loader = document.getElementById('pdf-loader');
+        var iframe = document.getElementById('pdf-iframe');
+        if (modal) {
+            modal.classList.add('open');
+            loader.style.display = 'flex';
+            iframe.style.display = 'none';
+            iframe.onload = function() {
+                loader.style.display = 'none';
+                iframe.style.display = 'block';
+            };
+            iframe.src = url;
+        } else {
+            window.open(url, '_blank');
+        }
+    };
+
+    function ajouterLigne() {
+        const tbody = document.getElementById('lignes-transfert');
+        const template = document.querySelector('.ligne-transfert');
+        const clone = template.cloneNode(true);
+        clone.querySelector('select').value = '';
+        clone.querySelector('input').value = 1;
+        const td = clone.querySelector('td:last-child');
+        td.innerHTML = '<button type="button" class="btn-del-ligne" onclick="this.closest(\'tr\').remove()"><i class="fas fa-trash"></i></button>';
+        tbody.appendChild(clone);
+    }
+
+    function annulerTransfert(id, numero) {
+        Swal.fire({
+            title: 'Annuler le transfert ' + numero + ' ?',
+            text: 'Le stock sera restitué au magasin source (le magasin destination sera débité).',
+            icon: 'warning',
+            input: 'text',
+            inputPlaceholder: 'Motif de l\'annulation (optionnel)',
+            showCancelButton: true,
+            confirmButtonText: 'Oui, annuler',
+            cancelButtonText: 'Non',
+            confirmButtonColor: '#dc3545',
+            inputValidator: () => undefined
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'liste_transferts' %}".replace('liste_transferts', 'transferts/' + id + '/annuler/');
+            form.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + CSRF_TOKEN + '">' +
+                '<input type="hidden" name="motif" value="' + (result.value || '') + '">';
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Fermeture modales au clic extérieur
+        const modalTransfert = document.getElementById('modal-transfert');
+        if (modalTransfert) {
+            modalTransfert.addEventListener('click', function(e) {
+                if (e.target === this) this.style.display = 'none';
+            });
+        }
+        const modalPdf = document.getElementById('modal-pdf');
+        if (modalPdf) {
+            modalPdf.addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('open');
+            });
+        }
+    });
+</script>
+{% endblock %}

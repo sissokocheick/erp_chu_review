@@ -39,6 +39,9 @@ from .views.stock import etat_stock
 from .views.historique import journal_historique
 from .views.lots import api_lots_disponibles
 from .views.utils import changer_magasin
+from .views.transferts import (
+    liste_transferts, annuler_transfert,
+)
 
 # ═════════════════════════════════════════════════════════════════════════════
 # VUES D'IMPRESSION PDF — CENTRALISÉES dans pdf_views.py
@@ -102,6 +105,8 @@ urlpatterns = [
     # ═══════════════════════════════════════════════════════════════════════
     path('stock/retours-services/', liste_retours_services, name='liste_retours_services'),
     path('retours-services/apercu/<int:bon_id>/', apercu_bon_retour, name='apercu_bon_retour'),
+    path('transferts/', liste_transferts, name='liste_transferts'),
+    path('transferts/<int:bon_id>/annuler/', annuler_transfert, name='annuler_transfert'),
     path('stock/retours-services/imprimer/<int:bon_id>/', imprimer_bon_multi_lignes, name='imprimer_bon_retour'),
 
     # ═══════════════════════════════════════════════════════════════════════

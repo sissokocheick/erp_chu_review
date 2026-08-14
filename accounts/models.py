@@ -266,6 +266,7 @@ MENU_ACCESS_PERMISSIONS = [
     ('menu_sorties', 'Bons de Sortie'),
     ('menu_sorties_hors_stock', 'Sorties Hors Stock'),
     ('menu_retours_services', 'Retours Services'),
+    ('menu_transferts', 'Transferts inter-Magasins'),
     
     # === MODULE STOCK - GESTION STOCK ===
     ('menu_stock', 'État du Stock'),

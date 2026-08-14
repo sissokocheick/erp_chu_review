@@ -18,6 +18,8 @@ class StockTransactionService:
         'AJUSTEMENT_NEG_FORCE': 'AJUSTEMENT_POS',
         'RETOUR_SERVICE': 'SORTIE',
         'RETOUR_FOURNISSEUR': 'ENTREE',
+        'TRANSFERT_SORTIE': 'TRANSFERT_ENTREE',
+        'TRANSFERT_ENTREE': 'TRANSFERT_SORTIE',
     }
 
     @staticmethod
@@ -158,7 +160,7 @@ class StockTransactionService:
         if mouvement.date_peremption:
             stock_item.expiry_date = mouvement.date_peremption
 
-        if mouvement.type_mouvement == 'ENTREE':
+        if mouvement.type_mouvement in ('ENTREE', 'TRANSFERT_ENTREE'):
             ancienne_qte = stock_item.quantite_physique
             ancienne_val = stock_item.valeur_cmup or Decimal('0')
             nouvelle_qte = ancienne_qte + mouvement.quantite
@@ -200,7 +202,7 @@ class StockTransactionService:
                     f"demandé={mouvement.quantite}, appliqué={ancienne_qte - nouvelle_qte}"
                 )
 
-        elif mouvement.type_mouvement in ('SORTIE', 'AJUSTEMENT_NEG', 'RETOUR_FOURNISSEUR'):
+        elif mouvement.type_mouvement in ('SORTIE', 'AJUSTEMENT_NEG', 'RETOUR_FOURNISSEUR', 'TRANSFERT_SORTIE'):
             if stock_item.quantite_physique < mouvement.quantite:
                 raise ValidationError(
                     f"Stock insuffisant dans {mouvement.magasin}: {stock_item.quantite_physique} disponible(s)",

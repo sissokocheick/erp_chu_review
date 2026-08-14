@@ -444,6 +444,8 @@ class Mouvement(models.Model):
         ('AJUSTEMENT_NEG_FORCE', 'Ajustement Négatif Forcé (annulation)'),
         ('INVENTAIRE_POS',     'Inventaire Positif (écart constaté)'),
         ('INVENTAIRE_NEG',     'Inventaire Négatif (écart constaté)'),
+        ('TRANSFERT_SORTIE',   'Sortie Transfert inter-magasins'),
+        ('TRANSFERT_ENTREE',   'Entrée Transfert inter-magasins'),
     ]
 
     type_mouvement     = models.CharField(max_length=30, choices=TYPE_MOUVEMENT_CHOICES, db_index=True)
@@ -471,7 +473,7 @@ class Mouvement(models.Model):
 
     def clean(self):
         """Validation métier SANS modification de stock."""
-        if self.type_mouvement in ['SORTIE', 'RETOUR_FOURNISSEUR', 'AJUSTEMENT_NEG']:
+        if self.type_mouvement in ['SORTIE', 'RETOUR_FOURNISSEUR', 'AJUSTEMENT_NEG', 'TRANSFERT_SORTIE']:
             if not self.magasin_id:
                 raise ValidationError("Un mouvement de sortie doit être rattaché à un magasin.")
             filtre = {'article': self.article, 'magasin': self.magasin}
@@ -506,7 +508,8 @@ class Mouvement(models.Model):
         if self.type_mouvement in [
             'ENTREE', 'SORTIE', 'RETOUR_SERVICE', 'RETOUR_FOURNISSEUR',
             'AJUSTEMENT_POS', 'AJUSTEMENT_NEG', 'AJUSTEMENT_NEG_FORCE',
-            'INVENTAIRE_POS', 'INVENTAIRE_NEG'
+            'INVENTAIRE_POS', 'INVENTAIRE_NEG',
+            'TRANSFERT_SORTIE', 'TRANSFERT_ENTREE'
         ]:
             if not self.magasin_id:
                 raise ValidationError("Un mouvement de stock doit être rattaché à un magasin.")
@@ -521,7 +524,7 @@ class Mouvement(models.Model):
                 batch = self.numero_lot if self.numero_lot else None
 
                 # ── BLOC ENTRÉE : ajoute du stock ──
-                if self.type_mouvement in ['ENTREE', 'RETOUR_SERVICE', 'AJUSTEMENT_POS', 'INVENTAIRE_POS']:
+                if self.type_mouvement in ['ENTREE', 'RETOUR_SERVICE', 'AJUSTEMENT_POS', 'INVENTAIRE_POS', 'TRANSFERT_ENTREE']:
                     stock, _ = StockItem.objects.select_for_update().get_or_create(
                         article=self.article, magasin=self.magasin, batch_number=batch,
                         defaults={'quantite_physique': 0, 'valeur_cmup': 0}
@@ -539,7 +542,7 @@ class Mouvement(models.Model):
                     stock.save()
 
                 # ── BLOC SORTIE : retire du stock ──
-                elif self.type_mouvement in ['SORTIE', 'RETOUR_FOURNISSEUR', 'AJUSTEMENT_NEG', 'AJUSTEMENT_NEG_FORCE', 'INVENTAIRE_NEG']:
+                elif self.type_mouvement in ['SORTIE', 'RETOUR_FOURNISSEUR', 'AJUSTEMENT_NEG', 'AJUSTEMENT_NEG_FORCE', 'INVENTAIRE_NEG', 'TRANSFERT_SORTIE']:
                     try:
                         stock = StockItem.objects.select_for_update().get(
                             article=self.article, magasin=self.magasin, batch_number=batch
@@ -590,7 +593,7 @@ class Mouvement(models.Model):
             stock = None
 
         if self.type_mouvement in [
-            'ENTREE', 'RETOUR_SERVICE', 'AJUSTEMENT_POS', 'INVENTAIRE_POS'
+            'ENTREE', 'RETOUR_SERVICE', 'AJUSTEMENT_POS', 'INVENTAIRE_POS', 'TRANSFERT_ENTREE'
         ]:
             if stock:
                 stock.quantite_physique = max(0, stock.quantite_physique - self.quantite)
@@ -599,7 +602,7 @@ class Mouvement(models.Model):
 
         elif self.type_mouvement in [
             'SORTIE', 'RETOUR_FOURNISSEUR', 'AJUSTEMENT_NEG',
-            'AJUSTEMENT_NEG_FORCE', 'INVENTAIRE_NEG'
+            'AJUSTEMENT_NEG_FORCE', 'INVENTAIRE_NEG', 'TRANSFERT_SORTIE'
         ]:
             if stock:
                 stock.quantite_physique += self.quantite
@@ -617,7 +620,7 @@ class Mouvement(models.Model):
             article=stock.article,
             magasin=stock.magasin,
             numero_lot=stock.batch_number,
-            type_mouvement__in=['ENTREE', 'RETOUR_SERVICE', 'AJUSTEMENT_POS', 'INVENTAIRE_POS'],
+            type_mouvement__in=['ENTREE', 'RETOUR_SERVICE', 'AJUSTEMENT_POS', 'INVENTAIRE_POS', 'TRANSFERT_ENTREE'],
             prix_unitaire__isnull=False
         ).exclude(pk=self.pk)
 
@@ -895,6 +898,7 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
         ('RETOUR_FOURNISSEUR', 'Retour Fournisseur (Litige)'),
         ('RETOUR_SERVICE',     "Retour d'un Service"),
         ('AJUSTEMENT',         "Ajustement d'Inventaire"),
+        ('TRANSFERT',          'Transfert inter-magasins'),
     ]
 
     type_bon            = models.CharField(max_length=30, choices=TYPE_BON_CHOICES, db_index=True)
@@ -908,6 +912,7 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
     annule_par          = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='bons_annules_user')
     date_annulation     = models.DateTimeField(null=True, blank=True)
     magasin             = models.ForeignKey(Magasin,     on_delete=models.PROTECT, related_name='bons_magasin')
+    magasin_destination = models.ForeignKey(Magasin, on_delete=models.PROTECT, null=True, blank=True, related_name='bons_transferts_recus', verbose_name='Magasin de destination (Transfert)')
     fournisseur         = models.ForeignKey(Fournisseur, on_delete=models.PROTECT, null=True, blank=True, related_name='bons_fournisseur')
     service_demandeur   = models.ForeignKey(Service,       on_delete=models.PROTECT, null=True, blank=True, related_name='bons_service')
 

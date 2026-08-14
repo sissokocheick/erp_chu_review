@@ -43,7 +43,13 @@ def controle_peremptions(request):
     lots = None
     destructions = None
     lots_inventaire = None
+    lots_a_expirer = None
     nb_perimes = nb_critique = nb_attention = 0
+    # Seuil de l'onglet « À expirer » (en jours, borné 15..365)
+    try:
+        seuil_expiration = min(365, max(15, int(request.GET.get('seuil', 30))))
+    except (TypeError, ValueError):
+        seuil_expiration = 30
     # ── KPIs DESTRUCTION (toujours calculés pour affichage dans les KPIs) ──
     nb_destructions_total = Mouvement.objects.filter(
         type_mouvement='SORTIE',
@@ -71,7 +77,8 @@ def controle_peremptions(request):
 
         stock_physique_sub = StockItem.objects.filter(
             article=OuterRef('article'),
-            magasin=OuterRef('magasin')
+            magasin=OuterRef('magasin'),
+            batch_number=OuterRef('numero_lot')
         ).values('quantite_physique')[:1]
 
         qs = Mouvement.objects.filter(
@@ -116,6 +123,59 @@ def controle_peremptions(request):
             lots_valides.append(lot)
 
         lots, per_page = paginer(lots_valides, request)
+
+    # ── ONGLET À EXPIRER (lots expirant dans les prochains jours) ──
+    elif onglet == 'a_expirer':
+        date_limite = aujourdhui + timedelta(days=seuil_expiration)
+
+        sorties_sub = Mouvement.objects.filter(
+            type_mouvement='SORTIE',
+            article=OuterRef('article'),
+            numero_lot=OuterRef('numero_lot'),
+            magasin=OuterRef('magasin')
+        ).values('article', 'numero_lot', 'magasin').annotate(
+            total=Sum('quantite')
+        ).values('total')[:1]
+
+        stock_physique_sub = StockItem.objects.filter(
+            article=OuterRef('article'),
+            magasin=OuterRef('magasin'),
+            batch_number=OuterRef('numero_lot')
+        ).values('quantite_physique')[:1]
+
+        qs = Mouvement.objects.filter(
+            type_mouvement='ENTREE',
+            date_peremption__isnull=False,
+            date_peremption__gte=aujourdhui,
+            date_peremption__lte=date_limite,
+        ).annotate(
+            qte_sortie=Coalesce(Subquery(sorties_sub), 0),
+            quantite_restante=F('quantite') - F('qte_sortie'),
+            stock_physique=Coalesce(Subquery(stock_physique_sub), 0)
+        ).filter(
+            quantite_restante__gt=0,
+            stock_physique__gt=0
+        ).select_related(
+            'article', 'fournisseur', 'magasin', 'utilisateur'
+        )
+
+        if magasin_id:
+            qs = qs.filter(magasin_id=magasin_id)
+        if q:
+            qs = qs.filter(
+                Q(article__designation__icontains=q) |
+                Q(numero_lot__icontains=q) |
+                Q(article__reference__icontains=q)
+            ).distinct()
+
+        qs = qs.order_by('date_peremption')
+
+        lots_expirants = []
+        for lot in qs:
+            lot.jours_restants = (lot.date_peremption - aujourdhui).days
+            lots_expirants.append(lot)
+
+        lots_a_expirer, per_page = paginer(lots_expirants, request)
 
     # ── ONGLET DESTRUCTION ──
     elif onglet == 'destruction':
@@ -199,6 +259,9 @@ def controle_peremptions(request):
         'nb_perimes': nb_perimes,
         'nb_critique': nb_critique,
         'nb_attention': nb_attention,
+        # À expirer
+        'lots_a_expirer': lots_a_expirer,
+        'seuil_expiration': seuil_expiration,
         # Destruction
         'destructions': destructions,
         'nb_destructions_total': nb_destructions_total,
@@ -213,6 +276,8 @@ def controle_peremptions(request):
             return render(request, 'stock/peremptions_lignes.html', context)
         elif onglet == 'destruction':
             return render(request, 'stock/destructions_lignes.html', context)
+        elif onglet == 'a_expirer':
+            return render(request, 'stock/peremptions_a_expirer_lignes.html', context)
         return render(request, 'stock/lots_lignes.html', context)
 
     return render(request, 'stock/controle_peremptions.html', context)

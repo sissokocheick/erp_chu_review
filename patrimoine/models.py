@@ -523,10 +523,14 @@ class ContratMaintenance(TracabiliteModel):
     cout_annuel     = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'), verbose_name="Coût annuel (FCFA)")
     conditions_sla  = models.TextField(blank=True, verbose_name="Conditions SLA / Delais d'intervention")
     document_scan   = models.FileField(upload_to='contrats_maintenance/%Y/', null=True, blank=True)
-    statut          = models.CharField(max_length=10, choices=STATUT_CHOICES, default='ACTIF')
-    alerte_expiration_jours = models.PositiveSmallIntegerField(
-        default=30,
-        help_text="Nombre de jours avant expiration pour declencher une alerte"
+    statut          = models.CharField(max_length=10, choices=STATUT_CHOICES, default='ACTIF')
+    alerte_expiration_jours = models.PositiveSmallIntegerField(
+        default=30,
+        help_text="Nombre de jours avant expiration pour declencher une alerte"
+    )
+    frequence_mois = models.PositiveSmallIntegerField(
+        default=12,
+        help_text="Fréquence des maintenances préventives (en mois, ex. 12 = annuelle, 6 = semestrielle)"
     )
 
     @property

@@ -21,6 +21,7 @@ ARCHITECTURE_MENU = OrderedDict([
         'menu_sorties',
         'menu_sorties_hors_stock',
         'menu_retours_services',
+        'menu_transferts',
     ]),
 
     ('📦 GESTION DES STOCKS', [
@@ -98,6 +99,7 @@ MENU_ITEMS_META = {
     'menu_sorties':              {'icon': 'fa-sign-out-alt',    'color': '#ff9e9e', 'label': 'Bons de Sortie'},
     'menu_sorties_hors_stock':   {'icon': 'fa-file-export',     'color': '#ffc58a', 'label': 'Sorties Hors Stock'},
     'menu_retours_services':     {'icon': 'fa-undo-alt',        'color': '#8be0ee', 'label': 'Retours Services'},
+    'menu_transferts':           {'icon': 'fa-arrows-alt-h',    'color': '#ffd166', 'label': 'Transferts inter-Magasins'},
 
     # Gestion des Stocks
     'menu_stock':                {'icon': 'fa-search-location', 'color': '#1c5b96', 'label': 'État du Stock'},
@@ -171,7 +173,7 @@ MODULE_ICONS = {
 ROLE_ARCHITECTURE_MENU = OrderedDict([
     ('🏠 ACCUEIL & DASHBOARD', ['menu_accueil', 'menu_dashboard']),
     ('🛒 DEMANDES', ['menu_demandes', 'menu_guichet', 'menu_valider_demandes']),
-    ('🏪 MOUVEMENTS DE STOCK', ['menu_entrees', 'menu_sorties', 'menu_sorties_hors_stock', 'menu_retours_services', 'menu_livraisons', 'menu_reception_commande']),
+    ('🏪 MOUVEMENTS DE STOCK', ['menu_entrees', 'menu_sorties', 'menu_sorties_hors_stock', 'menu_retours_services', 'menu_transferts', 'menu_livraisons', 'menu_reception_commande']),
     ('📦 GESTION DES STOCKS', ['menu_stock', 'menu_ajustements', 'menu_inventaires', 'menu_lots', 'menu_peremptions', 'menu_historique']),
     ('🛍️ ACHATS & CATALOGUE', ['menu_commandes', 'menu_articles', 'menu_familles']),
     ('🏢 PATRIMOINE & SAV', ['menu_pat_tickets', 'menu_pat_tech', 'menu_pat_dispatch', 'menu_pat_historique', 'menu_pat_registre', 'menu_pat_sas', 'menu_pat_contrats', 'menu_pat_import', 'menu_pat_inventaire', 'menu_pat_rebuts', 'menu_pat_pertes', 'menu_pat_parametres']),

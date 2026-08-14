@@ -15,11 +15,10 @@ urlpatterns = [
 
     # ─── Mouvements ────────────────────────────────────────────────────────────    path('<int:pk>/mouvement/',                 views.creer_mouvement,       name='patrimoine_mouvement'),
     # NB: l'historique des mouvements est consultable dans chaque fiche immobilisation
-    # (route liste_mouvements retirée : template patrimoine/mouvements.html inexistant)
-
-    # ─── Contrats ──────────────────────────────────────────────────────────────
-    path('contrats/',                           views.liste_contrats,        name='patrimoine_contrats'),
-    path('contrats/<int:pk>/',                  views.detail_contrat,        name='patrimoine_contrat_detail'),
+    # (route liste_mouvements retirée : template patrimoine/mouvements.html inexistant)    # ─── Contrats ──────────────────────────────────────────────────────────────
+    path('contrats/',                           views.liste_contrats,        name='patrimoine_contrats'),
+    path('contrats/<int:pk>/',                  views.detail_contrat,        name='patrimoine_contrat_detail'),
+    path('echeancier-maintenance/',             views.echeancier_maintenance, name='patrimoine_echeancier_maintenance'),
 
     # ─── Interventions ─────────────────────────────────────────────────────────
     path('interventions/',                      views.liste_interventions,   name='patrimoine_interventions'),

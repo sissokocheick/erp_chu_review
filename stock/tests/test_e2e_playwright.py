@@ -13,11 +13,12 @@ Prérequis (une fois) :
 Si Playwright n'est pas disponible, la suite est ignorée proprement.
 
 Lancement :
-    DJANGO_ALLOW_ASYNC_UNSAFE=1 DJANGO_SETTINGS_MODULE=config.settings_test \\
+    DJANGO_SETTINGS_MODULE=config.settings_test \\
         python manage.py test stock.tests.test_e2e_playwright
 
-(le DJANGO_ALLOW_ASYNC_UNSAFE est requis car Playwright sync tourne sa
-propre boucle d'événements, ce que Django interprète comme un contexte async)
+(config/settings_test.py pose DJANGO_ALLOW_ASYNC_UNSAFE=1 automatiquement :
+Playwright sync tourne sa propre boucle d'événements, ce que Django
+interprète comme un contexte async sans cette variable.)
 """
 import unittest
 
