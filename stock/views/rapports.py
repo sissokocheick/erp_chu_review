@@ -977,3 +977,178 @@ def stats_satisfaction_services(request):
         'magasin_actif': magasin_actif,
     }
     return render(request, 'stock/stats_satisfaction_services.html', context)
+
+# ══════════════════════════════════════════════════════════════════════════════
+# RAPPORT MENSUEL DE CONSOMMATION PAR SERVICE
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _base_consommation(request):
+    """Mouvements de consommation (sorties vers services) scopés magasin."""
+    from django.db.models.functions import Coalesce
+    qs = Mouvement.objects.filter(
+        type_mouvement__in=['SORTIE', 'SORTIE_HORS_STOCK'],
+        service_demandeur__isnull=False,
+        est_annule=False,
+    ).exclude(service_demandeur__code='REBUTS')
+    magasin_id = _get_magasin_filtre(request)
+    if magasin_id:
+        qs = qs.filter(magasin_id=magasin_id)
+    return qs
+
+
+def _filtres_consommation(request, qs):
+    """Applique les filtres période + service à la base de consommation."""
+    date_range = request.GET.get('date_range', '')
+    service_id = request.GET.get('service', '')
+    try:
+        nb_mois = int(request.GET.get('mois', '6'))
+        if nb_mois not in (1, 3, 6, 12):
+            nb_mois = 6
+    except (TypeError, ValueError):
+        nb_mois = 6
+
+    if date_range:
+        date_debut, date_fin = parse_date_range(date_range, default_days=365)
+        qs = qs.filter(
+            date_mouvement__date__gte=date_debut,
+            date_mouvement__date__lte=date_fin)
+    else:
+        date_fin = timezone.now().date()
+        # premier jour du mois, nb_mois en arrière
+        premier = date_fin.replace(day=1)
+        for _ in range(nb_mois - 1):
+            annee, mois = premier.year, premier.month
+            premier = (premier.replace(day=1) - timedelta(days=1)).replace(day=1)
+        date_debut = premier
+        date_range = f"{date_debut.strftime('%d/%m/%Y')} - {date_fin.strftime('%d/%m/%Y')}"
+
+    if service_id:
+        qs = qs.filter(service_demandeur_id=service_id)
+
+    return qs, date_debut, date_fin, service_id, nb_mois, date_range
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_rapports')
+@magasin_requis
+@catch_errors(redirect_url='page_rapports')
+def rapport_consommation_services(request):
+    """Consommation mensuelle par service : tableau + graphique d'évolution."""
+    from django.db.models import DecimalField, Value
+    from django.db.models.functions import Coalesce
+
+    base = _base_consommation(request)
+    qs, date_debut, date_fin, service_id, nb_mois, date_range = \
+        _filtres_consommation(request, base)
+
+    # Montant par ligne (prix_unitaire sinon prix de référence) puis agrégation
+    # (évite le bug Django 6 : Sum(F * F) mélangé à d'autres agrégats)
+    montant_ligne = F('quantite') * Coalesce(
+        'prix_unitaire', 'article__prix_reference', Value(0),
+        output_field=DecimalField(max_digits=14, decimal_places=2))
+
+    # ── Tableau par service ──
+    par_service = qs.annotate(
+        montant_ligne=montant_ligne
+    ).values(
+        'service_demandeur__id', 'service_demandeur__nom',
+        'service_demandeur__code'
+    ).annotate(
+        quantite=Sum('quantite'),
+        nb_mouvements=Count('id'),
+        valeur=Sum('montant_ligne'),
+    ).order_by('-valeur', '-quantite')
+
+    total_quantite = sum(r['quantite'] or 0 for r in par_service)
+    total_valeur = sum(r['valeur'] or 0 for r in par_service)
+    total_mouvements = sum(r['nb_mouvements'] or 0 for r in par_service)
+
+    # ── Évolution mensuelle (séries complètes, mois sans données = 0) ──
+    evolution = qs.annotate(
+        montant_ligne=montant_ligne,
+        mois=TruncMonth('date_mouvement'),
+    ).values('mois').annotate(
+        quantite=Sum('quantite'),
+        valeur=Sum('montant_ligne'),
+    ).order_by('mois')
+
+    # Normaliser les clés en date (TruncMonth renvoie un datetime)
+    data_par_mois = {e['mois'].date(): e for e in evolution}
+
+    # Mois consécutifs de date_debut à date_fin
+    labels, series_qte, series_valeur = [], [], []
+    courant = date_debut.replace(day=1)
+    while courant <= date_fin:
+        entree = data_par_mois.get(courant, {})
+        labels.append(courant.strftime('%m/%Y'))
+        series_qte.append(int(entree.get('quantite') or 0))
+        series_valeur.append(float(entree.get('valeur') or 0))
+        # mois suivant
+        annee, mois = courant.year, courant.month
+        courant = courant.replace(year=annee + (mois == 12), month=(mois % 12) + 1)
+
+    magasin_actif = Magasin.objects.filter(
+        id=_get_magasin_filtre(request)).first()
+
+    context = {
+        'par_service': par_service,
+        'total_quantite': total_quantite,
+        'total_valeur': total_valeur,
+        'total_mouvements': total_mouvements,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'date_range': date_range,
+        'service_id': service_id,
+        'mois': nb_mois,
+        'services': Service.objects.all().order_by('nom'),
+        'chart_labels': json.dumps(labels),
+        'chart_qte': json.dumps(series_qte),
+        'chart_valeur': json.dumps(series_valeur),
+        'magasin_actif': magasin_actif,
+        'export_url': reverse('export_consommation_services_csv'),
+    }
+    return render(request, 'stock/rapport_consommation_services.html', context)
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_rapports')
+@magasin_requis
+@catch_errors(redirect_url='page_rapports')
+def export_consommation_services_csv(request):
+    """Export CSV du rapport de consommation par service (mêmes filtres)."""
+    from django.db.models import DecimalField, Value
+    from django.db.models.functions import Coalesce
+    base = _base_consommation(request)
+    qs, date_debut, date_fin, service_id, nb_mois, date_range = \
+        _filtres_consommation(request, base)
+
+    montant_ligne = F('quantite') * Coalesce(
+        'prix_unitaire', 'article__prix_reference', Value(0),
+        output_field=DecimalField(max_digits=14, decimal_places=2))
+    par_service = qs.annotate(montant_ligne=montant_ligne).values(
+        'service_demandeur__nom', 'service_demandeur__code'
+    ).annotate(
+        quantite=Sum('quantite'),
+        nb_mouvements=Count('id'),
+        valeur=Sum('montant_ligne'),
+    ).order_by('-valeur', '-quantite')
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = (
+        'attachment; filename="Consommation_par_Service.csv"')
+    response.write('\ufeff'.encode('utf8'))
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow([
+        'Service', 'Code', 'Quantité (unités)', 'Valeur (FCFA)',
+        'Nb mouvements', 'Période',
+    ])
+    for r in par_service:
+        writer.writerow([
+            r['service_demandeur__nom'],
+            r['service_demandeur__code'] or '',
+            r['quantite'] or 0,
+            f"{r['valeur'] or 0:.2f}".replace('.', ','),
+            r['nb_mouvements'] or 0,
+            f"{date_debut.strftime('%d/%m/%Y')} - {date_fin.strftime('%d/%m/%Y')}",
+        ])
+    return response

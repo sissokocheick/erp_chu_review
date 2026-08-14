@@ -79,6 +79,22 @@
             </div>
         </div>
 
+        <!-- CARTE 3bis : Consommation par Service -->
+        <div style="border: 1px solid #20c997; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px var(--shadow);">
+            <div style="background: #20c997; color: white; padding: 15px 20px; font-weight: bold; font-size: 16px;">
+                <i class="fas fa-chart-line"></i> Consommation par Service
+            </div>
+            <div style="padding: 20px; background: var(--bg-stripe);">
+                <p style="font-size: 13px; color: var(--text-secondary); margin-top: 0; margin-bottom: 20px;">
+                    Consommation mensuelle par service : quantités, valeurs (FCFA) et évolution sur les
+                    3 / 6 / 12 derniers mois. Export CSV du même rapport.
+                </p>
+                <a href="{% url 'rapport_consommation_services' %}" style="background: #20c997; color: white; border: none; padding: 12px 15px; border-radius: 4px; text-decoration: none; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; font-size: 15px;">
+                    <i class="fas fa-eye"></i> Voir le Rapport
+                </a>
+            </div>
+        </div>
+
         <!-- CARTE 3 : Stats Demandes -->
         <div style="border: 1px solid #17a2b8; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px var(--shadow);">
             <div style="background: #17a2b8; color: white; padding: 15px 20px; font-weight: bold; font-size: 16px;">

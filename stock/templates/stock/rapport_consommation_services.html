@@ -1,0 +1,269 @@
+{% extends "base_ui.html" %}
+{% block title %}Consommation par Service{% endblock %}
+
+{% block contenu %}
+<style>
+  :root {
+    --rc-bg: #ffffff; --rc-bg-alt: #f8fafc;
+    --rc-text: #0f172a; --rc-text-2: #64748b;
+    --rc-border: #e2e8f0; --rc-accent: #20c997;
+    --rc-accent-l: rgba(32,201,151,0.12);
+    --rc-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  body.dark-mode {
+    --rc-bg: #1e293b; --rc-bg-alt: #0f172a;
+    --rc-text: #f1f5f9; --rc-text-2: #94a3b8;
+    --rc-border: #334155; --rc-accent: #2dd4bf;
+    --rc-accent-l: rgba(45,212,191,0.15);
+    --rc-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .rc-header {
+    background: linear-gradient(135deg, var(--rc-accent) 0%, #2563eb 100%);
+    color: white; border-radius: 12px; padding: 22px 26px; margin-bottom: 20px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: var(--rc-shadow); position: relative; overflow: hidden;
+  }
+  .rc-header::before {
+    content: ''; position: absolute; top: -50%; right: -10%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .rc-header h4 { margin: 0; font-size: 21px; font-weight: 800; position: relative; }
+  .rc-header small { opacity: 0.9; font-size: 13px; display: block; margin-top: 4px; }
+  .btn-retour {
+    background: rgba(255,255,255,0.18); color: white; border: 1.5px solid rgba(255,255,255,0.35);
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px; font-weight: 600; position: relative;
+  }
+  .btn-retour:hover { background: rgba(255,255,255,0.3); }
+
+  .rc-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; margin-bottom: 18px; }
+  .rc-kpi {
+    background: var(--rc-bg); border: 1px solid var(--rc-border); border-radius: 12px;
+    padding: 15px 17px; display: flex; align-items: center; gap: 13px; box-shadow: var(--rc-shadow);
+  }
+  .rc-kpi .rc-kpi-icon {
+    width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; font-size: 17px; color: white;
+  }
+  .rc-kpi .rc-val { font-size: 20px; font-weight: 800; line-height: 1.1; color: var(--rc-text); }
+  .rc-kpi .rc-lbl { font-size: 12px; color: var(--rc-text-2); font-weight: 600; }
+
+  .rc-filtres {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end;
+    background: var(--rc-bg); border: 1px solid var(--rc-border);
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+  }
+  .rc-filtres label { display: block; font-size: 11px; color: var(--rc-text-2); font-weight: 700; margin-bottom: 4px; }
+  .rc-filtres select {
+    background: var(--rc-bg-alt); color: var(--rc-text); border: 1.5px solid var(--rc-border);
+    border-radius: 8px; padding: 8px 12px; font-size: 13px; outline: none; font-family: inherit; min-width: 160px;
+  }
+  .rc-filtres select:focus { border-color: var(--rc-accent); }
+  .rc-btn {
+    background: var(--rc-accent); color: white; border: none; padding: 9px 16px;
+    border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+  }
+  .rc-btn:hover { opacity: 0.9; }
+  .rc-btn-outline {
+    background: var(--rc-bg-alt); color: var(--rc-text); border: 1.5px solid var(--rc-border);
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 7px; text-decoration: none;
+  }
+  .rc-btn-outline:hover { border-color: var(--rc-accent); color: var(--rc-accent); }
+
+  .rc-cartes { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  @media (max-width: 992px) { .rc-cartes { grid-template-columns: 1fr; } }
+  .rc-carte {
+    background: var(--rc-bg); border: 1px solid var(--rc-border); border-radius: 12px;
+    box-shadow: var(--rc-shadow); padding: 16px 18px;
+  }
+  .rc-carte h5 { margin: 0 0 12px; font-size: 14px; font-weight: 800; color: var(--rc-text); }
+  .rc-carte .canvas-wrap { position: relative; height: 280px; }
+
+  .rc-table-wrap {
+    background: var(--rc-bg); border-radius: 12px; box-shadow: var(--rc-shadow);
+    border: 1px solid var(--rc-border); overflow: auto; max-height: calc(100vh - 300px);
+  }
+  .rc-table-wrap table thead th { position: sticky; top: 0; z-index: 3; }
+  @media (max-width: 768px) { .rc-table-wrap { max-height: none; } .rc-table-wrap table thead th { position: static; } }
+  .rc-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  .rc-table thead th {
+    background: linear-gradient(135deg, var(--rc-accent), #2563eb); color: white;
+    padding: 12px 14px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .rc-table tbody td { padding: 11px 14px; border-top: 1px solid var(--rc-border); color: var(--rc-text); vertical-align: middle; }
+  .rc-table tbody tr:hover { background: var(--rc-accent-l); }
+  .rc-empty { text-align: center; padding: 36px 20px; color: var(--rc-text-2); font-size: 14px; }
+</style>
+
+<div class="rc-header">
+  <div>
+    <h4><i class="fas fa-chart-line"></i> Consommation par Service</h4>
+    <small>Sorties vers services ({{ date_debut|date:"d/m/Y" }} → {{ date_fin|date:"d/m/Y" }}) — magasin : <strong>{{ magasin_actif.nom }}</strong></small>
+  </div>
+  <a href="{% url 'page_rapports' %}" class="btn-retour">
+    <i class="fas fa-arrow-left"></i> Rapports
+  </a>
+</div>
+
+<div class="rc-kpis">
+  <div class="rc-kpi">
+    <div class="rc-kpi-icon" style="background:#20c997;"><i class="fas fa-boxes"></i></div>
+    <div><div class="rc-val">{{ total_quantite }}</div><div class="rc-lbl">Unités consommées</div></div>
+  </div>
+  <div class="rc-kpi">
+    <div class="rc-kpi-icon" style="background:#2563eb;"><i class="fas fa-coins"></i></div>
+    <div><div class="rc-val">{{ total_valeur|floatformat:0 }} F</div><div class="rc-lbl">Valeur consommée</div></div>
+  </div>
+  <div class="rc-kpi">
+    <div class="rc-kpi-icon" style="background:#6f42c1;"><i class="fas fa-hospital-user"></i></div>
+    <div><div class="rc-val">{{ par_service|length }}</div><div class="rc-lbl">Services consommateurs</div></div>
+  </div>
+  <div class="rc-kpi">
+    <div class="rc-kpi-icon" style="background:#fd7e14;"><i class="fas fa-exchange-alt"></i></div>
+    <div><div class="rc-val">{{ total_mouvements }}</div><div class="rc-lbl">Mouvements</div></div>
+  </div>
+</div>
+
+<form method="get" class="rc-filtres">
+  <div>
+    <label>Période</label>
+    <select name="mois">
+      <option value="1" {% if mois == 1 %}selected{% endif %}>1 mois</option>
+      <option value="3" {% if mois == 3 %}selected{% endif %}>3 mois</option>
+      <option value="6" {% if mois == 6 %}selected{% endif %}>6 mois</option>
+      <option value="12" {% if mois == 12 %}selected{% endif %}>12 mois</option>
+    </select>
+  </div>
+  <div>
+    <label>Service</label>
+    <select name="service">
+      <option value="">Tous les services</option>
+      {% for s in services %}
+        <option value="{{ s.id }}" {% if service_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nom }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="rc-btn"><i class="fas fa-filter"></i> Appliquer</button>
+  <a href="{{ export_url }}?{{ request.GET.urlencode }}" class="rc-btn-outline" title="Exporter les données affichées">
+    <i class="fas fa-file-csv"></i> Export CSV
+  </a>
+</form>
+
+<div class="rc-cartes">
+  <div class="rc-carte">
+    <h5><i class="fas fa-chart-line"></i> Évolution mensuelle</h5>
+    <div class="canvas-wrap"><canvas id="chartEvolution"></canvas></div>
+  </div>
+  <div class="rc-carte">
+    <h5><i class="fas fa-chart-bar"></i> Top services (valeur)</h5>
+    <div class="canvas-wrap"><canvas id="chartTop"></canvas></div>
+  </div>
+</div>
+
+<div class="rc-table-wrap">
+  <table class="rc-table">
+    <thead>
+      <tr>
+        <th>Service</th>
+        <th>Code</th>
+        <th>Unités consommées</th>
+        <th>Valeur (FCFA)</th>
+        <th>Nb mouvements</th>
+        <th>Part (valeur)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in par_service %}
+      <tr>
+        <td><strong>{{ r.service_demandeur__nom }}</strong></td>
+        <td>{{ r.service_demandeur__code|default:"—" }}</td>
+        <td>{{ r.quantite|default:0 }}</td>
+        <td>{{ r.valeur|default:0|floatformat:0 }} F</td>
+        <td>{{ r.nb_mouvements|default:0 }}</td>
+        <td>
+          {% if total_valeur %}
+            <div style="background: var(--rc-border); border-radius: 20px; height: 8px; width: 110px; overflow: hidden;">
+              <div style="width: {{ r.valeur|default:0|floatformat:1|default:0|floatformat:0 }}%; height: 100%; background: var(--rc-accent);"></div>
+            </div>
+          {% else %}
+            —
+          {% endif %}
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="rc-empty"><i class="fas fa-inbox" style="font-size:26px;margin-bottom:8px;"></i><br>Aucune consommation sur la période pour ce filtre.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+(function () {
+  var labels = {{ chart_labels|safe }};
+  var qte = {{ chart_qte|safe }};
+  var valeur = {{ chart_valeur|safe }};
+
+  var evo = document.getElementById('chartEvolution');
+  if (evo && typeof Chart !== 'undefined') {
+    new Chart(evo, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Unités consommées', data: qte,
+            borderColor: '#20c997', backgroundColor: 'rgba(32,201,151,0.15)',
+            fill: true, tension: 0.35, yAxisID: 'y',
+          },
+          {
+            label: 'Valeur (FCFA)', data: valeur,
+            borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)',
+            fill: false, tension: 0.35, yAxisID: 'y1',
+          }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          y: { beginAtZero: true, grid: { color: 'rgba(128,128,128,0.15)' } },
+          y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false } },
+        }
+      }
+    });
+  }
+
+  var topEl = document.getElementById('chartTop');
+  if (topEl && typeof Chart !== 'undefined') {
+    var topLabels = [];
+    var topData = [];
+    var topColors = ['#20c997', '#2563eb', '#fd7e14', '#6f42c1', '#dc3545',
+                     '#17a2b8', '#ffc107', '#e83e8c'];
+    document.querySelectorAll('.rc-table tbody tr').forEach(function (tr, i) {
+      if (i >= 8) return;
+      var tds = tr.querySelectorAll('td');
+      if (tds.length < 4) return;
+      var nom = tds[0].innerText.trim();
+      var val = parseFloat(tds[3].innerText.replace(/[^\d.-]/g, '')) || 0;
+      topLabels.push(nom.length > 22 ? nom.slice(0, 22) + '…' : nom);
+      topData.push(val);
+    });
+    new Chart(topEl, {
+      type: 'doughnut',
+      data: {
+        labels: topLabels,
+        datasets: [{ data: topData, backgroundColor: topColors.slice(0, topData.length) }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '55%',
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10 } } } }
+      }
+    });
+  }
+})();
+</script>
+{% endblock %}
