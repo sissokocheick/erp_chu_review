@@ -102,7 +102,7 @@ s'affiche que si l'utilisateur (ou son rôle) possède la permission corresponda
 | **Accueil & Tableau de bord** | Accueil, Tableau de bord |
 | **Demandes** | Mes Demandes, Traiter (Guichet), **A Valider** ⚠️ (voir §13) |
 | **Mouvements de stock** | Entrées en Stock, Bons de Sortie, Sorties Hors Stock, Retours Services, Livraisons, Réceptions Commandes |
-| **Gestion des stocks** | État du Stock, Ajustements Manuels, Campagnes Inventaires, Gestion des Lots, Suivi Péremptions, Historique Mouvements |
+| **Gestion des stocks** | État du Stock, Ajustements Manuels, Campagnes Inventaires, **Inventaire Tournant**, Gestion des Lots, Suivi Péremptions, Historique Mouvements |
 | **Achats & catalogue** | Commandes Fourn., Catalogue Articles, Familles d'Articles |
 | **Patrimoine & SAV** | Tickets SAV, Espace Tech, Dispatch Pannes, Historique Global, Registre Matériel, Sas Immatriculation, Contrats, Import Excel, Inventaire Parc, Registre Rebuts, Équipements Perdus, Paramètres |
 | **Rapports & exports** | Exports CSV / PDF, Stats Demandes, Stats Sondages, Stats Satisfaction |
@@ -263,6 +263,32 @@ BROUILLON → EN_ATTENTE_VALIDATION → VALIDÉE → (livraison) → CLÔTURÉE
 - Saisie ligne par ligne (sauvegarde AJAX), clôture de campagne.
 - **Résultat d'inventaire** (PDF) : écarts constatés (positifs/négatifs) appliqués au stock.
 - Validation selon le circuit INVENTAIRE.
+
+### Inventaire Tournant (`/inventaires/tournants/`)
+Rotation du comptage **par famille / par zone** au lieu d'une campagne complète, avec planification :
+
+- **Plan de rotation** : titre, magasin, type de rotation (par famille ou par zone =
+  toutes les familles du magasin), fréquence en jours (ex. 90 j), familles cibles.
+- **Échéance automatique** : à la création, la prochaine échéance est fixée à aujourd'hui ;
+  après chaque génération, elle est repoussée de `fréquence` jours. Un badge rouge
+  « Échue » signale les plans dont l'échéance est atteinte.
+- **Génération automatique à l'échéance** : les campagnes échues sont générées
+  automatiquement à la connexion d'un utilisateur (`_generer_tournants_a_echeance`,
+  silencieux et non bloquant) et par la commande
+  `python manage.py generer_inventaires_tournants` (avec `--dry-run` pour prévisualiser) —
+  à brancher en tâche planifiée (cron / Planificateur Windows) pour une rotation sans
+  intervention.
+- **Génération d'une campagne ciblée** (`InventaireService.generer_campagne_tournante`) :
+  - *Par famille* → seuls les articles des familles cibles sont comptés.
+  - *Par zone* → tous les articles du magasin.
+  - Les quantités théoriques sont prises du **stock actuel du magasin du plan** (isolation
+    magasin : le stock des autres magasins ne compte pas).
+  - La campagne créée est de type `PAR_FAMILLE`, liée au magasin du plan, et ouvre
+    directement la page de **saisie** (`/inventaires/<id>/saisir/`).
+- **Activation / pause** : un plan en pause ne peut pas générer de campagne (refus avec
+  message clair) ; un plan sans familles cibles est également refusé.
+- Accès : menu **Gestion des stocks → Inventaire Tournant** (permission `menu_inventaires`).
+- La page liste est **filtrée par le magasin actif** sélectionné dans l'en-tête.
 
 ### Gestion des Lots (`/lots/`) & Suivi Péremptions (`/stock/peremptions/`)
 - Lots (n° de lot, dates de péremption) des articles « gérés en lot ».
@@ -505,7 +531,7 @@ avec la vue `demandes_a_valider`.
 - `stock` : `Magasin`, `Article`, `Famille`, `StockItem` (stock physique), `Mouvement`,
   `BonMouvement`/`LigneBon`, `DemandeMateriel`, `Commande`/`LigneCommande`,
   `CircuitValidation`/`CircuitValidateur`, `Ajustement`, `CampagneInventaire`,
-  `ModeleDocumentMagasin`, `ConfigurationHopital` (core).
+  `PlanInventaireTournant`, `ModeleDocumentMagasin`, `ConfigurationHopital` (core).
 - `patrimoine` : `Immobilisation`, `TypeEquipement`, `ContratMaintenance`,
   `TicketSAV`, `Intervention`, `CampagneInventairePatrimoine`.
 
@@ -513,7 +539,8 @@ avec la vue `demandes_a_valider`.
 - **Plus de 2100 tests** répartis : `stock` (modèles, services, isolation magasin, sécurité,
   PDF, configuration, recherche sans accents, responsive 375px), `accounts` + `core`
   (politique de mot de passe, login, reset mot de passe email/SMS, notifications, permissions),
-  `patrimoine` (amortissement linéaire/dégressif généré en masse, contrats, permissions).
+  `patrimoine` (amortissement linéaire/dégressif généré en masse, contrats, permissions),
+  et l'inventaire tournant (planification, génération par famille/zone, échéances).
 - Commandes utiles :
   ```bash
   source venv/Scripts/activate

@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Q
 from django.http import HttpResponse, JsonResponse
@@ -20,7 +21,7 @@ from ..decorators import magasin_requis, catch_errors
 from ..models import (
     Article, Magasin, StockItem, Ajustement,
     CampagneInventaire, LigneInventaire, CircuitValidation,
-    FamilleArticle)
+    FamilleArticle, PlanInventaireTournant)
 from ..services.inventaire_service import InventaireService
 from .catalogue import paginer
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
@@ -309,3 +310,139 @@ def api_sauvegarder_ligne_inventaire(request, campagne_id):
         'ecart': ecart,
         'ligne_id': ligne.id,
     })
+
+# ═══════════════════════════════════════════════════════════
+# INVENTAIRE TOURNANT (rotation par famille/zone)
+# ═══════════════════════════════════════════════════════════
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_inventaires')
+@magasin_requis
+@catch_errors(redirect_url='liste_plans_inventaire_tournant')
+def liste_plans_inventaire_tournant(request):
+    """Plans d'inventaires tournants : liste, création, génération manuelle."""
+    magasins_autorises = get_magasins_autorises(request)
+    magasin_actif = get_magasin_actif(request)
+
+    if request.method == 'POST':
+        titre = request.POST.get('titre', '').strip()
+        magasin_id = request.POST.get('magasin_id')
+        type_rotation = request.POST.get('type_rotation', 'PAR_FAMILLE')
+        frequence = request.POST.get('frequence_jours', '90')
+        familles_ids = request.POST.getlist('familles_ids')
+
+        if not titre or not magasin_id:
+            messages.error(request, "❌ Le titre et le magasin sont obligatoires.")
+            return redirect('liste_plans_inventaire_tournant')
+
+        if not magasins_autorises.filter(id=magasin_id).exists():
+            messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
+            return redirect('liste_plans_inventaire_tournant')
+
+        try:
+            frequence_jours = int(frequence)
+            if frequence_jours <= 0:
+                raise ValueError
+        except ValueError:
+            messages.error(request, "❌ La fréquence doit être un nombre de jours positif.")
+            return redirect('liste_plans_inventaire_tournant')
+
+        plan = PlanInventaireTournant.objects.create(
+            titre=titre,
+            magasin_id=magasin_id,
+            type_rotation=type_rotation,
+            frequence_jours=frequence_jours,
+            cree_par=request.user,
+            prochaine_echeance=timezone.now().date(),
+        )
+        if type_rotation == 'PAR_FAMILLE' and familles_ids:
+            plan.familles_cibles.set(familles_ids)
+        elif type_rotation == 'PAR_FAMILLE':
+            messages.warning(
+                request,
+                "⚠️ Aucune famille sélectionnée — le plan générera un inventaire vide. "
+                "Modifiez le plan pour ajouter des familles."
+            )
+
+        messages.success(request, f"✅ Plan d'inventaire tournant '{titre}' créé.")
+        return redirect('liste_plans_inventaire_tournant')
+
+    plans = PlanInventaireTournant.objects.select_related(
+        'magasin', 'cree_par'
+    ).order_by('-date_creation')
+    if magasin_actif:
+        plans = plans.filter(magasin=magasin_actif)
+
+    aujourdhui = timezone.now().date()
+    for plan in plans:
+        plan.est_due = bool(
+            plan.statut == 'ACTIF'
+            and plan.prochaine_echeance
+            and plan.prochaine_echeance <= aujourdhui
+        )
+        plan.nb_familles = plan.familles_cibles.count()
+        plan.nb_campagnes = plan.dernier_comptage and 1 or 0
+        # nombre total de lignes générées pour le plan
+        dernieres = plan.nb_campagnes
+        plan.nb_articles = 0
+        if dernieres:
+            from ..models import LigneInventaire
+            plan.nb_articles = LigneInventaire.objects.filter(
+                campagne__titre__icontains=plan.titre
+            ).count()
+
+    context = {
+        'plans': plans,
+        'magasins': magasins_autorises.order_by('nom'),
+        'familles': FamilleArticle.objects.filter(is_deleted=False).order_by('intitule'),
+        'magasin_actif': magasin_actif,
+        'aujourdhui': aujourdhui,
+        'peut_generer': request.user.has_perm('accounts.menu_inventaires') or request.user.is_superuser,
+    }
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return render(request, 'stock/plans_tournants_lignes.html', context)
+    return render(request, 'stock/liste_plans_tournants.html', context)
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_inventaires')
+@magasin_requis
+@catch_errors(redirect_url='liste_plans_inventaire_tournant')
+def generer_campagne_tournante(request, plan_id):
+    """Génère immédiatement la campagne d'inventaire d'un plan tournant."""
+    plan = get_object_or_404(PlanInventaireTournant, id=plan_id)
+    try:
+        campagne = InventaireService.generer_campagne_tournante(plan, request.user)
+    except ValidationError as e:
+        messages.error(request, f"❌ {e}")
+        return redirect('liste_plans_inventaire_tournant')
+    except Exception as e:
+        logger.exception("[Inventaire tournant] %s", e)
+        messages.error(request, "❌ Erreur lors de la génération de la campagne.")
+        return redirect('liste_plans_inventaire_tournant')
+
+    messages.success(
+        request,
+        f"🎉 Campagne '{campagne.titre}' générée : {campagne.lignes_inventaire.count()} article(s) à compter. "
+        f"Prochaine échéance : {plan.prochaine_echeance.strftime('%d/%m/%Y')}."
+    )
+    return redirect('saisir_inventaire', campagne_id=campagne.id)
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_inventaires')
+@magasin_requis
+@catch_errors(redirect_url='liste_plans_inventaire_tournant')
+def basculer_statut_plan(request, plan_id):
+    """Active / met en pause un plan tournant."""
+    plan = get_object_or_404(PlanInventaireTournant, id=plan_id)
+    if plan.statut == 'ACTIF':
+        plan.statut = 'INACTIF'
+        messages.info(request, f"⏸️ Plan '{plan.titre}' mis en pause.")
+    else:
+        plan.statut = 'ACTIF'
+        if not plan.prochaine_echeance:
+            plan.prochaine_echeance = timezone.now().date()
+        messages.success(request, f"▶️ Plan '{plan.titre}' réactivé.")
+    plan.save()
+    return redirect('liste_plans_inventaire_tournant')

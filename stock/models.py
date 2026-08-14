@@ -769,6 +769,69 @@ class LigneInventaire(models.Model):
         ]
 
 # ==========================================================
+# INVENTAIRE TOURNANT (rotation par famille/zone)
+# ==========================================================
+class PlanInventaireTournant(TracabiliteModel, SoftDeleteModel):
+    """
+    Planification d'inventaires tournants : au lieu d'une campagne complète,
+    on compte les familles/zones selon un planning rotatif.
+
+    À chaque échéance (prochaine_echeance atteinte), le service
+    InventaireService.generer_campagne_tournante() crée une
+    CampagneInventaire ciblée sur les familles/zone dues.
+    """
+    STATUTS = (
+        ('ACTIF',  'Actif'),
+        ('INACTIF','Inactif / En pause'),
+    )
+    TYPE_ROTATION_CHOICES = (
+        ('PAR_FAMILLE', 'Par famille d\'articles'),
+        ('PAR_ZONE',    'Par zone / emplacement (toutes familles d\'une zone)'),
+    )
+
+    titre          = models.CharField(max_length=200, verbose_name="Titre du plan")
+    magasin        = models.ForeignKey(Magasin, on_delete=models.CASCADE, related_name='plans_inventaire_tournant')
+    type_rotation  = models.CharField(
+        max_length=20, choices=TYPE_ROTATION_CHOICES, default='PAR_FAMILLE',
+        verbose_name="Type de rotation"
+    )
+    familles_cibles = models.ManyToManyField(
+        FamilleArticle,
+        blank=True,
+        related_name='plans_inventaire_tournant',
+        verbose_name="Familles ciblées (rotation par famille)"
+    )
+    frequence_jours = models.PositiveIntegerField(
+        default=90,
+        verbose_name="Fréquence (jours)",
+        help_text="Intervalle entre deux comptages de la même famille/zone."
+    )
+    statut          = models.CharField(
+        max_length=20, choices=STATUTS, default='ACTIF',
+        verbose_name="Statut"
+    )
+    prochaine_echeance = models.DateField(
+        null=True, blank=True,
+        verbose_name="Prochaine échéance",
+        help_text="Date à laquelle le prochain inventaire tournant sera généré."
+    )
+    dernier_comptage = models.DateTimeField(
+        null=True, blank=True,
+        verbose_name="Dernier comptage généré",
+        help_text="Date de la dernière génération automatique."
+    )
+
+    objects     = BaseManager()
+    all_objects = models.Manager()
+
+    def __str__(self):
+        return f"{self.titre} - {self.magasin.nom} ({self.get_statut_display()})"
+
+    class Meta:
+        verbose_name = "Plan d'inventaire tournant"
+        verbose_name_plural = "Plans d'inventaires tournants"
+
+# ==========================================================
 # GESTION DES BONS
 # ==========================================================
 class MotifAnnulation(SoftDeleteModel):

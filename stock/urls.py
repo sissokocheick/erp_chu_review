@@ -27,6 +27,9 @@ from .views.validation_bons import valider_bon
 from .views.inventaires import (
     liste_inventaires, saisir_inventaire,
     api_sauvegarder_ligne_inventaire,
+    liste_plans_inventaire_tournant,
+    generer_campagne_tournante,
+    basculer_statut_plan,
 )
 from .views.livraisons import liste_livraisons, detail_livraisons_demande
 from .views.peremptions import (
@@ -118,6 +121,10 @@ urlpatterns = [
     path('inventaires/<int:campagne_id>/saisir/', saisir_inventaire, name='saisir_inventaire'),
     # API AJAX inventaire (sauvegarde ligne par ligne)
     path('inventaire/<int:campagne_id>/api/sauvegarder-ligne/', api_sauvegarder_ligne_inventaire, name='api_sauvegarder_ligne_inventaire'),
+    # Inventaire tournant (rotation par famille/zone)
+    path('inventaires/tournants/', liste_plans_inventaire_tournant, name='liste_plans_inventaire_tournant'),
+    path('inventaires/tournants/<int:plan_id>/generer/', generer_campagne_tournante, name='generer_campagne_tournante'),
+    path('inventaires/tournants/<int:plan_id>/statut/', basculer_statut_plan, name='basculer_statut_plan'),
 
     # ═══════════════════════════════════════════════════════════════════════
     # ÉTAT DU STOCK

@@ -44,11 +44,77 @@ class InventaireService:
                 )
             )
 
-        LigneInventaire.objects.bulk_create(lignes_a_creer)
-        return campagne
-
-    @staticmethod
-    @transaction.atomic
+        LigneInventaire.objects.bulk_create(lignes_a_creer)
+        return campagne
+
+    @staticmethod
+    @transaction.atomic
+    def generer_campagne_tournante(plan, user):
+        """
+        Génère une campagne d'inventaire ciblée depuis un plan tournant.
+
+        - PAR_FAMILLE : seules les familles cibles du plan sont comptées.
+        - PAR_ZONE    : toutes les familles (la "zone" = le magasin du plan).
+        - Met à jour prochaine_echeance = aujourd'hui + frequence_jours.
+
+        Returns:
+            CampagneInventaire : la campagne créée.
+        """
+        from ..models import (
+            CampagneInventaire, LigneInventaire, Article, StockItem,
+            FamilleArticle, PlanInventaireTournant)
+        from django.utils import timezone
+
+        if plan.statut != 'ACTIF':
+            raise ValidationError(
+                "Ce plan d'inventaire tournant est inactif — impossible de générer."
+            )
+
+        familles_ids = list(
+            plan.familles_cibles.values_list('id', flat=True)
+        ) if plan.type_rotation == 'PAR_FAMILLE' else list(
+            FamilleArticle.objects.values_list('id', flat=True)
+        )
+
+        if not familles_ids:
+            raise ValidationError(
+                "Aucune famille cible définie pour ce plan tournant."
+            )
+
+        articles = Article.objects.filter(famille_id__in=familles_ids)
+        stock_map = dict(StockItem.objects.filter(
+            article__in=articles, magasin=plan.magasin
+        ).values_list('article_id', 'quantite_physique'))
+
+        campagne = CampagneInventaire.objects.create(
+            titre=f"{plan.titre} — {timezone.now().strftime('%d/%m/%Y')}".upper(),
+            magasin=plan.magasin,
+            cree_par=user,
+            type_campagne='PAR_FAMILLE',
+        )
+        campagne.familles_cibles.set(familles_ids)
+
+        lignes_a_creer = [
+            LigneInventaire(
+                campagne=campagne,
+                article=article,
+                quantite_theorique=stock_map.get(article.id, 0),
+            )
+            for article in articles
+        ]
+        LigneInventaire.objects.bulk_create(lignes_a_creer)
+
+        # Mise à jour du planning
+        plan.dernier_comptage = timezone.now()
+        plan.prochaine_echeance = (
+            timezone.now().date() + timezone.timedelta(days=plan.frequence_jours)
+        )
+        plan.save(update_fields=['dernier_comptage', 'prochaine_echeance'])
+
+        return campagne
+
+    @staticmethod
+    @transaction.atomic
     def sauvegarder_saisie(campagne, quantites_dict, user):
         """
         Sauvegarde les quantités physiques saisies (brouillon).

@@ -466,6 +466,36 @@ def _ctx_utilisateurs(request, page_obj, q, statut, form_data=None, show_modal=F
 
 
 
+def _generer_tournants_a_echeance():
+    """Génère les campagnes d'inventaire tournant dont l'échéance est atteinte.
+
+    Appelé après une connexion réussie : silencieux, très léger (une requête
+    count d'abord), ne bloque jamais le login en cas d'erreur. Un plan sans
+    familles cibles ou en pause est simplement ignoré.
+    """
+    try:
+        from django.utils import timezone as _tz
+        from stock.models import PlanInventaireTournant
+        from stock.services.inventaire_service import InventaireService
+
+        aujourdhui = _tz.now().date()
+        plans_echus = PlanInventaireTournant.objects.filter(
+            statut='ACTIF',
+            prochaine_echeance__lte=aujourdhui,
+        )
+        if not plans_echus.exists():
+            return
+        for plan in plans_echus:
+            try:
+                InventaireService.generer_campagne_tournante(plan, None)
+            except Exception:
+                logger.exception(
+                    "[Inventaire tournant] Échec génération auto du plan %s",
+                    getattr(plan, 'titre', plan.id))
+    except Exception:
+        logger.exception("[Inventaire tournant] Échec de l'auto-génération à la connexion")
+
+
 def custom_login(request):
 
 
@@ -625,6 +655,8 @@ def custom_login(request):
 
 
 
+            # Inventaire tournant : génère les campagnes dont l'échéance est atteinte
+            _generer_tournants_a_echeance()
 
 
 

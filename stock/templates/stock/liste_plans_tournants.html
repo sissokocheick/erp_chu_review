@@ -1,0 +1,279 @@
+{% extends "base_ui.html" %}
+{% block title %}Inventaire Tournant{% endblock %}
+
+{% block contenu %}
+<style>
+  .inv-header {
+    background: linear-gradient(135deg, #0e7a5f, #17a2b8);
+    color: white; border-radius: 12px; padding: 20px 25px;
+    margin-bottom: 22px; display: flex; align-items: center;
+    justify-content: space-between; gap: 14px;
+    box-shadow: 0 4px 15px rgba(14,122,95,.3); flex-wrap: wrap;
+  }
+  .inv-header-left { display: flex; align-items: center; gap: 14px; }
+  .inv-header i.ico { font-size: 28px; opacity: .9; }
+  .inv-header h4 { margin: 0; font-size: 20px; font-weight: 700; }
+  .inv-header small { opacity:.85; font-size: 12px; }
+
+  .btn-new {
+    background: rgba(255,255,255,.18); color: white; border: none;
+    padding: 10px 18px; border-radius: 8px; font-weight: 700;
+    font-size: 13px; cursor: pointer; display: inline-flex;
+    align-items: center; gap: 7px; transition: .2s;
+  }
+  .btn-new:hover { background: rgba(255,255,255,.3); }
+
+  .card-table {
+    background: var(--bg-card); border-radius: 12px;
+    box-shadow: 0 2px 10px var(--shadow); overflow: hidden;
+    border: 1px solid var(--border-light);
+  }
+  .tb-bar {
+    padding: 14px 18px; border-bottom: 1px solid var(--border-light);
+    display: flex; align-items: center; gap: 10px;
+    flex-wrap: wrap; justify-content: space-between;
+    background: var(--bg-hover);
+  }
+  .tb-title { font-weight: 700; color: var(--text-dark); font-size: 14px; }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    background: var(--bg-stripe); color: var(--text-medium);
+    font-size: 11px; text-transform: uppercase; letter-spacing: .4px;
+    padding: 12px 14px; text-align: left; border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+  }
+  tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); font-size: 13px; }
+  tbody tr:hover { background: var(--bg-hover); }
+
+  .badge-plan { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .badge-actif { background: rgba(40,167,69,.15); color: #155724; }
+  .badge-pause { background: rgba(108,117,125,.15); color: #495057; }
+  .badge-due { background: rgba(220,53,69,.15); color: #721c24; }
+  .badge-ok { background: rgba(23,162,184,.15); color: #0c5460; }
+
+  .btn-ghost {
+    background: var(--bg-card); border: 1px solid var(--border-color);
+    color: var(--text-medium); padding: 6px 12px; border-radius: 7px;
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: .2s;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-ghost:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+  .btn-gen {
+    background: #17a2b8; color: white; border: none; padding: 6px 12px;
+    border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  }
+  .btn-gen:hover { background: #138496; color: white; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1050; align-items: center; justify-content: center; padding: 20px; }
+  .modal-overlay.open { display: flex; }
+  .modal-box { background: var(--bg-card); border-radius: 14px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+  .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid var(--border-light); }
+  .modal-header h5 { margin: 0; font-size: 17px; }
+  .btn-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light); line-height: 1; }
+  .modal-body { padding: 20px 22px; }
+  .modal-footer { padding: 14px 22px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 10px; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 600; color: var(--text-medium); margin-bottom: 5px; }
+  .form-group input, .form-group select {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border-color);
+    border-radius: 8px; font-size: 13px; background: var(--bg-card); color: var(--text-dark);
+  }
+  .familles-check { max-height: 180px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 8px; padding: 8px 10px; }
+  .familles-check label { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; font-weight: 400; cursor: pointer; }
+  .btn-save { background: #17a2b8; color: white; border: none; padding: 9px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .btn-cancel { background: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-medium); padding: 9px 18px; border-radius: 8px; cursor: pointer; }
+
+  .empty-state { padding: 50px; text-align: center; color: var(--text-light); }
+  .empty-state i { font-size: 40px; display: block; margin-bottom: 12px; opacity: .4; }
+  .hint { font-size: 12px; color: var(--text-light); line-height: 1.5; }
+  @media (max-width: 768px) {
+    table, thead, tbody, tr, td, th { display: block; }
+    thead { display: none; }
+    tbody td { border: none; padding: 8px 14px; }
+    tbody tr { border: 1px solid var(--border-light); border-radius: 10px; margin: 10px 12px; padding: 6px 0; }
+    .cell-label { display: inline-block; font-weight: 700; color: var(--text-medium); width: 110px; }
+  }
+</style>
+
+<div class="inv-header">
+  <div class="inv-header-left">
+    <i class="fas fa-sync-alt ico"></i>
+    <div>
+      <h4>Inventaire Tournant</h4>
+      <small>Rotation du comptage par famille / zone, avec planification automatique.</small>
+    </div>
+  </div>
+  <button type="button" class="btn-new" onclick="ouvrirModalePlan()"><i class="fas fa-plus"></i> Nouveau plan</button>
+</div>
+
+{% if magasin_actif %}
+<div style="margin-bottom: 14px; font-size: 13px; color: var(--text-medium);">
+  <i class="fas fa-warehouse" style="color: var(--primary-blue);"></i>
+  Plans du magasin : <b>{{ magasin_actif.nom }}</b>
+</div>
+{% endif %}
+
+<div class="card-table">
+  <div class="tb-bar">
+    <span class="tb-title"><i class="fas fa-clipboard-list" style="color:#17a2b8;"></i> Plans de rotation</span>
+    <span class="hint">Une campagne ciblée est générée automatiquement à chaque échéance (ou manuellement).</span>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Plan</th>
+        <th>Rotation</th>
+        <th>Fréquence</th>
+        <th>Familles</th>
+        <th>Statut</th>
+        <th>Prochaine échéance</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for plan in plans %}
+      <tr>
+        <td>
+          <div style="font-weight:700; color: var(--text-dark);">{{ plan.titre }}</div>
+          <div style="font-size:11px; color: var(--text-light);">{{ plan.magasin.nom }}</div>
+        </td>
+        <td>
+          {% if plan.type_rotation == 'PAR_FAMILLE' %}
+          <span class="badge-plan" style="background:rgba(23,162,184,.15); color:#0c5460;"><i class="fas fa-tag"></i> Par famille</span>
+          {% else %}
+          <span class="badge-plan" style="background:rgba(111,66,193,.15); color:#5a189a;"><i class="fas fa-map-marker-alt"></i> Par zone</span>
+          {% endif %}
+        </td>
+        <td>{{ plan.frequence_jours }} j</td>
+        <td>
+          {% if plan.type_rotation == 'PAR_FAMILLE' %}
+            {% if plan.nb_familles %}
+              {{ plan.nb_familles }} famille{{ plan.nb_familles|pluralize }}
+            {% else %}
+              <span style="color:#dc3545;">Aucune</span>
+            {% endif %}
+          {% else %}
+            Toutes (zone magasin)
+          {% endif %}
+        </td>
+        <td>
+          {% if plan.statut == 'ACTIF' %}
+            <span class="badge-plan badge-actif"><i class="fas fa-play-circle"></i> Actif</span>
+          {% else %}
+            <span class="badge-plan badge-pause"><i class="fas fa-pause-circle"></i> Pause</span>
+          {% endif %}
+        </td>
+        <td>
+          {% if plan.est_due %}
+            <span class="badge-plan badge-due"><i class="fas fa-exclamation-triangle"></i> Échue ({{ plan.prochaine_echeance|date:"d/m/Y" }})</span>
+          {% elif plan.prochaine_echeance %}
+            <span class="badge-plan badge-ok"><i class="fas fa-calendar-check"></i> {{ plan.prochaine_echeance|date:"d/m/Y" }}</span>
+          {% else %}
+            <span style="color: var(--text-light);">—</span>
+          {% endif %}
+        </td>
+        <td>
+          <div style="display:flex; gap:6px; flex-wrap:wrap;">
+            {% if plan.statut == 'ACTIF' %}
+            <a href="{% url 'generer_campagne_tournante' plan.id %}" class="btn-gen" title="Générer la campagne d'inventaire maintenant"><i class="fas fa-magic"></i> Générer</a>
+            <a href="{% url 'basculer_statut_plan' plan.id %}" class="btn-ghost" title="Mettre en pause"><i class="fas fa-pause"></i></a>
+            {% else %}
+            <a href="{% url 'basculer_statut_plan' plan.id %}" class="btn-ghost" title="Réactiver"><i class="fas fa-play"></i> Réactiver</a>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="7">
+          <div class="empty-state">
+            <i class="fas fa-sync-alt"></i>
+            Aucun plan d'inventaire tournant.
+            <div style="margin-top:10px;"><button type="button" class="btn-gen" onclick="ouvrirModalePlan()"><i class="fas fa-plus"></i> Créer le premier plan</button></div>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{# Modale création #}
+<div id="modale-plan" class="modal-overlay">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h5><i class="fas fa-sync-alt" style="color:#17a2b8;"></i> Nouveau plan d'inventaire tournant</h5>
+      <button type="button" class="btn-modal-close" onclick="fermerModalePlan()">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'liste_plans_inventaire_tournant' %}">
+      {% csrf_token %}
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Titre du plan *</label>
+          <input type="text" name="titre" placeholder="Ex: Rotation Pharmacie — Trimestre 1" required>
+        </div>
+        <div class="form-group">
+          <label>Magasin *</label>
+          <select name="magasin_id" required>
+            {% for m in magasins %}
+            <option value="{{ m.id }}" {% if magasin_actif and m.id == magasin_actif.id %}selected{% endif %}>{{ m.nom }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Type de rotation</label>
+          <select name="type_rotation" id="type-rotation" onchange="basculerTypeRotation()">
+            <option value="PAR_FAMILLE">Par famille d'articles</option>
+            <option value="PAR_ZONE">Par zone (toutes familles du magasin)</option>
+          </select>
+        </div>
+        <div class="form-group" style="max-width:220px;">
+          <label>Fréquence (jours) *</label>
+          <input type="number" name="frequence_jours" value="90" min="1" required>
+        </div>
+        <div class="form-group" id="bloc-familles">
+          <label>Familles à compter (rotation par famille)</label>
+          <div class="familles-check">
+            {% for f in familles %}
+            <label>
+              <input type="checkbox" name="familles_ids" value="{{ f.id }}">
+              <span>{{ f.intitule }}</span>
+            </label>
+            {% empty %}
+            <div style="color:var(--text-light); font-size:12px;">Aucune famille d'articles disponible.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn-cancel" onclick="fermerModalePlan()">Annuler</button>
+        <button type="submit" class="btn-save"><i class="fas fa-save"></i> Créer le plan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function ouvrirModalePlan() {
+    document.getElementById('modale-plan').classList.add('open');
+  }
+  function fermerModalePlan() {
+    document.getElementById('modale-plan').classList.remove('open');
+  }
+  function basculerTypeRotation() {
+    var sel = document.getElementById('type-rotation');
+    var bloc = document.getElementById('bloc-familles');
+    if (bloc) bloc.style.display = (sel.value === 'PAR_FAMILLE') ? '' : 'none';
+  }
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') fermerModalePlan();
+  });
+  // Fermeture au clic sur le fond
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'modale-plan') fermerModalePlan();
+  });
+</script>
+{% endblock %}

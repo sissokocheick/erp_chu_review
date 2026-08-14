@@ -694,6 +694,7 @@
             {% endif %}
             {% if perms.accounts.menu_inventaires %}
             <a href="{% url 'liste_inventaires' %}" class="menu-item" data-title="Inventaires"><i class="fas fa-clipboard-check nav-icon" style="color:#28a745;"></i><span class="nav-text">Campagnes Inventaires</span></a>
+            <a href="{% url 'liste_plans_inventaire_tournant' %}" class="menu-item" data-title="Inventaire Tournant"><i class="fas fa-sync-alt nav-icon" style="color:#17a2b8;"></i><span class="nav-text">Inventaire Tournant</span></a>
             {% endif %}
             {% if perms.accounts.menu_lots %}
             <a href="{% url 'liste_lots' %}" class="menu-item" data-title="Lots"><i class="fas fa-boxes nav-icon" style="color:#ffc107;"></i><span class="nav-text">Gestion des Lots</span></a>
