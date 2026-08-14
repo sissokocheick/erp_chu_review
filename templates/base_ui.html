@@ -824,7 +824,7 @@
         {% endif %}
 
         <!-- SECURITE & ACCES -->
-        {% if perms.accounts.menu_utilisateurs or perms.accounts.menu_roles or perms.accounts.menu_circuits_validation or perms.accounts.menu_journal_audit %}
+        {% if user.is_superuser or perms.accounts.menu_utilisateurs or perms.accounts.menu_roles or perms.accounts.menu_circuits_validation or perms.accounts.menu_journal_audit %}
         <div class="module-title" onclick="toggleMenu('menu-securite')" data-title="Securite">
             <span style="display:flex;align-items:center;"><i class="fas fa-shield-alt nav-icon" style="color:#0d47a1;"></i><span class="nav-text">Securite & Acces</span></span>
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-securite"></i>
@@ -841,6 +841,9 @@
             {% endif %}
             {% if perms.accounts.menu_journal_audit %}
             <a href="{% url 'accounts:journal_audit' %}" class="menu-item" data-title="Audit"><i class="fas fa-user-secret nav-icon" style="color:#6c757d;"></i><span class="nav-text">Journal & Audit</span></a>
+            {% endif %}
+            {% if user.is_superuser %}
+            <a href="{% url 'supervision' %}" class="menu-item" data-title="Supervision"><i class="fas fa-heartbeat nav-icon" style="color:#28a745;"></i><span class="nav-text">Supervision</span></a>
             {% endif %}
         </div>
         {% endif %}

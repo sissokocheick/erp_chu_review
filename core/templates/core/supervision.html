@@ -1,0 +1,141 @@
+{% extends "base_ui.html" %}
+{% block title %}Supervision{% endblock %}
+
+{% block contenu %}
+<style>
+  .sup-container { padding: 20px; }
+  .sup-header {
+    background: linear-gradient(135deg, #0d47a1 0%, #1c5b96 100%);
+    color: white; border-radius: 10px; padding: 18px 25px; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 4px 15px rgba(13,71,161,0.3);
+  }
+  .sup-header i { font-size: 28px; opacity: .9; }
+  .sup-header h4 { margin: 0; font-size: 20px; font-weight: 700; }
+  .sup-header small { opacity: .85; font-size: 12px; }
+  .sup-status-pill {
+    margin-left: auto; padding: 6px 16px; border-radius: 20px;
+    font-weight: 800; font-size: 13px; text-transform: uppercase;
+  }
+  .sup-status-pill.ok  { background: rgba(40,167,69,0.9); color: white; }
+  .sup-status-pill.degraded { background: rgba(253,126,20,0.95); color: white; }
+  .sup-status-pill.error { background: rgba(220,53,69,0.95); color: white; }
+
+  .sup-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 22px; }
+  .sup-kpi {
+    background: var(--bg-card); border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 2px 10px var(--shadow); border-left: 4px solid var(--primary-blue);
+  }
+  .sup-kpi .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-light); }
+  .sup-kpi .val { font-size: 26px; font-weight: 800; margin-top: 4px; }
+  .sup-kpi .sub { font-size: 12px; color: var(--text-medium); margin-top: 4px; word-break: break-word; }
+  .sup-kpi.green  { border-left-color: #27ae60; } .sup-kpi.green .val { color: #27ae60; }
+  .sup-kpi.orange { border-left-color: #fd7e14; } .sup-kpi.orange .val { color: #fd7e14; }
+  .sup-kpi.red    { border-left-color: #e74c3c; } .sup-kpi.red .val { color: #e74c3c; }
+  .sup-kpi.grey   { border-left-color: #6c757d; } .sup-kpi.grey .val { color: #6c757d; }
+
+  .sup-card { background: var(--bg-card); border-radius: 12px; box-shadow: 0 2px 10px var(--shadow); margin-bottom: 20px; border: 1px solid var(--border-light); overflow: hidden; }
+  .sup-card-header { padding: 15px 22px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+  .sup-card-header i { color: var(--primary-blue); }
+  .sup-card-body { padding: 6px 0; overflow-x: auto; }
+
+  .sup-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .sup-table thead th { background: var(--bg-hover); padding: 10px 22px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; font-weight: 700; color: var(--text-light); border-bottom: 2px solid var(--border-color); text-align: left; white-space: nowrap; }
+  .sup-table tbody tr { border-bottom: 1px solid var(--border-light); }
+  .sup-table tbody td { padding: 10px 22px; color: var(--text-dark); vertical-align: middle; }
+  .sup-err { font-family: Consolas, monospace; font-size: 12px; color: #c62828; word-break: break-word; }
+  body.dark-mode .sup-err { color: #ff8a80; }
+  .sup-empty { padding: 30px; text-align: center; color: var(--text-light); font-size: 13px; }
+  .sup-refresh { float: right; }
+</style>
+
+<div class="sup-container">
+  <div class="sup-header">
+    <i class="fas fa-heartbeat"></i>
+    <div>
+      <h4>Tableau de bord de supervision</h4>
+      <small>Santé de l'application, sauvegardes et erreurs récentes — réservé à l'administrateur</small>
+    </div>
+    <span class="sup-status-pill {{ status }}">{{ status }}</span>
+    <a href="{% url 'supervision' %}" class="nx-btn nx-btn-light sup-refresh" title="Rafraîchir"><i class="fas fa-sync-alt"></i> Rafraîchir</a>
+  </div>
+
+  <!-- ── Indicateurs ── -->
+  <div class="sup-grid">
+    <div class="sup-kpi {{ checks.database.status }}">
+      <div class="lbl">Base de données</div>
+      <div class="val">{{ checks.database.status|upper }}</div>
+      {% if checks.database.detail %}<div class="sub">{{ checks.database.detail }}</div>{% endif %}
+    </div>
+    <div class="sup-kpi {{ checks.smtp.status }}">
+      <div class="lbl">Serveur SMTP (email)</div>
+      <div class="val">{{ checks.smtp.status|upper }}</div>
+      {% if checks.smtp.detail %}<div class="sub">{{ checks.smtp.detail }}</div>{% endif %}
+    </div>
+    <div class="sup-kpi {{ checks.sms.status }}">
+      <div class="lbl">SMS</div>
+      <div class="val">{{ checks.sms.status|upper }}</div>
+      {% if checks.sms.detail %}<div class="sub">{{ checks.sms.detail }}</div>{% endif %}
+    </div>
+    <div class="sup-kpi grey">
+      <div class="lbl">Sauvegardes disponibles</div>
+      <div class="val">{{ sauvegardes|length }}</div>
+      <div class="sub">pg_dump — dossier backups/</div>
+    </div>
+  </div>
+
+  <!-- ── Sauvegardes ── -->
+  <div class="sup-card">
+    <div class="sup-card-header"><i class="fas fa-database"></i> Sauvegardes PostgreSQL ({{ sauvegardes|length }})</div>
+    <div class="sup-card-body">
+      {% if sauvegardes %}
+      <table class="sup-table">
+        <thead><tr><th>Fichier</th><th>Taille</th><th>Date</th><th>Âge</th></tr></thead>
+        <tbody>
+          {% for b in sauvegardes %}
+          <tr>
+            <td>{{ b.nom }}</td>
+            <td>{{ b.taille_lisible }}</td>
+            <td>{{ b.date }}</td>
+            <td>{{ b.age }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sup-empty"><i class="fas fa-info-circle"></i> Aucune sauvegarde trouvée — lancer <code>python scripts/backup_db.py</code> (voir PRODUCTION.md).</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Erreurs récentes ── -->
+  <div class="sup-card">
+    <div class="sup-card-header"><i class="fas fa-exclamation-triangle" style="color:#e74c3c;"></i> Erreurs récentes dans les logs ({{ erreurs_logs|length }})</div>
+    <div class="sup-card-body">
+      {% if erreurs_logs %}
+      <table class="sup-table">
+        <thead><tr><th>Fichier</th><th>Ligne</th></tr></thead>
+        <tbody>
+          {% for e in erreurs_logs %}
+          <tr>
+            <td style="white-space:nowrap;">{{ e.fichier }}</td>
+            <td class="sup-err">{{ e.texte }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sup-empty"><i class="fas fa-check-circle" style="color:#27ae60;"></i> Aucune erreur détectée dans les logs récents.</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="sup-card">
+    <div class="sup-card-body sup-empty" style="padding:16px;">
+      <i class="fas fa-bell" style="color:#ffc107;"></i>
+      Les pannes sont également signalées automatiquement par <code>manage.py verifier_sante</code>
+      (alerte email/SMS avec cooldown — cron planifié toutes les 5 minutes en production).
+    </div>
+  </div>
+</div>
+{% endblock %}
