@@ -47,6 +47,12 @@ ExecStart=/opt/erp_chu_review/venv/bin/gunicorn config.wsgi:application \
 Restart=always
 RestartSec=5
 
+# ── Surveillance de santé (systemd >= 254, ex. Ubuntu 24.04) ──
+# L'unité devient « unhealthy » si /health/ ne répond plus (DB KO -> 503).
+HealthCheckCommand=/usr/bin/curl -fsS http://127.0.0.1:8000/health/
+HealthCheckIntervalSec=30
+HealthCheckTimeoutSec=10
+
 # ── Durcissement du service ──
 NoNewPrivileges=true
 PrivateTmp=true

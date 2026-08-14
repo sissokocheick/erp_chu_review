@@ -158,6 +158,22 @@ sleep 3
 
 if kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
   ok "gunicorn démarré (PID $(cat "$PID_FILE")) — http://127.0.0.1:$PORT"
+  # Vérification de santé /health/ (DB accessible => 200)
+  HEALTHY=0
+  for i in $(seq 1 10); do
+    if curl -fsS "http://127.0.0.1:$PORT/health/" > /dev/null 2>&1; then
+      HEALTHY=1
+      break
+    fi
+    sleep 3
+  done
+  if [ "$HEALTHY" -eq 1 ]; then
+    ok "Sain : /health/ répond (http://127.0.0.1:$PORT/health/)"
+  else
+    fail "/health/ ne répond pas après 30 s — base de données inaccessible ?"
+    echo "   Le serveur tourne mais est probablement dégradé — voir $LOG_DIR/gunicorn-error.log"
+    exit 1
+  fi
   echo "   Logs : $LOG_DIR/gunicorn-access.log / gunicorn-error.log"
   echo "   Arrêter : kill \$(cat .gunicorn.pid)"
 else

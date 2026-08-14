@@ -39,6 +39,17 @@ function Info($m) { Write-Host ">> $m" -ForegroundColor Cyan }
 function Ok($m)   { Write-Host "OK $m" -ForegroundColor Green }
 function Fail($m) { Write-Host "ERR $m" -ForegroundColor Red; exit 1 }
 
+function Wait-Healthy([int]$Port, [int]$Attempts = 10) {
+  for ($i = 1; $i -le $Attempts; $i++) {
+    try {
+      $r = Invoke-WebRequest -Uri "http://127.0.0.1:$Port/health/" -UseBasicParsing -TimeoutSec 3
+      if ($r.StatusCode -eq 200) { return $true }
+    } catch { }
+    Start-Sleep -Seconds 3
+  }
+  return $false
+}
+
 if (-not (Test-Path $VENV_PY)) { Fail "venv python not found: $VENV_PY" }
 
 # ---- 1. Load .env (without overriding existing variables) ------------------
@@ -142,6 +153,8 @@ if ($useGunicorn) {
     Start-Sleep -Seconds 3
     if ($p.HasExited) { Fail "gunicorn exited - see $logErr" }
     Ok "gunicorn started (PID $($p.Id)) - http://127.0.0.1:$Port"
+    if (Wait-Healthy -Port $Port) { Ok "Healthy: /health/ responds" }
+    else { Fail "/health/ did not respond after 30s - database unreachable?" }
     Write-Host "   Stop: Stop-Process -Id $($p.Id)"
   }
 } else {
@@ -158,6 +171,8 @@ if ($useGunicorn) {
       Start-Sleep -Seconds 3
       if ($p.HasExited) { Fail "waitress exited" }
       Ok "waitress started (PID $($p.Id)) - http://127.0.0.1:$Port"
+      if (Wait-Healthy -Port $Port) { Ok "Healthy: /health/ responds" }
+      else { Fail "/health/ did not respond after 30s - database unreachable?" }
       Write-Host "   Stop: Stop-Process -Id $($p.Id)"
     }
   } else {
