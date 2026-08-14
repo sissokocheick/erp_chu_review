@@ -167,6 +167,18 @@ automatique après 5 s, logs dans `logs/`). Désinstallation :
   (rotation du comptage par famille/zone à l'échéance ; déjà déclenché à la
   connexion, le cron le rend indépendant des connexions).
 
+- **Supervision** :
+  - Endpoint machine `/health/` (JSON `{status, checks}` — base critique en
+    503, SMTP/SMS optionnels en « degraded ») : pour le healthcheck systemd,
+    un load-balancer ou un uptime checker externe.
+  - Alerte automatique : `python manage.py verifier_sante` (email + SMS,
+    cooldown 15 min, destinataires `ALERT_EMAILS`/`ALERT_PHONES`) — cron
+    toutes les 5 minutes (`*/5 * * * * cd /chemin/erp && venv/bin/python
+    manage.py verifier_sante --quiet`).
+  - Tableau de bord humain : **`/supervision/`** (réservé au superutilisateur,
+    menu Sécurité & Accès) — état de santé, sauvegardes récentes (`backups/`)
+    et erreurs de log récentes (`logs/`).
+
 ## 6. Rappels
 
 - Ne jamais committer `SECRET_KEY`, mots de passe DB ou identifiants Twilio
