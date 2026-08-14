@@ -203,6 +203,66 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+# ── Journalisation des requêtes lentes ────────────────────────────────
+# Le logger django.db.backends reçoit chaque requête SQL avec son attribut
+# `duration` (secondes) quand le curseur de debug est actif (DEBUG=True en
+# dev, ou force_debug_cursor activé par le signal connection_created en prod).
+# SlowQueryFilter ne garde que celles ≥ 200 ms, écrites dans
+# logs/slow-queries.log (surveillées par le tableau de bord /supervision/).
+# Désactivable avec SLOW_QUERY_LOG=0 ; inactif en TEST_MODE (pas d'écriture
+# disque dans les tests).
+if (os.environ.get('TEST_MODE', 'False').lower() not in ('true', '1', 'yes')
+        and os.environ.get('SLOW_QUERY_LOG', '1') != '0'):
+    _LOGS_DIR = BASE_DIR / 'logs'
+    _LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': False,
+        'filters': {
+            'slow_queries': {
+                '()': 'core.logging_filters.SlowQueryFilter',
+                'threshold': 0.2,  # secondes
+            },
+        },
+        'formatters': {
+            'simple': {
+                'format': '[{asctime}] {levelname} {message}',
+                'style': '{',
+            },
+        },
+        'handlers': {
+            'slow_queries_file': {
+                'level': 'DEBUG',
+                'class': 'logging.handlers.RotatingFileHandler',
+                'filename': str(_LOGS_DIR / 'slow-queries.log'),
+                'maxBytes': 5 * 1024 * 1024,   # 5 Mo
+                'backupCount': 3,
+                'formatter': 'simple',
+                'filters': ['slow_queries'],
+            },
+        },
+        'loggers': {
+            'django.db.backends': {
+                'level': 'DEBUG',
+                'handlers': ['slow_queries_file'],
+                'propagate': False,
+            },
+        },
+    }
+    # En production (DEBUG=False), le curseur de debug n'est pas actif par
+    # défaut — on l'active à la création de chaque connexion pour que les
+    # durées soient mesurées (signal idiomatique Django).
+    if not DEBUG:
+        from django.db.backends.signals import connection_created
+
+        def _activer_suivi_requetes(sender, connection, **kwargs):  # noqa: ARG001
+            connection.force_debug_cursor = True
+
+        connection_created.connect(
+            _activer_suivi_requetes, dispatch_uid='nexuserp_slow_query_log'
+        )
+
+
 # ── Sécurité ─────────────────────────────────────────────────────────
 # Activer UNIQUEMENT si l'application est derrière un reverse proxy qui
 # écrase X-Forwarded-For (nginx, traefik…). Sinon, rester False : un

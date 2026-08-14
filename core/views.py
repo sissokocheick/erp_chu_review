@@ -5,7 +5,14 @@ from django.http import HttpResponseForbidden, JsonResponse
 from django.shortcuts import render
 
 from core.health import run_checks
-from core.supervision import lister_erreurs_logs, lister_sauvegardes
+from core.supervision import (
+    _taille_lisible,
+    lister_erreurs_logs,
+    lister_requetes_lentes,
+    lister_sauvegardes,
+    taille_base,
+    usage_disque,
+)
 
 
 def health_check(request):
@@ -35,10 +42,19 @@ def supervision(request):
     if not request.user.is_superuser:
         return HttpResponseForbidden("⛔ Accès réservé à l'administrateur.")
     status, checks = run_checks()
+    octets_base = taille_base()
+    disque = usage_disque()
+    pct = disque['pourcentage'] if disque else 0
+    disque_statut = 'green' if pct < 70 else ('orange' if pct < 90 else 'red')
     context = {
         'status': status,
         'checks': checks,
         'sauvegardes': lister_sauvegardes(limit=10),
         'erreurs_logs': lister_erreurs_logs(limit=50),
+        'taille_base_octets': octets_base,
+        'taille_base_lisible': _taille_lisible(octets_base) if octets_base else '—',
+        'disque': disque,
+        'disque_statut': disque_statut,
+        'requetes_lentes': lister_requetes_lentes(limit=20),
     }
     return render(request, 'core/supervision.html', context)

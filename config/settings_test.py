@@ -6,6 +6,9 @@ import os
 # (les tests Client + E2E LiveServer tournent en HTTP : SECURE_SSL_REDIRECT et
 # les cookies sécurisés doivent rester inactifs).
 os.environ.setdefault('DJANGO_DEBUG', 'True')
+# Désactive la journalisation des requêtes lentes (pas d'écriture disque
+# dans les tests, et le logger django.db.backends resterait silencieux).
+os.environ['TEST_MODE'] = '1'
 
 from .settings import *
 

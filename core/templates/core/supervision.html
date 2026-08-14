@@ -82,6 +82,21 @@
       <div class="val">{{ sauvegardes|length }}</div>
       <div class="sub">pg_dump — dossier backups/</div>
     </div>
+    <div class="sup-kpi grey">
+      <div class="lbl">Taille de la base</div>
+      <div class="val" style="font-size:22px;">{{ taille_base_lisible }}</div>
+      <div class="sub">{{ checks.database.status|upper }} — requêtes mesurées</div>
+    </div>
+    <div class="sup-kpi {{ disque_statut }}">
+      <div class="lbl">Espace disque utilisé</div>
+      <div class="val">{{ disque.pourcentage|default:0 }}%</div>
+      <div class="sub">{{ disque.utilise_lisible|default:"—" }} / {{ disque.total_lisible|default:"—" }} — libres : {{ disque.libre_lisible|default:"—" }}</div>
+    </div>
+    <div class="sup-kpi {{ requetes_lentes|length|yesno:"orange,green" }}">
+      <div class="lbl">Requêtes lentes (&gt; 200 ms)</div>
+      <div class="val">{{ requetes_lentes|length }}</div>
+      <div class="sub">logs/slow-queries.log</div>
+    </div>
   </div>
 
   <!-- ── Sauvegardes ── -->
@@ -104,6 +119,28 @@
       </table>
       {% else %}
       <div class="sup-empty"><i class="fas fa-info-circle"></i> Aucune sauvegarde trouvée — lancer <code>python scripts/backup_db.py</code> (voir PRODUCTION.md).</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Requêtes lentes ── -->
+  <div class="sup-card">
+    <div class="sup-card-header"><i class="fas fa-tachometer-alt" style="color:#fd7e14;"></i> Requêtes lentes (&gt; 200 ms) — {{ requetes_lentes|length }}</div>
+    <div class="sup-card-body">
+      {% if requetes_lentes %}
+      <table class="sup-table">
+        <thead><tr><th>Durée</th><th>Requête SQL</th></tr></thead>
+        <tbody>
+          {% for q in requetes_lentes %}
+          <tr>
+            <td style="white-space:nowrap; font-weight:700; color:#fd7e14;">{{ q.ms }} ms</td>
+            <td class="sup-err">{{ q.sql }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="sup-empty"><i class="fas fa-check-circle" style="color:#27ae60;"></i> Aucune requête SQL lente enregistrée (logger actif quand DEBUG ou force_debug_cursor est activé).</div>
       {% endif %}
     </div>
   </div>

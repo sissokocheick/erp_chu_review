@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests du tableau de bord de supervision (vue + helpers)."""
 import os
+import tempfile
 from pathlib import Path
 from unittest import mock
 
@@ -9,7 +10,15 @@ from django.contrib.auth.models import User
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
-from core.supervision import lister_erreurs_logs, lister_sauvegardes, _taille_lisible
+from core.logging_filters import SlowQueryFilter
+from core.supervision import (
+    _taille_lisible,
+    lister_erreurs_logs,
+    lister_requetes_lentes,
+    lister_sauvegardes,
+    taille_base,
+    usage_disque,
+)
 
 
 @override_settings(ROOT_URLCONF='config.urls')
@@ -40,6 +49,10 @@ class SupervisionViewTest(TestCase):
         # Statut de santé présent
         self.assertContains(resp, 'BASE')
         self.assertContains(resp, 'Sauvegardes PostgreSQL')
+        # Métriques de performance
+        self.assertContains(resp, 'Requêtes lentes')
+        self.assertContains(resp, 'Espace disque utilisé')
+        self.assertContains(resp, 'Taille de la base')
 
     def test_statut_erreur_base_visible(self):
         self.client.force_login(self.superuser)
@@ -102,3 +115,58 @@ class SupervisionHelpersTest(TestCase):
         self.assertEqual(_taille_lisible(500), '500 o')
         self.assertEqual(_taille_lisible(2048), '2 Ko')
         self.assertEqual(_taille_lisible(3 * 1024 * 1024), '3.0 Mo')
+        self.assertEqual(_taille_lisible(2 * 1024 * 1024 * 1024), '2.0 Go')
+
+    def test_taille_base_sqlite_positive(self):
+        octets = taille_base()
+        self.assertIsNotNone(octets)
+        self.assertGreater(octets, 0)
+
+    def test_usage_disque(self):
+        disque = usage_disque()
+        self.assertIsNotNone(disque)
+        self.assertGreater(disque['total'], 0)
+        self.assertGreater(disque['libre'], 0)
+        self.assertIn('dossiers', disque)
+        self.assertIn('logs', disque['dossiers'])
+        self.assertIn('pourcentage', disque)
+
+    def test_lister_requetes_lentes_parse_et_trie(self):
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix='.log')
+        tmp.close()
+        f = Path(tmp.name)
+        f.write_text(
+            '[2026-08-14 10:00:00] DEBUG (0.512) SELECT * FROM articles; args=(1,); alias=default\n'
+            '[2026-08-14 10:00:01] DEBUG (0.050) SELECT 1; args=(); alias=default\n'
+            '[2026-08-14 10:00:02] DEBUG (1.234) SELECT * FROM mouvements; args=(); alias=default\n',
+            encoding='utf-8',
+        )
+        try:
+            resultats = lister_requetes_lentes(limit=10, fichier=f)
+            # Toutes les lignes du fichier (le filtre de log fait le seuil à l'écriture)
+            self.assertEqual(len(resultats), 3)
+            self.assertEqual(resultats[0]['ms'], 1234)   # plus récente en premier
+            self.assertEqual(resultats[0]['sql'], 'SELECT * FROM mouvements')
+            self.assertNotIn('args=', resultats[0]['sql'])  # données retirées
+            self.assertEqual(resultats[2]['ms'], 512)
+        finally:
+            f.unlink(missing_ok=True)
+
+    def test_aucune_requete_lente_sans_fichier(self):
+        self.assertEqual(lister_requetes_lentes(fichier=Path(settings.BASE_DIR) / 'logs' / 'inexistant-xyz.log'), [])
+
+
+class SlowQueryFilterTest(TestCase):
+    def test_garde_seulement_les_lentes(self):
+        filtre = SlowQueryFilter(threshold=0.2)
+        rapide = type('R', (), {'duration': 0.05})()
+        lente = type('R', (), {'duration': 0.5})()
+        sans_duree = type('R', (), {})()
+        self.assertFalse(filtre.filter(rapide))
+        self.assertTrue(filtre.filter(lente))
+        self.assertFalse(filtre.filter(sans_duree))
+
+    def test_seuil_par_defaut_200ms(self):
+        filtre = SlowQueryFilter()
+        self.assertEqual(filtre.threshold, 0.2)
+        self.assertTrue(filtre.filter(type('R', (), {'duration': 0.2})()))
