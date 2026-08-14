@@ -1,0 +1,92 @@
+name: Deploy Staging
+
+# Déploie automatiquement sur l'environnement de staging via le playbook
+# Ansible (deploy/ansible/playbook.yml), après le succès de la CI sur main.
+# Déclenchable aussi manuellement (Actions → Deploy Staging → Run workflow).
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    name: Déploiement staging (Ansible)
+    runs-on: ubuntu-latest
+    environment: staging
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Ansible
+        run: pip install ansible-core
+
+      - name: Préparer inventaire + variables d'hôte
+        env:
+          STAGING_HOST: ${{ secrets.STAGING_HOST }}
+          STAGING_SSH_USER: ${{ secrets.STAGING_SSH_USER }}
+          STAGING_SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          STAGING_SERVER_NAME: ${{ secrets.STAGING_SERVER_NAME }}
+          STAGING_SECRET_KEY: ${{ secrets.STAGING_SECRET_KEY }}
+          STAGING_DB_PASSWORD: ${{ secrets.STAGING_DB_PASSWORD }}
+          STAGING_DB_USER: ${{ secrets.STAGING_DB_USER }}
+          STAGING_DB_NAME: ${{ secrets.STAGING_DB_NAME }}
+        run: |
+          set -euo pipefail
+          if [ -z "${STAGING_HOST:-}" ]; then
+            echo "::warning::Secret STAGING_HOST non configuré — déploiement ignoré."
+            echo "Renseigner les secrets (environnement 'staging') : STAGING_HOST,"
+            echo "STAGING_SSH_USER, STAGING_SSH_KEY, STAGING_SERVER_NAME,"
+            echo "STAGING_SECRET_KEY, STAGING_DB_PASSWORD (et STAGING_DB_USER/NAME optionnels)."
+            exit 0
+          fi
+
+          # Clé SSH pour le contrôleur Ansible
+          mkdir -p ~/.ssh
+          printf '%s\n' "${STAGING_SSH_KEY}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+
+          # Inventaire : hôte alias 'staging' → host_vars/staging.yml
+          cat > deploy/ansible/inventory <<INI
+          [staging]
+          staging ansible_host=${STAGING_HOST} ansible_user=${STAGING_SSH_USER:-ubuntu} ansible_ssh_private_key_file=~/.ssh/deploy_key
+
+          [staging:vars]
+          ansible_python_interpreter=/usr/bin/python3
+          INI
+
+          # Variables d'hôte (le code est cloné en git — pas de rsync en CI)
+          cat > deploy/ansible/host_vars/staging.yml <<EOF
+          server_name: "${STAGING_SERVER_NAME:-erp-staging.chu.example}"
+          allowed_hosts: "${STAGING_SERVER_NAME:-erp-staging.chu.example}"
+          csrf_trusted_origins: "https://${STAGING_SERVER_NAME:-erp-staging.chu.example}"
+          secret_key: "${STAGING_SECRET_KEY}"
+          db_name: "${STAGING_DB_NAME:-chu_angre_db}"
+          db_user: "${STAGING_DB_USER:-postgres}"
+          db_password: "${STAGING_DB_PASSWORD}"
+          db_host: localhost
+          db_port: "5432"
+          django_debug: "False"
+          # Staging : certificat auto-signé (domaine non public) ;
+          # passer à tls_letsencrypt: true quand le domaine pointe sur le serveur.
+          tls_letsencrypt: false
+          tls_email: admin@chu.example
+          tls_self_signed: true
+          EOF
+
+      - name: Déployer via Ansible (clone git du commit exact)
+        run: |
+          ansible-playbook -i deploy/ansible/inventory deploy/ansible/playbook.yml \
+            --extra-vars "repo_url=https://github.com/${GITHUB_REPOSITORY}.git" \
+            --extra-vars "git_ref=${GITHUB_SHA}" \
+            --extra-vars "tls_self_signed=true"
+
+      - name: Succès
+        run: echo "✅ NexusERP déployé sur staging (commit ${GITHUB_SHA}) — voir /health/ pour confirmer."
