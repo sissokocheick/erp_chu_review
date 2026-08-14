@@ -29,6 +29,7 @@ jobs:
         run: pip install ansible-core
 
       - name: Préparer inventaire + variables d'hôte
+        id: prepare
         env:
           STAGING_HOST: ${{ secrets.STAGING_HOST }}
           STAGING_SSH_USER: ${{ secrets.STAGING_SSH_USER }}
@@ -45,8 +46,10 @@ jobs:
             echo "Renseigner les secrets (environnement 'staging') : STAGING_HOST,"
             echo "STAGING_SSH_USER, STAGING_SSH_KEY, STAGING_SERVER_NAME,"
             echo "STAGING_SECRET_KEY, STAGING_DB_PASSWORD (et STAGING_DB_USER/NAME optionnels)."
+            echo "configured=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+          echo "configured=true" >> "$GITHUB_OUTPUT"
 
           # Clé SSH pour le contrôleur Ansible
           mkdir -p ~/.ssh
@@ -82,6 +85,7 @@ jobs:
           EOF
 
       - name: Déployer via Ansible (clone git du commit exact)
+        if: steps.prepare.outputs.configured == 'true'
         run: |
           ansible-playbook -i deploy/ansible/inventory deploy/ansible/playbook.yml \
             --extra-vars "repo_url=https://github.com/${GITHUB_REPOSITORY}.git" \
@@ -89,4 +93,5 @@ jobs:
             --extra-vars "tls_self_signed=true"
 
       - name: Succès
+        if: steps.prepare.outputs.configured == 'true'
         run: echo "✅ NexusERP déployé sur staging (commit ${GITHUB_SHA}) — voir /health/ pour confirmer."
