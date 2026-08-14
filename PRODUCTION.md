@@ -39,6 +39,28 @@ et utilise **PostgreSQL** en production.
 
 ## 2. Étapes de déploiement
 
+### Automatisé (recommandé)
+
+Deux scripts font tout le pipeline (chargement `.env` → validation → `migrate` →
+`collectstatic` → `check --deploy` → lancement du serveur) :
+
+```bash
+# Linux / WSL / Git Bash :
+./scripts/deploy.sh                     # tout + gunicorn en arrière-plan
+./scripts/deploy.sh --check             # validation + check --deploy, sans lancer
+./scripts/deploy.sh --port 8080 --workers 4
+
+# Windows PowerShell :
+.\scripts\deploy.ps1                    # tout + serveur (gunicorn ou waitress)
+.\scripts\deploy.ps1 -Check
+.\scripts\deploy.ps1 -Port 8080 -Workers 4
+```
+
+> Sur **Windows**, gunicorn n'est pas supporté : `deploy.ps1` bascule sur
+> **waitress** (`pip install waitress`) ou vous guide vers WSL/Linux.
+
+### Manuel
+
 ```bash
 # 1. Dépendances (environnement propre)
 python -m venv venv && source venv/bin/activate

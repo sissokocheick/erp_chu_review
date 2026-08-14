@@ -103,3 +103,5 @@ staticfiles/
 media/
 .freebuff/
 !.env.example
+logs/
+.gunicorn.pid
