@@ -174,6 +174,7 @@ urlpatterns = [
     # COMMANDES
     # ═══════════════════════════════════════════════════════════════════════
     path('commandes/', commandes.liste_commandes, name='liste_commandes'),
+    path('commandes/suggestions/', commandes.suggestions_reappro, name='suggestions_reappro'),
     path('commande/<int:commande_id>/imprimer/', imprimer_commande, name='imprimer_commande'),
     path('commande/<int:commande_id>/receptionner/', commandes.receptionner_commande, name='receptionner_commande'),
     path('commande/<int:commande_id>/valider/', commandes.valider_commande, name='valider_commande'),

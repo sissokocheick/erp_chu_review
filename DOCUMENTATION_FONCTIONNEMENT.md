@@ -320,6 +320,19 @@ Rotation du comptage **par famille / par zone** au lieu d'une campagne complète
 - **Solder** : clôturer une commande en reliquat (statut `SOLDE`).
 - Impression PDF (modale), suppression.
 
+### Suggestions de Réapprovisionnement (`/commandes/suggestions/`)
+- Boucle de réappro **fermée** : la page liste automatiquement les **articles sous seuil
+  minimum** dans le magasin actif, avec : stock actuel, seuils (min/critique/max), statut
+  d'alerte (CRITIQUE d'abord, puis ratio stock/seuil) et **quantité recommandée**
+  (= seuil maximum − stock, sinon double du seuil minimum − stock, minimum 1).
+- Valeur estimée par ligne et au total (prix de référence × quantité recommandée).
+- Filtres par famille et recherche (désignation, référence).
+- **Conversion en un clic** : sélection des suggestions (case tout-cocher, quantités
+  modifiables), choix du fournisseur et objet optionnel → **une commande fournisseur par
+  famille** est créée avec les lignes (prix unitaire = prix de référence) puis redirection
+  vers la liste des commandes pour validation/réception.
+- Accès : menu **Achats & Catalogue → Suggestions Réappro** (permission `menu_commandes`).
+
 ---
 
 ## 9. Patrimoine & SAV

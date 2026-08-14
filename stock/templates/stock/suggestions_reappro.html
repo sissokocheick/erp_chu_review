@@ -1,0 +1,251 @@
+{% extends "base_ui.html" %}
+{% block title %}Suggestions de Réapprovisionnement{% endblock %}
+
+{% block contenu %}
+<style>
+  :root {
+    --ra-bg: #ffffff; --ra-bg-alt: #f8fafc;
+    --ra-text: #0f172a; --ra-text-2: #64748b;
+    --ra-border: #e2e8f0; --ra-accent: #0d9488;
+    --ra-accent-h: #0f766e; --ra-accent-l: rgba(13,148,136,0.1);
+    --ra-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  }
+  body.dark-mode {
+    --ra-bg: #1e293b; --ra-bg-alt: #0f172a;
+    --ra-text: #f1f5f9; --ra-text-2: #94a3b8;
+    --ra-border: #334155; --ra-accent: #2dd4bf;
+    --ra-accent-h: #5eead4; --ra-accent-l: rgba(45,212,191,0.15);
+    --ra-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .ra-header {
+    background: linear-gradient(135deg, var(--ra-accent) 0%, #2563eb 100%);
+    color: white; border-radius: 12px; padding: 22px 26px; margin-bottom: 22px;
+    display: flex; align-items: center; justify-content: space-between;
+    box-shadow: var(--ra-shadow); position: relative; overflow: hidden;
+  }
+  .ra-header::before {
+    content: ''; position: absolute; top: -50%; right: -10%;
+    width: 300px; height: 300px;
+    background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+  .ra-header h4 { margin: 0; font-size: 21px; font-weight: 800; position: relative; }
+  .ra-header small { opacity: 0.9; font-size: 13px; display: block; margin-top: 4px; }
+  .btn-retour {
+    background: rgba(255,255,255,0.18); color: white; border: 1.5px solid rgba(255,255,255,0.35);
+    padding: 9px 16px; border-radius: 8px; font-size: 13px; cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; gap: 6px; font-weight: 600; position: relative;
+  }
+  .btn-retour:hover { background: rgba(255,255,255,0.3); }
+
+  .ra-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; margin-bottom: 20px; }
+  .ra-kpi {
+    background: var(--ra-bg); border: 1px solid var(--ra-border); border-radius: 12px;
+    padding: 16px 18px; display: flex; align-items: center; gap: 14px; box-shadow: var(--ra-shadow);
+  }
+  .ra-kpi .ra-kpi-icon {
+    width: 44px; height: 44px; border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; font-size: 18px; color: white;
+  }
+  .ra-kpi .ra-val { font-size: 22px; font-weight: 800; line-height: 1.1; color: var(--ra-text); }
+  .ra-kpi .ra-lbl { font-size: 12px; color: var(--ra-text-2); font-weight: 600; }
+
+  .ra-filtres {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    background: var(--ra-bg); border: 1px solid var(--ra-border);
+    border-radius: 12px; padding: 12px 16px; margin-bottom: 16px;
+  }
+  .ra-filtres input, .ra-filtres select {
+    background: var(--ra-bg-alt); color: var(--ra-text); border: 1.5px solid var(--ra-border);
+    border-radius: 8px; padding: 9px 14px; font-size: 13px; outline: none; font-family: inherit;
+  }
+  .ra-filtres input:focus, .ra-filtres select:focus { border-color: var(--ra-accent); }
+
+  .ra-table-wrap {
+    background: var(--ra-bg); border-radius: 12px; box-shadow: var(--ra-shadow);
+    border: 1px solid var(--ra-border); overflow: auto; max-height: calc(100vh - 380px);
+  }
+  .ra-table-wrap table thead th { position: sticky; top: 0; z-index: 3; }
+  @media (max-width: 768px) { .ra-table-wrap { max-height: none; } .ra-table-wrap table thead th { position: static; } }
+  .ra-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+  .ra-table thead th {
+    background: linear-gradient(135deg, var(--ra-accent), #2563eb); color: white;
+    padding: 12px 14px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .ra-table tbody td { padding: 11px 14px; border-top: 1px solid var(--ra-border); color: var(--ra-text); vertical-align: middle; }
+  .ra-table tbody tr:hover { background: var(--ra-accent-l); }
+  .ra-table input[type="number"] {
+    width: 76px; background: var(--ra-bg-alt); color: var(--ra-text);
+    border: 1.5px solid var(--ra-border); border-radius: 8px; padding: 7px 10px; font-size: 13px; text-align: center;
+  }
+  .ra-table input[type="checkbox"] { width: 17px; height: 17px; cursor: pointer; accent-color: var(--ra-accent); }
+
+  .badge-reappro { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-block; }
+  .badge-critique { background: rgba(220,53,69,0.14); color: #dc3545; }
+  .badge-alerte   { background: rgba(255,193,7,0.16); color: #b8860b; }
+  body.dark-mode .badge-critique { color: #ff8a80; }
+  body.dark-mode .badge-alerte { color: #ffd54f; }
+
+  .ra-footer {
+    margin-top: 16px; background: var(--ra-bg); border: 1px solid var(--ra-border);
+    border-radius: 12px; padding: 16px 18px; display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;
+    box-shadow: var(--ra-shadow);
+  }
+  .ra-footer label { display: block; font-size: 12px; color: var(--ra-text-2); font-weight: 700; margin-bottom: 5px; }
+  .ra-footer select, .ra-footer input {
+    background: var(--ra-bg-alt); color: var(--ra-text); border: 1.5px solid var(--ra-border);
+    border-radius: 8px; padding: 9px 14px; font-size: 13px; outline: none; font-family: inherit; min-width: 220px;
+  }
+  .btn-creer {
+    background: var(--ra-accent); color: white; border: none; padding: 11px 22px;
+    border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .btn-creer:hover { background: var(--ra-accent-h); }
+  .btn-creer:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ra-empty { text-align: center; padding: 40px 20px; color: var(--ra-text-2); font-size: 14px; }
+</style>
+
+<div class="ra-header">
+  <div>
+    <h4><i class="fas fa-cart-plus"></i> Suggestions de Réapprovisionnement</h4>
+    <small>Articles sous seuil dans <strong>{{ magasin.nom }}</strong> — une commande fournisseur par famille en un clic.</small>
+  </div>
+  <a href="{% url 'liste_commandes' %}" class="btn-retour">
+    <i class="fas fa-arrow-left"></i> Commandes
+  </a>
+</div>
+
+<div class="ra-kpis">
+  <div class="ra-kpi">
+    <div class="ra-kpi-icon" style="background:#0d9488;"><i class="fas fa-box-open"></i></div>
+    <div><div class="ra-val">{{ nb_suggestions }}</div><div class="ra-lbl">Articles sous seuil</div></div>
+  </div>
+  <div class="ra-kpi">
+    <div class="ra-kpi-icon" style="background:#dc3545;"><i class="fas fa-exclamation-triangle"></i></div>
+    <div><div class="ra-val">{{ nb_critiques }}</div><div class="ra-lbl">Stock critique</div></div>
+  </div>
+  <div class="ra-kpi">
+    <div class="ra-kpi-icon" style="background:#2563eb;"><i class="fas fa-coins"></i></div>
+    <div><div class="ra-val">{{ valeur_totale|floatformat:0 }} F</div><div class="ra-lbl">Valeur estimée (prix réf.)</div></div>
+  </div>
+</div>
+
+<form method="get" class="ra-filtres">
+  <input type="text" name="q" value="{{ q_reappro }}" placeholder="Rechercher (désignation, référence)…">
+  <select name="famille">
+    <option value="">Toutes les familles</option>
+    {% for f in familles %}
+      <option value="{{ f.id }}" {% if famille_filtre == f.id|stringformat:"s" %}selected{% endif %}>{{ f.intitule }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn-retour" style="position:static;color:var(--ra-text);background:var(--ra-bg-alt);border-color:var(--ra-border);">
+    <i class="fas fa-filter"></i> Filtrer
+  </button>
+  <a href="{% url 'suggestions_reappro' %}" class="btn-retour" style="position:static;color:var(--ra-text);background:var(--ra-bg-alt);border-color:var(--ra-border);">
+    <i class="fas fa-redo"></i> Réinitialiser
+  </a>
+</form>
+
+{% if suggestions %}
+<form method="post" id="form-reappro">
+  {% csrf_token %}
+  <div class="ra-table-wrap">
+    <table class="ra-table">
+      <thead>
+        <tr>
+          <th style="width:38px;"><input type="checkbox" id="tout-selectionner" checked></th>
+          <th>Référence</th>
+          <th>Désignation</th>
+          <th>Famille</th>
+          <th>Stock</th>
+          <th>Seuil min.</th>
+          <th>Seuil crit.</th>
+          <th>Qte recommandée</th>
+          <th>Valeur estimée</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for s in suggestions %}
+        <tr>
+          <td><input type="checkbox" name="articles[]" value="{{ s.article.id }}" class="ligne-check" checked></td>
+          <td>{{ s.article.reference|default:"—" }}</td>
+          <td><strong>{{ s.article.designation }}</strong></td>
+          <td>{{ s.article.famille.intitule }}</td>
+          <td><strong>{{ s.stock }}</strong></td>
+          <td>{{ s.seuil_minimum }}</td>
+          <td>{{ s.seuil_critique|default:"—" }}</td>
+          <td><input type="number" name="quantites[]" value="{{ s.qte_recommandee }}" min="1"></td>
+          <td>{{ s.valeur_estimee|floatformat:0 }} F</td>
+          <td>
+            {% if s.statut == 'CRITIQUE' %}
+              <span class="badge-reappro badge-critique">CRITIQUE</span>
+            {% else %}
+              <span class="badge-reappro badge-alerte">ALERTE</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="ra-footer">
+    <div>
+      <label>Fournisseur *</label>
+      <select name="fournisseur" id="select-fournisseur" required>
+        <option value="">— Choisir un fournisseur —</option>
+        {% for f in fournisseurs %}
+          <option value="{{ f.id }}">{{ f.raison_sociale }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label>Objet (optionnel)</label>
+      <input type="text" name="objet" placeholder="Ex : Réappro pharmacie — juillet">
+    </div>
+    <button type="submit" class="btn-creer" id="btn-creer-commande">
+      <i class="fas fa-file-invoice-dollar"></i> Créer la commande
+    </button>
+  </div>
+</form>
+{% else %}
+<div class="ra-table-wrap"><div class="ra-empty">
+  <i class="fas fa-check-circle" style="font-size:32px;margin-bottom:10px;color:#198754;"></i><br>
+  Aucun article sous seuil dans ce magasin — le stock est au niveau requis.
+</div></div>
+{% endif %}
+
+<script>
+(function () {
+  var tout = document.getElementById('tout-selectionner');
+  var cases = document.querySelectorAll('.ligne-check');
+  if (tout) {
+    tout.addEventListener('change', function () {
+      cases.forEach(function (c) { c.checked = tout.checked; });
+    });
+  }
+  var form = document.getElementById('form-reappro');
+  if (form) {
+    form.addEventListener('submit', function (e) {
+      var fournisseur = document.getElementById('select-fournisseur');
+      var selection = document.querySelectorAll('.ligne-check:checked');
+      if (!fournisseur || !fournisseur.value) {
+        e.preventDefault();
+        alert('Veuillez sélectionner un fournisseur pour créer la commande.');
+        fournisseur && fournisseur.focus();
+        return;
+      }
+      if (selection.length === 0) {
+        e.preventDefault();
+        alert('Veuillez sélectionner au moins un article à commander.');
+        return;
+      }
+      var btn = document.getElementById('btn-creer-commande');
+      if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Création…'; }
+    });
+  }
+})();
+</script>
+{% endblock %}

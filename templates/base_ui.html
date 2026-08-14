@@ -717,6 +717,7 @@
         <div class="submenu" id="menu-achats">
             {% if perms.accounts.menu_commandes %}
             <a href="{% url 'liste_commandes' %}" class="menu-item" data-title="Commandes"><i class="fas fa-file-invoice-dollar nav-icon"></i><span class="nav-text">Commandes Fourn.</span></a>
+            <a href="{% url 'suggestions_reappro' %}" class="menu-item" data-title="Reappro"><i class="fas fa-cart-plus nav-icon" style="color:#20c997;"></i><span class="nav-text">Suggestions Réappro</span></a>
             {% endif %}
             {% if perms.accounts.menu_articles %}
             <a href="{% url 'liste_articles' %}" class="menu-item" data-title="Articles"><i class="fas fa-barcode nav-icon" style="color:#0d47a1;"></i><span class="nav-text">Catalogue Articles</span></a>

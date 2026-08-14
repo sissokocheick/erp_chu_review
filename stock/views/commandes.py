@@ -14,7 +14,7 @@ from accounts.permissions import verifier_permission
 from ..models import (
     Commande, LigneCommande, BonMouvement, LigneBon,
     Fournisseur, Article, Magasin, Mouvement, CircuitValidation,
-    BonDeLivraison, FamilleArticle)
+    BonDeLivraison, FamilleArticle, StockItem)
 from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 from ..services import NumeroGenerator, NotificationService
@@ -25,6 +25,7 @@ from .common_views import render_liste, get_magasin_actif, build_redirect_url, f
 from django.urls import reverse
 from core.models import ConfigurationHopital
 from django.db.models import Sum, Count, Case, When, Value, IntegerField
+from collections import defaultdict
 
 # Constante : taille maximale de fichier upload (1 Mo)
 MAX_FILE_SIZE = 1024 * 1024  # 1 Mo en octets
@@ -824,3 +825,187 @@ def voir_bon_livraison(request, bon_id):
         return FileResponse(bon.fichier.open(), content_type=content_type)
     return HttpResponse("Aucun document joint.", status=404)
 
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SUGGESTIONS DE RÉAPPROVISIONNEMENT
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _statut_suggestion(stock, seuil_critique, seuil_minimum):
+    """Statut d'alerte d'un stock par rapport aux seuils de l'article."""
+    if seuil_critique is not None and stock <= seuil_critique:
+        return 'CRITIQUE'
+    if seuil_minimum is not None and stock <= seuil_minimum:
+        return 'ALERTE'
+    return 'OK'
+
+
+def _qte_recommandee(article, stock):
+    """Quantité à commander pour remonter au niveau cible (seuil max sinon
+    double du seuil min)."""
+    cible = article.seuil_maximum if (article.seuil_maximum or 0) > 0 \
+        else (article.seuil_minimum or 0) * 2
+    return max(cible - stock, 1)
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_commandes')
+@magasin_requis
+@catch_errors(redirect_url='liste_commandes')
+def suggestions_reappro(request):
+    """Suggestions automatiques de commandes : articles sous seuil dans le
+    magasin actif, avec quantité recommandée, convertibles en commandes
+    fournisseur en un clic (une commande par famille)."""
+    magasin = get_magasin_actif(request)
+    famille_filtre = request.GET.get('famille', '')
+    q = request.GET.get('q', '').strip()
+
+    # ── POST : conversion des suggestions sélectionnées en commandes ──
+    if request.method == 'POST':
+        fournisseur_id = request.POST.get('fournisseur')
+        objet = request.POST.get('objet', '').strip() or None
+        article_ids = request.POST.getlist('articles[]')
+        quantites = request.POST.getlist('quantites[]')
+
+        if not magasin:
+            messages.error(request, "❌ Veuillez sélectionner un magasin.")
+            return redirect('suggestions_reappro')
+
+        if not fournisseur_id:
+            messages.error(
+                request, "❌ Sélectionnez un fournisseur pour créer la commande.")
+            return redirect('suggestions_reappro')
+
+        fournisseur = get_object_or_404(Fournisseur, id=fournisseur_id)
+
+        if not article_ids:
+            messages.error(
+                request, "❌ Sélectionnez au moins un article à commander.")
+            return redirect('suggestions_reappro')
+
+        # (article_id, quantite) validés
+        lignes_valides = []
+        articles_map = {
+            a.id: a for a in Article.objects.filter(
+                id__in=[int(aid) for aid in article_ids if aid])
+        }
+        for aid, qte in zip(article_ids, quantites):
+            if not aid or not qte:
+                continue
+            try:
+                qte_int = int(qte)
+            except (TypeError, ValueError):
+                continue
+            if qte_int <= 0 or int(aid) not in articles_map:
+                continue
+            lignes_valides.append((int(aid), qte_int))
+
+        if not lignes_valides:
+            messages.error(
+                request, "❌ Aucune quantité valide à commander.")
+            return redirect('suggestions_reappro')
+
+        # Groupement par famille → une commande par famille
+        par_famille = defaultdict(list)
+        for aid, qte in lignes_valides:
+            par_famille[articles_map[aid].famille_id].append((aid, qte))
+
+        commandes_crees = []
+        try:
+            with transaction.atomic():
+                for famille_id, lignes_famille in par_famille.items():
+                    famille = FamilleArticle.objects.get(id=famille_id)
+                    commande = Commande(
+                        fournisseur=fournisseur,
+                        magasin=magasin,
+                        famille=famille,
+                        cree_par=request.user,
+                        modifie_par=request.user,
+                        objet=objet or f"Réappro {famille.intitule}",
+                    )
+                    commande.save()
+                    for aid, qte in lignes_famille:
+                        article = articles_map[aid]
+                        LigneCommande.objects.create(
+                            commande=commande,
+                            article=article,
+                            quantite_demandee=qte,
+                            quantite_recue=0,
+                            prix_unitaire=article.prix_reference,
+                        )
+                    commandes_crees.append(
+                        f"{commande.numero_commande} ({famille.intitule}, "
+                        f"{len(lignes_famille)} article(s))")
+        except IntegrityError:
+            logger.exception("[REAPPRO] Erreur création commande")
+            messages.error(
+                request, "⛔ Erreur lors de la création. Veuillez réessayer.")
+            return redirect('suggestions_reappro')
+
+        messages.success(
+            request,
+            f"✅ {len(commandes_crees)} commande(s) créée(s) : "
+            + ", ".join(commandes_crees)
+            + ". Elles apparaissent dans la liste des commandes.")
+        return redirect('liste_commandes')
+
+    # ── GET : calcul des suggestions ──
+    stocks = StockItem.objects.select_related('article__famille', 'magasin').filter(
+        magasin=magasin,
+        batch_number__isnull=True,
+        quantite_physique__gte=0,
+        article__seuil_minimum__gt=0,
+    )
+
+    if famille_filtre:
+        stocks = stocks.filter(article__famille_id=famille_filtre)
+    if q:
+        stocks = stocks.filter(
+            Q(article__designation__icontains=q) |
+            Q(article__reference__icontains=q)
+        )
+
+    suggestions = []
+    for s in stocks:
+        art = s.article
+        if s.quantite_physique > art.seuil_minimum:
+            continue  # au-dessus du seuil : pas de suggestion
+        qte_rec = _qte_recommandee(art, s.quantite_physique)
+        valeur = Decimal(str(art.prix_reference or 0)) * qte_rec
+        suggestions.append({
+            'article': art,
+            'stock': s.quantite_physique,
+            'seuil_minimum': art.seuil_minimum,
+            'seuil_critique': art.seuil_critique,
+            'seuil_maximum': art.seuil_maximum,
+            'qte_recommandee': qte_rec,
+            'valeur_estimee': valeur,
+            'statut': _statut_suggestion(
+                s.quantite_physique, art.seuil_critique, art.seuil_minimum),
+        })
+
+    # Tri : CRITIQUE d'abord, puis ratio stock/seuil croissant
+    def _cle(sug):
+        ratio = (sug['stock'] / sug['seuil_minimum']) \
+            if sug['seuil_minimum'] else 1
+        return (0 if sug['statut'] == 'CRITIQUE' else 1, ratio)
+
+    suggestions.sort(key=_cle)
+
+    nb_critiques = sum(1 for s in suggestions if s['statut'] == 'CRITIQUE')
+    valeur_totale = sum(s['valeur_estimee'] for s in suggestions)
+
+    familles = FamilleArticle.objects.all().order_by('intitule')
+
+    context = {
+        'suggestions': suggestions,
+        'familles': familles,
+        'famille_filtre': famille_filtre,
+        'q_reappro': q,
+        'magasin': magasin,
+        'nb_suggestions': len(suggestions),
+        'nb_critiques': nb_critiques,
+        'valeur_totale': valeur_totale,
+        'fournisseurs': Fournisseur.objects.all().order_by('raison_sociale'),
+    }
+    return render(request, 'stock/suggestions_reappro.html', context)
