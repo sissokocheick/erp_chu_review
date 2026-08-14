@@ -38,6 +38,8 @@
           - curl                # healthcheck systemd
           - rsync               # synchronize (déploiement local)
           - openssl             # cert auto-signé éventuel
+          - certbot             # Let's Encrypt (si tls_letsencrypt)
+          - python3-certbot-nginx
         update_cache: true
         state: present
 
@@ -174,6 +176,16 @@
         src: /etc/nginx/sites-available/nexuserp
         dest: /etc/nginx/sites-enabled/nexuserp
         state: link
+
+    - name: Certificat Let's Encrypt (certbot, si demandé)
+      command: >
+        certbot certonly --nginx -d {{ server_name }}
+        --non-interactive --agree-tos -m {{ tls_email }}
+        --redirect --keep-until-expiring
+      args:
+        creates: /etc/letsencrypt/live/{{ server_name }}/fullchain.pem
+      when: tls_letsencrypt
+      notify: reload nginx
 
     # ── Sauvegardes quotidiennes ────────────────────────────────────────────
     - name: Cron de sauvegarde PostgreSQL (02h00)

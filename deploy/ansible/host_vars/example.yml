@@ -28,7 +28,12 @@ django_debug: "False"
 # twilio_auth_token: "!!remplacer!!"
 # twilio_from_number: "+2250000000000"
 
-# TLS : true pour un cert auto-signé de test, false pour Let's Encrypt
+# TLS :
+#   tls_letsencrypt: true  → certbot auto (domaine public requis)
+#   tls_self_signed: true  → certificat auto-signé (test local)
+#   sinon                   → certs existants via tls_cert/tls_key
+tls_letsencrypt: false
+tls_email: admin@chu.example
 tls_self_signed: false
 tls_cert: /etc/letsencrypt/live/erp.chu.example/fullchain.pem
 tls_key: /etc/letsencrypt/live/erp.chu.example/privkey.pem

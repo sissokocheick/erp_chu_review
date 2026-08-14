@@ -39,12 +39,25 @@ ansible-playbook -i inventory playbook.yml         # + --ask-vault-pass si vault
 | `smtp_*` / `twilio_*` | canaux de notification (optionnels) |
 | `tls_self_signed` / `tls_cert` / `tls_key` | TLS (auto-signé ou existant) |
 
+## TLS automatique (Let's Encrypt)
+
+Avec `tls_letsencrypt: true` (et `tls_email` renseigné), le playbook installe
+certbot et obtient le certificat au premier déploiement :
+
+```yaml
+# host_vars/<hote>.yml
+tls_letsencrypt: true
+tls_email: admin@chu.example
+```
+
+Prérequis : le domaine `server_name` doit pointer (DNS) vers le serveur et le
+port 80 doit être ouvert — certbot valide via nginx. Le renouvellement est
+automatique (timer `certbot.timer` installé avec le paquet).
+
 ## Après le déploiement
 
 - Superutilisateur : `python manage.py createsuperuser` sur le serveur
   (via `sudo -u nexuserp /opt/erp_chu_review/venv/bin/python manage.py createsuperuser`).
-- Let's Encrypt : `sudo certbot --nginx -d erp.chu.example` (puis mettre à
-  jour `tls_cert`/`tls_key` ou l'auto-signé se suffit pour un test).
 - Journal : `journalctl -u nexuserp -f` · Statut : `systemctl status nexuserp`.
 
 ## Redéploiement du code seul

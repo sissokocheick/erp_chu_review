@@ -40,8 +40,12 @@ twilio_auth_token: ""
 twilio_from_number: ""
 
 # ── TLS ────────────────────────────────────────────────────────────────────
-# true = génère un certificat auto-signé (test) ; false = utiliser des certs
-# existants (Let's Encrypt…) via tls_cert / tls_key.
+# 1) tls_letsencrypt: true → certbot obtient/renouvelle automatiquement le
+#    certificat Let's Encrypt (le domaine doit pointer vers le serveur).
+# 2) tls_self_signed: true → certificat auto-signé (test local).
+# 3) sinon → utiliser des certs existants via tls_cert / tls_key.
+tls_letsencrypt: false
+tls_email: admin@chu.example   # email de récupération Let's Encrypt
 tls_self_signed: false
 tls_cert: /etc/letsencrypt/live/erp.chu.example/fullchain.pem
 tls_key: /etc/letsencrypt/live/erp.chu.example/privkey.pem
