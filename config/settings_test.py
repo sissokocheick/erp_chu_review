@@ -1,4 +1,12 @@
 """Configuration de test sans PostgreSQL"""
+import os
+
+# Depuis le durcissement production, DEBUG défaut à False et settings.py lève
+# si DJANGO_SECRET_KEY est absente. En test on force le mode dev AVANT l'import
+# (les tests Client + E2E LiveServer tournent en HTTP : SECURE_SSL_REDIRECT et
+# les cookies sécurisés doivent rester inactifs).
+os.environ.setdefault('DJANGO_DEBUG', 'True')
+
 from .settings import *
 
 DATABASES = {

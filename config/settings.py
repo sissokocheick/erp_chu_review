@@ -15,8 +15,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# ✅ CORRECTION : DEBUG depuis variable d'environnement
-DEBUG = os.environ.get('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+# ✅ CORRECTION : DEBUG depuis variable d'environnement.
+# Défaut FAIL-SAFE : sans DJANGO_DEBUG explicite, l'app démarre en mode
+# production (DEBUG=False). En développement local, lancer avec
+# DJANGO_DEBUG=True (voir .freebuff/run.md).
+DEBUG = os.environ.get('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 # ✅ CORRECTION : SECRET_KEY lu depuis l'environnement.
 # Le fallback en dur n'est autorisé qu'en développement (DEBUG=True).
@@ -162,6 +165,8 @@ SESSION_COOKIE_SECURE = not DEBUG
 SECURE_CONTENT_TYPE_NOSNIFF = True
 # X_FRAME_OPTIONS : 'SAMEORIGIN' (défini plus bas) est volontaire :
 # nécessaire pour les aperçus PDF affichés en iframe sur le même site.
+# On silencie donc le warning security.W019 (DENY impossible ici).
+SILENCED_SYSTEM_CHECKS = ['security.W019']
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
 
 # --- CONFIGURATION DE LA CONNEXION (Module accounts) ---

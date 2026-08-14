@@ -11,8 +11,11 @@ urlpatterns = [
     path('', include('stock.urls')), 
 
     path('patrimoine/', include('patrimoine.urls')),
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+]
 
-# Permet d'afficher les fichiers envoyés (images/PDF) en mode développement
+# En production, WhiteNoise (middleware) sert /static/ depuis STATIC_ROOT avec
+# compression et cache — le helper static() n'est utile qu'en développement.
 if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    # Permet d'afficher les fichiers envoyés (images/PDF) en mode développement
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

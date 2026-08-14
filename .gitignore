@@ -97,3 +97,9 @@ collected_static/
 
 # Freebuff (preview / logs locaux)
 .freebuff/
+
+# Artifacts de production / dev locaux
+staticfiles/
+media/
+.freebuff/
+!.env.example
