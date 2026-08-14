@@ -1,0 +1,34 @@
+---
+# Exemple de variables d'hôte — copier vers host_vars/<hote>.yml et renseigner.
+# Pour les secrets, préférer ansible-vault :
+#   ansible-vault create host_vars/<hote>.yml
+
+server_name: erp.chu.example
+allowed_hosts: "erp.chu.example,www.erp.chu.example"
+csrf_trusted_origins: "https://erp.chu.example"
+
+db_name: chu_angre_db
+db_user: chu_app
+db_password: "!!remplacer!!"
+db_host: localhost
+db_port: "5432"
+
+secret_key: "!!remplacer par openssl rand -hex 40!!"
+django_debug: "False"
+
+# SMTP optionnel
+# smtp_host: smtp.gmail.com
+# smtp_port: "587"
+# smtp_user: noreply@chu.example
+# smtp_password: "!!remplacer!!"
+# email_from: noreply@chu.example
+
+# Twilio optionnel
+# twilio_account_sid: ACxxxxxxxxxxxx
+# twilio_auth_token: "!!remplacer!!"
+# twilio_from_number: "+2250000000000"
+
+# TLS : true pour un cert auto-signé de test, false pour Let's Encrypt
+tls_self_signed: false
+tls_cert: /etc/letsencrypt/live/erp.chu.example/fullchain.pem
+tls_key: /etc/letsencrypt/live/erp.chu.example/privkey.pem

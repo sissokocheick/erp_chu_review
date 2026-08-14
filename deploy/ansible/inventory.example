@@ -1,0 +1,9 @@
+# Exemple d'inventaire Ansible — copier vers inventory et adapter.
+# (une seule cible : l'application est mono-tenant)
+
+[erp]
+prod-01 ansible_host=203.0.113.10 ansible_user=ubuntu
+# prod-02 ansible_host=203.0.113.11 ansible_user=ubuntu
+
+[erp:vars]
+ansible_python_interpreter=/usr/bin/python3

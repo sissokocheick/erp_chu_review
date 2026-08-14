@@ -1,0 +1,47 @@
+---
+# ── Défauts de déploiement — surcharger par hôte (host_vars/) ou vault ──
+
+# Utilisateur et chemins
+app_user: nexuserp
+app_dir: /opt/erp_chu_review
+app_port: 8000
+server_name: erp.chu.example
+
+# Déploiement du code :
+#   - définir `repo_url` (ex: git@github.com:org/erp.git) pour un clone git,
+#   - sinon rsync depuis le checkout local du contrôleur :
+local_checkout: "{{ playbook_dir }}/../.."
+
+# ── Django ─────────────────────────────────────────────────────────────────
+django_debug: "False"
+# ⚠️ Clé de 50+ caractères aléatoires — à surcharger (ansible-vault)
+secret_key: "CHANGEME_0123456789abcdef0123456789abcdef0123456789abcdef"
+allowed_hosts: "erp.chu.example"
+csrf_trusted_origins: "https://erp.chu.example"
+
+# ── Base de données ────────────────────────────────────────────────────────
+db_name: chu_angre_db
+db_user: postgres
+db_host: localhost
+db_port: "5432"
+# ⚠️ À surcharger (ansible-vault)
+db_password: "CHANGEME"
+
+# ── Notifications e-mail (optionnel) ───────────────────────────────────────
+smtp_host: ""
+smtp_port: "587"
+smtp_user: ""
+smtp_password: ""
+email_from: ""
+
+# ── Notifications SMS (optionnel) ──────────────────────────────────────────
+twilio_account_sid: ""
+twilio_auth_token: ""
+twilio_from_number: ""
+
+# ── TLS ────────────────────────────────────────────────────────────────────
+# true = génère un certificat auto-signé (test) ; false = utiliser des certs
+# existants (Let's Encrypt…) via tls_cert / tls_key.
+tls_self_signed: false
+tls_cert: /etc/letsencrypt/live/erp.chu.example/fullchain.pem
+tls_key: /etc/letsencrypt/live/erp.chu.example/privkey.pem

@@ -1,0 +1,37 @@
+[Unit]
+Description=NexusERP - ERP de gestion de stock (gunicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User={{ app_user }}
+Group={{ app_user }}
+WorkingDirectory={{ app_dir }}
+EnvironmentFile={{ app_dir }}/.env
+
+ExecStart={{ app_dir }}/venv/bin/gunicorn config.wsgi:application \
+  --bind 127.0.0.1:{{ app_port }} \
+  --workers 3 \
+  --timeout 120 \
+  --max-requests 1000 \
+  --max-requests-jitter 100 \
+  --access-logfile {{ app_dir }}/logs/gunicorn-access.log \
+  --error-logfile {{ app_dir }}/logs/gunicorn-error.log
+
+Restart=always
+RestartSec=5
+
+# Surveillance de santé (systemd >= 254)
+HealthCheckCommand=/usr/bin/curl -fsS http://127.0.0.1:{{ app_port }}/health/
+HealthCheckIntervalSec=30
+HealthCheckTimeoutSec=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths={{ app_dir }}/media {{ app_dir }}/logs
+
+[Install]
+WantedBy=multi-user.target

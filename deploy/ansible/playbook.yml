@@ -1,0 +1,208 @@
+---
+# ═══════════════════════════════════════════════════════════════════════════
+#  Playbook Ansible — Déploiement NexusERP sur Ubuntu (22.04 / 24.04)
+#
+#  Usage :
+#    1. Copier host_vars/example.yml → host_vars/<hote>.yml et renseigner
+#       les secrets (ou utiliser ansible-vault).
+#    2. ansible-playbook -i inventory playbook.yml
+#
+#  Ce que fait le playbook :
+#    - paquets système (venv, pip, client PostgreSQL, nginx, curl, rsync)
+#    - utilisateur système dédié + dossier d'application
+#    - copie du code (git si `repo_url` défini, sinon rsync du checkout local)
+#    - .env de production (template, mode 0600)
+#    - venv + pip install + migrate + collectstatic + check --deploy
+#    - service systemd (gunicorn, redémarrage auto, healthcheck /health/)
+#    - nginx (TLS auto-signé si tls_self_signed, sinon certs existants)
+#    - cron de sauvegarde PostgreSQL quotidienne
+#    - vérification finale : GET /health/ → 200
+# ═══════════════════════════════════════════════════════════════════════════
+- name: Deploy NexusERP (Ubuntu)
+  hosts: all
+  become: true
+  vars_files:
+    - group_vars/all.yml
+  vars:
+    ansible_python_interpreter: /usr/bin/python3
+
+  tasks:
+    # ── Prérequis système ───────────────────────────────────────────────────
+    - name: Paquets système
+      apt:
+        name:
+          - python3-venv
+          - python3-pip
+          - postgresql-client   # pg_dump / pg_restore pour les sauvegardes
+          - nginx
+          - curl                # healthcheck systemd
+          - rsync               # synchronize (déploiement local)
+          - openssl             # cert auto-signé éventuel
+        update_cache: true
+        state: present
+
+    - name: Utilisateur système dédié
+      user:
+        name: "{{ app_user }}"
+        system: true
+        shell: /usr/sbin/nologin
+        create_home: false
+
+    - name: Dossier d'application
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+
+    - name: Sous-dossiers media / logs / backups
+      file:
+        path: "{{ app_dir }}/{{ item }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+      loop: [media, logs, backups]
+
+    # ── Code ────────────────────────────────────────────────────────────────
+    - name: Copie du code (git)
+      git:
+        repo: "{{ repo_url }}"
+        dest: "{{ app_dir }}"
+        version: "{{ git_ref | default('main') }}"
+        force: true
+      when: repo_url is defined
+      become_user: "{{ app_user }}"
+
+    - name: Copie du code (rsync depuis le contrôleur)
+      synchronize:
+        src: "{{ local_checkout }}/"
+        dest: "{{ app_dir }}/"
+        delete: true
+        rsync_opts:
+          - "--exclude=venv"
+          - "--exclude=.git"
+          - "--exclude=__pycache__"
+          - "--exclude=*.pyc"
+          - "--exclude=staticfiles"
+          - "--exclude=media"
+          - "--exclude=backups"
+          - "--exclude=logs"
+          - "--exclude=.env"
+          - "--exclude=.freebuff"
+      when: repo_url is not defined
+
+    - name: Propriétaire du code
+      file:
+        path: "{{ app_dir }}"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        recurse: true
+
+    # ── Configuration ───────────────────────────────────────────────────────
+    - name: Fichier .env de production
+      template:
+        src: templates/nexuserp.env.j2
+        dest: "{{ app_dir }}/.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: "0600"
+
+    # ── Environnement Python ────────────────────────────────────────────────
+    - name: Virtualenv
+      command: python3 -m venv "{{ app_dir }}/venv"
+      args:
+        creates: "{{ app_dir }}/venv/bin/activate"
+      become_user: "{{ app_user }}"
+
+    - name: Dépendances Python
+      pip:
+        requirements: "{{ app_dir }}/requirements.txt"
+        virtualenv: "{{ app_dir }}/venv"
+        state: present
+
+    - name: Migrations + statiques + vérifications de sécurité
+      become_user: "{{ app_user }}"
+      environment:
+        PATH: "{{ app_dir }}/venv/bin:{{ ansible_env.PATH }}"
+      shell: |
+        set -a
+        . "{{ app_dir }}/.env"
+        set +a
+        cd "{{ app_dir }}"
+        python manage.py migrate
+        python manage.py collectstatic --noinput
+        python manage.py check --deploy
+      register: deploy_checks
+
+    - name: Résultat des vérifications
+      debug:
+        var: deploy_checks.stdout_lines
+
+    # ── Service systemd ─────────────────────────────────────────────────────
+    - name: Unité systemd
+      template:
+        src: templates/nexuserp.service.j2
+        dest: /etc/systemd/system/nexuserp.service
+      notify: reload systemd
+
+    - name: Démarrage du service au boot
+      systemd:
+        name: nexuserp
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    # ── Reverse proxy nginx ─────────────────────────────────────────────────
+    - name: Certificat auto-signé (si demandé)
+      command: >
+        openssl req -x509 -nodes -newkey rsa:2048 -days 365
+        -keyout /etc/ssl/private/nexuserp-selfsigned.key
+        -out /etc/ssl/certs/nexuserp-selfsigned.crt
+        -subj "/CN={{ server_name }}"
+      args:
+        creates: /etc/ssl/certs/nexuserp-selfsigned.crt
+      when: tls_self_signed
+
+    - name: Configuration nginx
+      template:
+        src: templates/nginx_nexuserp.conf.j2
+        dest: /etc/nginx/sites-available/nexuserp
+      notify: reload nginx
+
+    - name: Activation du site nginx
+      file:
+        src: /etc/nginx/sites-available/nexuserp
+        dest: /etc/nginx/sites-enabled/nexuserp
+        state: link
+
+    # ── Sauvegardes quotidiennes ────────────────────────────────────────────
+    - name: Cron de sauvegarde PostgreSQL (02h00)
+      cron:
+        name: "nexuserp backup quotidien"
+        minute: "0"
+        hour: "2"
+        job: "cd {{ app_dir }} && venv/bin/python scripts/backup_db.py --quiet >> {{ app_dir }}/logs/backup-cron.log 2>&1"
+        user: "{{ app_user }}"
+
+    # ── Vérification finale ─────────────────────────────────────────────────
+    - name: Attendre le service (healthcheck)
+      uri:
+        url: "http://127.0.0.1:{{ app_port }}/health/"
+        status_code: 200
+      retries: 10
+      delay: 3
+      register: health
+
+    - name: Résultat de la vérification
+      debug:
+        msg: "✅ NexusERP déployé — http://{{ server_name }}/  (health: {{ health.status }})"
+
+  handlers:
+    - name: reload systemd
+      systemd:
+        daemon_reload: true
+
+    - name: reload nginx
+      service:
+        name: nginx
+        state: reloaded
