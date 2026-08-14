@@ -39,6 +39,10 @@ twilio_account_sid: ""
 twilio_auth_token: ""
 twilio_from_number: ""
 
+# ── Alertes de supervision (verifier_sante) ────────────────────────────────
+alert_emails: ""       # ex: "ops@chu.example,admin@chu.example"
+alert_phones: ""       # ex: "+2250700000000"
+
 # ── TLS ────────────────────────────────────────────────────────────────────
 # 1) tls_letsencrypt: true → certbot obtient/renouvelle automatiquement le
 #    certificat Let's Encrypt (le domaine doit pointer vers le serveur).

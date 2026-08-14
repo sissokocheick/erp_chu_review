@@ -20,7 +20,7 @@ class HealthCheckTest(TestCase):
         self.assertIn('timestamp', data)
 
     def test_base_inaccessible_retourne_503(self):
-        with mock.patch('core.views.connection.cursor',
+        with mock.patch('core.health.connection.cursor',
                         side_effect=Exception('connexion refusée')):
             resp = self.client.get(reverse('health_check'))
         self.assertEqual(resp.status_code, 503)
@@ -34,7 +34,7 @@ class HealthCheckTest(TestCase):
         config.smtp_host = 'smtp.invalide.test'
         config.smtp_port = 1
         config.save()
-        with mock.patch('core.views.socket.create_connection',
+        with mock.patch('core.health.socket.create_connection',
                         side_effect=OSError('timeout')):
             resp = self.client.get(reverse('health_check'))
         self.assertEqual(resp.status_code, 200)  # la base va bien
