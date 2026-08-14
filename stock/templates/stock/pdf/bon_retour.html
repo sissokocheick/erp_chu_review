@@ -177,8 +177,12 @@ img { max-width: 100%; height: auto; }
         <thead>
           <tr>
             <th style="width:14%;">Réf.</th>
-            <th style="width:69%;">Désignations</th>
+            <th style="width:{% if a_lots %}49{% else %}69{% endif %}%;">Désignations</th>
             <th style="width:7%;">Unité</th>
+            {% if a_lots %}
+            <th style="width:10%; font-size:8pt;">N° Lot</th>
+            <th style="width:10%; font-size:8pt;">Péremption</th>
+            {% endif %}
             <th style="width:10%;">Qté<br>retournée</th>
           </tr>
         </thead>
@@ -188,6 +192,10 @@ img { max-width: 100%; height: auto; }
             <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
             <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
             <td style="text-align:center;">{{ ligne.unite|default:"U" }}</td>
+            {% if a_lots %}
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+            {% endif %}
             <td style="text-align:center; font-weight:bold;">{{ ligne.quantite|intspace }}</td>
           </tr>
           {% endfor %}

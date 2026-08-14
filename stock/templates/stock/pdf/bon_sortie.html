@@ -327,8 +327,12 @@ img { max-width: 100%; height: auto; }
         <thead>
           <tr>
             <th rowspan="2" style="width:14%;">Réf.</th>
-            <th rowspan="2" style="width:{% if est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
+            <th rowspan="2" style="width:{% if a_lots %}{% if est_livraison_partielle and not est_cloture %}23{% else %}28{% endif %}{% elif est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
             <th rowspan="2" style="width:10%;">Unité</th>
+{% if a_lots %}
+            <th rowspan="2" style="width:14%; font-size:8pt;">N° Lot</th>
+            <th rowspan="2" style="width:11%; font-size:8pt;">Péremption</th>
+{% endif %}
             <th colspan="{% if est_livraison_partielle and not est_cloture %}3{% else %}2{% endif %}" style="width:{% if est_livraison_partielle and not est_cloture %}26{% else %}21{% endif %}%;">Quantité</th>
           </tr>
           <tr>
@@ -345,6 +349,10 @@ img { max-width: 100%; height: auto; }
             <td style="text-align:center;">{{ ligne.unite }}</td>
             <td style="text-align:center;">{{ ligne.quantite }}</td>
             <td style="text-align:center;">{{ ligne.quantite_servie|default:"&mdash;" }}</td>
+{% if a_lots %}
+            <td style="text-align:center; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+            <td style="text-align:center; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+{% endif %}
             {% if est_livraison_partielle and not est_cloture %}<td style="text-align:center;">{{ ligne.reste }}</td>{% endif %}
           </tr>
           {% endfor %}
@@ -481,8 +489,12 @@ img { max-width: 100%; height: auto; }
           <thead>
             <tr>
               <th rowspan="2" style="width:14%;">Réf.</th>
-              <th rowspan="2" style="width:{% if est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
+              <th rowspan="2" style="width:{% if a_lots %}{% if est_livraison_partielle and not est_cloture %}23{% else %}28{% endif %}{% elif est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
               <th rowspan="2" style="width:10%;">Unité</th>
+{% if a_lots %}
+              <th rowspan="2" style="width:14%; font-size:8pt;">N° Lot</th>
+              <th rowspan="2" style="width:11%; font-size:8pt;">Péremption</th>
+{% endif %}
               <th colspan="{% if est_livraison_partielle and not est_cloture %}3{% else %}2{% endif %}" style="width:{% if est_livraison_partielle and not est_cloture %}26{% else %}21{% endif %}%;">Quantité</th>
             </tr>
             <tr>
@@ -499,6 +511,10 @@ img { max-width: 100%; height: auto; }
               <td style="text-align:center;">{{ ligne.unite }}</td>
               <td style="text-align:center;">{{ ligne.quantite }}</td>
               <td style="text-align:center;">{{ ligne.quantite_servie|default:"&mdash;" }}</td>
+{% if a_lots %}
+              <td style="text-align:center; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+              <td style="text-align:center; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+{% endif %}
               {% if est_livraison_partielle and not est_cloture %}<td style="text-align:center;">{{ ligne.reste }}</td>{% endif %}
             </tr>
             {% endfor %}
@@ -523,8 +539,12 @@ img { max-width: 100%; height: auto; }
             <thead>
               <tr>
                 <th rowspan="2" style="width:14%;">Réf.</th>
-                <th rowspan="2" style="width:{% if est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
+                <th rowspan="2" style="width:{% if a_lots %}{% if est_livraison_partielle and not est_cloture %}23{% else %}28{% endif %}{% elif est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
                 <th rowspan="2" style="width:10%;">Unité</th>
+{% if a_lots %}
+                <th rowspan="2" style="width:14%; font-size:8pt;">N° Lot</th>
+                <th rowspan="2" style="width:11%; font-size:8pt;">Péremption</th>
+{% endif %}
                 <th colspan="{% if est_livraison_partielle and not est_cloture %}3{% else %}2{% endif %}" style="width:{% if est_livraison_partielle and not est_cloture %}26{% else %}21{% endif %}%;">Quantité</th>
               </tr>
               <tr>
@@ -541,6 +561,10 @@ img { max-width: 100%; height: auto; }
                 <td style="text-align:center;">{{ ligne.unite }}</td>
                 <td style="text-align:center;">{{ ligne.quantite }}</td>
                 <td style="text-align:center;">{{ ligne.quantite_servie|default:"&mdash;" }}</td>
+{% if a_lots %}
+                <td style="text-align:center; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+                <td style="text-align:center; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+{% endif %}
                 {% if est_livraison_partielle and not est_cloture %}<td style="text-align:center;">{{ ligne.reste }}</td>{% endif %}
               </tr>
               {% endfor %}
@@ -594,8 +618,12 @@ img { max-width: 100%; height: auto; }
           <thead>
             <tr>
               <th rowspan="2" style="width:14%;">Réf.</th>
-              <th rowspan="2" style="width:{% if est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
+              <th rowspan="2" style="width:{% if a_lots %}{% if est_livraison_partielle and not est_cloture %}23{% else %}28{% endif %}{% elif est_livraison_partielle and not est_cloture %}50{% else %}55{% endif %}%;">Désignations</th>
               <th rowspan="2" style="width:10%;">Unité</th>
+{% if a_lots %}
+              <th rowspan="2" style="width:14%; font-size:8pt;">N° Lot</th>
+              <th rowspan="2" style="width:11%; font-size:8pt;">Péremption</th>
+{% endif %}
               <th colspan="{% if est_livraison_partielle and not est_cloture %}3{% else %}2{% endif %}" style="width:{% if est_livraison_partielle and not est_cloture %}26{% else %}21{% endif %}%;">Quantité</th>
             </tr>
             <tr>
@@ -612,6 +640,10 @@ img { max-width: 100%; height: auto; }
               <td style="text-align:center;">{{ ligne.unite }}</td>
               <td style="text-align:center;">{{ ligne.quantite }}</td>
               <td style="text-align:center;">{{ ligne.quantite_servie|default:"&mdash;" }}</td>
+{% if a_lots %}
+              <td style="text-align:center; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+              <td style="text-align:center; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+{% endif %}
               {% if est_livraison_partielle and not est_cloture %}<td style="text-align:center;">{{ ligne.reste }}</td>{% endif %}
             </tr>
             {% endfor %}

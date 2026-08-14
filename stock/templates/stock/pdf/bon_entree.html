@@ -190,8 +190,12 @@ img { max-width: 100%; height: auto; }
           <tr>
             <th style="width:8%;">N°</th>
             <th style="width:14%;">Ref.</th>
-            <th style="{% if est_reception_partielle %}width:44%;{% else %}width:54%;{% endif %}">Désignations</th>
+            <th style="{% if a_lots %}{% if est_reception_partielle %}width:24%;{% else %}width:34%;{% endif %}{% elif est_reception_partielle %}width:44%;{% else %}width:54%;{% endif %}">Désignations</th>
             <th style="width:10%;">Unité</th>
+            {% if a_lots %}
+            <th style="width:10%; font-size:8pt;">N° Lot</th>
+            <th style="width:10%; font-size:8pt;">Péremption</th>
+            {% endif %}
             {% if est_reception_partielle %}
             <th style="width:10%;">Qté demandée</th>
             {% endif %}
@@ -210,6 +214,10 @@ img { max-width: 100%; height: auto; }
             <td style="text-align:center;">{{ ligne.unite|default:"Unité" }}</td>
             {% if est_reception_partielle %}
             <td style="text-align:center; font-weight:bold;">{{ ligne.quantite|intspace }}</td>
+            {% endif %}
+            {% if a_lots %}
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
             {% endif %}
             <td style="text-align:center; font-weight:bold;">{{ ligne.quantite_recue|intspace }}</td>
             {% if est_reception_partielle %}
