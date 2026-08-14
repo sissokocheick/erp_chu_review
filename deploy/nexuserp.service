@@ -1,0 +1,58 @@
+# ═══════════════════════════════════════════════════════════════════════════
+#  nexuserp.service — Service systemd NexusERP (gunicorn)
+#
+#  Installation :
+#    1. Adapter le chemin d'installation (WORKDIR ci-dessous, par défaut
+#       /opt/erp_chu_review) et l'utilisateur (User=www-data ou dédié).
+#    2. Copier .env.example → /opt/erp_chu_review/.env et renseigner les
+#       valeurs (DJANGO_DEBUG=False, DJANGO_SECRET_KEY, DB_PASSWORD…).
+#    3. sudo cp deploy/nexuserp.service /etc/systemd/system/
+#    4. sudo systemctl daemon-reload
+#    5. sudo systemctl enable --now nexuserp
+#
+#  Diagnostics :
+#    systemctl status nexuserp
+#    journalctl -u nexuserp -f
+#
+#  Redémarrage automatique : Restart=always + RestartSec=5 (crash ou boot).
+#  Note : l'utilisateur du service doit pouvoir écrire dans media/ et logs/.
+# ═══════════════════════════════════════════════════════════════════════════
+
+[Unit]
+Description=NexusERP - ERP de gestion de stock (gunicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+# Utilisateur système dédié (créer avec : sudo useradd -r -s /usr/sbin/nologin nexuserp)
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/erp_chu_review
+# Les variables (DJANGO_DEBUG, DJANGO_SECRET_KEY, DB_*, DATABASE_URL…) sont
+# lues depuis le .env de production.
+EnvironmentFile=/opt/erp_chu_review/.env
+
+# ── Lancement gunicorn (avant-plan, systemd gère le cycle de vie) ──
+ExecStart=/opt/erp_chu_review/venv/bin/gunicorn config.wsgi:application \
+  --bind 127.0.0.1:8000 \
+  --workers 3 \
+  --timeout 120 \
+  --max-requests 1000 \
+  --max-requests-jitter 100 \
+  --access-logfile /opt/erp_chu_review/logs/gunicorn-access.log \
+  --error-logfile /opt/erp_chu_review/logs/gunicorn-error.log
+
+# ── Redémarrage automatique ──
+Restart=always
+RestartSec=5
+
+# ── Durcissement du service ──
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+ReadWritePaths=/opt/erp_chu_review/media /opt/erp_chu_review/logs
+
+[Install]
+WantedBy=multi-user.target

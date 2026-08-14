@@ -81,7 +81,47 @@ DJANGO_DEBUG=False ... gunicorn config.wsgi:application \
   --bind 127.0.0.1:8000 --workers 3 --timeout 120
 ```
 
-## 3. Reverse proxy (nginx) — recommandé
+## 3. Service de démarrage (boot + redémarrage automatique)
+
+### Linux — systemd (`deploy/nexuserp.service`)
+
+Démarre gunicorn au boot avec `Restart=always` (crash ou redémarrage machine) :
+
+```bash
+# Adapter le chemin (/opt/erp_chu_review) et l'utilisateur dans le fichier
+sudo cp deploy/nexuserp.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now nexuserp        # démarre maintenant + au boot
+systemctl status nexuserp                   # contrôle
+journalctl -u nexuserp -f                   # logs
+```
+
+> L'utilisateur du service doit pouvoir écrire dans `media/` et `logs/`
+> (`ReadWritePaths` déjà configuré ; ajuster si le chemin diffère).
+
+### Windows — service NSSM ou tâche planifiée
+
+**Option A — NSSM** (vrai service, redémarrage auto, gestion de l'arrêt système) :
+
+```powershell
+winget install NSSM
+.\.\deploy\install_windows_service.ps1        # en PowerShell administrateur
+nssm start NexusERP
+```
+
+**Option B — Tâche planifiée** (sans dépendance externe, au démarrage de la machine) :
+
+```powershell
+.\deploy\install_windows_service.ps1 -UseTaskScheduler
+schtasks /Run /TN NexusERP
+```
+
+Le serveur Windows utilise **waitress** (gunicorn non supporté nativement) via
+`deploy/run_windows_service.ps1` (charge le `.env`, boucle avec redémarrage
+automatique après 5 s, logs dans `logs/`). Désinstallation :
+`.\deploy\install_windows_service.ps1 -Uninstall`.
+
+## 4. Reverse proxy (nginx) — recommandé
 
 - Terminer le TLS en amont (certificat Let's Encrypt / entreprise).
 - Rediriger tout le trafic HTTP vers HTTPS.
@@ -91,7 +131,7 @@ DJANGO_DEBUG=False ... gunicorn config.wsgi:application \
   ```
   (à n'activer QUE derrière un proxy de confiance, sinon risque de spoofing).
 
-## 4. Tâches planifiées (cron / Planificateur Windows)
+## 5. Tâches planifiées (cron / Planificateur Windows)
 
 - **Sauvegarde PostgreSQL quotidienne** (`scripts/backup_db.py`) : `pg_dump`
   en format custom compressé + **rétention graduée** (7 jours quotidiens, puis
@@ -127,7 +167,7 @@ DJANGO_DEBUG=False ... gunicorn config.wsgi:application \
   (rotation du comptage par famille/zone à l'échéance ; déjà déclenché à la
   connexion, le cron le rend indépendant des connexions).
 
-## 5. Rappels
+## 6. Rappels
 
 - Ne jamais committer `SECRET_KEY`, mots de passe DB ou identifiants Twilio
   (`.gitignore` couvre `.env*`, `media/`, `staticfiles/`).
