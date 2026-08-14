@@ -93,10 +93,28 @@ DJANGO_DEBUG=False ... gunicorn config.wsgi:application \
 
 ## 4. Tâches planifiées (cron / Planificateur Windows)
 
+- **Sauvegarde PostgreSQL quotidienne** (`scripts/backup_db.py`) : `pg_dump`
+  en format custom compressé + **rétention graduée** (7 jours quotidiens, puis
+  le plus ancien backup de chaque semaine sur 8 semaines, puis de chaque mois
+  sur 12 mois — rien n'est supprimé si la sauvegarde du jour a échoué).
+  ```bash
+  # Linux — tous les jours à 02h00 :
+  0 2 * * * cd /chemin/vers/erp && venv/bin/python scripts/backup_db.py --quiet
+  ```
+  ```powershell
+  # Windows — Planificateur de tâches, action :
+  #   Program : C:\chemin\vers\erp\venv\Scripts\python.exe
+  #   Arguments : C:\chemin\vers\erp\scripts\backup_db.py --quiet
+  #   Déclencheur : tous les jours à 02:00
+  ```
+  Options utiles : `--dir /mnt/backups` (dossier externe), `--keep-days 14`,
+  `--dry-run` (simulation). Les sauvegardes vont dans `backups/` (gitignoré).
+  > ⚠️ Exporter aussi les sauvegardes hors de la machine (NAS / stockage objet)
+  > pour résister à la perte du serveur.
+
 - **Inventaire tournant** : `python manage.py generer_inventaires_tournants`
   (rotation du comptage par famille/zone à l'échéance ; déjà déclenché à la
   connexion, le cron le rend indépendant des connexions).
-- Sauvegarde quotidienne de la base PostgreSQL (`pg_dump`).
 
 ## 5. Rappels
 

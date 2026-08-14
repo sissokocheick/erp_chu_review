@@ -6,6 +6,7 @@
 #  Usage :
 #    .\scripts\deploy.ps1                 # everything + start server
 #    .\scripts\deploy.ps1 -Check          # validate env + check --deploy, no server
+#    .\scripts\deploy.ps1 -Backup         # PostgreSQL backup before migrate
 #    .\scripts\deploy.ps1 -NoMigrate -NoCollectstatic
 #    .\scripts\deploy.ps1 -Port 8080 -Workers 4 -Foreground
 #
@@ -19,6 +20,7 @@
 [CmdletBinding()]
 param(
   [switch]$Check,
+  [switch]$Backup,
   [switch]$NoMigrate,
   [switch]$NoCollectstatic,
   [switch]$Foreground,
@@ -76,7 +78,16 @@ if (-not $env:DJANGO_ALLOWED_HOSTS) {
 }
 Ok "Environment validated (DEBUG=False)"
 
-# ---- 3. Migrations ---------------------------------------------------------
+# ---- 3. Backup (optional but recommended before migration) ----------------
+if ($Backup) {
+  Info "PostgreSQL backup before deployment..."
+  Push-Location $BASE_DIR
+  try { & $VENV_PY scripts\backup_db.py --quiet } finally { Pop-Location }
+  if ($LASTEXITCODE -ne 0) { Fail "Backup failed - deployment aborted (see scripts/backup_db.py --help)" }
+  Ok "Backup done (backups/)"
+}
+
+# ---- 4. Migrations ---------------------------------------------------------
 if (-not $NoMigrate) {
   Info "Applying migrations..."
   Push-Location $BASE_DIR
@@ -85,7 +96,7 @@ if (-not $NoMigrate) {
   Ok "Migrations applied"
 } else { Info "Migration skipped (-NoMigrate)" }
 
-# ---- 4. Static files -------------------------------------------------------
+# ---- 5. Static files -------------------------------------------------------
 if (-not $NoCollectstatic) {
   Info "Collecting static files..."
   Push-Location $BASE_DIR
@@ -94,7 +105,7 @@ if (-not $NoCollectstatic) {
   Ok "Static files collected"
 } else { Info "Collectstatic skipped (-NoCollectstatic)" }
 
-# ---- 5. Security checks ----------------------------------------------------
+# ---- 6. Security checks ----------------------------------------------------
 Info "Running check --deploy..."
 Push-Location $BASE_DIR
 try { & $VENV_PY manage.py check --deploy } finally { Pop-Location }
@@ -106,7 +117,7 @@ if ($Check) {
   exit 0
 }
 
-# ---- 6. Start the server ---------------------------------------------------
+# ---- 7. Start the server ---------------------------------------------------
 New-Item -ItemType Directory -Force -Path $LOG_DIR | Out-Null
 $gunicornExe = Join-Path $BASE_DIR 'venv\Scripts\gunicorn.exe'
 $useGunicorn = (Test-Path $gunicornExe) -or (Get-Command 'gunicorn' -ErrorAction SilentlyContinue)

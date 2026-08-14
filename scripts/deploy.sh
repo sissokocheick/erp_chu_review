@@ -7,6 +7,7 @@
 #  Usage :
 #    ./scripts/deploy.sh                # tout + lance gunicorn en arrière-plan
 #    ./scripts/deploy.sh --check        # valide l'env + check --deploy, sans lancer
+#    ./scripts/deploy.sh --backup       # sauvegarde PostgreSQL avant migrate
 #    ./scripts/deploy.sh --no-migrate --no-collectstatic   # saute une étape
 #    ./scripts/deploy.sh --port 8080 --workers 4 --foreground
 #
@@ -24,13 +25,14 @@ VENV_PY="$BASE_DIR/venv/bin/python"
 LOG_DIR="$BASE_DIR/logs"
 
 # ── Arguments ──────────────────────────────────────────────────────────────
-CHECK=0; NO_MIGRATE=0; NO_COLLECTSTATIC=0; FOREGROUND=0
+CHECK=0; NO_MIGRATE=0; NO_COLLECTSTATIC=0; FOREGROUND=0; BACKUP=0
 PORT="${PORT:-8000}"
 WORKERS="${WORKERS:-3}"
 TIMEOUT="${TIMEOUT:-120}"
 while [ $# -gt 0 ]; do
   case "$1" in
     --check)          CHECK=1 ;;
+    --backup)         BACKUP=1 ;;
     --no-migrate)     NO_MIGRATE=1 ;;
     --no-collectstatic) NO_COLLECTSTATIC=1 ;;
     --foreground)     FOREGROUND=1 ;;
@@ -83,7 +85,17 @@ if [ -z "${DJANGO_ALLOWED_HOSTS:-}" ]; then
 fi
 ok "Environnement validé (DEBUG=False)"
 
-# ── 3. Migrations ──────────────────────────────────────────────────────────
+# ── 3. Sauvegarde (optionnelle mais recommandée avant migration) ───────────
+if [ "$BACKUP" -eq 1 ]; then
+  info "Sauvegarde PostgreSQL avant déploiement…"
+  if ! (cd "$BASE_DIR" && "$VENV_PY" scripts/backup_db.py --quiet); then
+    fail "La sauvegarde a échoué — déploiement annulé (voir scripts/backup_db.py --help)."
+    exit 1
+  fi
+  ok "Sauvegarde effectuée (backups/)"
+fi
+
+# ── 4. Migrations ──────────────────────────────────────────────────────────
 if [ "$NO_MIGRATE" -eq 0 ]; then
   info "Application des migrations…"
   (cd "$BASE_DIR" && "$VENV_PY" manage.py migrate)
@@ -92,7 +104,7 @@ else
   info "Migration ignorée (--no-migrate)"
 fi
 
-# ── 4. Statiques ───────────────────────────────────────────────────────────
+# ── 5. Statiques ───────────────────────────────────────────────────────────
 if [ "$NO_COLLECTSTATIC" -eq 0 ]; then
   info "Collecte des fichiers statiques…"
   (cd "$BASE_DIR" && "$VENV_PY" manage.py collectstatic --noinput)
@@ -101,7 +113,7 @@ else
   info "Collectstatic ignoré (--no-collectstatic)"
 fi
 
-# ── 5. Vérifications de sécurité ───────────────────────────────────────────
+# ── 6. Vérifications de sécurité ───────────────────────────────────────────
 info "check --deploy…"
 (cd "$BASE_DIR" && "$VENV_PY" manage.py check --deploy)
 ok "check --deploy : aucun warning"
@@ -112,7 +124,7 @@ if [ "$CHECK" -eq 1 ]; then
   exit 0
 fi
 
-# ── 6. Lancement gunicorn ──────────────────────────────────────────────────
+# ── 7. Lancement gunicorn ──────────────────────────────────────────────────
 mkdir -p "$LOG_DIR"
 GUNICORN_ARGS=(
   config.wsgi:application

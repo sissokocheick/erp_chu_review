@@ -105,3 +105,4 @@ media/
 !.env.example
 logs/
 .gunicorn.pid
+backups/
