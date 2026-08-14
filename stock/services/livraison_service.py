@@ -99,21 +99,37 @@ class LivraisonService:
                 )
 
             # ✅ CORRECTION : éviter race condition get_or_create avec select_for_update
-            try:
-                stock_item = StockItem.objects.select_for_update().get(
-                    article=ligne.article, magasin_id=magasin_id
-                )
-            except StockItem.DoesNotExist:
-                stock_item = StockItem.objects.create(
+            # ✅ FEFO : pour les articles gérés en lot, la disponibilité
+            # s'apprécie par lots (hors lots périmés, qui sont bloqués).
+            consos_fefo = []
+            prix_unitaire_ligne = Decimal('0')
+            if ligne.article.requiert_lot_peremption:
+                consos_fefo = StockTransactionService.resoudre_lots_fefo(
+                    ligne.article, bon.magasin, qte)
+                premier_lot = consos_fefo[0] if consos_fefo else None
+                stock_item = StockItem.objects.select_for_update().filter(
                     article=ligne.article, magasin_id=magasin_id,
-                    quantite_physique=0, valeur_cmup=0
-                )
+                    batch_number=premier_lot['numero_lot'] if premier_lot else None,
+                ).first()
+            else:
+                try:
+                    stock_item = StockItem.objects.select_for_update().get(
+                        article=ligne.article, magasin_id=magasin_id
+                    )
+                except StockItem.DoesNotExist:
+                    stock_item = StockItem.objects.create(
+                        article=ligne.article, magasin_id=magasin_id,
+                        quantite_physique=0, valeur_cmup=0
+                    )
 
-            if qte > stock_item.quantite_physique:
-                raise ValidationError(
-                    f"Stock insuffisant pour {ligne.article.designation} : "
-                    f"{stock_item.quantite_physique} disponible(s)."
-                )
+                if qte > stock_item.quantite_physique:
+                    raise ValidationError(
+                        f"Stock insuffisant pour {ligne.article.designation} : "
+                        f"{stock_item.quantite_physique} disponible(s)."
+                    )
+
+            if stock_item:
+                prix_unitaire_ligne = stock_item.valeur_cmup
 
             au_moins_un = True
             total_livre += qte
@@ -136,22 +152,40 @@ class LivraisonService:
                 reste_avant_livraison=reste_avant,  # ✅ NOUVEAU CHAMP : reste avant cette livraison
                 quantite_livree=qte,
                 reste=reste_apres,
-                prix_unitaire=stock_item.valeur_cmup,
+                prix_unitaire=prix_unitaire_ligne,
             )
 
             if not circuit_sortie:
-                mouvement = Mouvement(
-                    type_mouvement='SORTIE',
-                    article=ligne.article,
-                    magasin_id=magasin_id,
-                    service_demandeur=demande.service_demandeur,
-                    quantite=qte,
-                    prix_unitaire=stock_item.valeur_cmup,
-                    reference_document=bon.numero_bon,
-                    utilisateur=user,
-                    commentaire=f"Sortie via Bon {bon.numero_bon}",
-                )
-                StockTransactionService.executer(mouvement)
+                # ✅ FEFO : un mouvement par lot consommé (traçabilité complète)
+                if consos_fefo:
+                    for conso in consos_fefo:
+                        mouvement = Mouvement(
+                            type_mouvement='SORTIE',
+                            article=ligne.article,
+                            magasin_id=magasin_id,
+                            service_demandeur=demande.service_demandeur,
+                            quantite=conso['quantite'],
+                            prix_unitaire=prix_unitaire_ligne,
+                            reference_document=bon.numero_bon,
+                            utilisateur=user,
+                            commentaire=f"Sortie via Bon {bon.numero_bon}",
+                            numero_lot=conso['numero_lot'],
+                            date_peremption=conso['date_peremption'],
+                        )
+                        StockTransactionService.executer(mouvement)
+                else:
+                    mouvement = Mouvement(
+                        type_mouvement='SORTIE',
+                        article=ligne.article,
+                        magasin_id=magasin_id,
+                        service_demandeur=demande.service_demandeur,
+                        quantite=qte,
+                        prix_unitaire=prix_unitaire_ligne,
+                        reference_document=bon.numero_bon,
+                        utilisateur=user,
+                        commentaire=f"Sortie via Bon {bon.numero_bon}",
+                    )
+                    StockTransactionService.executer(mouvement)
 
         if not au_moins_un:
             # ✅ CORRECTION : pas de delete() manuel — @transaction.atomic fera le rollback

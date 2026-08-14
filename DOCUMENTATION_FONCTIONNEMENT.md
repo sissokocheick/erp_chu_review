@@ -207,12 +207,20 @@ BROUILLON → EN_ATTENTE_VALIDATION → VALIDÉE → (livraison) → CLÔTURÉE
 - **Traçabilité livraison unifiée** : toute sortie liée à une demande crée automatiquement une
   `LivraisonPartielle` + accusé de réception (même parcours que le guichet « Traiter ») — le
   module **Livraisons** (§6) est donc toujours alimenté, quel que soit le chemin utilisé.
+- **Politique FEFO (First-Expired-First-Out)** : pour les articles « gérés en lot », la sortie
+  consomme automatiquement les lots **par date de péremption croissante** (le lot qui expire le
+  plus tôt est servi en premier), découpée en une ligne/mouvement par lot. Appliqué sur les
+  trois chemins de sortie : création directe, validation du circuit SORTIE, et guichet « Traiter ».
+- **Blocage des lots périmés** : un lot dont la date de péremption est dépassée ne peut **plus
+  être servi** — la sortie est refusée avec un message indiquant les quantités périmées bloquées
+  (destruction requise via Suivi Péremptions §7). Les lots sans date de péremption sont
+  consommés en dernier.
 - Colonnes demandée / servie ; gestion des **livraisons partielles** (reste à livrer).
 - **Validation** : selon le circuit SORTIE (§13), le bon passe en attente puis est validé
   par les valideurs désignés ; sans circuit actif, la validation est directe.
 - **Sondage de satisfaction** (optionnel, configurable dans le modèle PDF) renseigné à la
   réception par le service demandeur.
-- Scan joint, impression PDF, annulation.
+- Scan joint, impression PDF, annulation (remise en stock sur le bon lot d'origine).
 
 ### Sorties Hors Stock (`/bons/hors-stock/`)
 - Sorties **hors catalogue** (fournitures non répertoriées) : désignation libre, service

@@ -228,6 +228,12 @@ class BonService:
                 article = articles_map.get(int(article_id))
                 if not article:
                     continue
+                # ✅ FEFO : pour les articles gérés en lot, la disponibilité
+                # s'apprécie par lots (hors lots périmés, qui sont bloqués).
+                if article.requiert_lot_peremption:
+                    StockTransactionService.resoudre_lots_fefo(
+                        article, magasin, quantite)
+                    continue
                 stock_item = StockItem.objects.select_for_update().filter(
                     article=article, magasin=magasin
                 ).first()
@@ -282,6 +288,32 @@ class BonService:
 
                 article = articles_map.get(int(article_id))
                 if not article:
+                    continue
+
+                # ✅ FEFO : découpage de la sortie par lot (péremption la plus
+                # proche d'abord, lots périmés bloqués). Une ligne par lot
+                # pour une traçabilité complète sur le bon.
+                consommations = StockTransactionService.resoudre_lots_fefo(
+                    article, magasin, quantite)
+                if consommations:
+                    for conso in consommations:
+                        LigneBon.objects.create(
+                            bon=bon, article=article,
+                            quantite=conso['quantite'],
+                            numero_lot=conso['numero_lot'],
+                            date_peremption=conso['date_peremption'],
+                        )
+                        mouvement = Mouvement(
+                            type_mouvement='SORTIE',
+                            article=article,
+                            magasin=magasin,
+                            quantite=conso['quantite'],
+                            utilisateur=utilisateur,
+                            reference_document=bon.numero_bon,
+                            numero_lot=conso['numero_lot'],
+                            date_peremption=conso['date_peremption'],
+                        )
+                        StockTransactionService.executer(mouvement)
                     continue
 
                 LigneBon.objects.create(
@@ -576,6 +608,12 @@ class BonService:
         # ✅ CORRECTION : revérifier le stock AVANT validation (le stock a pu changer)
         from stock.models import StockItem
         for ligne in bon.lignes_bon.select_related('article').all():
+            # ✅ FEFO : la disponibilité des articles gérés en lot s'apprécie
+            # par lots (hors lots périmés, qui sont bloqués).
+            if ligne.article.requiert_lot_peremption:
+                StockTransactionService.resoudre_lots_fefo(
+                    ligne.article, bon.magasin, ligne.quantite)
+                continue
             stock_item = StockItem.objects.select_for_update().filter(
                 article=ligne.article, magasin=bon.magasin
             ).first()
@@ -598,6 +636,25 @@ class BonService:
 
         # Créer les mouvements de sortie
         for ligne in bon.lignes_bon.all():
+            # ✅ FEFO : découpage par lot au moment de la validation pour
+            # consommer le stock réel au plus proche de la péremption.
+            consommations = StockTransactionService.resoudre_lots_fefo(
+                ligne.article, bon.magasin, ligne.quantite)
+            if consommations:
+                for conso in consommations:
+                    mouvement = Mouvement(
+                        type_mouvement='SORTIE',
+                        article=ligne.article,
+                        magasin=bon.magasin,
+                        quantite=conso['quantite'],
+                        utilisateur=utilisateur,
+                        reference_document=bon.numero_bon,
+                        numero_lot=conso['numero_lot'],
+                        date_peremption=conso['date_peremption'],
+                    )
+                    StockTransactionService.executer(mouvement)
+                continue
+
             mouvement = Mouvement(
                 type_mouvement='SORTIE',
                 article=ligne.article,
