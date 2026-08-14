@@ -35,7 +35,7 @@
         <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap;">
             <a href="{% url 'historique_article' article.id %}" class="btn-action history" title="Historique"><i class="fas fa-history"></i></a>
             <a href="?edit_article={{ article.id }}" class="btn-action edit" title="Modifier"><i class="fas fa-edit"></i></a>
-            {% if article.mouvements.all or article.lignes_commande_article.all or article.lignes_article.all or article.stocks.all %}
+            {% if article.id in articles_lies %}
             <span class="btn-action delete" style="opacity:0.4;cursor:not-allowed;" title="Article utilise — suppression impossible"><i class="fas fa-trash"></i></span>
             {% else %}
             <button type="button" class="btn-action delete" title="Supprimer" onclick="confirmerSuppressionArticle('{% url 'supprimer_parametre' 'article' article.id %}', '{{ article.designation|escapejs }}')"><i class="fas fa-trash"></i></button>

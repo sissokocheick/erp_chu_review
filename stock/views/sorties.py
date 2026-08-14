@@ -19,12 +19,12 @@ from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, Mouvement,
     Service, LivraisonPartielle, CircuitValidation)
+from django.db.models import Q, Count
 from ..services import NumeroGenerator, PDFService, NotificationService
 from ..services.bon_service import BonService
 from .catalogue import paginer
 from .common import _has_perm_bon
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
-from django.db.models import Q
 
 # Constante : taille maximale de fichier upload (1 Mo)
 MAX_FILE_SIZE = 1024 * 1024  # 1 Mo en octets
@@ -47,9 +47,15 @@ def liste_sorties(request):
     if circuit_sortie:
         est_valideur = circuit_sortie.valideurs.filter(id=request.user.id).exists() or request.user.is_superuser
 
-    sorties_bons = BonMouvement.objects.filter(
-        type_bon='SORTIE', magasin__in=magasins_autorises
-    ).select_related('magasin', 'service_demandeur', 'cree_par', 'valide_par').order_by('-date_bon')
+    sorties_bons = (
+        BonMouvement.objects.filter(
+            type_bon='SORTIE', magasin__in=magasins_autorises
+        )
+        .select_related('magasin', 'service_demandeur', 'cree_par', 'valide_par')
+        .prefetch_related('lignes_bon__article')
+        .annotate(nb_lignes=Count('lignes_bon', distinct=True))
+        .order_by('-date_bon')
+    )
 
     # Le magasin sélectionné dans l'en-tête s'applique partout :
     # la liste ne montre que le magasin actif de la session.

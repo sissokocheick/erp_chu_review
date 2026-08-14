@@ -10,7 +10,9 @@ from django.contrib import messages
 import logging
 
 from accounts.permissions import verifier_permission
-from ..models import Article, Mouvement, FamilleArticle, Magasin
+from ..models import (
+    Article, Mouvement, FamilleArticle, Magasin,
+    StockItem, LigneBon, LigneCommande)
 from ..forms import ArticleForm, FamilleArticleForm
 from ..decorators import magasin_requis, catch_errors
 from .common_views import filtrer_texte
@@ -72,7 +74,7 @@ def build_redirect_url(base_name, query=None, per_page=None, default_per_page=15
 @catch_errors(redirect_url='liste_articles')
 def liste_articles(request):
     articles = Article.objects.all().select_related(
-        'famille'
+        'famille', 'cree_par', 'modifie_par'
     ).prefetch_related('stocks__magasin').order_by('-date_creation')
 
     famille_id = request.GET.get('famille', '')
@@ -123,6 +125,16 @@ def liste_articles(request):
 
     familles = FamilleArticle.objects.all().order_by('intitule')
 
+    # Anti N+1 : set d'IDs d'articles ayant des dépendances (pour le bouton
+    # supprimer) calculé en 4 requêtes globales au lieu de 4 requêtes par ligne.
+    ids_page = [a.id for a in articles_pagines]
+    ids_lies = set()
+    if ids_page:
+        ids_lies |= set(Mouvement.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
+        ids_lies |= set(StockItem.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
+        ids_lies |= set(LigneBon.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
+        ids_lies |= set(LigneCommande.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
+
     context = {
         'articles': articles_pagines,
         'q_article': query,
@@ -130,6 +142,7 @@ def liste_articles(request):
         'per_page': per_page,
         'familles': familles,
         'famille_id': famille_id,
+        'articles_lies': ids_lies,
     }
 
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'

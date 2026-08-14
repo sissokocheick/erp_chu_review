@@ -63,7 +63,7 @@
 
     <td style="padding: 12px; text-align: center;">
         <span style="background: var(--bg-hover); color: var(--text-dark); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700;">
-            <i class="fas fa-box"></i> {{ bon.lignes_bon.count }} article(s)
+            <i class="fas fa-box"></i> {{ bon.nb_lignes|default:0 }} article(s)
         </span>
     </td>
 
@@ -100,7 +100,7 @@
 
                 {% if circuit_sortie and est_valideur and bon.statut_validation == 'ATTENTE' and not bon.est_annule %}
                 <button type="button" 
-                        onclick="confirmerValidationBon({{ bon.id }}, '{{ bon.numero_bon|escapejs }}', '{{ bon.service_demandeur.nom|default:"N/A"|escapejs }}', {{ bon.lignes_bon.count }}, '{% url "valider_bon_sortie" bon.id %}')" 
+                        onclick="confirmerValidationBon({{ bon.id }}, '{{ bon.numero_bon|escapejs }}', '{{ bon.service_demandeur.nom|default:"N/A"|escapejs }}', {{ bon.nb_lignes|default:0 }}, '{% url "valider_bon_sortie" bon.id %}')" 
                         style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" 
                         title="Valider le bon" aria-label="Valider le bon {{ bon.numero_bon }}">
                     <i class="fas fa-stamp"></i>

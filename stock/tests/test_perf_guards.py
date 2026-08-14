@@ -6,15 +6,21 @@ Objectif : détecter immédiatement une régression N+1 (requête par ligne)
 sur les pages les plus consultées. Si une vue ajoute une requête par
 ligne dans une boucle, le compteur explose et le test échoue.
 
-Valeurs mesurées (300 articles / 3000 mouvements / 100 bons) :
+Valeurs mesurées avec magasin actif fonctionnel (30 articles /
+200 mouvements / 10 bons, 15/page) :
     dashboard           52 requêtes
-    etat_stock          14
-    liste_articles      14
-    liste_sorties       14
-    historique          14
-    peremptions         14
-    liste_commandes     14
+    etat_stock          17
+    liste_articles      21
+    liste_sorties       24
+    historique          20
+    peremptions         16
 Les plafonds laissent une marge de sécurité.
+
+NB : le magasin de session est stocké en string (comme dans le flux réel) —
+le middleware de session étant corrigé, le magasin actif reste appliqué et
+les pages rendent le vrai chemin (c'est ce qui rend ce test utile : avant
+le correctif, le magasin était silencieusement supprimé et les pages
+rendaient ~14 requêtes sans isolation).
 """
 from decimal import Decimal
 from random import choice, randint
@@ -89,7 +95,7 @@ class PerfGuardTest(TestCase):
 
         self.client.force_login(self.user)
         session = self.client.session
-        session['magasin_actif_id'] = self.mag_a.id
+        session['magasin_actif_id'] = str(self.mag_a.id)
         session.save()
 
     def _assert_nb_queries(self, url, plafond, label):
@@ -106,17 +112,17 @@ class PerfGuardTest(TestCase):
         self._assert_nb_queries('/', 65, 'dashboard /')
 
     def test_etat_stock_requetes_plafonnees(self):
-        self._assert_nb_queries('/etat-stock/', 25, 'etat_stock')
+        self._assert_nb_queries('/etat-stock/', 30, 'etat_stock')
 
     def test_liste_articles_requetes_plafonnees(self):
-        self._assert_nb_queries('/articles/?q=Perf', 25, 'liste_articles')
+        self._assert_nb_queries('/articles/?q=Perf', 30, 'liste_articles')
 
     def test_liste_sorties_requetes_plafonnees(self):
-        self._assert_nb_queries('/sorties/', 25, 'liste_sorties')
+        self._assert_nb_queries('/sorties/', 35, 'liste_sorties')
 
     def test_historique_requetes_plafonnees(self):
-        self._assert_nb_queries('/administration/historique/', 25,
+        self._assert_nb_queries('/administration/historique/', 30,
                                 'historique mouvements')
 
     def test_peremptions_requetes_plafonnees(self):
-        self._assert_nb_queries('/stock/peremptions/', 25, 'peremptions')
+        self._assert_nb_queries('/stock/peremptions/', 30, 'peremptions')

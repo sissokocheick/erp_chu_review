@@ -40,6 +40,29 @@ from .catalogue import paginer, get_magasins_autorises
 logger = logging.getLogger(__name__)
 User = get_user_model()
 
+
+def _element_historique(h):
+    """Description d'un enregistrement historique sans accès FK par ligne (anti N+1)."""
+    modele = h.__class__.__name__.replace('Historical', '')
+    if modele == 'Mouvement':
+        art = getattr(h, 'article', None)
+        designation = getattr(art, 'designation', '') or '' if art is not None else ''
+        return f"{getattr(h, 'type_mouvement', '') or ''} — {designation} x{getattr(h, 'quantite', '') or ''}"
+    if modele == 'Group':
+        return getattr(h, 'name', '') or ''
+    if modele == 'Magasin':
+        return getattr(h, 'nom', '') or ''
+    if modele == 'Article':
+        ref = getattr(h, 'reference', '') or ''
+        des = getattr(h, 'designation', '') or ''
+        return f"[{ref}] {des}" if ref else des
+    if modele == 'Fournisseur':
+        return f"{getattr(h, 'code', '') or ''} - {getattr(h, 'raison_sociale', '') or ''}"
+    if modele == 'Service':
+        return f"{getattr(h, 'code', '') or ''} - {getattr(h, 'nom', '') or ''}"
+    return str(getattr(h, 'id', ''))
+
+
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_historique')
 @magasin_requis
@@ -71,22 +94,24 @@ def journal_historique(request):
         date_fin = timezone.now().date()
         date_debut = date_fin - timedelta(days=60)
 
-    h_articles = Article.history.filter(
+    h_articles = Article.history.select_related('history_user').filter(
         history_date__date__gte=date_debut,
         history_date__date__lte=date_fin
     ).order_by('-history_date')[:50]
-    h_magasins = Magasin.history.filter(
+    h_magasins = Magasin.history.select_related('history_user').filter(
         history_date__date__gte=date_debut,
         history_date__date__lte=date_fin
     ).order_by('-history_date')[:50]
-    h_fournisseurs = Fournisseur.history.filter(
+    h_fournisseurs = Fournisseur.history.select_related('history_user').filter(
         history_date__date__gte=date_debut,
         history_date__date__lte=date_fin
     ).order_by('-history_date')[:50]
 
     magasins_ids = list(Magasin.objects.all().values_list('id', flat=True))
     if magasins_ids:
-        h_mouvements = Mouvement.history.filter(
+        h_mouvements = Mouvement.history.select_related(
+            'history_user', 'article', 'magasin', 'service_demandeur'
+        ).filter(
             magasin_id__in=magasins_ids,
             history_date__date__gte=date_debut,
             history_date__date__lte=date_fin
@@ -94,12 +119,12 @@ def journal_historique(request):
     else:
         h_mouvements = Mouvement.history.none()
 
-    h_services = Service.history.filter(
+    h_services = Service.history.select_related('history_user').filter(
         history_date__date__gte=date_debut,
         history_date__date__lte=date_fin
     ).order_by('-history_date')[:50] if hasattr(Service, 'history') else Service.objects.none()
 
-    h_roles = Group.history.filter(
+    h_roles = Group.history.select_related('history_user').filter(
         history_date__date__gte=date_debut,
         history_date__date__lte=date_fin
     ).order_by('-history_date')[:50] if hasattr(Group, 'history') else Group.objects.none()
@@ -119,7 +144,8 @@ def journal_historique(request):
         modele = h.__class__.__name__.replace('Historical', '')
         if modele == 'Group':
             modele = 'Rôle / Accès'
-        element = str(h)
+        # Construction explicite : évite les accès FK par ligne (N+1) via str(h)
+        element = _element_historique(h)
         action_text = "Création" if h.history_type == '+' else "Modification" if h.history_type == '~' else "Suppression"
 
         if q:

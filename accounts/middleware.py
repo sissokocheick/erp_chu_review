@@ -143,10 +143,14 @@ class MagasinAutoSelectMiddleware:
                 magasin_ids = [str(m.id) for m in magasins]
                 actif_id = request.session.get('magasin_actif_id')
 
-                if not actif_id and len(magasin_ids) == 1:
+                # ✅ CORRECTION : normaliser en str avant comparaison (le
+                # magasin peut être stocké en int ou str selon le code appelant)
+                actif_id_str = str(actif_id) if actif_id is not None else None
+
+                if not actif_id_str and len(magasin_ids) == 1:
                     # Sélection automatique
                     request.session['magasin_actif_id'] = magasin_ids[0]
-                elif actif_id and actif_id not in magasin_ids:
+                elif actif_id_str and actif_id_str not in magasin_ids:
                     # CORRECTION : le magasin en session n'est plus autorisé
                     request.session.pop('magasin_actif_id', None)
                     if len(magasin_ids) == 1:
