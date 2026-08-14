@@ -112,6 +112,17 @@ DJANGO_DEBUG=False ... gunicorn config.wsgi:application \
   > ⚠️ Exporter aussi les sauvegardes hors de la machine (NAS / stockage objet)
   > pour résister à la perte du serveur.
 
+- **Restauration** (`scripts/restore_db.py`) : restaure un `.backup` dans la
+  base cible (`--target-db`, défaut `DB_NAME`). Vérification d'intégrité
+  (`pg_restore --list`) avant toute action, confirmation obligatoire
+  (`--yes` pour automatiser), `--dry-run` pour prévisualiser sans rien faire.
+  ```bash
+  python scripts/restore_db.py backups/chu_angre_db_20260814.backup
+  python scripts/restore_db.py backups/chu_angre_db_20260814.backup --dry-run
+  ```
+  ⚠️ DESTRUCTIF : le contenu actuel de la base cible est remplacé
+  (`--clean --if-exists`).
+
 - **Inventaire tournant** : `python manage.py generer_inventaires_tournants`
   (rotation du comptage par famille/zone à l'échéance ; déjà déclenché à la
   connexion, le cron le rend indépendant des connexions).

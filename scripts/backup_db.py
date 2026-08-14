@@ -83,25 +83,27 @@ def db_params():
     }
 
 
-# ── Découverte de pg_dump ──────────────────────────────────────────────────
-def find_pg_dump():
+# ── Découverte des outils PostgreSQL (pg_dump / pg_restore) ────────────────
+def find_pg_tool(tool):
+    """Retourne la liste des chemins candidats pour `tool` (pg_dump, pg_restore…),
+    la version la plus récente d'abord (gère les installations multiples)."""
     candidates = []
     pgb = os.environ.get('PGBIN')
     if pgb:
-        candidates.append(Path(pgb) / 'pg_dump')
-    found = shutil.which('pg_dump')
+        candidates.append(Path(pgb) / tool)
+    found = shutil.which(tool)
     if found:
         candidates.append(Path(found))
 
     patterns = []
     if sys.platform.startswith('win'):
-        patterns = [r'C:\Program Files\PostgreSQL\*\bin\pg_dump.exe']
+        patterns = [rf'C:\Program Files\PostgreSQL\*\bin\{tool}.exe']
     elif sys.platform.startswith('darwin'):
-        patterns = [r'/opt/homebrew/opt/postgresql*/bin/pg_dump',
-                    r'/usr/local/opt/postgresql*/bin/pg_dump']
+        patterns = [rf'/opt/homebrew/opt/postgresql*/bin/{tool}',
+                    rf'/usr/local/opt/postgresql*/bin/{tool}']
     else:
-        patterns = [r'/usr/lib/postgresql/*/bin/pg_dump',
-                    r'/usr/pgsql-*/bin/pg_dump']
+        patterns = [rf'/usr/lib/postgresql/*/bin/{tool}',
+                    rf'/usr/pgsql-*/bin/{tool}']
     for pattern in patterns:
         try:
             for p in glob.glob(pattern):
@@ -117,12 +119,17 @@ def find_pg_dump():
             continue
         seen.add(key)
         unique.append(p)
-    # Tri par version (nombre extrait du chemin, ex. PostgreSQL/18/bin)
+
     def version_key(p):
         m = re.search(r'(\d+)', str(p).replace('\\', '/').split('bin/')[0])
         return int(m.group(1)) if m else 0
     unique.sort(key=version_key, reverse=True)
     return unique
+
+
+def find_pg_dump():
+    """Chemins candidats pour pg_dump (version la plus récente d'abord)."""
+    return find_pg_tool('pg_dump')
 
 
 # ── Rétention graduée ──────────────────────────────────────────────────────
@@ -209,6 +216,14 @@ def run_backup(pg_dump, params, dest, quiet, dry_run):
 
 
 def main():
+    # Console Windows (cp1252) : force UTF-8 avec remplacement pour ne jamais
+    # planter à l'affichage (accents, em-dash, …).
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding='utf-8', errors='replace')
+        except Exception:
+            pass
+
     ap = argparse.ArgumentParser(description="Sauvegarde PostgreSQL + rétention")
     ap.add_argument('--dir', default=os.environ.get('BACKUP_DIR', 'backups'))
     ap.add_argument('--keep-days', type=int, default=7)
