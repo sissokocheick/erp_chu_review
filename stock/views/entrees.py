@@ -16,7 +16,7 @@ from django.utils import timezone
 from accounts.permissions import verifier_permission
 from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
-from ..pdf_utils import get_pdf_config
+from ..pdf_utils import get_pdf_config, paginate_lignes, ajouter_hauteurs_lignes, build_signature_cases
 from ..forms import EntreeStockForm
 from ..models import (
     Mouvement, BonMouvement, LigneBon, MotifAnnulation,
@@ -277,36 +277,53 @@ def apercu_bon_entree(request, bon_id):
 
     pdf_config, logo_url = get_pdf_config(bon.magasin, 'BE', request)
 
-    # Signatures
-    sig_magasinier_url = None
-    if bon.cree_par:
-        profil = getattr(bon.cree_par, 'profil', None)
-        if profil and getattr(profil, 'signature', None):
-            try:
-                sig_magasinier_url = request.build_absolute_uri(profil.signature.url)
-            except Exception:
-                pass
+    # Lignes harmonisées (mêmes clés que le PDF imprimable)
+    lignes_data = []
+    for idx, ligne in enumerate(bon.lignes_bon.all(), start=1):
+        article = ligne.article
+        lignes_data.append({
+            'idx': idx,
+            'reference': getattr(article, 'reference', ''),
+            'designation': getattr(article, 'designation', ''),
+            'unite': getattr(article, 'unite_distribution', None) or getattr(article, 'unite', 'U') or 'U',
+            'quantite': ligne.quantite,
+            'quantite_recue': ligne.quantite,
+            'numero_lot': getattr(ligne, 'numero_lot', None),
+            'date_peremption': getattr(ligne, 'date_peremption', None),
+        })
+    a_lots = any(l['numero_lot'] for l in lignes_data)
 
-    sig_valideur_url = None
-    if bon.valide_par:
-        profil = getattr(bon.valide_par, 'profil', None)
-        if profil and getattr(profil, 'signature', None):
-            try:
-                sig_valideur_url = request.build_absolute_uri(profil.signature.url)
-            except Exception:
-                pass
+    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc='ENTREE')
+    pages = [
+        {'lignes': page, 'est_derniere_page': i == len(pagination.pages) - 1}
+        for i, page in enumerate(pagination.pages)
+    ]
+    pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='ENTREE')
 
-    total_qte = sum(l.quantite for l in bon.lignes_bon.all())
+    service = bon.service_demandeur
 
     context = {
         'is_apercu': True,
         'bon': bon,
         'magasin': bon.magasin,
         'lignes': list(bon.lignes_bon.all()),
-        'total_qte': total_qte,
+        'lignes_data': lignes_data,
+        'lignes_pages': pagination.pages,
+        'pages': pages,
+        'est_multi_page': pagination.est_multi_page,
+        'est_reception_partielle': False,
+        'est_livraison_partielle': False,
+        'est_cloture': False,
+        'numero_livraison': bon.numero_livraison,
+        'commande': bon.commande_liee,
+        'service': service,
+        'service_code': getattr(service, 'code', '') if service else '',
+        'service_poste': getattr(service, 'poste', '') if service else '',
+        'sondage_data': None,
+        'a_lots': a_lots,
+        'signature_cases': build_signature_cases(bon, pdf_config, request),
+        'total_qte': sum(l.quantite for l in bon.lignes_bon.all()),
         'logo_url': logo_url,
-        'sig_magasinier_url': sig_magasinier_url,
-        'sig_valideur_url': sig_valideur_url,
         'date_impression': timezone.now(),
         'pdf_config': pdf_config,
     }

@@ -7,7 +7,7 @@
 <style>
 @page {
     size: A4;
-    margin: 10mm 7mm 18mm 7mm;
+    margin: 6mm 7mm 12mm 7mm;
     @bottom-center {
         content: "{{ pdf_config.pied_de_page.texte_personnalise|default:pdf_config.texte_institutionnel|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
         white-space: pre-line;
@@ -15,7 +15,7 @@
         color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
         font-weight: bold;
         text-align: center;
-        width: 100%;
+
     }
     @bottom-right {
         content: counter(page) " / " counter(pages);
@@ -41,7 +41,7 @@ body {
 .page-flex {
     display: flex;
     flex-direction: column;
-    min-height: 262mm;
+    min-height: 279mm;
 }
 
 .content-main {
@@ -343,7 +343,7 @@ img { max-width: 100%; height: auto; }
         </thead>
         <tbody>
           {% for ligne in pages.0.lignes %}
-          <tr>
+          <tr{% if pages.0.hauteur_ligne %} style="height: {{ pages.0.hauteur_ligne }}mm"{% endif %}>
             <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
             <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
             <td style="text-align:center;">{{ ligne.unite }}</td>
@@ -505,7 +505,7 @@ img { max-width: 100%; height: auto; }
           </thead>
           <tbody>
             {% for ligne in page.lignes %}
-            <tr>
+            <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
               <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
               <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
               <td style="text-align:center;">{{ ligne.unite }}</td>
@@ -528,9 +528,9 @@ img { max-width: 100%; height: auto; }
   {% elif page.est_derniere_page %}
   {% with nb_lignes=page.lignes|length %}
   {% if nb_lignes >= 15 %}
-  <div class="page page-break page-flex">
-  {% else %}
   <div class="page page-break">
+  {% else %}
+  <div class="page page-break page-flex">
   {% endif %}
 
     <div class="content-main">
@@ -555,7 +555,7 @@ img { max-width: 100%; height: auto; }
             </thead>
             <tbody>
               {% for ligne in page.lignes %}
-              <tr>
+              <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
                 <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
                 <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
                 <td style="text-align:center;">{{ ligne.unite }}</td>
@@ -634,7 +634,7 @@ img { max-width: 100%; height: auto; }
           </thead>
           <tbody>
             {% for ligne in page.lignes %}
-            <tr>
+            <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
               <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
               <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
               <td style="text-align:center;">{{ ligne.unite }}</td>

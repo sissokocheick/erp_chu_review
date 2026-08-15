@@ -7,7 +7,7 @@
     <style>
         @page {
             size: A4 landscape;
-            margin: 8mm 8mm 18mm 8mm;
+            margin: 6mm 8mm 12mm 8mm;
             @bottom-center {
                 content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
         white-space: pre-line;
@@ -15,7 +15,7 @@
                 color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
                 font-weight: bold;
                 text-align: center;
-                width: 100%;
+
             }
             @bottom-right {
                 content: counter(page) " / " counter(pages);

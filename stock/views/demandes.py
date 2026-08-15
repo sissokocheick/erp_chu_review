@@ -248,10 +248,28 @@ def _creer_ma_demande(request):
 
     # ── Génération du Bon de Demande PDF ──
     try:
+        from stock.pdf_utils import paginate_lignes, ajouter_hauteurs_lignes
         pdf_config, logo_url = get_pdf_config(demande.magasin_cible, 'DEMANDE', request)
+        lignes_data = [{
+            'idx': idx,
+            'reference': getattr(ligne.article, 'reference', ''),
+            'designation': getattr(ligne.article, 'designation', ''),
+            'unite': getattr(ligne.article, 'unite', 'U'),
+            'quantite': ligne.quantite_demandee,
+        } for idx, ligne in enumerate(demande.lignes.all(), start=1)]
+        pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc='DEMANDE')
+        pages = [
+            {'lignes': page, 'est_derniere_page': i == len(pagination.pages) - 1}
+            for i, page in enumerate(pagination.pages)
+        ]
+        pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='DEMANDE')
         context = {
             'demande': demande,
             'lignes': demande.lignes.all(),
+            'lignes_data': lignes_data,
+            'lignes_pages': pagination.pages,
+            'pages': pages,
+            'est_multi_page': pagination.est_multi_page,
             'pdf_config': pdf_config,
             'logo_url': logo_url,
             'signature_cases': build_signature_cases(demande, pdf_config, request),

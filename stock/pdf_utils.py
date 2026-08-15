@@ -283,21 +283,127 @@ class PaginationResult:
     est_multi_page: bool
 
 
-def paginate_lignes(lignes_data: List[Dict], pdf_config: Dict, lignes_par_page: int = 18) -> PaginationResult:
+def paginate_lignes(lignes_data: List[Dict], pdf_config: Dict, lignes_par_page: int = 18, type_doc: str = '') -> PaginationResult:
     """
     Découpe les lignes en pages pour les documents multi-pages.
+
+    La pagination est consciente des hauteurs : une page unique doit contenir
+    l'entête complète + les lignes + le bloc-bas (sondage + signatures) dans la
+    hauteur utile. Si ça ne rentre pas, le document passe en multi-pages avec
+    une dernière page qui porte le bloc-bas.
     """
     if not lignes_data:
         return PaginationResult(pages=[[]], est_multi_page=False)
 
-    if len(lignes_data) <= lignes_par_page:
+    n = len(lignes_data)
+    # Hauteur réelle minimale d'une ligne (le contenu ne se compresse pas en dessous).
+    entete_p1 = ENTETE_P1_MM.get(type_doc or '', ENTETE_P1_MM['default']) + THEAD_MM
+    bloc = hauteur_bloc_bas_mm(pdf_config)
+
+    # Capacité d'une page unique : entête complète + bloc-bas + lignes.
+    mono_cap = max(1, int((HAUTEUR_UTILE_MM - entete_p1 - bloc) / HAUTEUR_LIGNE_REAL_MIN_MM))
+    if n <= mono_cap:
         return PaginationResult(pages=[lignes_data], est_multi_page=False)
 
+    # Multi-pages : la première page (entête, sans bloc) et les pages
+    # intermédiaires peuvent porter plus de lignes que la dernière (bloc-bas).
+    cap_p1 = max(1, int((HAUTEUR_UTILE_MM - entete_p1) / HAUTEUR_LIGNE_REAL_MIN_MM))
+    cap_mid = max(1, int((HAUTEUR_UTILE_MM - ENTETE_PAGE_SUIVANTE_MM) / HAUTEUR_LIGNE_REAL_MIN_MM))
+    cap_last = max(1, int((HAUTEUR_UTILE_MM - ENTETE_PAGE_SUIVANTE_MM - bloc) / HAUTEUR_LIGNE_REAL_MIN_MM))
+
     pages = []
-    for i in range(0, len(lignes_data), lignes_par_page):
-        pages.append(lignes_data[i:i + lignes_par_page])
+    remaining = n
+    # Première page : entête complète, sans bloc-bas (qui va en dernière page).
+    # On laisse au moins 1 ligne à la dernière page pour qu'elle porte le bloc-bas.
+    take = min(cap_p1, max(1, remaining - 1))
+    pages.append(lignes_data[:take])
+    remaining -= take
+    # Pages intermédiaires : on en remplit le plus possible (cap_mid) tout en
+    # laissant au moins 1 ligne à la dernière page (qui porte le bloc-bas).
+    while remaining > cap_last:
+        take = min(cap_mid, remaining - 1)
+        pages.append(lignes_data[len(lignes_data) - remaining:len(lignes_data) - remaining + take])
+        remaining -= take
+    # Dernière page (avec bloc-bas : sondage + signatures).
+    if remaining > 0:
+        pages.append(lignes_data[len(lignes_data) - remaining:])
 
     return PaginationResult(pages=pages, est_multi_page=len(pages) > 1)
+
+
+# ── Hauteurs de ligne pour remplir la page ──────────────────────────────────
+# WeasyPrint n'étire pas un tableau : seule une hauteur explicite sur les <tr>
+# permet d'étaler les lignes pour que le contenu atteigne le bas de la page.
+# Les réserves d'entête sont volontairement conservatives (légèrement au-dessus
+# de la réalité mesurée) : on préfère un petit espace résiduel en bas de page à
+# un débordement sur la page suivante, qui casserait la pagination manuelle.
+
+HAUTEUR_UTILE_MM = 279.0  # A4 297mm - 6mm haut - 12mm bas
+
+# Entête de la page 1 (sans le thead, ajouté ensuite) en mm, par type de document.
+ENTETE_P1_MM = {
+    'default': 63.0,
+    'SORTIE': 63.0,
+    'ENTREE': 61.0,
+    'RETOUR_SERVICE': 63.0,
+    'RETOUR_FOURNISSEUR': 63.0,
+    'TRANSFERT': 73.0,
+    'DEMANDE': 68.0,
+    'COMMANDE': 81.0,
+    'SORTIE_HORS_STOCK': 64.0,
+}
+
+THEAD_MM = 11.0            # hauteur du thead (répété sur chaque page)
+ENTETE_PAGE_SUIVANTE_MM = 13.0   # thead seul + marge de sécurité
+BLOC_BAS_SANS_SONDAGE_MM = 58.0  # signatures (2 lignes × 26mm) + marge
+BLOC_BAS_AVEC_SONDAGE_MM = 80.0  # sondage (~20mm) + signatures (2×26mm) + marge
+
+HAUTEUR_LIGNE_MIN_MM = 8.0
+HAUTEUR_LIGNE_MAX_MM = 18.0
+# Hauteur réelle minimale d'une ligne avec du contenu réel (désignations sur
+# une ou deux lignes, lots, etc.) — mesurée sur des PDF générés (~11.4mm).
+# Sert au calcul de capacité des pages (la pagination ne doit jamais promettre
+# plus de lignes que ce qui rentre réellement avec l'entête + le bloc-bas).
+HAUTEUR_LIGNE_REAL_MIN_MM = 11.5
+
+
+def hauteur_bloc_bas_mm(pdf_config) -> float:
+    """Hauteur estimée du bloc-bas (sondage + signatures) selon la configuration.
+
+    pdf_config est un dict : le sondage s'y trouve sous pdf_config['sondage']['afficher'].
+    """
+    sondage = (pdf_config or {}).get('sondage', {}).get('afficher', False)
+    return BLOC_BAS_AVEC_SONDAGE_MM if sondage else BLOC_BAS_SANS_SONDAGE_MM
+
+
+def ajouter_hauteurs_lignes(pages, pdf_config, type_doc='', bloc_bas=True):
+    """Attache à chaque page une `hauteur_ligne` (mm) pour que le tableau
+    remplisse la page jusqu'en bas (étirement des lignes par WeasyPrint).
+
+    pages : liste de dicts {lignes, est_derniere_page, ...} (mutée en place).
+    """
+    nb_pages = len(pages)
+    entete_p1 = ENTETE_P1_MM.get(type_doc or '', ENTETE_P1_MM['default']) + THEAD_MM
+    bloc = hauteur_bloc_bas_mm(pdf_config) if bloc_bas else 0.0
+
+    for i, page in enumerate(pages):
+        n = len(page.get('lignes') or [])
+        if n == 0:
+            page['hauteur_ligne'] = '0.00'
+            continue
+        if nb_pages == 1:
+            # Page unique : entête complète + tableau + bloc-bas (sondage + signatures).
+            reserve = entete_p1 + bloc
+        elif i == 0:
+            reserve = entete_p1
+        elif i == nb_pages - 1:
+            reserve = ENTETE_PAGE_SUIVANTE_MM + bloc
+        else:
+            reserve = ENTETE_PAGE_SUIVANTE_MM
+        hauteur = (HAUTEUR_UTILE_MM - reserve) / n
+        # Chaîne avec point décimal : la locale française (virgule) invaliderait le CSS.
+        page['hauteur_ligne'] = f"{min(max(hauteur, HAUTEUR_LIGNE_MIN_MM), HAUTEUR_LIGNE_MAX_MM):.2f}"
+    return pages
 
 
 # ═════════════════════════════════════════════════════════════════════════════

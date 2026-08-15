@@ -7,7 +7,8 @@ import logging
 from accounts.permissions import verifier_permission
 from stock.pdf_utils import (
     get_pdf_config, render_pdf_response, render_pdf_to_bytes,
-    paginate_lignes, build_signature_cases, build_signatures_config,
+    paginate_lignes, ajouter_hauteurs_lignes,
+    build_signature_cases, build_signatures_config,
     servir_pdf_cache, sauver_pdf_cache,
 )
 
@@ -68,8 +69,15 @@ def imprimer_bon_multi_lignes(request, bon_id):
         })
     a_lots = any(l['numero_lot'] for l in lignes_data)
 
-    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18)
-    pages = [{'lignes': page} for page in pagination.pages]
+    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc=bon.type_bon)
+    pages = [
+        {
+            'lignes': page,
+            'est_derniere_page': i == len(pagination.pages) - 1,
+        }
+        for i, page in enumerate(pagination.pages)
+    ]
+    pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc=bon.type_bon)
 
     service = bon.service_demandeur
     sondage_data = None
@@ -150,21 +158,31 @@ def imprimer_commande(request, commande_id):
     pdf_config, logo_url = get_pdf_config(commande.magasin, 'BC', request)
 
     lignes_data = []
-    for ligne in commande.lignes_commande.all():
+    for idx, ligne in enumerate(commande.lignes_commande.all(), start=1):
+        article = ligne.article
         lignes_data.append({
-            'article': ligne.article,
-            'quantite_demandee': ligne.quantite_demandee,
-            'quantite_recue': ligne.quantite_recue,
+            'idx': idx,
+            'reference': getattr(article, 'reference', ''),
+            'designation': getattr(article, 'designation', ''),
+            'unite': getattr(article, 'unite', 'U') or 'U',
+            'quantite': ligne.quantite_demandee,
+            'article': article,
             'prix_unitaire': ligne.prix_unitaire,
-            'unite': getattr(ligne.article, 'unite', 'U'),
         })
 
-    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18)
+    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc='COMMANDE')
+    pages = [
+        {'lignes': page, 'est_derniere_page': i == len(pagination.pages) - 1}
+        for i, page in enumerate(pagination.pages)
+    ]
+    pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='COMMANDE')
 
     context = {
         'commande': commande,
         'magasin': commande.magasin,
+        'lignes_data': lignes_data,
         'lignes_pages': pagination.pages,
+        'pages': pages,
         'est_multi_page': pagination.est_multi_page,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
@@ -190,19 +208,30 @@ def imprimer_bon_demande(request, demande_id):
     pdf_config, logo_url = get_pdf_config(demande.magasin_cible, 'BDM', request)
 
     lignes_data = []
-    for ligne in demande.lignes_demande.all():
+    for idx, ligne in enumerate(demande.lignes_demande.all(), start=1):
+        article = ligne.article
         lignes_data.append({
-            'article': ligne.article,
+            'idx': idx,
+            'reference': getattr(article, 'reference', ''),
+            'designation': getattr(article, 'designation', ''),
+            'article': article,
             'quantite': ligne.quantite_demandee,
-            'unite': getattr(ligne.article, 'unite', 'U'),
+            'unite': getattr(article, 'unite', 'U'),
         })
 
-    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18)
+    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc='DEMANDE')
+    pages = [
+        {'lignes': page, 'est_derniere_page': i == len(pagination.pages) - 1}
+        for i, page in enumerate(pagination.pages)
+    ]
+    pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='DEMANDE')
 
     context = {
         'demande': demande,
         'magasin': demande.magasin_cible,
+        'lignes_data': lignes_data,
         'lignes_pages': pagination.pages,
+        'pages': pages,
         'est_multi_page': pagination.est_multi_page,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
@@ -482,6 +511,13 @@ def imprimer_bon_hors_stock(request, bon_id):
             'quantite': ligne.quantite,
         })
 
+    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18)
+    pages = [
+        {'lignes': page, 'est_derniere_page': i == len(pagination.pages) - 1}
+        for i, page in enumerate(pagination.pages)
+    ]
+    pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='SORTIE_HORS_STOCK')
+
     # Signatures pilotées par la configuration du document (labels/visibilité)
     signature_cases = build_signatures_config(pdf_config, request)
 
@@ -492,7 +528,11 @@ def imprimer_bon_hors_stock(request, bon_id):
 
     context = {
         'bon': bon,
+        'magasin': bon.magasin,
         'lignes_data': lignes_data,
+        'lignes_pages': pagination.pages,
+        'pages': pages,
+        'est_multi_page': pagination.est_multi_page,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
         'signature_cases': signature_cases,

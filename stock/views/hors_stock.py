@@ -16,7 +16,7 @@ from accounts.permissions import verifier_permission
 from core.models import ConfigurationHopital
 from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
-from ..pdf_utils import get_pdf_config
+from ..pdf_utils import get_pdf_config, paginate_lignes, ajouter_hauteurs_lignes, build_signature_cases
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, Service,
@@ -263,7 +263,9 @@ def apercu_bon_hors_stock(request, bon_id):
         messages.error(request, "⛔ Accès non autorisé.")
         return redirect('liste_bons_hors_stock')
 
-    service_poste = getattr(bon.service_demandeur, 'poste_telephone', '') if bon.service_demandeur else ''
+    service = bon.service_demandeur
+    service_poste = getattr(service, 'poste_telephone', '') if service else ''
+    service_code = getattr(service, 'code', '') if service else ''
 
     pdf_config, logo_url = get_pdf_config(bon.magasin, 'BSHS', request)
 
@@ -283,8 +285,13 @@ def apercu_bon_hors_stock(request, bon_id):
             'unite': unite,
             'quantite': ligne.quantite,
         })
-    nb_lignes = len(lignes_data)
-    empty_lines = list(range(max(0, 12 - nb_lignes)))
+
+    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc='SORTIE_HORS_STOCK')
+    pages = [
+        {'lignes': page, 'est_derniere_page': i == len(pagination.pages) - 1}
+        for i, page in enumerate(pagination.pages)
+    ]
+    pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='SORTIE_HORS_STOCK')
 
     context = {
         'is_apercu': True,
@@ -292,11 +299,17 @@ def apercu_bon_hors_stock(request, bon_id):
         'magasin': bon.magasin,
         'lignes': list(bon.lignes_bon.all()),
         'lignes_data': lignes_data,
-        'empty_lines': empty_lines,
+        'lignes_pages': pagination.pages,
+        'pages': pages,
+        'est_multi_page': pagination.est_multi_page,
+        'empty_lines': list(range(max(0, 12 - len(lignes_data)))),
+        'service': service,
+        'service_code': service_code,
         'service_poste': service_poste,
         'logo_url': logo_url,
         'date_impression': timezone.now(),
         'pdf_config': pdf_config,
+        'signature_cases': build_signature_cases(bon, pdf_config, request),
     }
     return render(request, 'stock/pdf/bon_hors_stock.html', context)
 

@@ -6,29 +6,38 @@
     margin-bottom: 0;
     margin-top: 0.5mm;
     table-layout: fixed;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 .signatures-table td {
     border: 2px solid #000;
     vertical-align: top;
     padding: 0;
-    height: 32mm;
+    height: 26mm;
     position: relative;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 .sig-case-title {
     font-weight: bold;
     text-align: center;
     text-transform: uppercase;
-    font-size: 8pt;
+    font-size: 7pt;
     text-decoration: underline;
     padding: 1mm 0.5mm 0 0.5mm;
-    line-height: 1.2;
+    line-height: 1.15;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    hyphens: auto;
 }
 .sig-case-content {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    height: calc(32mm - 7pt);
+    height: calc(26mm - 7pt);
     padding: 0 1mm 0.5mm 1mm;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 .sig-name-top {
     text-align: center;
@@ -74,9 +83,9 @@
 </style>
 {% if signature_cases %}
 <table class="signatures-table">
-  <tr>
-    {% for case in signature_cases %}
-    <td>
+  {% for case in signature_cases %}
+    {% if forloop.counter0|divisibleby:3 %}<tr>{% endif %}
+    <td style="width:33.3%;">
       <div class="sig-case-title">{{ case.label }}</div>
       <div class="sig-case-content">
         {% if case.has_signature %}
@@ -102,7 +111,7 @@
       <div class="sig-date">{{ case.date|date:"d/m/Y" }}</div>
       {% endif %}
     </td>
-    {% endfor %}
-  </tr>
+    {% if forloop.counter|divisibleby:3 or forloop.last %}</tr>{% endif %}
+  {% endfor %}
 </table>
 {% endif %}

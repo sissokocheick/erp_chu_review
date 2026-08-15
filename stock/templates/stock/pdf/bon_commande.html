@@ -7,7 +7,7 @@
 <style>
 @page {
     size: A4;
-    margin: 10mm 7mm 18mm 7mm;
+    margin: 6mm 8mm 12mm 8mm;
     @bottom-center {
         content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
         white-space: pre-line;
@@ -15,7 +15,7 @@
         color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
         font-weight: bold;
         text-align: center;
-        width: 100%;
+
     }
     @bottom-right {
         content: counter(page) " / " counter(pages);
@@ -30,18 +30,22 @@ body {
     font-size: 9pt;
     line-height: 1.35;
     color: #000;
+    margin: 0;
+    padding: 0;
 }
-.page { width: 100%; }
+.page { width: 100%; height: 100%; }
 .page-flex {
     display: flex;
     flex-direction: column;
-    min-height: 262mm;
+    min-height: 279mm;
 }
 .content-main { flex: 1 1 auto; }
 .bloc-bas {
     width: 100%;
     page-break-inside: avoid;
     break-inside: avoid;
+    padding-bottom: 0;
+    margin-bottom: 0;
 }
 .page-flex .bloc-bas { margin-top: auto; }
 
@@ -158,6 +162,7 @@ body {
     border-collapse: collapse;
     font-size: 9pt;
     margin-bottom: 2mm;
+    table-layout: fixed;
 }
 .data-table thead {
     display: table-header-group;
@@ -173,6 +178,8 @@ body {
     padding: 1.5mm 2mm;
     vertical-align: middle;
     text-align: center;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 .data-table th {
     font-weight: bold;
@@ -201,79 +208,38 @@ body {
     border: 1px solid #000;
 }
 
-.signatures-block {
-    width: 100%;
-    margin-bottom: 2mm;
-    font-size: 9pt;
-}
-.sig-row {
-    display: flex;
-    justify-content: flex-end;
-    align-items: flex-start;
-    gap: 5mm;
-}
-.sig-item {
-    text-align: center;
-    min-width: 60mm;
-}
-.sig-fonction {
-    font-weight: bold;
-    text-transform: uppercase;
-    font-size: 9pt;
-    text-decoration: underline;
-    margin-bottom: 2mm;
-}
-.sig-name {
-    font-size: 10pt;
-    font-weight: bold;
-    margin-bottom: 1mm;
-}
-.sig-img {
-    display: block;
-    margin: 1mm auto;
-    max-height: 12mm;
-    max-width: 80%;
-    object-fit: contain;
-}
-.sig-date {
-    font-size: 8pt;
-    color: #555;
-    margin-top: 1mm;
-}
-
 img { max-width: 100%; height: auto; }
 </style>
+<base target="_blank">
 </head>
 <body>
+
+{% if not est_multi_page %}
 
 <div class="page page-flex">
   <div class="content-main">
 
     {% if pdf_config.cartouche.afficher_republique or pdf_config.cartouche.afficher_devise %}
-<table class="en-tete-etatique">
-  <tr>
-    <td style="width:50%; vertical-align:middle; text-align:left;">
-      <div style="display:inline-block; text-align:center;">
-        <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
-      </div>
-    </td>
-
-    <td style="width:50%; vertical-align:middle; text-align:right;">
-      <div style="display:inline-block; text-align:center;">
-
-        {% if pdf_config.cartouche.afficher_republique %}
-          <strong>République de Côte d'Ivoire</strong><br>
-        {% endif %}
-
-        {% if pdf_config.cartouche.afficher_devise %}
-          <em>Union - Discipline - Travail</em>
-        {% endif %}
-
-      </div>
-    </td>
-  </tr>
-</table>
-{% endif %}
+    <table class="en-tete-etatique">
+      <tr>
+        <td style="width:50%; vertical-align:middle; text-align:left;">
+          <div style="display:inline-block; text-align:center;">
+            <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
+          </div>
+        </td>
+        <td style="width:50%; vertical-align:middle; text-align:right;">
+          <div style="display:inline-block; text-align:center;">
+            {% if pdf_config.cartouche.afficher_republique %}
+              <strong>République de Côte d'Ivoire</strong><br>
+            {% endif %}
+            {% if pdf_config.cartouche.afficher_devise %}
+              <em>Union - Discipline - Travail</em>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    </table>
+    {% endif %}
 
     <table class="cartouche">
       <tr>
@@ -283,17 +249,16 @@ img { max-width: 100%; height: auto; }
           {% endif %}
         </td>
         <td class="title-cell" style="padding:0; vertical-align:top;">
-            <div style="height:11mm; line-height:11mm; width:100%; border-bottom:1.5px solid #000; box-sizing:border-box; text-align:center;">
-                <span style="font-size:10pt; font-weight:bold; text-transform:uppercase; display:inline-block; vertical-align:middle; line-height:normal;">
-                    {{ pdf_config.metadonnees.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
-                </span>
-            </div>
-
-            <div style="height:17mm; line-height:17mm; width:100%; box-sizing:border-box; text-align:center;">
-                <span style="font-size:16pt; font-weight:bold; text-transform:uppercase; letter-spacing:1px; display:inline-block; vertical-align:middle; line-height:normal;">
-                    BON DE COMMANDE
-                </span>
-            </div>
+          <div style="height:11mm; line-height:11mm; width:100%; border-bottom:1.5px solid #000; box-sizing:border-box; text-align:center;">
+            <span style="font-size:10pt; font-weight:bold; text-transform:uppercase; display:inline-block; vertical-align:middle; line-height:normal;">
+              {{ pdf_config.metadonnees.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
+            </span>
+          </div>
+          <div style="height:17mm; line-height:17mm; width:100%; box-sizing:border-box; text-align:center;">
+            <span style="font-size:16pt; font-weight:bold; text-transform:uppercase; letter-spacing:1px; display:inline-block; vertical-align:middle; line-height:normal;">
+              BON DE COMMANDE
+            </span>
+          </div>
         </td>
         <td class="code-cell">
           Code : {{ pdf_config.metadonnees.code_document|default:"ENR-BDC/DAF-001" }}<br>
@@ -346,8 +311,8 @@ img { max-width: 100%; height: auto; }
         </tr>
       </thead>
       <tbody>
-        {% for ligne in lignes_data %}
-        <tr>
+        {% for ligne in pages.0.lignes %}
+        <tr{% if pages.0.hauteur_ligne %} style="height: {{ pages.0.hauteur_ligne }}mm"{% endif %}>
           <td>{{ ligne.idx }}</td>
           <td>{{ ligne.reference|default:"" }}</td>
           <td class="desig">{{ ligne.designation }}</td>
@@ -368,6 +333,191 @@ img { max-width: 100%; height: auto; }
     {% include "stock/pdf/_signatures.html" %}
   </div>
 </div>
+
+{% else %}
+
+{% for page in pages %}
+
+  {% if forloop.first %}
+  <div class="page">
+    <div>
+      {% if pdf_config.cartouche.afficher_republique or pdf_config.cartouche.afficher_devise %}
+      <table class="en-tete-etatique">
+        <tr>
+          <td style="width:50%; vertical-align:middle; text-align:left;">
+            <div style="display:inline-block; text-align:center;">
+              <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong>
+            </div>
+          </td>
+          <td style="width:50%; vertical-align:middle; text-align:right;">
+            <div style="display:inline-block; text-align:center;">
+              {% if pdf_config.cartouche.afficher_republique %}
+                <strong>République de Côte d'Ivoire</strong><br>
+              {% endif %}
+              {% if pdf_config.cartouche.afficher_devise %}
+                <em>Union - Discipline - Travail</em>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+      </table>
+      {% endif %}
+      <table class="cartouche">
+        <tr>
+          <td class="logo-cell">
+            {% if pdf_config.cartouche.afficher_logo and logo_url %}
+              <img src="{{ logo_url }}" alt="Logo">
+            {% endif %}
+          </td>
+          <td class="title-cell" style="padding:0; vertical-align:top;">
+            <div style="height:11mm; line-height:11mm; width:100%; border-bottom:1.5px solid #000; box-sizing:border-box; text-align:center;">
+              <span style="font-size:10pt; font-weight:bold; text-transform:uppercase; display:inline-block; vertical-align:middle; line-height:normal;">
+                {{ pdf_config.metadonnees.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
+              </span>
+            </div>
+            <div style="height:17mm; line-height:17mm; width:100%; box-sizing:border-box; text-align:center;">
+              <span style="font-size:16pt; font-weight:bold; text-transform:uppercase; letter-spacing:1px; display:inline-block; vertical-align:middle; line-height:normal;">
+                BON DE COMMANDE
+              </span>
+            </div>
+          </td>
+          <td class="code-cell">
+            Code : {{ pdf_config.metadonnees.code_document|default:"ENR-BDC/DAF-001" }}<br>
+            Créé le : {{ pdf_config.metadonnees.date_creation_doc|default:"10/06/2024" }}<br>
+            Révisé le : {{ pdf_config.metadonnees.date_revision_doc|default:"" }}<br>
+            Version : {{ pdf_config.metadonnees.version_doc|default:"001" }}
+          </td>
+        </tr>
+      </table>
+      <table class="infos-commande">
+        <tr>
+          <td style="width:50%;">
+            <span class="label-bc">B.C.N° :</span> <span class="val-bc">{{ commande.numero_commande }}</span><br>
+            <span class="label-bc">Objet :</span> <span class="objet-val">{{ commande.objet|default:"" }}</span>
+          </td>
+          <td style="width:50%; text-align:right;">
+            <span class="label-bc">Fournisseur :</span> <span class="val-bc">{{ commande.fournisseur.raison_sociale|upper|default:"" }}</span><br>
+            <span class="label-bc">Interlocuteur :</span> {{ commande.fournisseur.contact|default:"" }}<br>
+            <span class="label-bc">Contact :</span> {{ commande.fournisseur.telephone|default:"" }}
+          </td>
+        </tr>
+      </table>
+      <table class="modalites">
+        <tr>
+          <td>
+            <div class="mod-title">DATE DE LA COMMANDE</div>
+            <div class="mod-val">{{ commande.date_commande|date:"d/m/Y" }}</div>
+          </td>
+          <td>
+            <div class="mod-title">DELAI DE LIVRAISON</div>
+            <div class="mod-val">{{ commande.delai_livraison|default:"" }}</div>
+          </td>
+          <td>
+            <div class="mod-title">LIVRAISON PREVUE LE</div>
+            <div class="mod-val">{{ commande.date_livraison_prevue|date:"d/m/Y"|default:"" }}</div>
+          </td>
+        </tr>
+      </table>
+    </div>
+    <div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-n">N°</th>
+            <th class="col-ref">Réf.</th>
+            <th class="col-des">DESCRIPTION</th>
+            <th class="col-un">UNITE</th>
+            <th class="col-qt">QUANTITE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ligne in page.lignes %}
+          <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
+            <td>{{ ligne.idx }}</td>
+            <td>{{ ligne.reference|default:"" }}</td>
+            <td class="desig">{{ ligne.designation }}</td>
+            <td>{{ ligne.unite|default:"U" }}</td>
+            <td class="qt-bold">{{ ligne.quantite|intspace }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% elif page.est_derniere_page %}
+  {% with nb_lignes=page.lignes|length %}
+  {% if nb_lignes >= 15 %}
+  <div class="page page-break">
+  {% else %}
+  <div class="page page-break page-flex">
+  {% endif %}
+    <div class="content-main">
+      <div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-n">N°</th>
+              <th class="col-ref">Réf.</th>
+              <th class="col-des">DESCRIPTION</th>
+              <th class="col-un">UNITE</th>
+              <th class="col-qt">QUANTITE</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for ligne in page.lignes %}
+            <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
+              <td>{{ ligne.idx }}</td>
+              <td>{{ ligne.reference|default:"" }}</td>
+              <td class="desig">{{ ligne.designation }}</td>
+              <td>{{ ligne.unite|default:"U" }}</td>
+              <td class="qt-bold">{{ ligne.quantite|intspace }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      <div class="texte-legal">
+        Exécuter la commande conformément aux modalités et spécifications précisées ci-dessus.
+      </div>
+    </div>
+    <div class="bloc-bas">
+      {% include "stock/pdf/_signatures.html" %}
+    </div>
+  </div>
+  {% endwith %}
+
+  {% else %}
+  <div class="page page-break">
+    <div>
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th class="col-n">N°</th>
+            <th class="col-ref">Réf.</th>
+            <th class="col-des">DESCRIPTION</th>
+            <th class="col-un">UNITE</th>
+            <th class="col-qt">QUANTITE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for ligne in page.lignes %}
+          <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
+            <td>{{ ligne.idx }}</td>
+            <td>{{ ligne.reference|default:"" }}</td>
+            <td class="desig">{{ ligne.designation }}</td>
+            <td>{{ ligne.unite|default:"U" }}</td>
+            <td class="qt-bold">{{ ligne.quantite|intspace }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endif %}
+
+{% endfor %}
+{% endif %}
 
 </body>
 </html>

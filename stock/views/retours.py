@@ -14,7 +14,7 @@ from django.utils import timezone
 from accounts.permissions import verifier_permission
 from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
-from ..pdf_utils import get_pdf_config
+from ..pdf_utils import get_pdf_config, paginate_lignes, ajouter_hauteurs_lignes, build_signature_cases
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, Service,
@@ -187,7 +187,7 @@ def apercu_bon_retour(request, bon_id):
     pdf_config, logo_url = get_pdf_config(bon.magasin, 'BR', request)
 
     lignes_data = []
-    for ligne in lignes_brutes:
+    for idx, ligne in enumerate(lignes_brutes, start=1):
         article = ligne.article
         unite = 'U'
         for attr in ('unite_distribution', 'unite_mesure', 'unite'):
@@ -197,13 +197,22 @@ def apercu_bon_retour(request, bon_id):
                     unite = val
                     break
         lignes_data.append({
+            'idx': idx,
             'reference': getattr(article, 'reference', '') or '',
             'designation': getattr(article, 'designation', '') or '',
             'unite': unite,
             'quantite': ligne.quantite,
+            'numero_lot': getattr(ligne, 'numero_lot', None),
+            'date_peremption': getattr(ligne, 'date_peremption', None),
         })
-    nb_lignes = len(lignes_data)
-    empty_lines = list(range(max(0, 12 - nb_lignes)))
+    a_lots = any(l['numero_lot'] for l in lignes_data)
+
+    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc='RETOUR_SERVICE')
+    pages = [
+        {'lignes': page, 'est_derniere_page': i == len(pagination.pages) - 1}
+        for i, page in enumerate(pagination.pages)
+    ]
+    pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='RETOUR_SERVICE')
 
     chef_service = None
     if bon.service_demandeur:
@@ -213,6 +222,7 @@ def apercu_bon_retour(request, bon_id):
             is_active=True
         ).first()
 
+    service = bon.service_demandeur
     responsable = getattr(bon.magasin, 'responsable', None) if bon.magasin else None
     magasinier = bon.cree_par
 
@@ -222,11 +232,18 @@ def apercu_bon_retour(request, bon_id):
         'magasin': bon.magasin,
         'lignes': lignes_brutes,
         'lignes_data': lignes_data,
-        'empty_lines': empty_lines,
+        'lignes_pages': pagination.pages,
+        'pages': pages,
+        'est_multi_page': pagination.est_multi_page,
+        'a_lots': a_lots,
         'total_qte': total_qte,
         'chef_service': chef_service,
         'responsable': responsable,
         'magasinier': magasinier,
+        'service': service,
+        'service_code': getattr(service, 'code', '') if service else '',
+        'service_poste': getattr(service, 'poste', '') if service else '',
+        'signature_cases': build_signature_cases(bon, pdf_config, request),
         'logo_url': logo_url,
         'date_impression': timezone.now(),
         'pdf_config': pdf_config,
