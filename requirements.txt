@@ -36,3 +36,5 @@ zopfli==0.4.1
 
 # Tests E2E (navigateur réel) — pip install playwright && playwright install chromium
 playwright==1.62.0
+# Tests PDF multi-pages : assertions de contenu (nombre de pages, numérotation)
+pymupdf==1.28.2

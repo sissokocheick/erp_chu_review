@@ -35,19 +35,20 @@ REQUIREMENTS = RACINE / "requirements.txt"
 BASHE = shutil.which("bash")
 
 
-def _requirements_contient_pyyaml():
-    """True si PyYAML est déclaré dans requirements.txt (insensible à la casse)."""
+def _requirements_contient(nom_dependance):
+    """True si la dépendance (ex: 'pyyaml') est déclarée dans requirements.txt.
+    Insensible à la casse ; ignore les commentaires et les lignes vides."""
+    nom_dependance = nom_dependance.strip().lower()
     try:
         texte = REQUIREMENTS.read_text(encoding="utf-8")
     except FileNotFoundError:
         return False
     for ligne in texte.splitlines():
-        # Ignore les commentaires et les lignes vides
         ligne = ligne.split("#", 1)[0].strip()
         if not ligne:
             continue
         nom = ligne.split("==", 1)[0].split("[", 1)[0].strip().lower()
-        if nom == "pyyaml":
+        if nom == nom_dependance:
             return True
     return False
 
@@ -224,27 +225,48 @@ class CjAlerteEchecCiTest(SimpleTestCase):
         self.assertIn("curl", step["run"])
 
 
-class PyYAMLDependanceTest(SimpleTestCase):
-    """Filet de sécurité : si PyYAML venait à manquer de nouveau, ce test échoue.
+class DependancesTestsFiletTest(SimpleTestCase):
+    """Filet de sécurité sur les dépendances de test.
 
-    Historique : core/tests_workflow_deploy.py importe `yaml` (PyYAML). Il avait
-    été oublié dans requirements.txt → sur un runner CI vierge, la collecte des
-    tests plantait (import error) alors que tout passait en local (paquet
-    installé à la main). Ce test vérifie que PyYAML est À LA FOIS déclaré dans
-    requirements.txt ET importable : retirer la ligne de requirements ou le
-    paquet de l'environnement fait échouer la CI proprement.
+    Chaque dépendance utilisée par les tests doit être À LA FOIS déclarée dans
+    requirements.txt ET importable dans l'environnement. Retirer une ligne de
+    requirements (ou le paquet) fait échouer la CI proprement au lieu de la
+    laisser passer en local puis planter sur un runner vierge.
+
+    - PyYAML  : core/tests_workflow_deploy.py importe `yaml` (avait été oublié
+      dans requirements → collecte des tests cassée en CI).
+    - playwright : tests E2E (skip si absent, mais doit rester déclaré pour que
+      la CI installe le paquet + chromium).
+    - pymupdf : assertions de contenu des PDF multi-pages (nombre de pages,
+      numérotation) — sans lui ces assertions sont silencieusement sautées.
     """
 
-    def test_pyyaml_declare_dans_requirements(self):
-        self.assertTrue(
-            _requirements_contient_pyyaml(),
-            "PyYAML doit être déclaré dans requirements.txt — "
-            "core/tests_workflow_deploy.py l'importe (yaml). Sans lui, la "
-            "collecte des tests échoue sur un runner CI vierge.",
-        )
+    DEPENDANCES = [
+        # (nom dans requirements, nom du module, attribut attendu, raison)
+        ("pyyaml", "yaml", "safe_load",
+         "core/tests_workflow_deploy.py l'importe (yaml)"),
+        ("playwright", "playwright.sync_api", "sync_playwright",
+         "tests E2E Playwright (LiveServerTestCase)"),
+        ("pymupdf", "pymupdf", "open",
+         "assertions de contenu des PDF multi-pages (pages, numérotation)"),
+    ]
 
-    def test_pyyaml_importable(self):
+    def test_dependances_declarees_dans_requirements(self):
+        for nom_req, module, attr, raison in self.DEPENDANCES:
+            with self.subTest(dependance=nom_req):
+                self.assertTrue(
+                    _requirements_contient(nom_req),
+                    f"{nom_req!r} doit être déclaré dans requirements.txt — "
+                    f"utilisé par {raison}. Sans lui, la collecte des tests "
+                    "échoue (ou des assertions sont sautées) sur un runner CI.",
+                )
+
+    def test_dependances_importables(self):
         import importlib
-        module = importlib.import_module("yaml")
-        self.assertTrue(hasattr(module, "safe_load"),
-                        "PyYAML doit exposer yaml.safe_load (utilisé par les tests)")
+        for nom_req, module, attr, raison in self.DEPENDANCES:
+            with self.subTest(dependance=module):
+                mod = importlib.import_module(module)
+                self.assertTrue(
+                    hasattr(mod, attr),
+                    f"{module!r} doit exposer {attr!r} (utilisé par {raison})",
+                )
