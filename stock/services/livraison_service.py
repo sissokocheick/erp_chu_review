@@ -308,13 +308,25 @@ class LivraisonService:
                 f"({stock_item.quantite_physique}) pour le lot {entree.numero_lot or 'N/A'}."
             )
 
-        # ✅ CORRECTION : utiliser un code unique et constant avec flag explicite
-        service_destruction, _ = Service.objects.get_or_create(
-            code='REBUTS',
-            defaults={
-                'nom': 'DESTRUCTION / PÉREMPTIONS',
-            }
-        )
+        # Service système REBUTS — seedé en base par la data migration
+        # core.0004_seed_service_rebuts (donnée de référence, pas de création
+        # à la volée dans le code). Garde de secours si la migration n'a pas
+        # encore été appliquée sur un environnement existant.
+        service_destruction = Service.objects.filter(code='REBUTS').first()
+        if service_destruction is None:
+            from django.db.utils import IntegrityError
+            try:
+                service_destruction, _ = Service.objects.get_or_create(
+                    code='REBUTS',
+                    defaults={'nom': 'DESTRUCTION / PÉREMPTIONS'},
+                )
+            except IntegrityError:
+                service_destruction = Service.objects.filter(code='REBUTS').first()
+            if service_destruction is None:
+                raise ValidationError(
+                    "Service système REBUTS introuvable — exécutez les migrations "
+                    "(python manage.py migrate)."
+                )
 
         # ✅ CORRECTION : utiliser type_bon='DESTRUCTION' si le modèle le supporte, sinon SORTIE
         # Note : si le modèle n'a pas DESTRUCTION dans les choices, utiliser SORTIE avec flag
