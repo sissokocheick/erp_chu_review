@@ -6,6 +6,45 @@
 
 ---
 
+## Résumé des fonctionnalités
+
+### Architecture
+- **Stack** : Django 6 + Python 3.14, **PostgreSQL** (seule base supportée — production, staging, dev et tests), templates + JS (jQuery, Chart.js, SweetAlert2, Select2), **WeasyPrint** (PDF), Playwright (tests E2E).
+- **4 modules** : `accounts` (utilisateurs & sécurité), `stock` (le cœur métier), `patrimoine` (immobilisations), `core` (configuration & supervision).
+- **Qualité** : 2441 tests (unitaires + E2E sur PostgreSQL), CI GitHub Actions, filets anti-régression (dépendances, données codées en dur, comptages CSV d'import).
+
+### 👤 Accounts — utilisateurs & sécurité
+- **Authentification** : login sécurisé (anti brute-force), logout POST-only, « Mot de passe oublié » **par email OU SMS** (selon le canal configuré), reset par l'admin si les notifications sont désactivées.
+- **Comptes** : création avec mot de passe généré (affiché + envoyé par email/SMS si le canal est actif), profils, **rôles & permissions** `menu_*`, circuits de validation.
+- **Sécurité** : politique de mots de passe, journal d'audit (JournalAudit, AuditConnexion), purge des sessions à la désactivation, middleware « doit changer le MDP ».
+
+### 📦 Stock — le cœur métier
+- **Référentiels** : articles (référence, famille, unité, seuils), familles, magasins, fournisseurs, services/bénéficiaires ; import Sage 100 via **CSV** (15 familles, 25 fournisseurs, 18 services, 664 articles).
+- **Mouvements** : bons d'entrée (lots + péremption), de sortie, de retour, **transferts inter-magasins**, sorties hors stock (traçage sans impact stock), ajustements, destructions/rebuts.
+- **FEFO** : sortie par date de péremption la plus proche, **blocage des lots périmés**.
+- **Commandes & réappro** : commandes fournisseurs, **boucle de réappro fermée** (suggestions depuis les seuils → conversion en commande en 1 clic), réceptions, livraisons, **demandes des services** (création → validation → livraison → accusé de réception).
+- **Inventaires** : campagnes complètes (comptage, écarts, validation) + **inventaires tournants** (planification par famille/zone, échéances, génération automatique).
+- **Péremptions & lots** : suivi des lots, alertes d'expiration, contrôle/destruction des lots périmés.
+- **Pilotage** : dashboard (valeur du stock, alertes de seuil, top mouvements/services, **taux de rotation 30 j**, lots en alerte, graphiques), rapports (consommation par service mensuelle exportable, réappro), exports CSV/Excel.
+- **Documents** : **PDF configurables** (logo + entête depuis les paramètres, modèles par type de bon, signatures sur 2 lignes, numérotation des pages, multi-pages, marges basses).
+
+### 🏥 Patrimoine
+- **Immobilisations** : catégories, types d'équipement, marques, localisation (bâtiment → étage → bureau).
+- **Amortissements** : linéaire et dégressif, valeur nette comptable.
+- **Contrats de maintenance** (échéanciers), **interventions** sur équipements, **SAS** (division des lots, modèles auto + manuel).
+
+### 🔔 Notifications
+- **Configuration globale par l'admin** : email (SMTP) et/ou **SMS (Twilio API)**.
+- Canal actif → notifications, mot de passe de création et de reset envoyés automatiquement ; désactivé → tout en local (reset manuel par l'admin).
+- Alertes de santé (uptime) + **alertes CI Slack/webhook**.
+
+### 🚀 Exploitation
+- **CI/CD** : GitHub Actions (tests sur PostgreSQL, pip-audit, check --deploy), déploiement staging Ansible.
+- **Déploiement** : scripts bash/PowerShell, Gunicorn/waitress, systemd/NSSM, **sauvegardes PostgreSQL automatiques** (pg_dump + rétention), **restauration** (pg_restore, --dry-run), Let's Encrypt (TLS auto), collectstatic.
+- **Supervision** : tableau de bord santé, taille de la base, requêtes lentes, usage disque, logs d'erreurs.
+
+---
+
 ## Table des matières
 
 1. [Vue d'ensemble](#1-vue-densemble)

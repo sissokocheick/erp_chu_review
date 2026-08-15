@@ -59,6 +59,10 @@ Deux scripts font tout le pipeline (chargement `.env` → validation → `migrat
 > Sur **Windows**, gunicorn n'est pas supporté : `deploy.ps1` bascule sur
 > **waitress** (`pip install waitress`) ou vous guide vers WSL/Linux.
 
+> Les scripts automatisés n'exécutent PAS l'import Sage (étape manuelle
+> unique) : après le premier déploiement, lancer une fois
+> `python manage.py import_sage_data` (voir le runbook manuel, étape 2 bis).
+
 ### CI / Staging (GitHub Actions)
 
 - **CI** (`.github/workflows/ci.yml`) : suite complète de tests (Python 3.13,
@@ -92,6 +96,15 @@ pip install -r requirements.txt
 # 2. Migrations
 python manage.py migrate
 
+# 2 bis. Données initiales (UNE SEULE FOIS, au premier déploiement)
+#   Import Sage 100 : familles, fournisseurs, services, articles
+#   (15 familles / 25 fournisseurs / 18 services / 664 articles, lus
+#   depuis stock/management/commands/data_sage/*.csv). Sans cette étape,
+#   le catalogue de stock est VIDE en production.
+#   La commande est idempotente (get_or_create) : relançable sans risque.
+python manage.py import_sage_data --dry-run    # simulation (0 écriture)
+python manage.py import_sage_data              # import réel
+
 # 3. Fichiers statiques (servis par WhiteNoise)
 python manage.py collectstatic --noinput
 
@@ -103,6 +116,11 @@ DJANGO_DEBUG=False DJANGO_SECRET_KEY=<cle> DB_PASSWORD=<mdp> \
 DJANGO_DEBUG=False ... gunicorn config.wsgi:application \
   --bind 127.0.0.1:8000 --workers 3 --timeout 120
 ```
+
+> ⚠️ **Les données initiales ne sont PAS créées par les migrations** :
+> `import_sage_data` est une étape manuelle à exécuter au premier
+> déploiement (et sur le staging avant validation). En cas d'oubli, le
+> catalogue d'articles est vide — les bons ne peuvent pas être créés.
 
 ## 3. Service de démarrage (boot + redémarrage automatique)
 
