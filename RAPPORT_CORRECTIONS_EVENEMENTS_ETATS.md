@@ -63,7 +63,7 @@
 | 29 | `accounts/views.py` | **Désactivation d'un compte sans purge des sessions** → l'utilisateur désactivé restait connecté jusqu'à expiration. Corrigé : purge des sessions actives de l'utilisateur désactivé. |
 | 30 | `accounts/views.py` | `user.groups.set([groupe_id])` : impossible de retirer le dernier rôle (groupe vide ignoré). Corrigé : `clear()` si `groupe_id` vide. |
 | 31 | `accounts/views.py` | `page_roles` : renommage d'un rôle vers un nom existant → `IntegrityError` (**500**) ; `role_id` non numérique → `ValueError` (**500**). Corrigé : contrôle de doublon + conversion `int()` sécurisée. |
-| 32 | `config/settings_test.py` | `MIGRATION_MODULES = {'stock': None}` cassait le graphe de migrations (`accounts.0001` dépend de `stock.0001`) → **tous les tests Django étaient impossibles à lancer**. Corrigé : migrations stock actives sur SQLite. |
+| 32 | `config/settings_test.py` | `MIGRATION_MODULES = {'stock': None}` cassait le graphe de migrations (`accounts.0001` dépend de `stock.0001`) → **tous les tests Django étaient impossibles à lancer**. Corrigé : migrations stock actives. (Depuis, les tests tournent sur PostgreSQL, seule base supportée.) |
 
 ### 🟠 Accounts — 2e passe (sécurité & audit)
 

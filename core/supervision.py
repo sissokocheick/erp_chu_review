@@ -106,26 +106,15 @@ def _taille_lisible(octets):
 
 
 def taille_base():
-    """Taille de la base de données (octets), indépendante du moteur.
+    """Taille de la base de données (octets).
 
-    PostgreSQL : pg_database_size(current_database()).
-    SQLite : fichier sur disque, sinon page_count * page_size (base en mémoire).
+    PostgreSQL est la seule base supportée : on utilise
+    pg_database_size(current_database()).
     """
-    moteur = connection.vendor
     try:
-        if moteur == 'postgresql':
-            with connection.cursor() as cursor:
-                cursor.execute('SELECT pg_database_size(current_database())')
-                octets = cursor.fetchone()[0]
-        elif moteur == 'sqlite':
-            with connection.cursor() as cursor:
-                cursor.execute('PRAGMA page_count')
-                pages = cursor.fetchone()[0]
-                cursor.execute('PRAGMA page_size')
-                taille_page = cursor.fetchone()[0]
-            octets = pages * taille_page
-        else:
-            return None
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT pg_database_size(current_database())')
+            octets = cursor.fetchone()[0]
     except Exception:  # noqa: BLE001 — une métrique ne doit jamais casser la page
         return None
     return octets

@@ -209,10 +209,8 @@ Les fichiers suivants utilisent encore `get_magasins_autorises` depuis `catalogu
 Les tests créés nécessitent une base PostgreSQL active. Pour tester localement :
 
 ```bash
-# Option 1 : Utiliser SQLite pour les tests
-DATABASE_URL=sqlite:///test.db python manage.py test stock.tests.test_isolation_magasin
-
-# Option 2 : Démarrer PostgreSQL
+# PostgreSQL est la seule base supportée (même moteur qu'en production)
+# — les tests s'exécutent sur un vrai PostgreSQL (config.settings_test).
 service postgresql start
 python manage.py test stock.tests.test_isolation_magasin
 ```

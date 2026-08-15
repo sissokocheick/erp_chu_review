@@ -1,4 +1,9 @@
-"""Configuration de test sans PostgreSQL"""
+"""Configuration de test sur PostgreSQL (même moteur qu'en production).
+
+La suite de tests s'exécute sur PostgreSQL : les migrations, le SQL et le
+comportement testés sont donc identiques à la production. Aucun autre moteur
+n'est supporté (voir config/settings.py).
+"""
 import os
 
 # Depuis le durcissement production, DEBUG défaut à False et settings.py lève
@@ -17,15 +22,20 @@ os.environ.setdefault('DJANGO_ALLOW_ASYNC_UNSAFE', '1')
 
 from .settings import *
 
+# PostgreSQL — même moteur qu'en production. Django crée automatiquement la
+# base de test (test_<NAME>) à chaque exécution. Paramétrable via les mêmes
+# variables d'environnement que le développement (DB_NAME, DB_USER, ...).
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': ':memory:',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'chu_angre_test'),
+        'USER': os.environ.get('DB_USER', 'postgres'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'admin'),
+        'HOST': os.environ.get('DB_HOST', 'localhost'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
-# Les migrations stock sont compatibles SQLite : on les garde actives.
-# (Désactiver stock cassait le graphe : accounts.0001 dépend de stock.0001)
 MIGRATION_MODULES = {}
 
 # Simplifier pour les tests

@@ -99,18 +99,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 
 # Database
-# ✅ CORRECTION : mot de passe lu depuis variable d'environnement
-# Utilisation de SQLite pour les tests si DATABASE_URL non défini
+# PostgreSQL est la SEULE base de données supportée (production, staging,
+# développement et tests). Aucun autre moteur (SQLite, MySQL...) n'est
+# accepté : les migrations, le SQL et les tests sont écrits pour Postgres.
 if os.environ.get('DATABASE_URL'):
     DATABASES = {
         'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
-    }
-elif os.environ.get('TEST_MODE', 'False').lower() in ('true', '1', 'yes'):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': ':memory:',
-        }
     }
 else:
     if not os.environ.get('DB_PASSWORD') and not DEBUG:

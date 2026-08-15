@@ -9,6 +9,30 @@ jobs:
   tests:
     name: Tests (suite complète)
     runs-on: ubuntu-latest
+    # PostgreSQL est la seule base supportée (comme en production) : les
+    # tests s'exécutent donc sur un vrai PostgreSQL, pas sur SQLite.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: chu_angre_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: admin
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings_test
+      DB_NAME: chu_angre_test
+      DB_USER: postgres
+      DB_PASSWORD: admin
+      DB_HOST: localhost
+      DB_PORT: 5432
+      PYTHONIOENCODING: utf-8
     steps:
       - uses: actions/checkout@v4
 
@@ -26,13 +50,11 @@ jobs:
 
       - name: Migrations à jour (makemigrations --check)
         run: |
-          DJANGO_SETTINGS_MODULE=config.settings_test python manage.py makemigrations --check --dry-run
+          python manage.py makemigrations --check --dry-run
 
       - name: Suite de tests complète (2351 tests, dont E2E)
         env:
-          DJANGO_SETTINGS_MODULE: config.settings_test
           DJANGO_ALLOW_ASYNC_UNSAFE: '1'
-          PYTHONIOENCODING: utf-8
         run: python manage.py test
 
   security:

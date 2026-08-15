@@ -578,7 +578,7 @@ avec la vue `demandes_a_valider`.
 - **Frontend** : templates Django + JS (jQuery, Chart.js, SweetAlert2, Select2,
   daterangepicker), CSS responsive maison.
 - **PDF** : WeasyPrint (HTML → PDF).
-- **Base de données** : SQLite (dev) / PostgreSQL possible (settings configurables).
+- **Base de données** : PostgreSQL (seule base supportée — production, staging, dev et tests).
 
 ### Modèles clés
 - `accounts` : `User` (Django), `Profil`, `MenuAccess` (permissions `menu_*`),

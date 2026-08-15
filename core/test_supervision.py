@@ -117,7 +117,7 @@ class SupervisionHelpersTest(TestCase):
         self.assertEqual(_taille_lisible(3 * 1024 * 1024), '3.0 Mo')
         self.assertEqual(_taille_lisible(2 * 1024 * 1024 * 1024), '2.0 Go')
 
-    def test_taille_base_sqlite_positive(self):
+    def test_taille_base_postgres_positive(self):
         octets = taille_base()
         self.assertIsNotNone(octets)
         self.assertGreater(octets, 0)
