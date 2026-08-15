@@ -88,6 +88,17 @@ class E2EBase(LiveServerTestCase):
         qui ne se terminent jamais (polling de la cloche notifications)."""
         self.page.wait_for_timeout(ms)
 
+    def _attendre_visible(self, selector, timeout_ms=20000):
+        """Attente conditionnelle robuste (CI) : attend que le sélecteur soit
+        visible au lieu d'un délai fixe — évite la flakiness sur runner chargé."""
+        self.page.wait_for_selector(
+            selector, state='visible', timeout=timeout_ms)
+
+    def _attendre_url(self, fragment, timeout_ms=20000):
+        """Attend que l'URL contienne `fragment` (navigation après soumission)."""
+        self.page.wait_for_url(
+            f'**{fragment}**', timeout=timeout_ms)
+
     def _se_connecter(self, url='/', magasin=None):
         """Connexion puis navigation vers `url`.
 
@@ -215,7 +226,9 @@ class E2EBase(LiveServerTestCase):
         self.page.locator('#opt_sms input[type="radio"]').check(force=True)
         self.page.fill('#id_identifiant', '07 08 09 10 11')
         self.page.click('form button[type="submit"]')
-        self._attendre(1200)
+
+        # Attente du message neutre (robuste : pas de délai fixe)
+        self._attendre_visible('text=Si un compte correspond')
 
         # Un jeton a été créé pour le bon compte (le numéro +225 a matché)
         jeton = MotDePasseResetToken.objects.filter(user=cible).first()
@@ -281,7 +294,7 @@ class E2EBase(LiveServerTestCase):
         ), override_settings(
                 EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
             self.page.click('form button[type="submit"]')
-            self._attendre(1800)
+            self._attendre_visible('text=Si un compte correspond')
             # Le SMS a échoué → repli email automatique
             jeton = MotDePasseResetToken.objects.filter(user=cible).first()
             self.assertIsNotNone(
@@ -342,7 +355,8 @@ class E2EBase(LiveServerTestCase):
             swal_ok = self.page.locator('.swal2-confirm')
             if swal_ok.count():
                 swal_ok.first.click()
-            self._attendre(1400)
+            # Retour à la liste des utilisateurs (robuste : pas de délai fixe)
+            self._attendre_url('/auth/utilisateurs/')
 
         # 4) Retour à la liste + mot de passe changé + email envoyé
         self.assertIn('/auth/utilisateurs/', self.page.url)
@@ -404,7 +418,8 @@ class E2EBase(LiveServerTestCase):
                 swal_ok.count(), 0,
                 "Une confirmation SweetAlert doit apparaître avant la création")
             swal_ok.first.click()
-            self._attendre(1800)
+            # Attente de la modale des identifiants (robuste)
+            self._attendre_visible('#modalCredentials.open')
 
         # 4) Modale d'affichage du mot de passe (session new_user_credentials)
         cred = self.page.locator('#modalCredentials')
