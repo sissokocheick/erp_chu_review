@@ -104,3 +104,16 @@ class DataSageStabiliteTest(SimpleTestCase):
         self.assertEqual(len(codes_fournisseurs), len(set(codes_fournisseurs)))
         self.assertEqual(len(codes_services), len(set(codes_services)))
         self.assertEqual(len(references), len(set(references)))
+
+    def test_familles_articles_existent(self):
+        """Chaque famille_code d'article existe bien dans familles.csv —
+        aucun article orphelin (sinon il serait ignoré à l'import)."""
+        codes_familles = {f["code"] for f in FAMILLES_DATA}
+        orphelins = [
+            (a[0], a[1]) for a in ARTICLES_DATA if a[1] not in codes_familles
+        ]
+        self.assertEqual(
+            orphelins, [],
+            "Articles avec une famille inexistante (familles.csv) — "
+            "ils seraient ignorés à l'import : " + str(orphelins[:10]),
+        )
