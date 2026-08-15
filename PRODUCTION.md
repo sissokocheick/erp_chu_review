@@ -59,6 +59,29 @@ Deux scripts font tout le pipeline (chargement `.env` → validation → `migrat
 > Sur **Windows**, gunicorn n'est pas supporté : `deploy.ps1` bascule sur
 > **waitress** (`pip install waitress`) ou vous guide vers WSL/Linux.
 
+### CI / Staging (GitHub Actions)
+
+- **CI** (`.github/workflows/ci.yml`) : suite complète de tests (Python 3.13,
+  Playwright E2E), `makemigrations --check`, `pip-audit`, `check --deploy` et
+  `collectstatic --dry-run`. En cas d'échec d'un job, un job `alert` envoie un
+  message à un webhook (Slack ou compatible) — configurable via le secret
+  **`CI_ALERT_WEBHOOK`** (URL d'un Incoming Webhook Slack). Si le secret est
+  absent, l'alerte est ignorée proprement (warning dans les logs).
+
+  ```text
+  ⛔ CI échouée — sissokocheick/erp_chu_review
+  • Branche : main
+  • Commit : e00a814
+  • Run : https://github.com/.../actions/runs/123
+  Un des jobs (Tests / Sécurité) a échoué. Voir le détail dans GitHub Actions.
+  ```
+
+- **Staging** (`.github/workflows/deploy.yml`) : déploiement Ansible après une
+  CI réussie, avec healthcheck local `/health/` (10 tentatives). Nécessite les
+  secrets de l'environnement `staging` (`STAGING_HOST`, `STAGING_SSH_USER`,
+  `STAGING_SSH_KEY`, `STAGING_SERVER_NAME`, `STAGING_SECRET_KEY`,
+  `STAGING_DB_PASSWORD`…). Sans `STAGING_HOST`, le déploiement est ignoré.
+
 ### Manuel
 
 ```bash

@@ -29,8 +29,27 @@ from django.test import SimpleTestCase
 
 RACINE = Path(__file__).resolve().parent.parent
 DEPLOY_YML = RACINE / ".github" / "workflows" / "deploy.yml"
+CI_YML = RACINE / ".github" / "workflows" / "ci.yml"
+REQUIREMENTS = RACINE / "requirements.txt"
 
 BASHE = shutil.which("bash")
+
+
+def _requirements_contient_pyyaml():
+    """True si PyYAML est déclaré dans requirements.txt (insensible à la casse)."""
+    try:
+        texte = REQUIREMENTS.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return False
+    for ligne in texte.splitlines():
+        # Ignore les commentaires et les lignes vides
+        ligne = ligne.split("#", 1)[0].strip()
+        if not ligne:
+            continue
+        nom = ligne.split("==", 1)[0].split("[", 1)[0].strip().lower()
+        if nom == "pyyaml":
+            return True
+    return False
 
 
 def _lire_workflow():
@@ -39,6 +58,14 @@ def _lire_workflow():
         texte = f.read()
     # PyYAML (YAML 1.1) interprète `on:` comme un booléen True — on renomme
     # la clé en `triggers:` avant le chargement pour l'inspecter.
+    texte = texte.replace("\non:\n", "\ntriggers:\n")
+    return yaml.safe_load(texte)
+
+
+def _lire_ci():
+    """Charge ci.yml de la même façon (clé `on` renommée en `triggers`)."""
+    with open(CI_YML, encoding="utf-8") as f:
+        texte = f.read()
     texte = texte.replace("\non:\n", "\ntriggers:\n")
     return yaml.safe_load(texte)
 
@@ -165,3 +192,59 @@ class DeployWorkflowIgnoreSansSecretsTest(SimpleTestCase):
             job.get("if"),
             "github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'",
         )
+
+
+class CjAlerteEchecCiTest(SimpleTestCase):
+    """Le workflow CI notifie un webhook (Slack) quand un job échoue."""
+
+    def setUp(self):
+        self.ci = _lire_ci()
+        self.alert = self.ci["jobs"]["alert"]
+
+    def test_job_alerte_present(self):
+        self.assertEqual(self.alert["name"], "Alerte échec CI (Slack/webhook)")
+
+    def test_se_declenche_uniquement_sur_echec(self):
+        self.assertEqual(self.alert.get("if"), "failure()",
+                         "L'alerte ne doit partir que si un job a échoué")
+        self.assertEqual(self.alert["needs"], ["tests", "security"],
+                         "L'alerte dépend des jobs tests et security")
+
+    def test_ignore_proprement_sans_secret(self):
+        """Sans CI_ALERT_WEBHOOK, l'alerte est ignorée (pas d'échec du job)."""
+        run = self.alert["steps"][0]["run"]
+        self.assertIn("CI_ALERT_WEBHOOK non configuré", run)
+        self.assertIn("exit 0", run)
+
+    def test_message_contient_les_infos_utiles(self):
+        step = self.alert["steps"][0]
+        self.assertEqual(step["env"]["WEBHOOK_URL"], "${{ secrets.CI_ALERT_WEBHOOK }}")
+        self.assertEqual(step["env"]["RUN_URL"],
+                         "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
+        self.assertIn("curl", step["run"])
+
+
+class PyYAMLDependanceTest(SimpleTestCase):
+    """Filet de sécurité : si PyYAML venait à manquer de nouveau, ce test échoue.
+
+    Historique : core/tests_workflow_deploy.py importe `yaml` (PyYAML). Il avait
+    été oublié dans requirements.txt → sur un runner CI vierge, la collecte des
+    tests plantait (import error) alors que tout passait en local (paquet
+    installé à la main). Ce test vérifie que PyYAML est À LA FOIS déclaré dans
+    requirements.txt ET importable : retirer la ligne de requirements ou le
+    paquet de l'environnement fait échouer la CI proprement.
+    """
+
+    def test_pyyaml_declare_dans_requirements(self):
+        self.assertTrue(
+            _requirements_contient_pyyaml(),
+            "PyYAML doit être déclaré dans requirements.txt — "
+            "core/tests_workflow_deploy.py l'importe (yaml). Sans lui, la "
+            "collecte des tests échoue sur un runner CI vierge.",
+        )
+
+    def test_pyyaml_importable(self):
+        import importlib
+        module = importlib.import_module("yaml")
+        self.assertTrue(hasattr(module, "safe_load"),
+                        "PyYAML doit exposer yaml.safe_load (utilisé par les tests)")

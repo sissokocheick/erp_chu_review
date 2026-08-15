@@ -66,3 +66,47 @@ jobs:
         env:
           DJANGO_DEBUG: 'True'
         run: python manage.py collectstatic --noinput --dry-run
+
+  # Alerte sur échec CI : un seul message par run échoué, envoyé à un
+  # webhook Slack (ou compatible). Configurable via le secret
+  # CI_ALERT_WEBHOOK — s'il est absent, l'alerte est ignorée proprement.
+  alert:
+    name: Alerte échec CI (Slack/webhook)
+    runs-on: ubuntu-latest
+    needs: [tests, security]
+    if: failure()
+    steps:
+      - name: Envoyer l'alerte
+        env:
+          WEBHOOK_URL: ${{ secrets.CI_ALERT_WEBHOOK }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          BRANCH: ${{ github.ref_name }}
+          JOB_URLS: ${{ toJson(needs) }}
+        run: |
+          set -euo pipefail
+          if [ -z "${WEBHOOK_URL:-}" ]; then
+            echo "::warning::Secret CI_ALERT_WEBHOOK non configuré — alerte ignorée."
+            echo "Créer un Incoming Webhook Slack puis définir le secret CI_ALERT_WEBHOOK."
+            exit 0
+          fi
+
+          # Construit le message JSON (échappement propre via Python)
+          payload=$(python3 - "$REPO" "$BRANCH" "$SHA" "$RUN_URL" <<'PYEOF'
+          import json, sys
+          repo, branch, sha, run_url = sys.argv[1:5]
+          message = (
+              f"\u26d4 *CI \u00e9chou\u00e9e* \u2014 {repo}\n"
+              f"\u2022 Branche : `{branch}`\n"
+              f"\u2022 Commit : `{sha[:7]}`\n"
+              f"\u2022 Run : {run_url}\n"
+              f"Un des jobs (Tests / S\u00e9curit\u00e9) a \u00e9chou\u00e9. Voir le d\u00e9tail dans GitHub Actions."
+          )
+          print(json.dumps({"text": message}))
+          PYEOF
+          )
+
+          curl -sS -X POST -H "Content-Type: application/json" \
+            -d "$payload" "$WEBHOOK_URL"
+          echo "\nAlerte envoy\u00e9e au webhook."
