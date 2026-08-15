@@ -761,12 +761,11 @@
         <div id="zone-select-etage" style="display: flex; gap: 10px;">
             <select id="select-nom-etage" class="form-control" style="flex: 1;" onchange="majVraiNomEtage()">
                 <option value="">-- Choisir un étage courant --</option>
-                <option value="RDC">RDC</option>
-                <option value="1ER ÉTAGE">1ER ÉTAGE</option>
-                <option value="2ÈME ÉTAGE">2ÈME ÉTAGE</option>
-                <option value="3ÈME ÉTAGE">3ÈME ÉTAGE</option>
-                <option value="4ÈME ÉTAGE">4ÈME ÉTAGE</option>
-                <option value="SOUS-SOL">SOUS-SOL</option>
+                {% for nom_etage in etages_connus %}
+                <option value="{{ nom_etage }}">{{ nom_etage }}</option>
+                {% empty %}
+                <option value="">Aucun étage enregistré — utilisez le bouton + pour saisir un nom</option>
+                {% endfor %}
             </select>
             <button type="button" onclick="basculerSaisieEtage()" title="Créer un nouveau nom d'étage" style="background: #28a745; color: white; border: none; padding: 0 15px; border-radius: 6px; cursor: pointer;">
                 <i class="fas fa-plus"></i>

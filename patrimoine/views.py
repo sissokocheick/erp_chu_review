@@ -1894,6 +1894,8 @@ def parametres(request):
 
         'types_contrat': TypeContrat.objects.all().order_by('nom'),
 
+        'etages_connus': list(Etage.objects.values_list('nom', flat=True).distinct().order_by('nom')),
+
     }
 
     return render(request, 'patrimoine/parametres.html', context)
