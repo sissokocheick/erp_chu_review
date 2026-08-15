@@ -72,14 +72,20 @@ L'utilisateur peut **réinitialiser lui-même** son mot de passe depuis la page 
    si l'envoi échoue sur ce canal, **l'autre canal est tenté automatiquement** (repli).
 4. **Réinitialisation** : lien `/auth/reinitialisation/<token>/` → nouveau mot de passe
    (validé par la politique §2).
-5. **Filet de sécurité admin** : si les canaux sont tous cassés, la réinitialisation manuelle
-   depuis la page **Utilisateurs** reste disponible (sinon aucun utilisateur ne pourrait être
-   dépanné). Dès qu'un canal redevient livrable, elle se désactive.
+5. **Filet de sécurité admin** : la réinitialisation manuelle depuis la page **Utilisateurs**
+   est **toujours disponible** (bouton &#128273; devant chaque compte). Si un canal email/SMS
+   est configuré et livrable, le **nouveau mot de passe est aussi envoyé par email/SMS** à
+   l'utilisateur ; sinon tout se fait **en local** (l'administrateur communique le mot de
+   passe lui-même).
 
 ### Politique de mots de passe (`/auth/securite/mots-de-passe/`)
 - **Mode d'attribution** des mots de passe à la création d'un utilisateur :
   - **Aléatoire** (recommandé) : mot de passe généré, communiqué à l'administrateur.
   - **Fixe** : mot de passe par défaut défini dans la configuration.
+- **À la création d'un compte** : le mot de passe initial est **toujours affiché** à
+  l'administrateur dans la modale « Identifiants du compte » (affichage unique). Si un canal
+  email/SMS est configuré et livrable, le mot de passe est **aussi envoyé** directement à
+  l'utilisateur par email (et/ou SMS) — l'affichage reste conservé dans les deux cas.
 - Réinitialisation de mot de passe d'un utilisateur possible depuis la page **Utilisateurs**.
 
 ### Profil utilisateur (`/auth/profil/`)
@@ -421,9 +427,12 @@ Rotation du comptage **par famille / par zone** au lieu d'une campagne complète
 ## 11. Paramètres
 
 ### Administratifs (`/parametres/administratifs/`)
-- **Identité & Cartouche PDF** : nom de l'établissement, adresse, téléphone, CC N°, email,
-  directions — alimente le **pied de page officiel** des PDF (ex : « CHU Angré, 28 BP 1350
-  ABIDJAN, Tél : …, CC N° : … »).
+- **Identité de l'établissement** : nom, adresse, téléphone, CC N°, email, directions,
+  numérotation des bons — alimente le **pied de page officiel** des PDF (ex : « CHU Angré,
+  28 BP 1350 ABIDJAN, Tél : …, CC N° : … »).
+- La **configuration détaillée des documents PDF** (métadonnées ISO, signatures, colonnes du
+  tableau, sondage, pied de page) est regroupée dans la page **Modèles PDF**
+  (`/magasin/<id>/modele-pdf/<TYPE>/`) — un lien y est affiché depuis cet accordéon.
 - Services, spécialités, fonctions & titres, motifs d'annulation.
 
 ### Logistique (`/parametres/logistique/`)
@@ -522,7 +531,10 @@ avec la vue `demandes_a_valider`.
 - **Modèles PDF** (menu Paramètres) → URL `/magasin/<id>/modele-pdf/<TYPE>/` avec un
   **sélecteur d'onglets** par type : **BS** (Sortie), **BE** (Entrée), **BR** (Retour),
   **BSHS** (Hors stock), **BC** (Commande), **BDM** (Demande).
-- **Administratifs → Identité & Cartouche PDF** : identité de l'établissement (footer CHU).
+- **Administratifs → Identité de l'établissement** : identité globale (footer CHU) et
+  numérotation. La configuration détaillée des documents (métadonnées, signatures, colonnes,
+  sondage) se fait uniquement ici, dans **Modèles PDF** — les anciens onglets « Documents » et
+  « Signatures » des administratifs ont été supprimés (regroupement).
 
 ### Paramètres par type de document
 | Bloc | Éléments configurables |

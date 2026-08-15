@@ -495,3 +495,55 @@ class CreationUtilisateurValidationTest(TestCase):
         resp = self.client.get('/auth/api/utilisateurs/verifier/', {'type': 'email', 'value': 'libre@chu.ci'})
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.json()['available'])
+
+    def test_creation_envoie_mdp_par_email_si_canal_config(self):
+        """Canal email configuré : le MDP initial part par email, ET la modale
+        d'affichage (session new_user_credentials) reste remplie."""
+        from django.core import mail
+        from django.test import override_settings
+        from core.models import ConfigurationNotification
+
+        cfg = ConfigurationNotification.get_instance()
+        cfg.activer_email = True
+        cfg.email_expediteur = 'no-reply@chu.ci'
+        cfg.smtp_host = 'smtp.gmail.com'
+        cfg.smtp_user = 'no-reply@chu.ci'
+        cfg.smtp_password = 'secret-app'
+        cfg.save()
+
+        with override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            resp = self._post_utilisateur(email='jean2@chu.ci', username='nouveau2')
+        self.assertEqual(resp.status_code, 302)
+        user = User.objects.get(username='nouveau2')
+
+        # 1 email envoyé avec le mot de passe dans le corps
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertEqual(mail.outbox[0].to, ['jean2@chu.ci'])
+        self.assertIn('nouveau2', mail.outbox[0].body)
+        # Le MDP dans l'email correspond au MDP réel du compte
+        mdp_email = None
+        for ligne in mail.outbox[0].body.splitlines():
+            if 'Mot de passe :' in ligne:
+                mdp_email = ligne.split(':', 1)[1].strip()
+                break
+        self.assertIsNotNone(mdp_email)
+        self.assertTrue(user.check_password(mdp_email))
+
+        # La modale reste affichée (session remplie)
+        session = self.client.session
+        creds = session.get('new_user_credentials')
+        self.assertIsNotNone(creds)
+        self.assertEqual(creds['username'], 'nouveau2')
+
+    def test_creation_aucun_canal_pas_d_email(self):
+        """Aucun canal configuré : pas d'envoi, mais la modale reste affichée."""
+        from django.core import mail
+        from django.test import override_settings
+
+        with override_settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            resp = self._post_utilisateur(email='jean3@chu.ci', username='nouveau3')
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(User.objects.filter(username='nouveau3').exists())
+        self.assertEqual(len(mail.outbox), 0)
+        session = self.client.session
+        self.assertIsNotNone(session.get('new_user_credentials'))

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vos identifiants NexusERP</title>
+<style>
+  /* Styles d'appoint : la structure est en tables (compatible Gmail/Outlook),
+     les styles critiques sont inline. Cette feuille ne sert qu'aux clients
+     qui la supportent (Apple Mail, Thunderbird, etc.). */
+  @media only screen and (max-width: 620px) {
+    .conteneur { width: 100% !important; }
+    .bloc-interne { padding: 16px 18px !important; }
+    .entete { padding: 18px 18px !important; }
+    .pied { padding: 12px 18px !important; }
+    .code { font-size: 16px !important; }
+  }
+  body { margin: 0; padding: 0; background: #f4f6f9; font-family: Arial, Helvetica, sans-serif; color: #2d3748; -webkit-text-size-adjust: 100%; }
+</style>
+</head>
+<body style="margin:0; padding:0; background:#f4f6f9; font-family:Arial, Helvetica, sans-serif; color:#2d3748; -webkit-text-size-adjust:100%;">
+  <center style="width:100%; background:#f4f6f9;">
+    <table role="presentation" class="conteneur" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%; max-width:600px; margin:24px auto; background:#ffffff; border-radius:10px; overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,0.08);">
+      <tr>
+        <td class="entete" style="padding:22px 28px; background:#1c5b96; color:#ffffff;">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+            <tr>
+              <td style="font-size:16px; font-family:Arial, Helvetica, sans-serif;">&#128274;</td>
+              <td style="font-size:18px; font-weight:bold; font-family:Arial, Helvetica, sans-serif; color:#ffffff; padding-left:10px;">
+                {% if contexte == 'creation' %}Bienvenue sur NexusERP{% else %}Votre mot de passe a été réinitialisé{% endif %}
+              </td>
+            </tr>
+            <tr>
+              <td colspan="2" style="padding-top:8px; font-size:12px; opacity:.9; color:#e6eef7; font-family:Arial, Helvetica, sans-serif;">
+                {{ utilisateur.get_full_name|default:utilisateur.username }}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td class="bloc-interne" style="padding:26px 28px; font-size:14px; line-height:1.6; font-family:Arial, Helvetica, sans-serif; color:#2d3748;">
+          <p style="margin:0 0 12px;">Bonjour <strong>{{ utilisateur.get_full_name|default:utilisateur.username }}</strong>,</p>
+
+          {% if contexte == 'creation' %}
+          <p style="margin:0 0 12px;">Votre compte a été créé par l'administrateur. Voici vos identifiants de connexion :</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0; padding:14px 18px; background:#f8fafc; border-left:4px solid #1c5b96; border-radius:6px;">
+            <tr>
+              <td style="font-size:12px; color:#8492a6; font-family:Arial, Helvetica, sans-serif; padding:2px 0;">Identifiant</td>
+            </tr>
+            <tr>
+              <td style="font-size:16px; font-weight:bold; color:#1c5b96; font-family:'Courier New', monospace; padding:0 0 10px; word-break:break-all;">{{ utilisateur.username }}</td>
+            </tr>
+            <tr>
+              <td style="font-size:12px; color:#8492a6; font-family:Arial, Helvetica, sans-serif; padding:2px 0;">Mot de passe temporaire</td>
+            </tr>
+            <tr>
+              <td class="code" style="font-size:18px; font-weight:800; letter-spacing:2px; color:#1c5b96; font-family:'Courier New', monospace; word-break:break-all;">{{ nouveau_mdp }}</td>
+            </tr>
+          </table>
+          {% else %}
+          <p style="margin:0 0 12px;">Votre mot de passe <strong>NexusERP</strong> a été réinitialisé par l'administrateur.</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0; padding:14px 18px; background:#f8fafc; border-left:4px solid #1c5b96; border-radius:6px;">
+            <tr>
+              <td style="font-size:12px; color:#8492a6; font-family:Arial, Helvetica, sans-serif; padding:2px 0;">Votre nouveau mot de passe est :</td>
+            </tr>
+            <tr>
+              <td class="code" style="font-size:18px; font-weight:800; letter-spacing:2px; color:#1c5b96; font-family:'Courier New', monospace; word-break:break-all;">{{ nouveau_mdp }}</td>
+            </tr>
+          </table>
+          {% endif %}
+
+          <p style="margin:12px 0 0;">Connectez-vous avec ce mot de passe, puis <strong>changez-le dès que possible</strong> dans votre profil.</p>
+
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px; padding:12px 16px; background:#fff8e1; border-left:4px solid #ffc107; border-radius:6px;">
+            <tr>
+              <td style="font-size:12px; color:#856404; font-family:Arial, Helvetica, sans-serif;">
+                <strong>&#9888;&#65039; Sécurité :</strong>
+                {% if contexte == 'creation' %}Si vous n'avez pas demandé la création de ce compte, contactez immédiatement votre administrateur.{% else %}si vous n'êtes pas à l'origine de cette réinitialisation, contactez immédiatement votre administrateur.{% endif %}
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+      <tr>
+        <td class="pied" style="padding:16px 28px; border-top:1px solid #eef2f7; font-size:12px; color:#8492a6; font-family:Arial, Helvetica, sans-serif;">
+          Document généré par NexusERP – Tous droits réservés.
+        </td>
+      </tr>
+    </table>
+  </center>
+</body>
+</html>

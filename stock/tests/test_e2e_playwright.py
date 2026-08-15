@@ -174,6 +174,256 @@ class E2EBase(LiveServerTestCase):
         self.assertGreater(
             self.page.locator('a[href*="mot-de-passe-oublie"]').count(), 0)
 
+    def test_mot_de_passe_oublie_sms_225_contact_stocke_225(self):
+        """« Mot de passe oublié » par SMS : un contact stocké avec +225
+        (13 chiffres) est retrouvé par une saisie locale, et le code part en
+        mode test SMS (loggé)."""
+        from django.contrib.auth import get_user_model
+        from django.test import override_settings
+        from core.models import ConfigurationNotification
+        from accounts.models import MotDePasseResetToken
+
+        User = get_user_model()
+        cible = User.objects.create_user(
+            username='sms225', password='Ancien123!', email='sms225@chu.ci')
+        # Contact stocké au format +225 (13 chiffres, comme produit par un
+        # ancien formulaire saisi avec l'indicatif)
+        cible.profil.contact = '2250708091011'
+        cible.profil.doit_changer_mdp = False
+        cible.profil.save()
+
+        # Canal SMS actif en mode test (aucun envoi réel, code loggé)
+        cfg = ConfigurationNotification.get_instance()
+        cfg.activer_sms = True
+        cfg.sms_mode_test = True
+        cfg.sms_provider = 'TEST'
+        cfg.sms_expediteur = 'NEXUS'
+        cfg.sms_api_url = 'https://api.example.com/sms'
+        cfg.sms_api_key = 'cle-test'
+        cfg.save()
+
+        # Le lien « Mot de passe oublié » est présent sur la page de connexion
+        self.page.goto(self.live_server_url + '/auth/login/')
+        self._attendre(600)
+        lien = self.page.locator('a[href*="mot-de-passe-oublie"]')
+        self.assertGreater(lien.count(), 0)
+        lien.first.click()
+        self._attendre(900)
+        self.assertIn('mot-de-passe-oublie', self.page.url)
+
+        # Sélection du canal SMS + saisie locale du numéro
+        self.page.locator('#opt_sms input[type="radio"]').check(force=True)
+        self.page.fill('#id_identifiant', '07 08 09 10 11')
+        self.page.click('form button[type="submit"]')
+        self._attendre(1200)
+
+        # Un jeton a été créé pour le bon compte (le numéro +225 a matché)
+        jeton = MotDePasseResetToken.objects.filter(user=cible).first()
+        self.assertIsNotNone(
+            jeton, "Le compte avec contact +225 doit être retrouvé")
+        self.assertFalse(jeton.utilise)
+
+        # Le message neutre est affiché (ne révèle pas l'existence du compte)
+        body = self.page.inner_text('body')
+        self.assertIn('Si un compte correspond', body)
+
+    def test_mot_de_passe_oublie_sms_repli_email(self):
+        """« Mot de passe oublié » : SMS choisi mais échec → repli sur email.
+        Vérifie le repli automatique de bout en bout dans le navigateur."""
+        import logging
+        from django.contrib.auth import get_user_model
+        from django.test import override_settings
+        from core.models import ConfigurationNotification
+        from accounts.models import MotDePasseResetToken
+
+        User = get_user_model()
+        cible = User.objects.create_user(
+            username='repli', password='Ancien123!', email='repli@chu.ci')
+        cible.profil.contact = '0708091011'
+        cible.profil.doit_changer_mdp = False
+        cible.profil.save()
+
+        # Email actif + SMS configuré mais qui échoue (hors mode test)
+        cfg = ConfigurationNotification.get_instance()
+        cfg.activer_email = True
+        cfg.email_expediteur = 'no-reply@chu.ci'
+        cfg.smtp_host = 'smtp.gmail.com'
+        cfg.smtp_user = 'no-reply@chu.ci'
+        cfg.smtp_password = 'secret-app'
+        cfg.activer_sms = True
+        cfg.sms_mode_test = False
+        cfg.sms_expediteur = 'NexusERP'
+        cfg.sms_provider = 'GENERIQUE'
+        cfg.sms_api_url = 'https://api.invalide.invalid/sms'
+        cfg.sms_api_key = 'cle-invalide'
+        cfg.save()
+
+        # Navigation directe vers la page « oublié » (robuste)
+        self.page.goto(
+            self.live_server_url + '/auth/mot-de-passe-oublie/')
+        self._attendre(800)
+        self.assertIn('mot-de-passe-oublie', self.page.url)
+
+        # Canal SMS (même mécanisme que le test SMS 225 : check force)
+        sms_radio = self.page.locator('#opt_sms input[type="radio"]')
+        self.assertGreater(
+            sms_radio.count(), 0, "Le canal SMS doit être proposé")
+        sms_radio.check(force=True)
+        self.page.fill('#id_identifiant', '0708091011')
+        self._attendre(300)
+
+        from django.core import mail
+        from unittest import mock
+        # Le SMS échoue (ex. Twilio trial) → repli sur email attendu
+        with mock.patch(
+            'stock.services.NotificationService.envoyer_sms_direct',
+            return_value=False,
+        ), override_settings(
+                EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            self.page.click('form button[type="submit"]')
+            self._attendre(1800)
+            # Le SMS a échoué → repli email automatique
+            jeton = MotDePasseResetToken.objects.filter(user=cible).first()
+            self.assertIsNotNone(
+                jeton, "Le compte doit être retrouvé et un jeton créé")
+            self.assertEqual(len(mail.outbox), 1)
+            self.assertEqual(mail.outbox[0].to, ['repli@chu.ci'])
+            self.assertIn(jeton.token, mail.outbox[0].body)
+
+    def test_reset_admin_bouton_visible_et_email_envoye(self):
+        """Reset admin de bout en bout : bouton visible devant le compte, saisie du
+        nouveau mot de passe, confirmation, retour à la liste, mot de passe changé
+        et email envoyé contenant le nouveau mot de passe (canal configuré)."""
+        from django.contrib.auth import get_user_model
+        from django.core import mail
+        from django.test.utils import override_settings
+        from core.models import ConfigurationNotification
+
+        User = get_user_model()
+        cible = User.objects.create_user(
+            username='cible_reset', password='Ancien123!',
+            email='cible@chu.ci', first_name='Cible', last_name='Reset')
+        cible.profil.doit_changer_mdp = False
+        cible.profil.save(update_fields=['doit_changer_mdp'])
+
+        # Canal email livrable → le nouveau mot de passe doit partir par email
+        cfg = ConfigurationNotification.get_instance()
+        cfg.activer_email = True
+        cfg.email_expediteur = 'no-reply@chu.ci'
+        cfg.smtp_host = 'smtp.gmail.com'
+        cfg.smtp_user = 'no-reply@chu.ci'
+        cfg.smtp_password = 'secret-app'
+        cfg.save()
+
+        self._se_connecter('/auth/utilisateurs/', magasin=self.mag_a)
+
+        # 1) Le bouton de réinitialisation est visible devant le compte cible
+        lien = self.page.locator(
+            f'a[href*="utilisateurs/{cible.id}/reinitialiser-mdp"]')
+        self.assertGreater(
+            lien.count(), 0,
+            "Le bouton de réinitialisation doit être visible devant le compte")
+        self.assertTrue(lien.first.is_visible())
+
+        # 2) Ouverture de la page de reset
+        lien.first.click()
+        self._attendre(900)
+        self.assertIn('reinitialiser-mdp', self.page.url)
+
+        # 3) Saisie + validation du nouveau mot de passe
+        with override_settings(
+                EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            self.page.fill('#newPwd', 'Nouveau123!')
+            self.page.fill('#confirmPwd', 'Nouveau123!')
+            self._attendre(300)
+            self.page.click('#btnSubmit')
+            self._attendre(600)
+            # Confirmation SweetAlert (NxUX.confirm)
+            swal_ok = self.page.locator('.swal2-confirm')
+            if swal_ok.count():
+                swal_ok.first.click()
+            self._attendre(1400)
+
+        # 4) Retour à la liste + mot de passe changé + email envoyé
+        self.assertIn('/auth/utilisateurs/', self.page.url)
+        cible.refresh_from_db()
+        self.assertTrue(
+            cible.check_password('Nouveau123!'),
+            "Le mot de passe doit être mis à jour")
+        self.assertEqual(len(mail.outbox), 1, "Un email doit être envoyé")
+        self.assertIn('Nouveau123!', mail.outbox[0].body)
+        self.assertIn(cible.email, mail.outbox[0].to)
+
+    def test_creation_utilisateur_modale_et_email_mdp(self):
+        """Création d'un utilisateur avec canal email actif : la modale affiche le
+        mot de passe temporaire (identifiant + MDP) ET l'email reçu contient le
+        même MDP (vérifié par check_password)."""
+        from django.contrib.auth import get_user_model
+        from django.contrib.auth.models import Group
+        from django.core import mail
+        from django.test.utils import override_settings
+        from core.models import ConfigurationNotification
+
+        User = get_user_model()
+        groupe = Group.objects.create(name='Magasinier E2E')
+
+        # Canal email livrable → le MDP initial doit partir par email
+        cfg = ConfigurationNotification.get_instance()
+        cfg.activer_email = True
+        cfg.email_expediteur = 'no-reply@chu.ci'
+        cfg.smtp_host = 'smtp.gmail.com'
+        cfg.smtp_user = 'no-reply@chu.ci'
+        cfg.smtp_password = 'secret-app'
+        cfg.save()
+
+        self._se_connecter('/auth/utilisateurs/', magasin=self.mag_a)
+
+        # 1) Ouvrir la modale de création
+        self.page.locator('button.btn-add-user').first.click()
+        self._attendre(600)
+        self.assertIn(
+            'open', self.page.locator('#modalUser').get_attribute('class') or '',
+            "La modale de création doit s'ouvrir")
+
+        # 2) Remplir le formulaire (groupe requis)
+        self.page.fill('#inp_nom', 'TRAORE')
+        self.page.fill('#inp_prenom', 'Awa')
+        self.page.fill('#inp_username', 'awa.traore')
+        self.page.fill('#inp_contact', '0708091011')
+        self.page.fill('#inp_email', 'awa@chu.ci')
+        self.page.select_option('#inp_groupe', str(groupe.id))
+        self._attendre(300)
+
+        # 3) Enregistrer + confirmation SweetAlert (NxUX.confirm)
+        with override_settings(
+                EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            self.page.click('#btnSaveUser')
+            self._attendre(700)
+            swal_ok = self.page.locator('.swal2-confirm')
+            self.assertGreater(
+                swal_ok.count(), 0,
+                "Une confirmation SweetAlert doit apparaître avant la création")
+            swal_ok.first.click()
+            self._attendre(1800)
+
+        # 4) Modale d'affichage du mot de passe (session new_user_credentials)
+        cred = self.page.locator('#modalCredentials')
+        self.assertTrue(cred.count() > 0, "La modale des identifiants doit s'afficher")
+        self.assertIn('open', cred.get_attribute('class') or '')
+        username_modale = self.page.locator('#credUsername').inner_text().strip()
+        mdp_modale = self.page.locator('#credPassword').inner_text().strip()
+        self.assertEqual(username_modale, 'awa.traore')
+        self.assertGreater(len(mdp_modale), 0, "Le mot de passe doit être affiché")
+
+        # 5) Email reçu avec le MDP réel du compte
+        awa = User.objects.get(username='awa.traore')
+        self.assertEqual(len(mail.outbox), 1, "Un email doit être envoyé")
+        self.assertEqual(mail.outbox[0].to, ['awa@chu.ci'])
+        self.assertIn('awa.traore', mail.outbox[0].body)
+        self.assertTrue(
+            awa.check_password(mdp_modale),
+            "Le MDP affiché dans la modale doit être celui du compte et de l'email")
+
     # ──────────────────────────────────────────────────────────────────
     # Sélection du magasin
     # ──────────────────────────────────────────────────────────────────

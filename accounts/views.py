@@ -57,6 +57,7 @@ from django.db.models import Q, Count
 
 
 from django.core.paginator import Paginator
+from django.template.loader import render_to_string
 
 
 
@@ -114,6 +115,7 @@ from .models import (
 
 
 from .permissions import verifier_permission
+from stock.services import NotificationService
 
 
 
@@ -134,6 +136,19 @@ from stock.models import Magasin
 
 
 logger = logging.getLogger(__name__)
+
+
+def _normaliser_contact(contact_raw):
+    """Stocke un numéro de contact en 10 chiffres locaux ivoiriens.
+
+    Accepte 0708091011, 07 08 09 10 11, +2250708091011, +225 07 08 09 10 11…
+    et retire l'indicatif +225 pour garder uniquement les 10 chiffres locaux
+    (cohérent avec la recherche par téléphone de « Mot de passe oublié »).
+    """
+    digits = ''.join(c for c in (contact_raw or '') if c.isdigit())
+    if len(digits) == 13 and digits.startswith('225'):
+        digits = digits[3:]
+    return digits
 
 
 
@@ -377,10 +392,6 @@ def _ctx_utilisateurs(request, page_obj, q, statut, form_data=None, show_modal=F
 
 
 
-    # La réinitialisation admin n'est désactivée que si un canal est réellement
-    # livrable (sinon les utilisateurs seraient bloqués sans aucune issue).
-    email_ok, sms_ok = canaux_notification_actifs()
-    reinit_mdp_desactive = bool(email_ok or sms_ok)
 
     return {
 
@@ -438,7 +449,6 @@ def _ctx_utilisateurs(request, page_obj, q, statut, form_data=None, show_modal=F
 
 
 
-        'reinit_mdp_desactive': reinit_mdp_desactive,
 
 
 
@@ -1436,7 +1446,7 @@ def profil_utilisateur(request):
 
 
 
-            profil.contact = ''.join(c for c in contact_raw if c.isdigit())
+            profil.contact = _normaliser_contact(contact_raw)
 
 
 
@@ -1700,7 +1710,7 @@ def page_utilisateurs(request):
 
 
 
-            contact = ''.join(c for c in contact_raw if c.isdigit())  # stocke chiffres seuls
+            contact = _normaliser_contact(contact_raw)  # 10 chiffres locaux (strip +225)
 
 
 
@@ -2222,7 +2232,151 @@ def page_utilisateurs(request):
 
 
 
-                messages.success(request, f"✅ Utilisateur '{username}' cree.")
+                # Si un canal email/SMS est configuré, le mot de passe initial est
+
+
+
+                # AUSSI envoyé par email/SMS (l'affichage en modale reste conservé).
+
+
+
+                envoye_email = False
+
+
+
+                envoye_sms = False
+
+
+
+                try:
+
+
+
+                    email_ok, sms_ok = canaux_notification_actifs()
+
+
+
+                    if email_ok and email:
+
+
+
+                        sujet = "Votre compte NexusERP a été créé"
+
+
+
+                        html = render_to_string('emails/nouveau_mdp_email.html', {
+
+
+
+                            'utilisateur': user,
+
+
+
+                            'nouveau_mdp': password,
+
+
+
+                            'contexte': 'creation',
+
+
+
+                        })
+
+
+
+                        txt = (
+
+
+
+                            f"Bonjour {user.get_full_name() or user.username},\n\n"
+
+
+
+                            f"Votre compte a été créé par l'administrateur.\n"
+
+
+
+                            f"Identifiant : {username}\n"
+
+
+
+                            f"Mot de passe : {password}\n\n"
+
+
+
+                            f"Connectez-vous puis changez-le dès que possible.\n\n— NexusERP"
+
+
+
+                        )
+
+
+
+                        envoye_email = NotificationService.envoyer_email_direct(email, sujet, html, txt)
+
+
+
+                    if not envoye_email and sms_ok and contact:
+
+
+
+                        envoye_sms = NotificationService.envoyer_sms_direct(
+
+
+
+                            contact,
+
+
+
+                            f"NexusERP : votre compte {username} a été créé. "
+
+
+
+                            f"Mot de passe : {password}. Connectez-vous puis changez-le.",
+
+
+
+                        )
+
+
+
+                except Exception:
+
+
+
+                    logger.exception("[Creation user] Échec envoi du mot de passe initial")
+
+
+
+                if envoye_email or envoye_sms:
+
+
+
+                    messages.success(
+
+
+
+                        request,
+
+
+
+                        f"✅ Utilisateur '{username}' cree. Mot de passe envoyé "
+
+
+
+                        f"par {'email' if envoye_email else 'SMS'}.",
+
+
+
+                    )
+
+
+
+                else:
+
+
+
+                    messages.success(request, f"✅ Utilisateur '{username}' cree.")
 
 
 
@@ -2438,19 +2592,10 @@ def reinitialiser_mdp(request, user_id):
 
 
 
-    # Si un canal email/SMS est livrable, la réinitialisation se fait par
-    # l'utilisateur lui-même via « Mot de passe oublié » sur la page de connexion.
+    # La réinitialisation manuelle par l'admin est TOUJOURS possible. Si un canal
+    # email/SMS est configuré, le nouveau mot de passe est aussi envoyé par
+    # email/SMS ; sinon tout se fait en local (l'admin le communique lui-même).
     email_ok, sms_ok = canaux_notification_actifs()
-    if email_ok or sms_ok:
-        messages.error(
-            request,
-            "❌ Réinitialisation manuelle désactivée : un canal email/SMS est "
-            "configuré. L'utilisateur doit utiliser « Mot de passe oublié » "
-            "depuis la page de connexion.",
-        )
-        return redirect('accounts:page_utilisateurs')
-
-
 
     user = get_object_or_404(User, id=user_id)
 
@@ -2543,7 +2688,61 @@ def reinitialiser_mdp(request, user_id):
                 except Exception:
                     logger.exception("AuditConnexion ADMIN reinitialisation impossible")
 
-                messages.success(request, f"✅ Mot de passe de {user.username} reinitialise.")
+                # Envoi du nouveau mot de passe par email / SMS si un canal est configuré
+                envoye_email = False
+                envoye_sms = False
+                if email_ok and user.email:
+                    try:
+                        sujet = "Nouveau mot de passe — NexusERP"
+
+
+
+                        html = render_to_string('emails/nouveau_mdp_email.html', {
+
+
+
+                            'utilisateur': user,
+
+
+
+                            'nouveau_mdp': nouveau,
+
+
+
+                            'contexte': 'reset',
+
+
+
+                        })
+                        txt = (
+                            f"Bonjour {user.get_full_name() or user.username},\n\n"
+                            f"Votre mot de passe a été réinitialisé par l'administrateur.\n"
+                            f"Nouveau mot de passe : {nouveau}\n\n"
+                            f"Connectez-vous puis changez-le dès que possible.\n\n— NexusERP"
+                        )
+                        envoye_email = NotificationService.envoyer_email_direct(user.email, sujet, html, txt)
+                    except Exception:
+                        logger.exception("[ResetMDP admin] Échec envoi email nouveau mdp")
+
+                telephone = getattr(getattr(user, 'profil', None), 'contact', None)
+                if not envoye_email and sms_ok and telephone:
+                    try:
+                        envoye_sms = NotificationService.envoyer_sms_direct(
+                            telephone,
+                            f"NexusERP : votre nouveau mot de passe est {nouveau}. "
+                            f"Connectez-vous et changez-le dès que possible.",
+                        )
+                    except Exception:
+                        logger.exception("[ResetMDP admin] Échec envoi SMS nouveau mdp")
+
+                if envoye_email or envoye_sms:
+                    messages.success(
+                        request,
+                        f"✅ Mot de passe de {user.username} réinitialisé et envoyé "
+                        f"par {'email' if envoye_email else 'SMS'}.",
+                    )
+                else:
+                    messages.success(request, f"✅ Mot de passe de {user.username} réinitialisé.")
 
 
 

@@ -46,12 +46,20 @@ def _normaliser_telephone_saisi(tel):
 
 
 def _trouver_par_telephone(tel_saisi):
-    """Cherche un utilisateur actif dont le téléphone correspond (10 chiffres)."""
+    """Cherche un utilisateur actif dont le téléphone correspond.
+
+    Normalise le numéro saisi ET le contact stocké : un contact enregistré
+    avec +225 (13 chiffres, ex. 2250708091011) doit matcher une saisie locale
+    (0708091011) comme une saisie internationale (+225 07 08 09 10 11).
+    """
     digits = _normaliser_telephone_saisi(tel_saisi)
     if len(digits) != 10:
         return None
     for p in Profil.objects.select_related('user').filter(user__is_active=True):
-        if p.contact and _chiffres(p.contact) == digits:
+        if not p.contact:
+            continue
+        contact_normalise = _normaliser_telephone_saisi(p.contact)
+        if contact_normalise and contact_normalise == digits:
             return p.user
     return None
 

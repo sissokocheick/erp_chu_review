@@ -376,14 +376,12 @@
                         )"
                         class="btn-action edit" title="Modifier" aria-label="Modifier"><i class="fas fa-edit"></i></button>
 
-                        {% if not reinit_mdp_desactive %}
                         <a href="{% url 'accounts:reinitialiser_mdp' u.id %}"
                            class="btn-action"
                            style="color: #fd7e14; margin-right: 3px;"
                            title="Réinitialiser le mot de passe" aria-label="Réinitialiser le mot de passe">
                             <i class="fas fa-key"></i>
                         </a>
-                        {% endif %}
 
                         <form id="formToggle-{{ u.id }}" method="POST" style="display: inline;">
                             {% csrf_token %}

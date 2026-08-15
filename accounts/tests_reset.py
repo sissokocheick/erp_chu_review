@@ -152,6 +152,58 @@ class MotDePasseOublieTest(TestCase):
         jeton = MotDePasseResetToken.objects.get(user=self.user)
         self.assertTrue(any(jeton.code in l for l in logs.output))
 
+    def test_contact_stocke_avec_225_retrouve_par_saisie_locale(self):
+        """Un contact enregistré au format +225 (13 chiffres) doit être retrouvé
+        par une saisie locale 0708091011 (bug de comparaison 10 vs 13 chiffres)."""
+        self.user.profil.contact = '2250708091011'  # stocké via +2250708091011
+        self.user.profil.save()
+        configurer_sms()
+        with self.assertLogs('stock.services', level='INFO') as logs:
+            resp = self.client.post(
+                reverse('accounts:mot_de_passe_oublie'),
+                {'canal': 'sms', 'identifiant': '0708091011'},
+            )
+        self.assertEqual(resp.status_code, 302)
+        jeton = MotDePasseResetToken.objects.get(user=self.user)
+        self.assertTrue(any(jeton.code in l for l in logs.output))
+
+    def test_contact_stocke_avec_225_retrouve_par_saisie_internationale(self):
+        """Contact stocké +225 retrouvé par une saisie +225 07 08 09 10 11."""
+        self.user.profil.contact = '2250708091011'
+        self.user.profil.save()
+        configurer_sms()
+        with self.assertLogs('stock.services', level='INFO') as logs:
+            resp = self.client.post(
+                reverse('accounts:mot_de_passe_oublie'),
+                {'canal': 'sms', 'identifiant': '+225 07 08 09 10 11'},
+            )
+        self.assertEqual(resp.status_code, 302)
+        jeton = MotDePasseResetToken.objects.get(user=self.user)
+        self.assertTrue(any(jeton.code in l for l in logs.output))
+
+    def test_contact_10_chiffres_retrouve_par_saisie_225(self):
+        """Contact stocké en 10 chiffres retrouvé par une saisie +225 (repli)."""
+        self.user.profil.contact = '0708091011'
+        self.user.profil.save()
+        configurer_sms()
+        with self.assertLogs('stock.services', level='INFO') as logs:
+            resp = self.client.post(
+                reverse('accounts:mot_de_passe_oublie'),
+                {'canal': 'sms', 'identifiant': '+2250708091011'},
+            )
+        self.assertEqual(resp.status_code, 302)
+        jeton = MotDePasseResetToken.objects.get(user=self.user)
+        self.assertTrue(any(jeton.code in l for l in logs.output))
+
+    def test_normalisation_contact_stocke_10_chiffres(self):
+        """La fonction de normalisation retire l'indicatif +225 au stockage."""
+        from accounts.views import _normaliser_contact
+        self.assertEqual(_normaliser_contact('+225 07 08 09 10 11'), '0708091011')
+        self.assertEqual(_normaliser_contact('+2250708091011'), '0708091011')
+        self.assertEqual(_normaliser_contact('07 08 09 10 11'), '0708091011')
+        self.assertEqual(_normaliser_contact('0708091011'), '0708091011')
+        self.assertEqual(_normaliser_contact(''), '')
+
     def test_sms_ignore_si_canal_email_choisi(self):
         """Choix email (email OK) → aucun SMS envoyé, seul l'email part."""
         configurer_email()
@@ -402,8 +454,26 @@ class DesactivationReinitAdminTest(TestCase):
         self.user.profil.doit_changer_mdp = False
         self.user.profil.save()
 
-    def test_reinit_admin_bloquee_si_email_configure(self):
+    def test_reinit_admin_toujours_ok_si_email_configure(self):
+        """Le reset manuel reste toujours possible ; le MDP est envoyé par email."""
         configurer_email()
+        self.client.force_login(self.admin)
+        with self.settings(EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend'):
+            resp = self.client.post(
+                reverse('accounts:reinitialiser_mdp', args=[self.user.id]),
+                {'nouveau_mdp': 'Nouveau1!', 'confirmer_mdp': 'Nouveau1!'},
+            )
+        self.assertRedirects(resp, reverse('accounts:page_utilisateurs'))
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password('Nouveau1!'))
+        # Email envoyé contenant le nouveau mot de passe
+        from django.core import mail
+        self.assertEqual(len(mail.outbox), 1)
+        self.assertIn('Nouveau1!', mail.outbox[0].body)
+
+    def test_reinit_admin_toujours_ok_si_sms_configure(self):
+        """Le reset manuel reste toujours possible si un canal SMS est configuré."""
+        configurer_sms()
         self.client.force_login(self.admin)
         resp = self.client.post(
             reverse('accounts:reinitialiser_mdp', args=[self.user.id]),
@@ -411,20 +481,10 @@ class DesactivationReinitAdminTest(TestCase):
         )
         self.assertRedirects(resp, reverse('accounts:page_utilisateurs'))
         self.user.refresh_from_db()
-        self.assertTrue(self.user.check_password('Ancien1!'))
-
-    def test_reinit_admin_bloquee_si_sms_configure(self):
-        configurer_sms()
-        self.client.force_login(self.admin)
-        self.client.post(
-            reverse('accounts:reinitialiser_mdp', args=[self.user.id]),
-            {'nouveau_mdp': 'Nouveau1!', 'confirmer_mdp': 'Nouveau1!'},
-        )
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.check_password('Ancien1!'))
+        self.assertTrue(self.user.check_password('Nouveau1!'))
 
     def test_reinit_admin_ok_si_email_actif_mais_non_livrable(self):
-        """Canal cassé → l'admin garde la main (sinon personne ne peut rien faire)."""
+        """Canal cassé → tout reste en local, l'admin garde la main."""
         configurer_email_incomplete()
         self.client.force_login(self.admin)
         self.client.post(
@@ -435,6 +495,7 @@ class DesactivationReinitAdminTest(TestCase):
         self.assertTrue(self.user.check_password('Nouveau1!'))
 
     def test_reinit_admin_ok_sans_canal(self):
+        """Aucun canal → reset 100 % local."""
         self.client.force_login(self.admin)
         resp = self.client.post(
             reverse('accounts:reinitialiser_mdp', args=[self.user.id]),
@@ -444,12 +505,13 @@ class DesactivationReinitAdminTest(TestCase):
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password('Nouveau1!'))
 
-    def test_bouton_masque_sur_page_utilisateurs(self):
+    def test_bouton_toujours_visible_sur_page_utilisateurs(self):
+        """Le bouton de reset admin est visible même si un canal est configuré."""
         configurer_email()
         self.client.force_login(self.admin)
         resp = self.client.get(reverse('accounts:page_utilisateurs'))
         self.assertEqual(resp.status_code, 200)
-        self.assertNotContains(resp, 'reinitialiser-mdp')
+        self.assertContains(resp, 'reinitialiser-mdp')
 
     def test_bouton_visible_sans_canal(self):
         self.client.force_login(self.admin)
