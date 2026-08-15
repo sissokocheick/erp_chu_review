@@ -11,7 +11,6 @@ from django.urls import reverse
 
 from core.models import ConfigurationHopital
 from core.forms import ConfigurationHopitalForm
-from accounts.models import ConfigDocument
 from stock.tests import factories
 
 
@@ -39,13 +38,10 @@ class ConfigurationFormTest(TestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.context['config_hopital'], self.config)
 
-    def test_contexte_contient_configs_list(self):
+    def test_contexte_sans_configs_list(self):
+        """La config détaillée des documents est regroupée dans la page Modèles PDF."""
         response = self.client.get(self.url)
-        configs = response.context['configs_list']
-        self.assertEqual(len(configs), len(ConfigDocument.TYPE_DOC_CHOICES))
-        codes = [c['code'] for c in configs]
-        for code, _ in ConfigDocument.TYPE_DOC_CHOICES:
-            self.assertIn(code, codes)
+        self.assertNotIn('configs_list', response.context)
 
     def test_contexte_contient_historique(self):
         response = self.client.get(self.url)
@@ -104,41 +100,6 @@ class ConfigurationFormTest(TestCase):
         data = response.json()
         self.assertFalse(data['success'])
 
-    def test_post_config_doc_enregistre(self):
-        config_doc, _ = ConfigDocument.objects.get_or_create(
-            type_doc='BS', defaults={'code_document': 'ENR-BSM/DAF-001'})
-        response = self.client.post(self.url, {
-            'enregistrer_config_doc': '1',
-            'doc_type': 'BS',
-            'code_document_BS': 'ENR-BSM/DAF-099',
-            'version_doc_BS': '003',
-            'date_creation_doc_BS': '01/01/2026',
-            'date_revision_doc_BS': '02/02/2026',
-            'ps2_label_BS': 'PS2 TEST',
-            'afficher_logo_BS': 'on',
-            'afficher_cachet_BS': '',
-            'afficher_cc_BS': 'on',
-            'afficher_ifu_BS': 'on',
-            'afficher_rccm_BS': 'on',
-            'afficher_telephone_BS': 'on',
-            'afficher_signatures_BS': 'on',
-        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        self.assertEqual(response.status_code, 200)
-        data = response.json()
-        self.assertTrue(data['success'])
-        config_doc.refresh_from_db()
-        self.assertEqual(config_doc.code_document, 'ENR-BSM/DAF-099')
-        self.assertEqual(config_doc.version_doc, '003')
-        self.assertFalse(config_doc.afficher_cachet)
-
-    def test_post_config_doc_type_inconnu(self):
-        response = self.client.post(self.url, {
-            'enregistrer_config_doc': '1',
-            'doc_type': 'ZZ',
-        }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
-        data = response.json()
-        self.assertFalse(data['success'])
-
     def test_page_redirige_utilisateur_non_autorise(self):
         user = factories.creer_utilisateur(username="simple_user")
         factories.desactiver_changement_mdp(user)
@@ -151,12 +112,18 @@ class ConfigurationFormTest(TestCase):
         response = self.client.get(self.url)
         self.assertIn(response.status_code, (301, 302))
 
-    def test_formulaires_des_types_documents_couples(self):
-        """Chaque type de doc a ses 7 cases d'affichage."""
+    def test_page_lie_vers_modeles_pdf(self):
+        """L'accordéon pointe vers la page Modèles PDF (regroupement)."""
+        magasin = factories.creer_magasin()
+        session = self.client.session
+        session['magasin_actif_id'] = str(magasin.id)
+        session.save()
         response = self.client.get(self.url)
-        for item in response.context['configs_list']:
-            cfg = item['config']
-            for champ in ('afficher_logo', 'afficher_cachet', 'afficher_cc',
-                          'afficher_ifu', 'afficher_rccm', 'afficher_telephone',
-                          'afficher_signatures'):
-                self.assertIn(champ, cfg)
+        html = response.content.decode('utf-8')
+        # Le lien vers la page Modèles PDF (résolu) est présent
+        self.assertIn(f"/magasin/{magasin.id}/modele-pdf/BS/", html)
+        self.assertIn('Modèles PDF', html)
+        # Les onglets dupliqués ont disparu
+        self.assertNotIn('tab-docs', html)
+        self.assertNotIn('tab-sign', html)
+        self.assertNotIn('sauverConfigDoc', html)

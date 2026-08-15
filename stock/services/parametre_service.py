@@ -337,29 +337,6 @@ def save_magasin_admin(form, instance, user):
     return True, "✅ Magasin enregistré.", magasin
 
 
-def save_config_document(request):
-    from accounts.models import ConfigDocument
-    doc_type = request.POST.get('doc_type')
-    try:
-        config = ConfigDocument.objects.get(type_doc=doc_type)
-        config.code_document = request.POST.get(f'code_document_{doc_type}', '').strip()
-        config.date_creation_doc = request.POST.get(f'date_creation_doc_{doc_type}', '').strip()
-        config.date_revision_doc = request.POST.get(f'date_revision_doc_{doc_type}', '').strip()
-        config.version_doc = request.POST.get(f'version_doc_{doc_type}', '').strip()
-        config.ps2_label = request.POST.get(f'ps2_label_{doc_type}', '').strip()
-        config.afficher_logo = request.POST.get(f'afficher_logo_{doc_type}') == 'on'
-        config.afficher_cachet = request.POST.get(f'afficher_cachet_{doc_type}') == 'on'
-        config.afficher_cc = request.POST.get(f'afficher_cc_{doc_type}') == 'on'
-        config.afficher_ifu = request.POST.get(f'afficher_ifu_{doc_type}') == 'on'
-        config.afficher_rccm = request.POST.get(f'afficher_rccm_{doc_type}') == 'on'
-        config.afficher_telephone = request.POST.get(f'afficher_telephone_{doc_type}') == 'on'
-        config.afficher_signatures = request.POST.get(f'afficher_signatures_{doc_type}') == 'on'
-        config.save()
-        return True, f"✅ Configuration {config.get_type_doc_display()} enregistrée.", None
-    except ConfigDocument.DoesNotExist:
-        return False, "Configuration introuvable.", None
-
-
 # ═══════════════════════════════════════════════════════════════════════════════
 # SUPPRESSION GÉNÉRIQUE
 # ═══════════════════════════════════════════════════════════════════════════════

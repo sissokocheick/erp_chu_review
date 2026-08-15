@@ -15,13 +15,12 @@ from ...services.parametre_service import (
     save_specialite,
     save_service,
     save_magasin_admin,
-    save_config_document
 )
 from core.models import Service, ConfigurationHopital
 from core.forms import ConfigurationHopitalForm
 from stock.models import Magasin
 from stock.forms import ServiceForm, MagasinForm, SpecialiteForm
-from accounts.models import Specialite, ConfigDocument, Fonction
+from accounts.models import Specialite, Fonction
 
 
 @login_required(login_url='/auth/login/')
@@ -89,28 +88,6 @@ def _handle_get(request):
     form_config = ConfigurationHopitalForm(instance=config)
     historique_config = config.history.all()[:10] if hasattr(config, 'history') else []
 
-    configs_list = []
-    for code, label in ConfigDocument.TYPE_DOC_CHOICES:
-        cd = ConfigDocument.objects.filter(type_doc=code).first()
-        configs_list.append({
-            'code': code,
-            'label': label,
-            'config': {
-                'code_document': cd.code_document if cd else '',
-                'version_doc': cd.version_doc if cd else '',
-                'date_creation_doc': cd.date_creation_doc if cd else '',
-                'date_revision_doc': cd.date_revision_doc if cd else '',
-                'ps2_label': cd.ps2_label if cd else '',
-                'afficher_logo': cd.afficher_logo if cd else True,
-                'afficher_cachet': cd.afficher_cachet if cd else True,
-                'afficher_cc': cd.afficher_cc if cd else True,
-                'afficher_ifu': cd.afficher_ifu if cd else True,
-                'afficher_rccm': cd.afficher_rccm if cd else True,
-                'afficher_telephone': cd.afficher_telephone if cd else True,
-                'afficher_signatures': cd.afficher_signatures if cd else True,
-            },
-        })
-
     context = {
         'services': services_pagines,
         'q_service': q_service,
@@ -147,7 +124,6 @@ def _handle_get(request):
         # Configuration de l'établissement
         'config_hopital': config,
         'form_config': form_config,
-        'configs_list': configs_list,
         'historique_config': historique_config,
     }
 
@@ -159,7 +135,6 @@ def _handle_get(request):
 def _handle_post(request):
     dispatch = {
         'enregistrer_config': _post_config,
-        'enregistrer_config_doc': _post_config_doc,
         'enregistrer_specialite': _post_specialite,
         'enregistrer_fonction': _post_fonction,
         'enregistrer_service': _post_service,
@@ -190,12 +165,6 @@ def _post_config(request):
         return JsonResponse({'success': True, 'message': "✅ Configuration de l'établissement enregistrée."})
     erreurs = [f"{champ}: {' '.join(msgs)}" for champ, msgs in form.errors.items()]
     return JsonResponse({'success': False, 'message': "❌ " + ' | '.join(erreurs)})
-
-
-def _post_config_doc(request):
-    """Enregistre les métadonnées ISO d'un type de document PDF (AJAX)."""
-    success, message, _ = save_config_document(request)
-    return JsonResponse({'success': success, 'message': message})
 
 
 def _ajax_response(request, ok, msg, errors=None):

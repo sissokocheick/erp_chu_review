@@ -137,13 +137,6 @@
   .sub-tab-content.active { display: block; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
-  .doc-tabs { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
-  .doc-tab { background: var(--bg-stripe); border: 1px solid var(--border-color); padding: 7px 16px; font-size: 12px; font-weight: 600; color: var(--text-medium); cursor: pointer; border-radius: 6px; transition: .2s; }
-  .doc-tab:hover { background: var(--bg-hover); color: var(--text-dark); }
-  .doc-tab.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); box-shadow: 0 2px 8px rgba(28,91,150,0.25); }
-  .doc-tab-content { display: none; animation: fadeIn .2s ease; }
-  .doc-tab-content.active { display: block; }
-
   .live-preview-box { border: 2px dashed var(--border-color); border-radius: 10px; padding: 20px; margin-bottom: 25px; background: var(--bg-stripe); }
   .live-cartouche { border: 1px solid var(--border-color); border-radius: 6px; padding: 20px; background: white; max-width: 720px; margin: 0 auto; box-shadow: 0 2px 10px rgba(0,0,0,.08); }
   body.dark-mode .live-cartouche { background: #0f172a; border-color: #334155; }
@@ -161,9 +154,6 @@
   .history-item:last-child { border-bottom: none; }
   .history-item strong { color: var(--text-dark); }
 
-  .chk-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 8px; }
-  .chk-item { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-dark); cursor: pointer; }
-  .chk-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--primary-blue); cursor: pointer; }
 </style>
 
 <div class="pa-container">
@@ -180,7 +170,7 @@
 
   {% if perm_config %}<div class="acc-card acc-entreprise">
     <div class="acc-head {% if request.GET.open == 'entreprise' %}open{% endif %}" onclick="toggleAcc('acc-entreprise')">
-      <h5><i class="fas fa-building"></i> Identité & Cartouche PDF</h5>
+      <h5><i class="fas fa-building"></i> Identité de l'établissement</h5>
       <i class="fas fa-chevron-down chevron"></i>
     </div>
     <div class="acc-body {% if request.GET.open == 'entreprise' %}open{% endif %}" id="acc-entreprise">
@@ -226,9 +216,19 @@
           <button type="button" class="sub-tab" onclick="switchSubTab(event,'tab-contact')">Contact & Légal</button>
           <button type="button" class="sub-tab" onclick="switchSubTab(event,'tab-hierarchie')">Hiérarchie</button>
           <button type="button" class="sub-tab" onclick="switchSubTab(event,'tab-numero')">Numérotation</button>
-          <button type="button" class="sub-tab" onclick="switchSubTab(event,'tab-docs')">Documents</button>
-          <button type="button" class="sub-tab" onclick="switchSubTab(event,'tab-sign')">Signatures</button>
         </div>
+
+        {% if magasin_actif %}
+        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; background:var(--bg-stripe); border:1px solid var(--border-color); border-radius:8px; padding:12px 16px; margin-bottom:18px;">
+          <div style="flex:1; min-width:220px;">
+            <div style="font-size:13px; font-weight:700; color:var(--text-dark);"><i class="fas fa-file-pdf" style="color:#dc3545; margin-right:6px;"></i>Configuration détaillée des documents PDF</div>
+            <div style="font-size:12px; color:var(--text-medium); margin-top:2px;">Métadonnées ISO, signatures, colonnes du tableau, sondage et pied de page — par type de document.</div>
+          </div>
+          <a href="{% url 'modele_pdf_config' magasin_actif.id 'BS' %}" class="btn-add btn-add-ent" style="text-decoration:none;">
+            <i class="fas fa-edit"></i> Modèles PDF
+          </a>
+        </div>
+        {% endif %}
 
         <div id="tab-identite" class="sub-tab-content active">
           <div class="fg3">
@@ -302,65 +302,7 @@
           </div>
         </div>
 
-        <div id="tab-docs" class="sub-tab-content">
-          <div style="font-size: 13px; color: var(--text-medium); margin-bottom: 14px;">
-            <i class="fas fa-file-contract"></i> Configurez les métadonnées ISO et l'affichage pour chaque type de document PDF.
-          </div>
 
-          <div class="doc-tabs">
-            {% for item in configs_list %}
-            <button type="button" class="doc-tab {% if forloop.first %}active{% endif %}" onclick="switchDocTab(event,'doc-{{ item.code }}')">{{ item.label }}</button>
-            {% endfor %}
-          </div>
-
-          {% for item in configs_list %}
-          <div id="doc-{{ item.code }}" class="doc-tab-content {% if forloop.first %}active{% endif %}">
-            <input type="hidden" name="doc_type" value="{{ item.code }}">
-            <div class="fg2">
-              <div class="fg"><label>Code document</label><input type="text" name="code_document_{{ item.code }}" value="{{ item.config.code_document|default:'' }}" placeholder="Ex: ENR-BSM/DAF-001"></div>
-              <div class="fg"><label>Version</label><input type="text" name="version_doc_{{ item.code }}" value="{{ item.config.version_doc|default:'' }}" placeholder="Ex: 002"></div>
-            </div>
-            <div class="fg3">
-              <div class="fg"><label>Date création</label><input type="text" name="date_creation_doc_{{ item.code }}" value="{{ item.config.date_creation_doc|default:'' }}" placeholder="DD/MM/YYYY"></div>
-              <div class="fg"><label>Date révision</label><input type="text" name="date_revision_doc_{{ item.code }}" value="{{ item.config.date_revision_doc|default:'' }}" placeholder="DD/MM/YYYY"></div>
-              <div class="fg"><label>Label PS2</label><input type="text" name="ps2_label_{{ item.code }}" value="{{ item.config.ps2_label|default:'' }}" placeholder="Ex: PS2 : GERER LES PRESTATIONS EXTERNES"></div>
-            </div>
-            <div style="margin-top: 10px;">
-              <label style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-medium); margin-bottom: 8px; display: block;">Éléments affichés sur le PDF</label>
-              <div class="chk-grid">
-                <label class="chk-item"><input type="checkbox" name="afficher_logo_{{ item.code }}" {% if item.config.afficher_logo %}checked{% endif %}> <span>Logo</span></label>
-                <label class="chk-item"><input type="checkbox" name="afficher_cachet_{{ item.code }}" {% if item.config.afficher_cachet %}checked{% endif %}> <span>Cachet</span></label>
-                <label class="chk-item"><input type="checkbox" name="afficher_cc_{{ item.code }}" {% if item.config.afficher_cc %}checked{% endif %}> <span>CC</span></label>
-                <label class="chk-item"><input type="checkbox" name="afficher_ifu_{{ item.code }}" {% if item.config.afficher_ifu %}checked{% endif %}> <span>IFU</span></label>
-                <label class="chk-item"><input type="checkbox" name="afficher_rccm_{{ item.code }}" {% if item.config.afficher_rccm %}checked{% endif %}> <span>RCCM</span></label>
-                <label class="chk-item"><input type="checkbox" name="afficher_telephone_{{ item.code }}" {% if item.config.afficher_telephone %}checked{% endif %}> <span>Téléphone</span></label>
-                <label class="chk-item"><input type="checkbox" name="afficher_signatures_{{ item.code }}" {% if item.config.afficher_signatures %}checked{% endif %}> <span>Signatures</span></label>
-              </div>
-            </div>
-            <div class="sec-bar" style="margin-top: 18px; justify-content: flex-end;">
-              <button type="button" class="btn-add btn-add-ent" onclick="sauverConfigDoc('{{ item.code }}')">
-                <i class="fas fa-save"></i> Enregistrer {{ item.label }}
-              </button>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-
-        <div id="tab-sign" class="sub-tab-content">
-          <div style="font-size: 13px; color: var(--text-medium); margin-bottom: 14px;">
-            <i class="fas fa-signature"></i> Ces labels apparaissent dans les 6 cases signature en bas de chaque document PDF.
-          </div>
-          <div class="fg3">
-            <div class="fg"><label>Signataire 1</label>{{ form_config.label_signataire_1 }}</div>
-            <div class="fg"><label>Signataire 2</label>{{ form_config.label_signataire_2 }}</div>
-            <div class="fg"><label>Signataire 3</label>{{ form_config.label_signataire_3 }}</div>
-          </div>
-          <div class="fg3">
-            <div class="fg"><label>Signataire 4</label>{{ form_config.label_signataire_4 }}</div>
-            <div class="fg"><label>Signataire 5</label>{{ form_config.label_signataire_5 }}</div>
-            <div class="fg"><label>Signataire 6</label>{{ form_config.label_signataire_6 }}</div>
-          </div>
-        </div>
 
         {% if historique_config %}
         <div class="history-box">
@@ -761,13 +703,6 @@ function switchSubTab(event, tabId) {
     if (event && event.target) event.target.classList.add('active');
 }
 
-function switchDocTab(event, tabId) {
-    document.querySelectorAll('.doc-tab-content').forEach(function(el) { el.classList.remove('active'); });
-    document.querySelectorAll('.doc-tab').forEach(function(el) { el.classList.remove('active'); });
-    document.getElementById(tabId).classList.add('active');
-    if (event && event.target) event.target.classList.add('active');
-}
-
 function updateLivePreview() {
     var nom = document.querySelector('input[name="nom"]')?.value || "NOM DE L'ÉTABLISSEMENT";
     var couleur = document.querySelector('input[name="couleur_principale"]')?.value || '#1c5b96';
@@ -861,55 +796,6 @@ function sauverSectionAjax(formId) {
     });
 }
 
-function sauverConfigDoc(docType) {
-    var container = document.getElementById('doc-' + docType);
-    if (!container) return;
-    var form = document.getElementById('form-entreprise');
-    var data = new FormData();
-    data.append('csrfmiddlewaretoken', form.querySelector('input[name="csrfmiddlewaretoken"]').value);
-    data.append('enregistrer_config_doc', '1');
-    data.append('doc_type', docType);
-
-    container.querySelectorAll('input, textarea').forEach(function(el) {
-        if (el.type === 'checkbox') {
-            data.append(el.name, el.checked ? 'on' : '');
-        } else {
-            data.append(el.name, el.value);
-        }
-    });
-
-    var btn = container.querySelector('button[onclick*="sauverConfigDoc"]');
-    var originalText = btn ? btn.innerHTML : 'Enregistrer';
-    if (btn) {
-        btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> …';
-        btn.disabled = true;
-    }
-
-    fetch(window.location.pathname, {
-        method: 'POST',
-        body: data,
-        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(d) {
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-        if (d.success) {
-            Swal.fire({ icon: 'success', title: 'Enregistré', text: d.message, timer: 1800, showConfirmButton: false });
-        } else {
-            Swal.fire({ icon: 'error', title: 'Erreur', text: d.message });
-        }
-    })
-    .catch(function() {
-        if (btn) {
-            btn.innerHTML = originalText;
-            btn.disabled = false;
-        }
-        Swal.fire({ icon: 'error', title: 'Erreur réseau', text: 'Vérifiez votre connexion.' });
-    });
-}
 </script>
 
 {% endblock %}
