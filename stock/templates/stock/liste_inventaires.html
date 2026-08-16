@@ -1,5 +1,5 @@
 {% extends "base_ui.html" %}
-{% block title %}Campagnes d'Inventaires{% endblock %}
+{% block title %}Inventaires{% endblock %}
 
 {% block contenu %}
 <style>
@@ -109,6 +109,66 @@
   .pag-cur {
     padding: 5px 10px; border-radius: 5px; font-size: 12px;
     font-weight: 700; color: white; background: #6f42c1;
+  }
+
+  /* ═════ ONGLET TOURNANT (plans de rotation) ═════ */
+  .tab-active-tour { border-bottom-color: #17a2b8; color: #17a2b8; }
+  .pl-tb-title { font-weight: 700; color: var(--text-dark); font-size: 14px; }
+  .pl-hint { font-size: 12px; color: var(--text-light); line-height: 1.5; }
+  .pl-table { width: 100%; border-collapse: collapse; }
+  .pl-table thead th {
+    background: var(--bg-stripe); color: var(--text-medium);
+    font-size: 11px; text-transform: uppercase; letter-spacing: .4px;
+    padding: 12px 14px; text-align: left; border-bottom: 2px solid var(--border-color);
+    white-space: nowrap;
+  }
+  .pl-table tbody td { padding: 12px 14px; border-bottom: 1px solid var(--border-light); font-size: 13px; }
+  .pl-table tbody tr:hover { background: var(--bg-hover); }
+  .pl-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
+  .pl-badge-actif { background: rgba(40,167,69,.15); color: #155724; }
+  .pl-badge-pause { background: rgba(108,117,125,.15); color: #495057; }
+  .pl-badge-due { background: rgba(220,53,69,.15); color: #721c24; }
+  .pl-badge-ok { background: rgba(23,162,184,.15); color: #0c5460; }
+  .pl-btn-ghost {
+    background: var(--bg-card); border: 1px solid var(--border-color);
+    color: var(--text-medium); padding: 6px 12px; border-radius: 7px;
+    font-size: 12px; font-weight: 600; cursor: pointer; transition: .2s;
+    text-decoration: none; display: inline-flex; align-items: center; gap: 6px;
+  }
+  .pl-btn-ghost:hover { border-color: var(--primary-blue); color: var(--primary-blue); }
+  .pl-btn-gen {
+    background: #17a2b8; color: white; border: none; padding: 6px 12px;
+    border-radius: 7px; font-size: 12px; font-weight: 700; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  }
+  .pl-btn-gen:hover { background: #138496; color: white; }
+  .pl-empty { padding: 50px; text-align: center; color: var(--text-light); }
+  .pl-empty i { font-size: 40px; display: block; margin-bottom: 12px; opacity: .4; }
+  /* Modale plan tournant */
+  .pl-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 1050; align-items: center; justify-content: center; padding: 20px; }
+  .pl-modal-overlay.open { display: flex; }
+  .pl-modal-box { background: var(--bg-card); border-radius: 14px; max-width: 560px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 40px rgba(0,0,0,.3); }
+  .pl-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid var(--border-light); }
+  .pl-modal-header h5 { margin: 0; font-size: 17px; }
+  .pl-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--text-light); line-height: 1; }
+  .pl-modal-body { padding: 20px 22px; }
+  .pl-modal-footer { padding: 14px 22px; border-top: 1px solid var(--border-light); display: flex; justify-content: flex-end; gap: 10px; }
+  .pl-fg { margin-bottom: 14px; }
+  .pl-fg label { display: block; font-size: 12px; font-weight: 600; color: var(--text-medium); margin-bottom: 5px; }
+  .pl-fg input, .pl-fg select {
+    width: 100%; padding: 9px 12px; border: 1px solid var(--border-color);
+    border-radius: 8px; font-size: 13px; background: var(--bg-card); color: var(--text-dark);
+    box-sizing: border-box;
+  }
+  .pl-familles { max-height: 180px; overflow-y: auto; border: 1px solid var(--border-light); border-radius: 8px; padding: 8px 10px; }
+  .pl-familles label { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; font-weight: 400; cursor: pointer; }
+  .pl-btn-save { background: #17a2b8; color: white; border: none; padding: 9px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+  .pl-btn-cancel { background: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-medium); padding: 9px 18px; border-radius: 8px; cursor: pointer; }
+  @media (max-width: 768px) {
+    .pl-table, .pl-table thead, .pl-table tbody, .pl-table tr, .pl-table td, .pl-table th { display: block; }
+    .pl-table thead { display: none; }
+    .pl-table tbody td { border: none; padding: 8px 14px; }
+    .pl-table tbody tr { border: 1px solid var(--border-light); border-radius: 10px; margin: 10px 12px; padding: 6px 0; }
   }
 
   /* ═════ MODAL WIZARD ═════ */
@@ -416,6 +476,15 @@
   body.dark-mode .pag-bar { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
   body.dark-mode .pag-link { background: var(--bg-card, #1e293b); color: var(--text-light, #94a3b8); border-color: var(--border-light, #475569); }
   body.dark-mode .pag-link:hover { color: #b39ddb; background: var(--bg-hover, #334155); }
+  body.dark-mode .tab-active-tour { color: #4dd0e1; border-color: #4dd0e1; }
+  body.dark-mode .pl-tb-title { color: var(--text-light, #f1f5f9); }
+  body.dark-mode .pl-table thead th { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); border-color: var(--border-light, #475569); }
+  body.dark-mode .pl-table tbody tr:hover { background: var(--bg-hover, #334155); }
+  body.dark-mode .pl-modal-box { background: var(--bg-card, #1e293b); }
+  body.dark-mode .pl-fg input, body.dark-mode .pl-fg select { background: var(--bg-hover, #334155); color: var(--text-light, #f1f5f9); border-color: var(--border-light, #475569); }
+  body.dark-mode .pl-btn-ghost { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); border-color: var(--border-light, #475569); }
+  body.dark-mode .pl-btn-cancel { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); border-color: var(--border-light, #475569); }
+  body.dark-mode .pl-btn-gen { background: #0e7490; }
   body.dark-mode .mb { background: var(--bg-card, #1e293b); }
   body.dark-mode .stepper { background: var(--bg-hover, #334155); border-color: var(--border-light, #475569); }
   body.dark-mode .step.active { color: #b39ddb; }
@@ -445,6 +514,22 @@
   body.dark-mode .btn-nok-pdf { background: var(--bg-hover, #334155); color: var(--text-light, #94a3b8); }
 </style>
 
+{% if active_tab == 'tournant' %}
+<div class="inv-header" style="background: linear-gradient(135deg, #0e7a5f, #17a2b8); box-shadow: 0 4px 15px rgba(14,122,95,.3);">
+  <div class="inv-header-left">
+    <i class="fas fa-sync-alt ico"></i>
+    <div>
+      <h4>Inventaire Tournant</h4>
+      <small>Rotation du comptage par famille / zone, avec planification automatique.</small>
+    </div>
+  </div>
+  {% if peut_generer %}
+  <button type="button" class="btn-new" onclick="ouvrirModalePlan()">
+    <i class="fas fa-plus"></i> Nouveau plan
+  </button>
+  {% endif %}
+</div>
+{% else %}
 <div class="inv-header">
   <div class="inv-header-left">
     <i class="fas fa-clipboard-list ico"></i>
@@ -459,8 +544,116 @@
   </button>
   {% endif %}
 </div>
+{% endif %}
 
 <div class="card-table">
+  <div class="tabs-bar">
+    <a href="?tab=en_cours{% if q %}&q={{ q }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}"
+       class="tab-link {% if active_tab == 'en_cours' %}tab-active{% else %}tab-inactive{% endif %}">
+      <i class="fas fa-edit"></i> Inventaires Actifs
+    </a>
+    <a href="?tab=historique{% if q %}&q={{ q }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}"
+       class="tab-link {% if active_tab == 'historique' %}tab-active-hist{% else %}tab-inactive{% endif %}">
+      <i class="fas fa-archive"></i> Historique
+    </a>
+    <a href="?tab=tournant{% if q %}&q={{ q }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}"
+       class="tab-link {% if active_tab == 'tournant' %}tab-active-tour{% else %}tab-inactive{% endif %}">
+      <i class="fas fa-sync-alt"></i> Plans Tournants
+    </a>
+  </div>
+
+  {% if active_tab == 'tournant' %}
+  <div class="tb-bar">
+    <span class="pl-tb-title"><i class="fas fa-clipboard-list" style="color:#17a2b8;"></i> Plans de rotation</span>
+    <span class="pl-hint">Une campagne ciblée est générée automatiquement à chaque échéance (ou manuellement).</span>
+  </div>
+  {% if magasin_actif %}
+  <div style="padding:12px 18px; border-bottom:1px solid var(--border-light); font-size:13px; color:var(--text-medium);">
+    <i class="fas fa-warehouse" style="color:var(--primary-blue);"></i>
+    Plans du magasin : <b>{{ magasin_actif.nom }}</b>
+  </div>
+  {% endif %}
+  <div style="overflow-x:auto;">
+    <table class="pl-table">
+      <thead>
+        <tr>
+          <th>Plan</th>
+          <th>Rotation</th>
+          <th>Fréquence</th>
+          <th>Familles</th>
+          <th>Statut</th>
+          <th>Prochaine échéance</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for plan in plans %}
+        <tr>
+          <td>
+            <div style="font-weight:700; color:var(--text-dark);">{{ plan.titre }}</div>
+            <div style="font-size:11px; color:var(--text-light);">{{ plan.magasin.nom }}</div>
+          </td>
+          <td>
+            {% if plan.type_rotation == 'PAR_FAMILLE' %}
+            <span class="pl-badge" style="background:rgba(23,162,184,.15); color:#0c5460;"><i class="fas fa-tag"></i> Par famille</span>
+            {% else %}
+            <span class="pl-badge" style="background:rgba(111,66,193,.15); color:#5a189a;"><i class="fas fa-map-marker-alt"></i> Par zone</span>
+            {% endif %}
+          </td>
+          <td>{{ plan.frequence_jours }} j</td>
+          <td>
+            {% if plan.type_rotation == 'PAR_FAMILLE' %}
+              {% if plan.nb_familles %}
+                {{ plan.nb_familles }} famille{{ plan.nb_familles|pluralize }}
+              {% else %}
+                <span style="color:#dc3545;">Aucune</span>
+              {% endif %}
+            {% else %}
+              Toutes (zone magasin)
+            {% endif %}
+          </td>
+          <td>
+            {% if plan.statut == 'ACTIF' %}
+              <span class="pl-badge pl-badge-actif"><i class="fas fa-play-circle"></i> Actif</span>
+            {% else %}
+              <span class="pl-badge pl-badge-pause"><i class="fas fa-pause-circle"></i> Pause</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if plan.est_due %}
+              <span class="pl-badge pl-badge-due"><i class="fas fa-exclamation-triangle"></i> Échue ({{ plan.prochaine_echeance|date:"d/m/Y" }})</span>
+            {% elif plan.prochaine_echeance %}
+              <span class="pl-badge pl-badge-ok"><i class="fas fa-calendar-check"></i> {{ plan.prochaine_echeance|date:"d/m/Y" }}</span>
+            {% else %}
+              <span style="color:var(--text-light);">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              {% if plan.statut == 'ACTIF' %}
+              <a href="{% url 'generer_campagne_tournante' plan.id %}" class="pl-btn-gen" title="Générer la campagne d'inventaire maintenant"><i class="fas fa-magic"></i> Générer</a>
+              <a href="{% url 'basculer_statut_plan' plan.id %}" class="pl-btn-ghost" title="Mettre en pause"><i class="fas fa-pause"></i></a>
+              {% else %}
+              <a href="{% url 'basculer_statut_plan' plan.id %}" class="pl-btn-ghost" title="Réactiver"><i class="fas fa-play"></i> Réactiver</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">
+            <div class="pl-empty">
+              <i class="fas fa-sync-alt"></i>
+              Aucun plan d'inventaire tournant.
+              <div style="margin-top:10px;"><button type="button" class="pl-btn-gen" onclick="ouvrirModalePlan()"><i class="fas fa-plus"></i> Créer le premier plan</button></div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
   <div class="tb-bar">
     <div class="tb-filters">
       <form id="form-recherche" method="GET" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
@@ -505,17 +698,6 @@
     </form>
   </div>
 
-  <div class="tabs-bar">
-    <a href="?tab=en_cours{% if q %}&q={{ q }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}"
-       class="tab-link {% if active_tab == 'en_cours' %}tab-active{% else %}tab-inactive{% endif %}">
-      <i class="fas fa-edit"></i> Inventaires Actifs
-    </a>
-    <a href="?tab=historique{% if q %}&q={{ q }}{% endif %}{% if date_range %}&date_range={{ date_range }}{% endif %}"
-       class="tab-link {% if active_tab == 'historique' %}tab-active-hist{% else %}tab-inactive{% endif %}">
-      <i class="fas fa-archive"></i> Historique
-    </a>
-  </div>
-
   <div style="overflow-x:auto;">
     <table class="inv-table">
       <thead>
@@ -550,6 +732,7 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}
 </div>
 
 <!-- ═════ MODAL IMPRESSION PDF ═════ -->
@@ -709,6 +892,79 @@
     </form>
   </div>
 </div>
+
+<!-- ═════ MODALE NOUVEAU PLAN TOURNANT ═════ -->
+<div id="modale-plan" class="pl-modal-overlay">
+  <div class="pl-modal-box">
+    <div class="pl-modal-header">
+      <h5><i class="fas fa-sync-alt" style="color:#17a2b8;"></i> Nouveau plan d'inventaire tournant</h5>
+      <button type="button" class="pl-modal-close" onclick="fermerModalePlan()">&times;</button>
+    </div>
+    <form method="POST" action="{% url 'liste_inventaires' %}" id="form-plan-tournant">
+      {% csrf_token %}
+      <div class="pl-modal-body">
+        <div class="pl-fg">
+          <label>Titre du plan *</label>
+          <input type="text" name="titre" placeholder="Ex: Rotation Pharmacie — Trimestre 1" required>
+        </div>
+        <div class="pl-fg">
+          <label>Magasin *</label>
+          <select name="magasin_id" required>
+            {% for m in magasins %}
+            <option value="{{ m.id }}" {% if magasin_actif and m.id == magasin_actif.id %}selected{% endif %}>{{ m.nom }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="pl-fg">
+          <label>Type de rotation</label>
+          <select name="type_rotation" id="type-rotation" onchange="basculerTypeRotation()">
+            <option value="PAR_FAMILLE">Par famille d'articles</option>
+            <option value="PAR_ZONE">Par zone (toutes familles du magasin)</option>
+          </select>
+        </div>
+        <div class="pl-fg" style="max-width:220px;">
+          <label>Fréquence (jours) *</label>
+          <input type="number" name="frequence_jours" value="90" min="1" required>
+        </div>
+        <div class="pl-fg" id="bloc-familles">
+          <label>Familles à compter (rotation par famille)</label>
+          <div class="pl-familles">
+            {% for f in familles %}
+            <label>
+              <input type="checkbox" name="familles_ids" value="{{ f.id }}">
+              <span>{{ f.intitule }}</span>
+            </label>
+            {% empty %}
+            <div style="color:var(--text-light); font-size:12px;">Aucune famille d'articles disponible.</div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      <div class="pl-modal-footer">
+        <button type="button" class="pl-btn-cancel" onclick="fermerModalePlan()">Annuler</button>
+        <button type="submit" class="pl-btn-save"><i class="fas fa-save"></i> Créer le plan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function ouvrirModalePlan() {
+    document.getElementById('modale-plan').classList.add('open');
+  }
+  function fermerModalePlan() {
+    document.getElementById('modale-plan').classList.remove('open');
+  }
+  function basculerTypeRotation() {
+    var sel = document.getElementById('type-rotation');
+    var bloc = document.getElementById('bloc-familles');
+    if (bloc) bloc.style.display = (sel.value === 'PAR_FAMILLE') ? '' : 'none';
+  }
+  // Fermeture au clic sur le fond
+  document.addEventListener('click', function(e) {
+    if (e.target && e.target.id === 'modale-plan') fermerModalePlan();
+  });
+</script>
 
 <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
@@ -943,6 +1199,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.key === 'Escape') {
             document.getElementById('modal-pdf').classList.remove('open');
             closeWizard();
+            if (typeof fermerModalePlan === 'function') fermerModalePlan();
         }
     });
 });

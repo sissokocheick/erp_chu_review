@@ -76,6 +76,10 @@ class InventaireTournantBase(TestCase):
         session['magasin_actif_id'] = str(self.magasin.id)
         session.save()
 
+    def _url_tournant(self):
+        """URL de l'onglet Tournant de la page unique /inventaires/."""
+        return reverse('liste_inventaires') + '?tab=tournant'
+
     def _creer_plan(self, type_rotation='PAR_FAMILLE', familles=None,
                     frequence=90, statut='ACTIF'):
         plan = PlanInventaireTournant.objects.create(
@@ -157,7 +161,7 @@ class VuesInventaireTournantTest(InventaireTournantBase):
 
     def test_page_liste_charge(self):
         self._creer_plan(familles=[self.fam_med])
-        resp = self.client.get(reverse('liste_plans_inventaire_tournant'))
+        resp = self.client.get(self._url_tournant())
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Rotation Trimestrielle')
         self.assertContains(resp, 'Inventaire Tournant')
@@ -166,11 +170,11 @@ class VuesInventaireTournantTest(InventaireTournantBase):
         plan = self._creer_plan(familles=[self.fam_med])
         plan.prochaine_echeance = timezone.now().date() - timezone.timedelta(days=1)
         plan.save()
-        resp = self.client.get(reverse('liste_plans_inventaire_tournant'))
+        resp = self.client.get(self._url_tournant())
         self.assertContains(resp, 'Échue')
 
     def test_creation_plan_via_post(self):
-        resp = self.client.post(reverse('liste_plans_inventaire_tournant'), {
+        resp = self.client.post(self._url_tournant(), {
             'titre': 'Rotation Mensuelle',
             'magasin_id': self.magasin.id,
             'type_rotation': 'PAR_FAMILLE',
@@ -184,7 +188,7 @@ class VuesInventaireTournantTest(InventaireTournantBase):
         self.assertEqual(plan.prochaine_echeance, timezone.now().date())
 
     def test_creation_plan_sans_titre_refuse(self):
-        resp = self.client.post(reverse('liste_plans_inventaire_tournant'), {
+        resp = self.client.post(self._url_tournant(), {
             'magasin_id': self.magasin.id,
             'type_rotation': 'PAR_FAMILLE',
             'frequence_jours': '30',
@@ -193,7 +197,7 @@ class VuesInventaireTournantTest(InventaireTournantBase):
         self.assertEqual(PlanInventaireTournant.objects.count(), 0)
 
     def test_creation_plan_frequence_invalide_refusee(self):
-        resp = self.client.post(reverse('liste_plans_inventaire_tournant'), {
+        resp = self.client.post(self._url_tournant(), {
             'titre': 'Plan Invalide',
             'magasin_id': self.magasin.id,
             'type_rotation': 'PAR_FAMILLE',
@@ -235,18 +239,46 @@ class VuesInventaireTournantTest(InventaireTournantBase):
             magasin=self.autre_mag,
             cree_par=self.user,
         )
-        resp = self.client.get(reverse('liste_plans_inventaire_tournant'))
+        resp = self.client.get(self._url_tournant())
         self.assertContains(resp, 'Rotation Trimestrielle')
         self.assertNotContains(resp, 'Plan Autre Magasin')
         self.assertIn(plan_autre.id, PlanInventaireTournant.objects.all().values_list('id', flat=True))
 
     def test_page_rendue_sans_plan(self):
-        resp = self.client.get(reverse('liste_plans_inventaire_tournant'))
+        resp = self.client.get(self._url_tournant())
         self.assertEqual(resp.status_code, 200)
         self.assertContains(resp, 'Aucun plan')
 
+    def test_ancienne_url_redirige_vers_onglet_tournant(self):
+        """Compatibilité : /inventaires/tournants/ redirige vers l'onglet fusionné."""
+        resp = self.client.get(reverse('liste_plans_inventaire_tournant'))
+        self.assertEqual(resp.status_code, 302)
+        self.assertIn('?tab=tournant', resp.url)
+        # Suivi de la redirection : la page fusionnée se charge
+        resp2 = self.client.get(resp.url)
+        self.assertEqual(resp2.status_code, 200)
+
+    def test_page_une_affiche_les_trois_onglets(self):
+        """La page unique affiche Campagnes + Historique + Plans Tournants."""
+        resp = self.client.get(reverse('liste_inventaires'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Inventaires Actifs')
+        self.assertContains(resp, 'Historique')
+        self.assertContains(resp, 'Plans Tournants')
+
+    def test_page_une_onglet_tournant_conserve_campagnes(self):
+        """L'onglet Tournant n'écrase pas l'accès aux campagnes (allers-retours)."""
+        resp = self.client.get(self._url_tournant())
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Plans Tournants')
+        self.assertContains(resp, 'Inventaire Tournant')
+        # Retour vers les campagnes
+        resp2 = self.client.get(reverse('liste_inventaires') + '?tab=en_cours')
+        self.assertEqual(resp2.status_code, 200)
+        self.assertContains(resp2, 'Inventaires Actifs')
+
     def test_creation_plan_sans_famille_avertit(self):
-        resp = self.client.post(reverse('liste_plans_inventaire_tournant'), {
+        resp = self.client.post(self._url_tournant(), {
             'titre': 'Plan Sans Famille',
             'magasin_id': self.magasin.id,
             'type_rotation': 'PAR_FAMILLE',

@@ -106,7 +106,7 @@ MENU_ITEMS_META = {
     'menu_peremptions':          {'icon': 'fa-exclamation-triangle', 'color': '#ffda6a', 'label': 'Suivi Péremptions'},
     'menu_destructions':         {'icon': 'fa-trash-alt',       'color': '#ff9e9e', 'label': 'Destructions'},
     'menu_ajustements':          {'icon': 'fa-balance-scale',   'color': '#6f42c1', 'label': 'Ajustements Manuels'},
-    'menu_inventaires':          {'icon': 'fa-clipboard-check', 'color': '#28a745', 'label': 'Campagnes Inventaires'},
+    'menu_inventaires':          {'icon': 'fa-clipboard-check', 'color': '#28a745', 'label': 'Inventaires'},
     'menu_historique':           {'icon': 'fa-history',         'color': '#b6c2c9', 'label': 'Historique Mouvements'},
 
     # Achats & Catalogue
