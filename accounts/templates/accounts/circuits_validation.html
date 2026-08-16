@@ -117,9 +117,12 @@
         <h1><i class="fas fa-check-double"></i> Circuits de validation</h1>
         <p>Paramétrez les autorisations hiérarchiques requises pour chaque type de mouvement stock.</p>
       </div>
-      <div class="cv-hero-stat">
-        <div class="n">{{ circuits|length }}</div>
-        <div class="l">circuit{{ circuits|length|pluralize }}</div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="cv-hero-stat">
+          <div class="n">{{ circuits|length }}</div>
+          <div class="l">circuit{{ circuits|length|pluralize }}</div>
+        </div>
+        <a href="{% url 'accounts:creer_circuit' %}" class="cv-btn" style="background:#28a745;padding:12px 18px;border-radius:10px;color:#fff;text-decoration:none;font-weight:700;font-size:14px;"><i class="fas fa-plus"></i> Nouveau circuit</a>
       </div>
     </div>
 
@@ -143,6 +146,10 @@
         <span class="cv-pill {% if circuit.est_actif %}on{% else %}off{% endif %}">
           {% if circuit.est_actif %}● Actif{% else %}○ Inactif{% endif %}
         </span>
+
+        <div style="display:flex;align-items:center;gap:12px;">
+          <a href="{% url 'accounts:modifier_circuit' circuit.id %}" class="cv-btn" style="background:#17a2b8;padding:8px 14px;border-radius:8px;color:#fff;text-decoration:none;font-weight:600;font-size:13px;"><i class="fas fa-edit"></i> Modifier</a>
+        </div>
       </div>
 
       <form method="POST" class="cv-body cv-form">

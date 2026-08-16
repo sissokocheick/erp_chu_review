@@ -125,10 +125,15 @@ def build_redirect_url(base_name, query=None, per_page=None, default_per_page='1
 
 def render_liste(request, qs, template, ajax_template,
                  context_extra=None, context_object_name='items',
-                 date_field='date_creation', texte_champs=None):
+                 date_field='date_creation', texte_champs=None,
+                 colonnes_tri=None, tri_defaut=None):
     """
     Prépare le contexte complet pour une vue liste et renvoie le bon template
     (HTML complet ou fragment AJAX).
+
+    colonnes_tri : dict {clé_GET -> champ_ordre} des colonnes triables par
+    clic sur les en-têtes (None = pas de tri). tri_defaut : order_by par
+    défaut (sinon '-<date_field>').
     """
     if texte_champs:
         qs, q = filtrer_par_texte(qs, request, texte_champs)
@@ -136,6 +141,14 @@ def render_liste(request, qs, template, ajax_template,
         q = ''
 
     qs, date_range = filtrer_par_date(qs, request, date_field)
+    if colonnes_tri:
+        from .catalogue import appliquer_tri
+        qs, tri, ordre = appliquer_tri(
+            qs, request, colonnes_tri,
+            defaut=tri_defaut or f'-{date_field}',
+        )
+    else:
+        tri, ordre = '', 'asc'
     page_obj, per_page = paginer(qs, request)
 
     context = {
@@ -144,6 +157,8 @@ def render_liste(request, qs, template, ajax_template,
         'date_range': date_range,
         'per_page': per_page,
         'magasin_actif': get_magasin_actif(request),
+        'tri': tri,
+        'ordre': ordre,
     }
     if context_extra:
         context.update(context_extra)

@@ -1032,19 +1032,3 @@ def annuler_demande(request, demande_id):
 # ═══════════════════════════════════════════════════════════════════════════
 # API : detail d une demande (pour accordéon lazy load)
 # ═══════════════════════════════════════════════════════════════════════════
-
-@login_required(login_url='/auth/login/')
-def api_detail_demande(request, demande_id):
-    """Renvoie le HTML du detail d une demande pour l accordéon."""
-    demande = get_object_or_404(
-        DemandeMateriel.objects.select_related('service_demandeur').prefetch_related(
-            'lignes_demande__article', 'livraisons__accuse', 'livraisons__bon_sortie'
-        ),
-        id=demande_id, demandeur=request.user)
-    html = render_to_string('stock/mes_demandes_detail.html', {'d': demande})
-    return JsonResponse({'html': html})
-
-# ═══════════════════════════════════════════════════════════════════════════
-# BON DE DEMANDE PDF
-# ═══════════════════════════════════════════════════════════════════════════
-

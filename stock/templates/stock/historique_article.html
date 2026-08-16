@@ -124,7 +124,7 @@
 <div class="page-header-bar">
     <h2><i class="fas fa-history" style="color: #17a2b8;"></i> Traçabilité : <span style="color: #1c5b96;">{{ article.designation }}</span></h2>
     <div style="display:flex; gap:10px;">
-        <button type="button" class="btn-print" onclick="imprimerModal('{% url 'imprimer_historique_article' article.id %}?tri={{ tri|default:'date_desc' }}', 'Historique des mouvements')">
+        <button type="button" class="btn-print" onclick="imprimerModal('{% url 'imprimer_historique_article' article.id %}?tri={{ tri }}&amp;ordre={{ ordre }}', 'Historique des mouvements')">
             <i class="fas fa-print"></i> Imprimer
         </button>
         <a href="{% url 'liste_articles' %}" class="btn-retour">
@@ -138,26 +138,23 @@
         <strong>Référence :</strong> {{ article.reference|default:"Non définie" }} <br>
         <strong>Famille :</strong> {{ article.famille.intitule|default:"—" }}
     </div>
-    <form method="GET" style="margin: 0;">
-        <label for="tri" style="font-weight: bold; color: var(--text-medium); margin-right: 10px;">Trier par :</label>
-        <select name="tri" id="tri" onchange="this.form.submit()" style="padding: 8px; border: 1px solid var(--border-color); border-radius: 6px; background: var(--bg-input); color: var(--text-dark);">
-            <option value="date_desc" {% if tri == 'date_desc' %}selected{% endif %}>Date (Plus récent)</option>
-            <option value="date_asc" {% if tri == 'date_asc' %}selected{% endif %}>Date (Plus ancien)</option>
-            <option value="alpha" {% if tri == 'alpha' %}selected{% endif %}>Type de mouvement</option>
-        </select>
-    </form>
+    <div style="margin: 0;">
+        <span style="font-weight: bold; color: var(--text-medium); margin-right: 10px;">Trier :</span>
+        <span style="color: var(--text-light); font-size: 12px;">cliquez sur une colonne du tableau</span>
+    </div>
 </div>
 
 <div class="table-card">
+    {% load tri_table %}
     <table>
         <thead>
             <tr>
-                <th>Date & Heure</th>
-                <th>Type</th>
-                <th style="text-align:center;">Quantité</th>
-                <th>Source</th>
-                <th>Destination</th>
-                <th>Opérateur</th>
+                {% th_tri 'date_mouvement' 'Date & Heure' tri ordre %}
+                {% th_tri 'type_mouvement' 'Type' tri ordre %}
+                {% th_tri 'quantite' 'Quantité' tri ordre %}
+                {% th_tri 'magasin' 'Source' tri ordre %}
+                {% th_tri 'service_demandeur' 'Destination' tri ordre %}
+                {% th_tri 'utilisateur' 'Opérateur' tri ordre %}
             </tr>
         </thead>
         <tbody>

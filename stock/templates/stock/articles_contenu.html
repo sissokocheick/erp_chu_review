@@ -1,9 +1,10 @@
+{% load tri_table %}
 <table>
     <thead>
         <tr>
-            <th>Article</th>
-            <th>Famille</th>
-            <th style="text-align: center;">Seuil</th>
+            {% th_tri 'designation' 'Article' tri ordre %}
+            {% th_tri 'famille' 'Famille' tri ordre %}
+            {% th_tri 'seuil_min' 'Seuil' tri ordre %}
             <th style="text-align: center;">Stocks</th>
             <th style="text-align: center;">Tracabilite</th>
             <th style="text-align: center;">Actions</th>

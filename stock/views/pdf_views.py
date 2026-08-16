@@ -458,20 +458,24 @@ def rapport_consommation_pdf(request):
         ref = m.article.reference or m.article.designation
         if ref not in consommation:
             consommation[ref] = {
-                'article': m.article,
-                'total_sortie': 0,
-                'unite': getattr(m.article, 'unite', 'U'),
+                'article__reference': m.article.reference or '-',
+                'article__designation': m.article.designation,
+                'article__unite_distribution': getattr(m.article, 'unite_distribution', 'U'),
+                'article__famille__intitule': m.article.famille.intitule if m.article.famille_id else None,
+                'total_sorti': 0,
             }
-        consommation[ref]['total_sortie'] += abs(m.quantite)
+        consommation[ref]['total_sorti'] += abs(m.quantite)
 
     context = {
-        'consommation': sorted(consommation.values(), key=lambda x: x['total_sortie'], reverse=True),
+        'consommations': sorted(consommation.values(), key=lambda x: x['total_sorti'], reverse=True),
         'date_debut': date_debut,
         'date_fin': date_fin,
         'magasin': magasin,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
         'signature_cases': build_signatures_config(pdf_config, request),
+        'edite_par': request.user,
+        'date_impression': timezone.now(),
     }
     return render_pdf_response(request, 'stock/pdf/rapport_consommation.html', context, "Rapport_Consommation.pdf")
 

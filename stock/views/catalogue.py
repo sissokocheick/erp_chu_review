@@ -31,6 +31,27 @@ def get_magasins_autorises(request):
         return Magasin.objects.none()
 
 
+def appliquer_tri(queryset, request, colonnes, defaut):
+    """Tri serveur par clic sur les en-têtes de colonnes.
+
+    colonnes : dict {clé_GET -> champ_ordre} — seule liste blanche
+               des colonnes triables (jamais d'entrée utilisateur brute).
+    defaut   : order_by par défaut (ex. '-date_creation').
+    Retourne (queryset, tri, ordre) où tri/ordre sont les valeurs GET
+    (vides si aucune colonne demandée) pour alimenter les en-têtes.
+    """
+    tri = request.GET.get('tri', '')
+    ordre = request.GET.get('ordre', 'asc')
+    if tri in colonnes:
+        champ = colonnes[tri]
+        if ordre == 'desc':
+            champ = '-' + champ.lstrip('-')
+        queryset = queryset.order_by(champ)
+    else:
+        queryset = queryset.order_by(defaut)
+    return queryset, tri, ordre
+
+
 def paginer(queryset, request, per_page_key='per_page', default=15):
     """Pagination. Si per_page='all', pas de pagination."""
     per_page_raw = request.GET.get(per_page_key, str(default))
@@ -75,7 +96,19 @@ def build_redirect_url(base_name, query=None, per_page=None, default_per_page=15
 def liste_articles(request):
     articles = Article.objects.all().select_related(
         'famille', 'cree_par', 'modifie_par'
-    ).prefetch_related('stocks__magasin').order_by('-date_creation')
+    ).prefetch_related('stocks__magasin')
+
+    articles, tri, ordre = appliquer_tri(
+        articles, request,
+        colonnes={
+            'designation': 'designation',
+            'reference': 'reference',
+            'famille': 'famille__intitule',
+            'seuil_min': 'seuil_minimum',
+            'date_creation': 'date_creation',
+        },
+        defaut='-date_creation',
+    )
 
     famille_id = request.GET.get('famille', '')
     if famille_id:
@@ -143,6 +176,8 @@ def liste_articles(request):
         'familles': familles,
         'famille_id': famille_id,
         'articles_lies': ids_lies,
+        'tri': tri,
+        'ordre': ordre,
     }
 
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -160,15 +195,20 @@ def historique_article(request, article_id):
         article=article
     ).select_related('magasin', 'fournisseur', 'service_demandeur', 'utilisateur')
 
-    tri = request.GET.get('tri', 'date_desc')
-    if tri == 'date_asc':
-        mouvements = mouvements.order_by('date_mouvement')
-    elif tri == 'alpha':
-        mouvements = mouvements.order_by('type_mouvement', '-date_mouvement')
-    else:
-        mouvements = mouvements.order_by('-date_mouvement')
+    mouvements, tri, ordre = appliquer_tri(
+        mouvements, request,
+        colonnes={
+            'date_mouvement': 'date_mouvement',
+            'type_mouvement': 'type_mouvement',
+            'quantite': 'quantite',
+            'magasin': 'magasin__nom',
+            'service_demandeur': 'service_demandeur__nom',
+            'utilisateur': 'utilisateur__first_name',
+        },
+        defaut='-date_mouvement',
+    )
 
-    context = {'article': article, 'mouvements': mouvements, 'tri': tri}
+    context = {'article': article, 'mouvements': mouvements, 'tri': tri, 'ordre': ordre}
     return render(request, 'stock/historique_article.html', context)
 
 

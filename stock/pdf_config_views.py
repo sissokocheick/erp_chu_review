@@ -203,12 +203,12 @@ _LEGACY_MAP = {
 }
 
 _TEMPLATE_MAP = {
-    'BDM': 'stock/bon_demande.html',
-    'BS': 'stock/bon_sortie.html',
-    'BE': 'stock/bon_entree.html',
-    'BR': 'stock/bon_retour.html',
-    'BSHS': 'stock/bon_hors_stock.html',
-    'BC': 'stock/bon_commande.html',
+    'BDM': 'stock/pdf/bon_demande.html',
+    'BS': 'stock/pdf/bon_sortie.html',
+    'BE': 'stock/pdf/bon_entree.html',
+    'BR': 'stock/pdf/bon_retour.html',
+    'BSHS': 'stock/pdf/bon_hors_stock.html',
+    'BC': 'stock/pdf/bon_commande.html',
 }
 
 
@@ -328,13 +328,19 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
     def _generer_apercu(self, request, magasin, modele):
         """Génère un PDF d'aperçu avec des données factices."""
         config_preview = _parse_post_to_config(request.POST, type_doc=modele.type_document)
+        # Parité avec pdf_utils : texte institutionnel manquant -> VariableDoesNotExist en DEBUG
+        config_preview['texte_institutionnel'] = (
+            config_preview.get('texte_institutionnel')
+            or (config_preview.get('pied_de_page') or {}).get('texte_personnalise')
+            or "Direction des Affaires Financières / Sous-Direction de la Logistique"
+        )
 
         try:
             if not weasyprint:
                 messages.error(request, "WeasyPrint n'est pas installé.")
                 return redirect('modele_pdf_config', magasin_id=magasin.id, type_doc=modele.type_document)
 
-            template_name = _TEMPLATE_MAP.get(modele.type_document, 'stock/bon_sortie.html')
+            template_name = _TEMPLATE_MAP.get(modele.type_document, 'stock/pdf/bon_sortie.html')
             logo_url = _get_logo_url(request)
 
             service = SimpleNamespace(nom='ORTHO-TRAUMATO-CHIRURGIE PLASTIQUE')

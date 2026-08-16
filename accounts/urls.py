@@ -44,8 +44,7 @@ urlpatterns = [
 
     # Fonctions
     # NB: la page Fonctions est gérée dans Paramètres → Administratifs (section Fonctions)
-    path('fonctions/<int:fonction_id>/modifier/', views_fonctions.modifier_fonction, name='modifier_fonction'),
-    path('fonctions/<int:fonction_id>/supprimer/', views_fonctions.supprimer_fonction, name='supprimer_fonction'),
+    # NB: routes modifier_fonction / supprimer_fonction desactivees (15/08/2026) : CRUD vivant dans Parametres -> Administratifs (stock)
     path('api/fonctions/creer/', views_fonctions.api_creer_fonction, name='api_creer_fonction'),
     path('api/fonctions/liste/', views_fonctions.api_liste_fonctions, name='api_liste_fonctions'),
 

@@ -22,7 +22,7 @@ from ..models import (
 from django.db.models import Q, Count
 from ..services import NumeroGenerator, PDFService, NotificationService
 from ..services.bon_service import BonService
-from .catalogue import paginer
+from .catalogue import paginer, appliquer_tri
 from .common import _has_perm_bon
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
 
@@ -54,7 +54,18 @@ def liste_sorties(request):
         .select_related('magasin', 'service_demandeur', 'cree_par', 'valide_par')
         .prefetch_related('lignes_bon__article')
         .annotate(nb_lignes=Count('lignes_bon', distinct=True))
-        .order_by('-date_bon')
+    )
+
+    sorties_bons, tri, ordre = appliquer_tri(
+        sorties_bons, request,
+        colonnes={
+            'numero_bon': 'numero_bon',
+            'date_bon': 'date_bon',
+            'magasin': 'magasin__nom',
+            'service_demandeur': 'service_demandeur__nom',
+            'articles': 'nb_lignes',
+        },
+        defaut='-date_bon',
     )
 
     # Le magasin sélectionné dans l'en-tête s'applique partout :
@@ -184,6 +195,8 @@ def liste_sorties(request):
         'q_bon': q,
         'date_range': date_range,
         'per_page': per_page,
+        'tri': tri,
+        'ordre': ordre,
         'motifs_annulation': motifs_annulation,
         'circuit_sortie': circuit_sortie,
         'est_valideur': est_valideur,

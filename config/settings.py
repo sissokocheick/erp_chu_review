@@ -262,3 +262,17 @@ if (os.environ.get('TEST_MODE', 'False').lower() not in ('true', '1', 'yes')
 # écrase X-Forwarded-For (nginx, traefik…). Sinon, rester False : un
 # client peut spoof cet en-tête pour contourner l'anti brute-force IP.
 USE_X_FORWARDED_FOR = False
+
+
+# ── Durcissement production (actif UNIQUEMENT hors DEBUG) ────────────
+# SECURE_SSL_REDIRECT suppose un reverse proxy qui termine le HTTPS
+# (nginx/traefik) et écrase X-Forwarded-Proto (cf. USE_X_FORWARDED_FOR).
+if not DEBUG:
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = 'same-origin'

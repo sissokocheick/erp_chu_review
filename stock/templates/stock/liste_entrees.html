@@ -200,13 +200,14 @@
 
     <div class="table-card">
         <table>
+            {% load tri_table %}
             <thead>
                 <tr>
                     <th style="width: 40px;"></th>
-                    <th>N° Bon</th>
-                    <th>Date</th>
-                    <th>Magasin de Dest.</th>
-                    <th>Fournisseur</th>
+                    {% th_tri 'numero_bon' 'N° Bon' tri ordre %}
+                    {% th_tri 'date_bon' 'Date' tri ordre %}
+                    {% th_tri 'magasin' 'Magasin de Dest.' tri ordre %}
+                    {% th_tri 'fournisseur' 'Fournisseur' tri ordre %}
                     <th>Articles</th>
                     <th>Traçabilité</th>
                     <th style="text-align: center;">Actions</th>

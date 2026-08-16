@@ -76,7 +76,7 @@ class MouvementAdmin(SimpleHistoryAdmin):
                    🖨️ Imprimer
                 </a>
             '''
-            return format_html(bouton_html)
+            return format_html("{}", bouton_html)
         return "-"
     imprimer_bon.short_description = "Action"
 

@@ -569,6 +569,12 @@
         body.dark-mode .daterangepicker .drp-buttons { border-top-color: var(--border-light); }
         body.dark-mode .daterangepicker .drp-selected { color: var(--text-medium); }
         body.dark-mode .daterangepicker .cancelBtn { background: var(--bg-hover); color: var(--text-medium); border-color: var(--border-color); }
+
+        /* ── En-têtes de colonnes triables (tag th_tri) ── */
+        th.th-tri a { color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+        th.th-tri a:hover { color: var(--primary-blue); }
+        th.th-tri.active a { color: var(--primary-blue); font-weight: 700; }
+        th.th-tri i { font-size: 10px; }
     </style>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" integrity="sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4" crossorigin="anonymous"></script>
@@ -1229,7 +1235,7 @@
             document.cookie = 'theme_pref=' + (isDark ? 'dark' : 'light') + '; expires=' + expires + '; path=/; SameSite=Lax';
             
             var csrf = document.querySelector('[name=csrfmiddlewaretoken]');
-            fetch('/accounts/api/save-theme/', {
+            fetch('/auth/api/save-theme/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

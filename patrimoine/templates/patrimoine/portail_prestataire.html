@@ -1,0 +1,74 @@
+{% extends "base_ui.html" %}
+{% block title %}Portail Prestataire{% endblock %}
+
+{% block extra_css %}
+<style>
+  .pp-page { max-width: 980px; margin: 0 auto; }
+  .pp-hero { background: linear-gradient(135deg, #0d47a1 0%, #17a2b8 100%); border-radius: 14px; padding: 26px 30px; color: #fff; margin-bottom: 24px; }
+  .pp-hero h1 { margin: 0; font-size: 23px; font-weight: 800; }
+  .pp-hero p { margin: 8px 0 0; opacity: .92; font-size: 14px; }
+  .pp-card { background: var(--bg-card, #fff); border-radius: 14px; border: 1px solid var(--border-color, #e8ecf1); box-shadow: 0 2px 12px rgba(0,0,0,.04); padding: 22px; margin-bottom: 18px; }
+  .pp-card h3 { margin-top: 0; color: #1c5b96; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { padding: 10px 12px; border-bottom: 1px solid var(--border-color, #e8ecf1); text-align: left; }
+  th { background: var(--bg-stripe, #f8f9fb); font-size: 12px; text-transform: uppercase; letter-spacing: .4px; }
+  .pp-badge { display: inline-block; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+  .pp-badge.ok { background: #d4edda; color: #155724; }
+  .pp-empty { text-align: center; padding: 26px; color: #889; font-style: italic; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="pp-page">
+  <div class="pp-hero">
+    <h1>Portail Prestataire</h1>
+    <p>{{ compte.fournisseur.raison_sociale|default:"Espace prestataire" }} — {{ compte.fournisseur.contact|default:"" }}</p>
+  </div>
+
+  <div class="pp-card">
+    <h3>Contrats actifs</h3>
+    {% if contrats %}
+      <table>
+        <thead>
+          <tr><th>Contrat</th><th>Statut</th><th>Équipements</th></tr>
+        </thead>
+        <tbody>
+          {% for contrat in contrats %}
+          <tr>
+            <td>{{ contrat.reference|default:contrat.nom|default:contrat.id }}</td>
+            <td><span class="pp-badge ok">Actif</span></td>
+            <td>{{ contrat.equipements.count }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="pp-empty">Aucun contrat actif associé à ce compte prestataire.</div>
+    {% endif %}
+  </div>
+
+  <div class="pp-card">
+    <h3>Interventions récentes</h3>
+    {% if interventions_recentes %}
+      <table>
+        <thead>
+          <tr><th>#</th><th>Équipement</th><th>Date</th><th>Statut</th></tr>
+        </thead>
+        <tbody>
+          {% for inter in interventions_recentes %}
+          <tr>
+            <td>#{{ inter.id|stringformat:"04d" }}</td>
+            <td>{{ inter.immobilisation.nom_affichage|default:inter.immobilisation.code_patrimoine|default:"—" }}</td>
+            <td>{{ inter.date_signalement|date:"d/m/Y H:i"|default:"—" }}</td>
+            <td>{{ inter.get_statut_display|default:inter.statut }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="pp-empty">Aucune intervention récente.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
+

@@ -26,7 +26,6 @@ from openpyxl.utils import get_column_letter
 from django.db import transaction, IntegrityError
 
 
-
 import qrcode
 
 import base64
@@ -38,7 +37,6 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 
-
 from stock.models import Article, DemandeMateriel, LigneDemande, Magasin
 
 from django.contrib.auth.models import User
@@ -46,9 +44,7 @@ from django.contrib.auth.models import User
 from accounts.permissions import verifier_permission
 
 
-
 from core.models import Service
-
 
 
 from stock.models import Fournisseur
@@ -56,11 +52,9 @@ from stock.models import Fournisseur
 from .models import TechnicienPrestataire
 
 
-
 from .models import CampagneInventairePatrimoine, LigneInventairePatrimoine
 
 from django.db.models import ProtectedError
-
 
 
 from .models import (
@@ -78,13 +72,11 @@ from .models import (
 )
 
 
-
 # ══════════════════════════════════════════════════════════════════
 
 # DÉCORATEUR PATRIMOINE
 
 # ══════════════════════════════════════════════════════════════════
-
 
 
 def patrimoine_required(view_func):
@@ -128,15 +120,11 @@ def patrimoine_required(view_func):
     return wrapper
 
 
-
-
-
 # ══════════════════════════════════════════════════════════════════
 
 # 1. REGISTRE GÉNÉRAL
 
 # ══════════════════════════════════════════════════════════════════
-
 
 
 @login_required(login_url='/auth/login/')
@@ -156,7 +144,6 @@ def registre(request):
     ).exclude(statut='EN_ATTENTE').order_by('-date_creation')
 
 
-
     q = request.GET.get('q', '').strip()
 
     if '/scan/' in q:
@@ -164,7 +151,6 @@ def registre(request):
         q = q.rstrip('/').split('/')[-1]
 
         
-
     categorie_id = request.GET.get('categorie', '')
 
     type_id      = request.GET.get('type', '')
@@ -176,7 +162,6 @@ def registre(request):
     batiment_id  = request.GET.get('batiment', '')
 
     action       = request.GET.get('action', '')
-
 
 
     if q:
@@ -204,7 +189,6 @@ def registre(request):
     if action:       qs = qs.filter(action_requise=action)
 
 
-
     stats = {
 
         'total':       qs.count(),
@@ -220,13 +204,11 @@ def registre(request):
     }
 
 
-
     per_page = request.GET.get('per_page', '20')
 
     limite   = qs.count() if per_page == 'all' else int(per_page) if str(per_page).isdigit() else 20
 
     page     = Paginator(qs, limite).get_page(request.GET.get('page'))
-
 
 
     context = {
@@ -250,15 +232,11 @@ def registre(request):
     return render(request, 'patrimoine/registre.html', context)
 
 
-
-
-
 # ══════════════════════════════════════════════════════════════════
 
 # 2. SAS & IMMATRICULATION
 
 # ══════════════════════════════════════════════════════════════════
-
 
 
 @login_required(login_url='/auth/login/')
@@ -274,7 +252,6 @@ def sas(request):
     return render(request, 'patrimoine/sas.html', {'immos': Paginator(qs, 25).get_page(request.GET.get('page')), 'nb_sas': qs.count()})
 
 
-
 @login_required(login_url='/auth/login/')
 
 @patrimoine_required
@@ -286,7 +263,6 @@ def valider_sas(request, pk):
     immo  = get_object_or_404(Immobilisation, pk=pk, statut='EN_ATTENTE')
 
     types = TypeEquipement.objects.filter(est_actif=True).select_related('categorie')
-
 
 
     if request.method == 'POST':
@@ -320,7 +296,6 @@ def valider_sas(request, pk):
             immo.notes                = request.POST.get('notes', '')
 
 
-
             if request.POST.get('valeur_acquisition'):
 
                 immo.valeur_acquisition = Decimal(request.POST.get('valeur_acquisition'))
@@ -328,11 +303,9 @@ def valider_sas(request, pk):
                 immo.prix_depuis_stock  = False
 
 
-
             if request.POST.get('duree_amortissement_ans'):
 
                 immo.duree_amortissement_ans = int(request.POST.get('duree_amortissement_ans'))
-
 
 
             specs = {}
@@ -348,11 +321,9 @@ def valider_sas(request, pk):
             immo.specs_techniques = specs
 
 
-
             immo.statut = 'ACTIF'
 
             immo.modifie_par = request.user
-
 
 
             annee = timezone.now().strftime('%y') 
@@ -360,7 +331,6 @@ def valider_sas(request, pk):
             cat_code = te.categorie.code[:3].upper() 
 
             prefix = f"{annee}-{cat_code}-"
-
 
 
             while True:
@@ -394,7 +364,6 @@ def valider_sas(request, pk):
                     continue
 
 
-
             messages.success(request, f"✅ Bien immatriculé sous le code {immo.code_patrimoine}.")
 
             return redirect('patrimoine_detail', pk=immo.pk)
@@ -403,6 +372,13 @@ def valider_sas(request, pk):
 
             messages.error(request, f"❌ Erreur : {e}")
 
+            # Réinitialiser les attributs FK « sales » avant le rendu :
+            # l'accès immo.bureau dans le template relèverait ValueError
+            # (valeur brute invalide) -> 500 au lieu d'un simple message.
+            try:
+                immo.refresh_from_db()
+            except Exception:
+                pass
 
 
     return render(request, 'patrimoine/valider_sas.html', {
@@ -418,15 +394,11 @@ def valider_sas(request, pk):
     })
 
 
-
-
-
 # ══════════════════════════════════════════════════════════════════
 
 # 3. FICHE DÉTAIL & MODIFICATION
 
 # ══════════════════════════════════════════════════════════════════
-
 
 
 @login_required(login_url='/auth/login/')
@@ -458,7 +430,6 @@ def fiche_detail(request, pk):
         'specs': immo.specs_techniques,
 
     })
-
 
 
 @login_required(login_url='/auth/login/')
@@ -502,11 +473,9 @@ def modifier_immo(request, pk):
             immo.notes                  = request.POST.get('notes', '')
 
 
-
             if request.POST.get('valeur_acquisition'):
 
                 immo.valeur_acquisition = Decimal(request.POST.get('valeur_acquisition'))
-
 
 
             if immo.type_equipement_id:
@@ -526,7 +495,6 @@ def modifier_immo(request, pk):
                 immo.specs_techniques = specs
 
 
-
             immo.modifie_par = request.user
 
             immo.save()
@@ -538,7 +506,6 @@ def modifier_immo(request, pk):
         except Exception as e:
 
             messages.error(request, f"❌ Erreur : {e}")
-
 
 
     return render(request, 'patrimoine/modifier_immo.html', {
@@ -558,97 +525,11 @@ def modifier_immo(request, pk):
     })
 
 
-
-
-
 # ══════════════════════════════════════════════════════════════════
 
 # 4. MOUVEMENTS & CONTRATS
 
 # ══════════════════════════════════════════════════════════════════
-
-
-
-@login_required(login_url='/auth/login/')
-
-@patrimoine_required
-
-@verifier_permission('accounts.menu_pat_registre')
-
-def creer_mouvement(request, pk):
-
-    immo = get_object_or_404(Immobilisation, pk=pk)
-
-    if request.method == 'POST':
-
-        type_mv = request.POST.get('type_mouvement')
-
-        try:
-
-            mv = MouvementPatrimoine.objects.create(
-
-                immobilisation=immo, type_mouvement=type_mv, bureau_depart=immo.bureau, service_depart=immo.service_affectation,
-
-                bureau_arrivee_id=request.POST.get('bureau_arrivee') or None, service_arrivee_id=request.POST.get('service_arrivee') or None,
-
-                date_mouvement=request.POST.get('date_mouvement') or timezone.now().date(), motif=request.POST.get('motif', ''), effectue_par=request.user, cree_par=request.user,
-
-            )
-
-            if type_mv == 'MUTATION':
-
-                immo.bureau_id = request.POST.get('bureau_arrivee') or None
-
-                immo.service_affectation_id = request.POST.get('service_arrivee') or None
-
-            elif type_mv == 'REPARATION':
-
-                immo.statut = 'EN_PANNE'
-
-            elif type_mv == 'RETOUR_REPARATION':
-
-                immo.statut = 'ACTIF'
-
-            elif type_mv == 'REFORME':
-                immo.statut = 'REFORME'
-            elif type_mv == 'CESSION':
-                immo.statut = 'CEDE'
-            elif type_mv == 'PERTE':
-                immo.statut = 'DISPARU'
-            elif type_mv == 'REMPLACEMENT':
-                immo.statut = 'REFORME'
-            elif type_mv == 'AFFECTATION':
-                immo.statut = 'ACTIF'
-            immo.modifie_par = request.user
-
-            immo.save()
-
-            messages.success(request, f"✅ Mouvement enregistré.")
-
-        except Exception as e:
-
-            messages.error(request, f"❌ Erreur : {e}")
-
-        return redirect('patrimoine_detail', pk=pk)
-
-
-
-    return render(request, 'patrimoine/mouvement.html', {'immo': immo, 'types': MouvementPatrimoine.TYPE_CHOICES, 'bureaux': Bureau.objects.select_related('etage__batiment').all()})
-
-
-
-@login_required(login_url='/auth/login/')
-
-@patrimoine_required
-
-@verifier_permission('accounts.menu_pat_historique')
-
-def liste_mouvements(request):
-
-    qs = MouvementPatrimoine.objects.select_related('immobilisation', 'bureau_depart__etage__batiment', 'bureau_arrivee__etage__batiment', 'effectue_par').order_by('-date_mouvement')
-
-    return render(request, 'patrimoine/mouvements.html', {'mouvements': Paginator(qs, 25).get_page(request.GET.get('page'))})
-
 
 
 @login_required(login_url='/auth/login/')
@@ -694,11 +575,9 @@ def liste_contrats(request):
         return redirect('patrimoine_contrats')
 
 
-
     qs = ContratMaintenance.objects.select_related('prestataire', 'type_contrat').annotate(nb_equip=Count('equipements')).order_by('date_fin')
 
     
-
     return render(request, 'patrimoine/contrats.html', {
 
         'contrats': qs, 
@@ -712,7 +591,6 @@ def liste_contrats(request):
         'nb_expires': qs.filter(date_fin__lt=timezone.now().date()).count(),
 
     })
-
 
 
 @login_required(login_url='/auth/login/')
@@ -754,7 +632,6 @@ def detail_contrat(request, pk):
     return render(request, 'patrimoine/contrat_detail.html', {'contrat': contrat, 'interventions': contrat.interventions.order_by('-date_signalement')[:20]})
 
 
-
 @login_required(login_url='/auth/login/')
 
 @patrimoine_required
@@ -768,7 +645,6 @@ def assigner_equipements_contrat(request, contrat_id):
     contrat = get_object_or_404(ContratMaintenance, id=contrat_id)
 
     
-
     equipements_disponibles = Immobilisation.objects.filter(
 
         Q(contrat_maintenance__isnull=True) | 
@@ -780,13 +656,11 @@ def assigner_equipements_contrat(request, contrat_id):
     ).select_related('type_equipement__categorie', 'service_affectation', 'bureau__etage__batiment')
 
 
-
     batiment_id = request.GET.get('batiment')
 
     service_id = request.GET.get('service')
 
     type_id = request.GET.get('type')
-
 
 
     if batiment_id:
@@ -802,7 +676,6 @@ def assigner_equipements_contrat(request, contrat_id):
         equipements_disponibles = equipements_disponibles.filter(type_equipement_id=type_id)
 
 
-
     if request.method == 'POST':
 
         equipements_coches = request.POST.getlist('equipements')
@@ -816,7 +689,6 @@ def assigner_equipements_contrat(request, contrat_id):
         messages.success(request, "✅ La couverture du contrat a été mise à jour avec succès.")
 
         return redirect('patrimoine_contrats')
-
 
 
     context = {
@@ -842,15 +714,11 @@ def assigner_equipements_contrat(request, contrat_id):
     return render(request, 'patrimoine/assigner_equipements_contrat.html', context)
 
 
-
-
-
 # ══════════════════════════════════════════════════════════════════
 
 # 6. GESTION DES INTERVENTIONS (LES 3 NOUVEAUX MODES)
 
 # ══════════════════════════════════════════════════════════════════
-
 
 
 @login_required(login_url='/auth/login/')
@@ -866,7 +734,6 @@ def liste_interventions(request):
     mode_visibilite = params.mode_visibilite_interventions
 
     qs = Intervention.objects.all()
-
 
 
     if not request.user.is_superuser:
@@ -898,13 +765,11 @@ def liste_interventions(request):
                 qs = Intervention.objects.none()
 
 
-
     qs = qs.select_related('immobilisation__type_equipement__categorie', 'immobilisation__service_affectation', 'intervenant', 'contrat').order_by('-date_signalement')
 
     per_page = request.GET.get('per_page', '15')
 
     limite = qs.count() or 1 if per_page == 'all' else int(per_page) if per_page.isdigit() else 15
-
 
 
     return render(request, 'patrimoine/interventions.html', {
@@ -914,9 +779,6 @@ def liste_interventions(request):
         'mode_visibilite': mode_visibilite,
 
     })
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -934,11 +796,9 @@ def detail_intervention(request, intervention_id):
     techniciens_externes = TechnicienPrestataire.objects.filter(est_actif=True)
 
 
-
     if request.method == 'POST':
 
         action = request.POST.get('action')
-
 
 
         if action == 'prendre_en_charge':
@@ -954,7 +814,6 @@ def detail_intervention(request, intervention_id):
             messages.success(request, "🔧 Vous avez pris en charge cette intervention.")
 
 
-
         elif action == 'demander_pieces':
 
             params = ParametresPatrimoine.get_parametres()
@@ -966,11 +825,9 @@ def detail_intervention(request, intervention_id):
                 return redirect('detail_intervention', intervention_id=intervention.id)
 
 
-
             article_ids = request.POST.getlist('articles[]')
 
             quantites = request.POST.getlist('quantites[]')
-
 
 
             if article_ids:
@@ -1005,7 +862,6 @@ def detail_intervention(request, intervention_id):
                 messages.success(request, "📦 Demande envoyée au magasin.")
 
 
-
         elif action == 'receptionner_demande':
 
             demande_id = request.POST.get('demande_id')
@@ -1025,7 +881,6 @@ def detail_intervention(request, intervention_id):
             messages.success(request, "📦 Pièces réceptionnées.")
 
 
-
         elif action == 'deleguer_prestataire':
 
             prestataire_id = request.POST.get('prestataire')
@@ -1033,7 +888,6 @@ def detail_intervention(request, intervention_id):
             tech_id = request.POST.get('technicien_appele')
 
             sortie = request.POST.get('necessite_sortie') == 'on'
-
 
 
             intervention.prestataire_concerne_id = prestataire_id if prestataire_id else None
@@ -1047,7 +901,6 @@ def detail_intervention(request, intervention_id):
             intervention.statut = 'EN_COURS'
 
             
-
             if sortie:
 
                 MouvementPatrimoine.objects.create(
@@ -1073,9 +926,7 @@ def detail_intervention(request, intervention_id):
                 intervention.immobilisation.save()
 
 
-
             messages.success(request, "🤝 Intervention déléguée au prestataire externe.")
-
 
 
         elif action == 'retour_prestataire':
@@ -1087,7 +938,6 @@ def detail_intervention(request, intervention_id):
             intervention.actions_effectuees = request.POST.get('rapport', '')
 
             
-
             if 'rapport_scan' in request.FILES:
 
                 intervention.rapport_prestataire_scan = request.FILES['rapport_scan']
@@ -1097,11 +947,9 @@ def detail_intervention(request, intervention_id):
                 intervention.bon_sortie_signe_scan = request.FILES['bon_signe']
 
             
-
             intervention.statut = 'EN_ATTENTE_VALIDATION'
 
             
-
             if intervention.necessite_sortie_reparation:
 
                 MouvementPatrimoine.objects.create(
@@ -1125,7 +973,6 @@ def detail_intervention(request, intervention_id):
             messages.success(request, "✅ Retour enregistré, rapport joint et dossier transmis pour validation.")
 
 
-
         elif action == 'soumettre_devis':
 
             intervention.frais_hors_contrat = Decimal(request.POST.get('montant_devis', 0))
@@ -1139,7 +986,6 @@ def detail_intervention(request, intervention_id):
             messages.success(request, "📝 Devis soumis. En attente de l'accord de l'administration.")
 
 
-
         elif action == 'valider_devis' and request.user.is_superuser:
 
             intervention.devis_accepte = True
@@ -1147,7 +993,6 @@ def detail_intervention(request, intervention_id):
             intervention.statut = 'EN_COURS'
 
             messages.success(request, "✅ Devis validé ! L'intervention se poursuit.")
-
 
 
         elif action == 'refuser_devis' and request.user.is_superuser:
@@ -1159,7 +1004,6 @@ def detail_intervention(request, intervention_id):
             messages.warning(request, "❌ Devis refusé.")
 
             
-
         elif action == 'resoudre':
 
             demandes_inutiles = intervention.demandes_pieces.exclude(statut__in=['LIVREE', 'RECEPTIONNE', 'CLOTUREE', 'REFUSEE', 'ANNULEE'])
@@ -1187,7 +1031,6 @@ def detail_intervention(request, intervention_id):
             messages.success(request, "✅ Réparation terminée. En attente de validation.")
 
 
-
         elif action == 'valider' and request.user.is_superuser:
 
             intervention.statut = 'RESOLUE'
@@ -1207,11 +1050,9 @@ def detail_intervention(request, intervention_id):
             messages.success(request, "🎉 Intervention clôturée !")
 
 
-
         intervention.save()
 
         return redirect('detail_intervention', intervention_id=intervention.id)
-
 
 
     return render(request, 'patrimoine/detail_intervention.html', {
@@ -1227,67 +1068,6 @@ def detail_intervention(request, intervention_id):
     })
 
 
-
-@login_required(login_url='/auth/login/')
-
-def declarer_panne_pc(request):
-
-    if request.method == 'POST':
-
-        immo_id = request.POST.get('equipement')
-
-        description = request.POST.get('description', '')
-
-        photo = request.FILES.get('photo')
-
-        equipement = get_object_or_404(Immobilisation, id=immo_id)
-
-        
-
-        Intervention.objects.create(
-
-            immobilisation=equipement, type_intervention='CURATIVE', statut='NOUVELLE',
-
-            description_probleme=description, photo=photo, cree_par=request.user
-
-        )
-
-        equipement.statut = 'EN_PANNE'
-
-        equipement.save()
-
-        messages.success(request, f"✅ Panne signalée pour {equipement.nom_affichage}.")
-
-        return redirect('patrimoine_mes_tickets')
-
-        
-
-    equipements = Immobilisation.objects.exclude(statut__in=['EN_ATTENTE', 'REFORME']).select_related('service_affectation', 'bureau').order_by('nom_affichage')
-
-    
-
-    params = ParametresPatrimoine.get_parametres()
-
-    if not request.user.is_superuser and hasattr(request.user, 'profil'):
-
-        profil = request.user.profil
-
-        if params.perimetre_declaration == 'SERVICE' and profil.service:
-
-            equipements = equipements.filter(service_affectation=profil.service)
-
-        elif params.perimetre_declaration == 'BUREAU' and profil.bureau:
-
-            equipements = equipements.filter(bureau=profil.bureau)
-
-            
-
-    return render(request, 'patrimoine/declarer_panne_pc.html', {'equipements': equipements})
-
-
-
-
-
 @login_required(login_url="/auth/login/")
 
 def signaler_panne(request, immo_id):
@@ -1300,7 +1080,7 @@ def signaler_panne(request, immo_id):
 
         photo = request.FILES.get('photo')
 
-        Intervention.objects.create(
+        intervention = Intervention.objects.create(
 
             immobilisation=equipement, type_intervention='CURATIVE', statut='NOUVELLE',
 
@@ -1308,12 +1088,9 @@ def signaler_panne(request, immo_id):
 
         )
 
-        return render(request, 'patrimoine/confirmer_signalement_panne.html')
+        return render(request, 'patrimoine/confirmer_signalement_panne.html', {'intervention': intervention})
 
     return render(request, 'patrimoine/signaler_panne.html', {'equipement': equipement})
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -1371,13 +1148,9 @@ def creer_intervention(request, immo_pk):
             messages.error(request, f"❌ Erreur : {e}")
 
 
-
     contrats = ContratMaintenance.objects.filter(equipements=immo, statut='ACTIF')
 
     return render(request, 'patrimoine/creer_intervention.html', {'immo': immo, 'contrats': contrats, 'types': Intervention.TYPE_CHOICES})
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -1421,15 +1194,11 @@ def valider_intervention(request, pk):
     return redirect('patrimoine_detail', pk=inter.immobilisation_id)
 
 
-
-
-
 # ══════════════════════════════════════════════════════════════════
 
 # 7. PORTAIL PRESTATAIRE & PARAMÈTRES
 
 # ══════════════════════════════════════════════════════════════════
-
 
 
 @login_required(login_url='/auth/login/')
@@ -1463,9 +1232,6 @@ def portail_prestataire(request):
     return render(request, 'patrimoine/portail_prestataire.html', {'compte': compte, 'contrats': contrats, 'interventions_recentes': interventions_recentes})
 
 
-
-
-
 @login_required(login_url='/auth/login/')
 
 @patrimoine_required
@@ -1477,7 +1243,6 @@ def parametres(request):
     params = ParametresPatrimoine.objects.first()
 
     
-
     if request.method == 'POST':
 
         action  = request.POST.get('action')
@@ -1485,7 +1250,6 @@ def parametres(request):
         item_id = request.POST.get('item_id')
 
         
-
         try:
 
             if action == 'toggle_chef':
@@ -1495,7 +1259,6 @@ def parametres(request):
                 utilisateur = User.objects.get(id=user_id)
 
                 
-
                 # 🔒 Protection : vérifier que le user a un profil
 
                 if not hasattr(utilisateur, 'profil') or utilisateur.profil is None:
@@ -1505,7 +1268,6 @@ def parametres(request):
                     return redirect('patrimoine_parametres')
 
                 
-
                 # Sécurité : on ne peut promouvoir que des gens de SON service (ou superuser)
 
                 if not request.user.is_superuser and hasattr(request.user, 'profil') and request.user.profil.service:
@@ -1517,7 +1279,6 @@ def parametres(request):
                         return redirect('patrimoine_parametres')
 
                 
-
                 nouveau_statut = not utilisateur.profil.est_chef_service
 
                 utilisateur.profil.est_chef_service = nouveau_statut
@@ -1529,7 +1290,6 @@ def parametres(request):
                 messages.success(request, f"✅ {utilisateur.get_full_name() or utilisateur.username} a été {titre}.")
 
 
-
             elif action == 'save_visibilite':
 
                 nouveau_mode = request.POST.get('mode_visibilite')
@@ -1539,7 +1299,6 @@ def parametres(request):
                     params.mode_visibilite_interventions = nouveau_mode
 
                 
-
                 nouveau_perimetre = request.POST.get('perimetre_declaration')
 
                 if nouveau_perimetre in ['LIBRE', 'SERVICE', 'BUREAU']:
@@ -1547,7 +1306,6 @@ def parametres(request):
                     params.perimetre_declaration = nouveau_perimetre
 
                     
-
                 magasin_id = request.POST.get('magasin_pieces')
 
                 if magasin_id:
@@ -1559,21 +1317,17 @@ def parametres(request):
                     params.magasin_pieces = None
 
                     
-
                 params.validation_inventaire_active = (request.POST.get('validation_inventaire') == 'on')
 
                 params.save()
 
                 
-
                 validateurs_ids = request.POST.getlist('validateurs_inventaire')
 
                 params.validateurs_inventaire.set(validateurs_ids)
 
                 
-
                 messages.success(request, "✅ Configuration et workflows mis à jour.")
-
 
 
             elif action == 'save_technicien':
@@ -1585,7 +1339,6 @@ def parametres(request):
                 utilisateur = User.objects.get(id=user_id)
 
                 
-
                 # 🔒 Protection profil
 
                 if not hasattr(utilisateur, 'profil') or utilisateur.profil is None:
@@ -1595,11 +1348,9 @@ def parametres(request):
                     return redirect('patrimoine_parametres')
 
                     
-
                 utilisateur.profil.domaines_intervention.set(categories_ids)
 
                 messages.success(request, f"✅ Compétences mises à jour pour {utilisateur.get_full_name() or utilisateur.username}.")
-
 
 
             elif action == 'save_batiment':
@@ -1625,7 +1376,6 @@ def parametres(request):
                     b.services.set(services_ids)
 
                 messages.success(request, "Bâtiment et ses bureaux mis à jour.")
-
 
 
             elif action == 'save_etage':
@@ -1655,7 +1405,6 @@ def parametres(request):
                 messages.success(request, "Étage et ses bureaux mis à jour.")
 
 
-
             elif action == 'save_bureau':
 
                 nom = request.POST.get('nom', '').upper()
@@ -1683,7 +1432,6 @@ def parametres(request):
                 messages.success(request, "Bureau enregistré et services liés.")
 
                 
-
             elif action == 'assigner_bureau':
 
                 user_id = request.POST.get('user_id')
@@ -1693,7 +1441,6 @@ def parametres(request):
                 utilisateur = User.objects.get(id=user_id)
 
                 
-
                 # 🔒 Protection profil
 
                 if not hasattr(utilisateur, 'profil') or utilisateur.profil is None:
@@ -1703,13 +1450,11 @@ def parametres(request):
                     return redirect('patrimoine_parametres')
 
                     
-
                 utilisateur.profil.bureau_id = bureau_id if bureau_id else None
 
                 utilisateur.profil.save()
 
                 messages.success(request, f"✅ Bureau assigné à {utilisateur.get_full_name() or utilisateur.username}.")
-
 
 
             elif action == 'save_categorie':
@@ -1729,7 +1474,6 @@ def parametres(request):
                 messages.success(request, "Catégorie supprimée.")
 
 
-
             elif action == 'save_type':
 
                 data = {'categorie_id': request.POST.get('categorie'), 'nom': request.POST.get('nom', '').upper(), 'code': request.POST.get('code', '').upper(), 'duree_amortissement_defaut': int(request.POST.get('duree', 5)), 'mode_amortissement': request.POST.get('mode', 'LINEAIRE'), 'modifie_par': request.user}
@@ -1747,7 +1491,6 @@ def parametres(request):
                 messages.success(request, "Type supprimé.")
 
 
-
             elif action == 'save_marque':
 
                 nom = request.POST.get('nom', '').upper()
@@ -1763,7 +1506,6 @@ def parametres(request):
                 Marque.objects.get(pk=item_id).delete()
 
                 messages.success(request, "Marque supprimée.")
-
 
 
             elif action == 'save_fournisseur':
@@ -1787,7 +1529,6 @@ def parametres(request):
                 messages.success(request, "🗑️ Fournisseur supprimé.")
 
 
-
             elif action == 'save_tech_externe':
 
                 if item_id:
@@ -1807,7 +1548,6 @@ def parametres(request):
                 TechnicienPrestataire.objects.filter(id=item_id).delete()
 
                 messages.success(request, "🗑️ Technicien externe supprimé.")
-
 
 
             elif action == 'save_type_contrat':
@@ -1831,7 +1571,6 @@ def parametres(request):
                 messages.success(request, "🗑️ Type de contrat supprimé.")
 
                 
-
         except ProtectedError:
 
             messages.error(request, "⛔ Impossible de supprimer — élément utilisé ailleurs.")
@@ -1841,9 +1580,7 @@ def parametres(request):
             messages.error(request, f"❌ Erreur : {e}")
 
 
-
         return redirect('patrimoine_parametres')
-
 
 
     # 🔒 FILTRAGE : on n'affiche que les users AYANT un profil
@@ -1865,9 +1602,7 @@ def parametres(request):
     ).order_by('first_name')
 
     
-
     from stock.models import Magasin, Fournisseur
-
 
 
     context = {
@@ -1899,9 +1634,6 @@ def parametres(request):
     }
 
     return render(request, 'patrimoine/parametres.html', context)
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -1949,15 +1681,11 @@ def editer_schema(request, pk):
     return render(request, 'patrimoine/editer_schema.html', {'te': te})
 
 
-
-
-
 # ══════════════════════════════════════════════════════════════════
 
 # 10. AJAX & UTILS
 
 # ══════════════════════════════════════════════════════════════════
-
 
 
 @login_required(login_url="/auth/login/")
@@ -1967,7 +1695,6 @@ def ajax_modeles(request):
     marque_id = request.GET.get('marque')
 
     return JsonResponse(list(Modele.objects.filter(marque_id=marque_id).values('id', 'nom').order_by('nom')), safe=False)
-
 
 
 @login_required(login_url="/auth/login/")
@@ -1985,7 +1712,6 @@ def ajax_batiments(request):
     return JsonResponse(list(qs.values('id', 'nom').order_by('nom')), safe=False)
 
 
-
 @login_required(login_url="/auth/login/")
 
 def ajax_localisation(request):
@@ -1999,7 +1725,6 @@ def ajax_localisation(request):
     bureau_id = request.GET.get('bureau')
 
 
-
     qs_b = Bureau.objects.all()
 
     qs_e = Etage.objects.all()
@@ -2007,7 +1732,6 @@ def ajax_localisation(request):
     qs_bat = Batiment.objects.all()
 
     qs_s = Service.objects.all()
-
 
 
     if service_id:
@@ -2019,7 +1743,6 @@ def ajax_localisation(request):
         qs_bat = qs_bat.filter(etages__bureaux__services__id=service_id).distinct()
 
     
-
     if batiment_id:
 
         qs_b = qs_b.filter(etage__batiment_id=batiment_id)
@@ -2029,7 +1752,6 @@ def ajax_localisation(request):
         qs_s = qs_s.filter(bureaux_occupes__etage__batiment_id=batiment_id).distinct()
 
         
-
     if etage_id:
 
         qs_b = qs_b.filter(etage_id=etage_id)
@@ -2039,7 +1761,6 @@ def ajax_localisation(request):
         qs_s = qs_s.filter(bureaux_occupes__etage_id=etage_id).distinct()
 
         
-
     if bureau_id:
 
         qs_e = qs_e.filter(bureaux__id=bureau_id).distinct()
@@ -2047,7 +1768,6 @@ def ajax_localisation(request):
         qs_bat = qs_bat.filter(etages__bureaux__id=bureau_id).distinct()
 
         qs_s = qs_s.filter(bureaux_occupes__id=bureau_id).distinct()
-
 
 
     return JsonResponse({
@@ -2061,7 +1781,6 @@ def ajax_localisation(request):
         'bureaux': list(qs_b.values('id', 'nom').order_by('nom'))
 
     })
-
 
 
 @login_required(login_url="/auth/login/")
@@ -2079,7 +1798,6 @@ def ajax_specs_schema(request):
         return JsonResponse({'schema': [], 'duree': 5, 'mode': 'LINEAIRE'})
 
 
-
 @login_required(login_url="/auth/login/")
 
 def ajax_vnc(request, pk):
@@ -2093,7 +1811,6 @@ def ajax_vnc(request, pk):
     except Immobilisation.DoesNotExist:
 
         return JsonResponse({'error': 'not found'}, status=404)
-
 
 
 @login_required(login_url='/auth/login/')
@@ -2123,7 +1840,6 @@ def quick_edit(request, pk):
     return JsonResponse({'success': True, 'valeur': val, 'modifie_par': request.user.get_full_name() or request.user.username})
 
 
-
 @login_required(login_url='/auth/login/')
 
 @patrimoine_required
@@ -2149,7 +1865,6 @@ def etiquette_qr(request, pk):
     img.save(buffer, format="PNG")
 
     return render(request, 'patrimoine/etiquette_qr.html', {'immo': immo, 'qr_code': base64.b64encode(buffer.getvalue()).decode("utf-8")})
-
 
 
 @login_required(login_url='/auth/login/')
@@ -2185,7 +1900,6 @@ def creer_type_equipement(request):
     return render(request, 'patrimoine/creer_type_equipement.html', {'categories': CategoriePatrimoine.objects.all()})
 
 
-
 @login_required(login_url='/auth/login/')
 
 @patrimoine_required
@@ -2201,7 +1915,6 @@ def api_type_specs(request, type_id):
     except TypeEquipement.DoesNotExist:
 
         return JsonResponse({'specs': []})
-
 
 
 @login_required(login_url='/auth/login/')
@@ -2259,7 +1972,6 @@ def eclater_bien_sas(request):
         return JsonResponse({'success': False, 'error': str(e)})
 
 
-
 @login_required(login_url='/auth/login/')
 
 @patrimoine_required
@@ -2273,7 +1985,6 @@ def creer_immatriculation_directe(request):
     return redirect('patrimoine_valider_sas', pk=nouvelle_immo.id)
 
 
-
 @login_required(login_url='/auth/login/')
 def scan_mobile(request, code):
 
@@ -2282,13 +1993,11 @@ def scan_mobile(request, code):
     return render(request, 'patrimoine/scan_mobile.html', {'immo': immo})
 
 
-
 # ══════════════════════════════════════════════════════════════════
 
 # 11. EXPORTS ET IMPORTS EXCEL
 
 # ══════════════════════════════════════════════════════════════════
-
 
 
 COLONNES_FIXES = [
@@ -2302,7 +2011,6 @@ COLONNES_FIXES = [
     'Garantie expiration (AAAA-MM-JJ)', 'Action requise', 'Notes',
 
 ]
-
 
 
 @login_required(login_url='/auth/login/')
@@ -2322,7 +2030,6 @@ def export_registre_excel(request):
     ).exclude(statut='EN_ATTENTE').order_by('-date_creation')
 
 
-
     q            = request.GET.get('q', '')
 
     categorie_id = request.GET.get('categorie', '')
@@ -2334,7 +2041,6 @@ def export_registre_excel(request):
     service_id   = request.GET.get('service', '')
 
     batiment_id  = request.GET.get('batiment', '')
-
 
 
     if q:
@@ -2358,7 +2064,6 @@ def export_registre_excel(request):
     if batiment_id:  qs = qs.filter(bureau__etage__batiment_id=batiment_id)
 
 
-
     wb = openpyxl.Workbook()
 
     ws = wb.active
@@ -2366,13 +2071,11 @@ def export_registre_excel(request):
     ws.title = "Registre Patrimoine"
 
 
-
     hf = Font(bold=True, color='FFFFFF', size=11)
 
     hb = PatternFill('solid', fgColor='1C5B96')
 
     ca = Alignment(horizontal='center', vertical='center')
-
 
 
     headers = [
@@ -2388,7 +2091,6 @@ def export_registre_excel(request):
     ]
 
 
-
     ws.row_dimensions[1].height = 35
 
     for i, h in enumerate(headers, 1):
@@ -2398,7 +2100,6 @@ def export_registre_excel(request):
         c.font = hf; c.fill = hb; c.alignment = ca
 
         ws.column_dimensions[get_column_letter(i)].width = max(16, len(h)+4)
-
 
 
     for row_i, immo in enumerate(qs, 2):
@@ -2448,9 +2149,7 @@ def export_registre_excel(request):
                 ws.cell(row=row_i, column=col_i).fill = PatternFill('solid', fgColor='F0F6FF')
 
 
-
     ws.freeze_panes = 'A2'
-
 
 
     response = HttpResponse(
@@ -2470,7 +2169,6 @@ def export_registre_excel(request):
     return response
 
 
-
 @login_required(login_url='/auth/login/')
 
 @patrimoine_required
@@ -2482,13 +2180,11 @@ def telecharger_template(request, type_id):
     te = get_object_or_404(TypeEquipement, pk=type_id)
 
 
-
     wb = openpyxl.Workbook()
 
     ws = wb.active
 
     ws.title = te.nom[:30]
-
 
 
     header_font    = Font(bold=True, color='FFFFFF', size=11)
@@ -2500,7 +2196,6 @@ def telecharger_template(request, type_id):
     center         = Alignment(horizontal='center', vertical='center', wrap_text=True)
 
     thin           = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-
 
 
     ws.row_dimensions[1].height = 30
@@ -2516,7 +2211,6 @@ def telecharger_template(request, type_id):
     ws['A1'].fill = PatternFill('solid', fgColor='F0F3F7')
 
 
-
     ws.row_dimensions[2].height = 40
 
     for col_idx, nom_col in enumerate(COLONNES_FIXES, start=1):
@@ -2526,7 +2220,6 @@ def telecharger_template(request, type_id):
         cell.font = header_font; cell.fill = header_fill_b; cell.alignment = center; cell.border = thin
 
         ws.column_dimensions[get_column_letter(col_idx)].width = max(18, len(nom_col) + 4)
-
 
 
     for i, spec in enumerate(te.specs_schema):
@@ -2540,7 +2233,6 @@ def telecharger_template(request, type_id):
         cell.font = header_font; cell.fill = header_fill_p; cell.alignment = center; cell.border = thin
 
         ws.column_dimensions[get_column_letter(col_idx)].width = max(18, len(label) + 4)
-
 
 
     ws.row_dimensions[3].height = 20
@@ -2562,9 +2254,7 @@ def telecharger_template(request, type_id):
         cell.alignment = Alignment(horizontal='left', vertical='center')
 
 
-
     ws.freeze_panes = 'A3'
-
 
 
     ws2 = wb.create_sheet("Guide")
@@ -2610,7 +2300,6 @@ def telecharger_template(request, type_id):
     ws2.column_dimensions['B'].width = 65
 
 
-
     response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
 
     response['Content-Disposition'] = f'attachment; filename="template_{te.code}_{timezone.now().strftime("%Y%m%d")}.xlsx"'
@@ -2618,7 +2307,6 @@ def telecharger_template(request, type_id):
     wb.save(response)
 
     return response
-
 
 
 @login_required(login_url='/auth/login/')
@@ -2632,13 +2320,11 @@ def import_excel(request):
     types = TypeEquipement.objects.filter(est_actif=True).select_related('categorie')
 
 
-
     if request.method == 'POST':
 
         fichier   = request.FILES.get('fichier')
 
         type_id   = request.POST.get('type_equipement')
-
 
 
         if not fichier or not type_id:
@@ -2648,7 +2334,6 @@ def import_excel(request):
             return render(request, 'patrimoine/import.html', {'types': types})
 
 
-
         if not fichier.name.endswith(('.xlsx', '.xls')):
 
             messages.error(request, "Format accepté : .xlsx ou .xls uniquement.")
@@ -2656,9 +2341,7 @@ def import_excel(request):
             return render(request, 'patrimoine/import.html', {'types': types})
 
 
-
         te = get_object_or_404(TypeEquipement, pk=type_id)
-
 
 
         try:
@@ -2666,7 +2349,6 @@ def import_excel(request):
             wb = openpyxl.load_workbook(fichier, data_only=True)
 
             ws = wb.active
-
 
 
             header_row  = None
@@ -2690,13 +2372,11 @@ def import_excel(request):
                     break
 
 
-
             if header_row is None:
 
                 messages.error(request, "En-têtes introuvables. Utilisez le template fourni.")
 
                 return redirect('patrimoine_import')
-
 
 
             def get_val(row, key_fragments):
@@ -2712,11 +2392,9 @@ def import_excel(request):
                 return ''
 
 
-
             nb_crees = nb_maj = nb_err = 0
 
             log_err  = []
-
 
 
             for row_num, row in enumerate(ws.iter_rows(min_row=header_row+1, values_only=True), start=header_row+1):
@@ -2728,13 +2406,11 @@ def import_excel(request):
                     continue
 
 
-
                 try:
 
                     from core.models import Service
 
                     from stock.models import Fournisseur
-
 
 
                     nom_bat = get_val(row, ['timent', 'bat'])
@@ -2746,11 +2422,9 @@ def import_excel(request):
                     nom_svc = get_val(row, ['service'])
 
 
-
                     batiment = Batiment.objects.filter(Q(code__iexact=nom_bat) | Q(nom__iexact=nom_bat)).first()
 
                     if not batiment and nom_bat: batiment = Batiment.objects.create(code=nom_bat[:10].upper(), nom=nom_bat.upper(), cree_par=request.user)
-
 
 
                     etage = None
@@ -2758,15 +2432,12 @@ def import_excel(request):
                     if batiment and nom_eta: etage, _ = Etage.objects.get_or_create(batiment=batiment, nom=nom_eta.upper(), defaults={'cree_par': request.user})
 
 
-
                     bureau = None
 
                     if etage and nom_bur: bureau, _ = Bureau.objects.get_or_create(etage=etage, nom=nom_bur.upper(), defaults={'cree_par': request.user})
 
 
-
                     service = Service.objects.filter(nom__iexact=nom_svc).first() if nom_svc else None
-
 
 
                     nom_marque = get_val(row, ['marque'])
@@ -2776,7 +2447,6 @@ def import_excel(request):
                     marque = Marque.objects.get_or_create(nom=nom_marque.upper(), defaults={'cree_par': request.user})[0] if nom_marque else None
 
                     modele = Modele.objects.get_or_create(marque=marque, nom=nom_modele.upper(), defaults={'cree_par': request.user})[0] if marque and nom_modele else None
-
 
 
                     code_pat  = get_val(row, ['asset', 'code', 'inventaire'])
@@ -2792,7 +2462,6 @@ def import_excel(request):
                     garantie_raw = get_val(row, ['garantie', 'expiration'])
 
 
-
                     date_acq = None
 
                     if date_acq_raw:
@@ -2806,7 +2475,6 @@ def import_excel(request):
                             except ValueError: pass
 
 
-
                     valeur = Decimal('0.00')
 
                     if valeur_raw:
@@ -2814,7 +2482,6 @@ def import_excel(request):
                         try: valeur = Decimal(str(valeur_raw).replace(' ', '').replace(',', '.'))
 
                         except Exception: pass
-
 
 
                     garantie = None
@@ -2828,13 +2495,11 @@ def import_excel(request):
                         except Exception: pass
 
 
-
                     action = get_val(row, ['action'])
 
                     if action not in [c[0] for c in Immobilisation.ACTION_CHOICES]: action = 'RAS'
 
                     notes  = get_val(row, ['note'])
-
 
 
                     specs = {}
@@ -2848,11 +2513,9 @@ def import_excel(request):
                         if val: specs[key] = val
 
 
-
                     nom_fourn = get_val(row, ['fournisseur'])
 
                     fournisseur = Fournisseur.objects.filter(raison_sociale__icontains=nom_fourn).first() if nom_fourn else None
-
 
 
                     lookup = {}
@@ -2862,7 +2525,6 @@ def import_excel(request):
                     elif num_serie: lookup['numero_serie'] = num_serie
 
                     else: lookup = None
-
 
 
                     defaults = {
@@ -2882,7 +2544,6 @@ def import_excel(request):
                     }
 
 
-
                     if lookup:
 
                         obj, created = Immobilisation.objects.update_or_create(**lookup, defaults=defaults)
@@ -2898,13 +2559,11 @@ def import_excel(request):
                         nb_crees += 1
 
 
-
                 except Exception as e:
 
                     nb_err += 1
 
                     log_err.append({'ligne': row_num, 'erreur': str(e)})
-
 
 
             statut_log = 'OK' if nb_err == 0 else ('PARTIEL' if nb_crees + nb_maj > 0 else 'ECHEC')
@@ -2918,15 +2577,12 @@ def import_excel(request):
             )
 
 
-
             if nb_err == 0: messages.success(request, f"✅ Import réussi — {nb_crees} créés, {nb_maj} mis à jour.")
 
             else: messages.warning(request, f"⚠️ Import partiel — {nb_crees} créés, {nb_maj} mis à jour, {nb_err} erreurs.")
 
 
-
             return redirect('patrimoine_import_log', pk=log.pk)
-
 
 
         except Exception as e:
@@ -2936,11 +2592,9 @@ def import_excel(request):
             return redirect('patrimoine_import')
 
 
-
     context = {'types': types, 'logs_recents': ImportPatrimoine.objects.order_by('-date_creation')[:5]}
 
     return render(request, 'patrimoine/import.html', context)
-
 
 
 @login_required(login_url='/auth/login/')
@@ -2956,15 +2610,11 @@ def detail_import_log(request, pk):
     return render(request, 'patrimoine/import_log.html', {'log': log})
 
 
-
-
-
 # ══════════════════════════════════════════════════════════════════
 
 # 12. ESPACES DÉDIÉS : TICKETS, DISPATCH ET KANBAN
 
 # ══════════════════════════════════════════════════════════════════
-
 
 
 @login_required(login_url='/auth/login/')
@@ -2982,13 +2632,11 @@ def mes_tickets(request):
     ).order_by('-date_signalement')
 
 
-
     tab = request.GET.get('tab', 'encours')
 
     statuts_historique = ['RESOLUE', 'TERMINEE', 'CLOTUREE', 'ANNULE', 'ANNULEE', 'REJETEE', 'FERME', 'FERMEE']
 
     
-
     if tab == 'historique':
 
         qs = qs.filter(statut__in=statuts_historique)
@@ -2998,13 +2646,11 @@ def mes_tickets(request):
         qs = qs.exclude(statut__in=statuts_historique)
 
 
-
     per_page = request.GET.get('per_page', '10')
 
     limite = qs.count() or 1 if per_page == 'all' else int(per_page) if str(per_page).isdigit() else 10
 
     page = Paginator(qs, limite).get_page(request.GET.get('page'))
-
 
 
     all_qs = Intervention.objects.filter(cree_par=request.user)
@@ -3018,15 +2664,11 @@ def mes_tickets(request):
     }
 
 
-
     return render(request, 'patrimoine/mes_tickets.html', {
 
         'tickets': page, 'stats': stats, 'per_page': per_page, 'current_tab': tab
 
     })
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -3046,7 +2688,6 @@ def dispatch_interventions(request):
         return redirect('/')
 
     
-
     service_chef = request.user.profil.service
 
     if not service_chef:
@@ -3056,11 +2697,9 @@ def dispatch_interventions(request):
         return redirect('/')
 
         
-
     params = ParametresPatrimoine.get_parametres()
 
     mode_actuel = params.mode_visibilite_interventions
-
 
 
     if request.method == 'POST':
@@ -3072,7 +2711,6 @@ def dispatch_interventions(request):
         intervention = get_object_or_404(Intervention, id=intervention_id)
 
         
-
         # Sécurité : on ne peut dispatcher que les pannes de SON service
 
         if intervention.immobilisation.service_affectation != service_chef:
@@ -3082,7 +2720,6 @@ def dispatch_interventions(request):
             return redirect('patrimoine_dispatch')
 
             
-
         if technicien_id:
 
             technicien = get_object_or_404(User, id=technicien_id)
@@ -3098,7 +2735,6 @@ def dispatch_interventions(request):
             messages.success(request, f"✅ Panne assignée à {technicien.get_full_name() or technicien.username}.")
 
         return redirect('patrimoine_dispatch')
-
 
 
     if mode_actuel == 'DISPATCH':
@@ -3126,7 +2762,6 @@ def dispatch_interventions(request):
         pannes_en_attente = Intervention.objects.none()
 
 
-
     # Techniciens rattachés au même service
 
     techniciens = User.objects.filter(
@@ -3136,7 +2771,6 @@ def dispatch_interventions(request):
         profil__service=service_chef
 
     ).order_by('first_name')
-
 
 
     return render(request, 'patrimoine/dispatch.html', {
@@ -3152,7 +2786,6 @@ def dispatch_interventions(request):
     })
 
 
-
 @login_required(login_url='/auth/login/')
 
 @patrimoine_required
@@ -3166,7 +2799,6 @@ def mes_interventions_tech(request):
     mode_visibilite = params.mode_visibilite_interventions
 
 
-
     mes_pannes = Intervention.objects.filter(intervenant=request.user).select_related(
 
         'immobilisation__type_equipement__categorie',
@@ -3178,7 +2810,6 @@ def mes_interventions_tech(request):
     )
 
 
-
     a_faire_perso = mes_pannes.filter(statut__in=['NOUVELLE', 'PLANIFIEE']).order_by('-date_signalement')
 
     en_cours = mes_pannes.filter(statut__in=['EN_COURS', 'EN_ATTENTE_PIECES']).order_by('-date_signalement')
@@ -3186,7 +2817,6 @@ def mes_interventions_tech(request):
     a_valider = mes_pannes.filter(statut='EN_ATTENTE_VALIDATION').order_by('-date_fin_intervention')
 
     historique_perso = mes_pannes.filter(statut__in=['RESOLUE', 'CLOTUREE', 'TERMINEE']).order_by('-date_fin_intervention')
-
 
 
     pannes_libres = Intervention.objects.none()
@@ -3208,7 +2838,6 @@ def mes_interventions_tech(request):
         ).order_by('date_signalement')
 
 
-
         if mode_visibilite == 'GLOBAL':
 
             pannes_libres = base_libres
@@ -3220,9 +2849,7 @@ def mes_interventions_tech(request):
             pannes_libres = base_libres.filter(immobilisation__type_equipement__categorie_id__in=domaines_ids)
 
 
-
     types_equipements = TypeEquipement.objects.all().order_by('nom')
-
 
 
     return render(request, 'patrimoine/mes_interventions.html', {
@@ -3244,9 +2871,6 @@ def mes_interventions_tech(request):
     })
 
 
-
-
-
 @login_required(login_url='/auth/login/')
 
 def suivi_ticket(request, pk):
@@ -3260,9 +2884,6 @@ def suivi_ticket(request, pk):
         return redirect('patrimoine_mes_tickets')
 
     return render(request, 'patrimoine/suivi_ticket.html', {'intervention': intervention})
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -3282,7 +2903,6 @@ def declarer_panne_pc(request):
         equipement = get_object_or_404(Immobilisation, id=immo_id)
 
         
-
         Intervention.objects.create(
 
             immobilisation=equipement, type_intervention='CURATIVE', statut='NOUVELLE',
@@ -3300,11 +2920,9 @@ def declarer_panne_pc(request):
         return redirect('patrimoine_mes_tickets')
 
         
-
     equipements = Immobilisation.objects.exclude(statut__in=['EN_ATTENTE', 'REFORME']).select_related('service_affectation', 'bureau').order_by('nom_affichage')
 
     
-
     try:
 
         params = ParametresPatrimoine.get_parametres()
@@ -3326,11 +2944,7 @@ def declarer_panne_pc(request):
         pass
 
             
-
     return render(request, 'patrimoine/declarer_panne_pc.html', {'equipements': equipements})
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -3344,13 +2958,6 @@ def imprimer_bon_sortie_reparation(request, pk):
     intervention = get_object_or_404(Intervention, pk=pk)
 
     return render(request, 'patrimoine/bon_sortie_reparation_print.html', {'intervention': intervention})
-
-
-
-
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -3368,11 +2975,9 @@ def patrimoine_campagnes_inventaire(request):
     batiments = Batiment.objects.all().order_by('nom')
 
 
-
     if request.method == 'POST':
 
         action = request.POST.get('action')
-
 
 
         if action == 'save_campagne':
@@ -3391,6 +2996,9 @@ def patrimoine_campagnes_inventaire(request):
 
             batiment_id = request.POST.get('batiment_cible') or None
 
+            if not titre or not reference or not date_debut:
+                messages.error(request, "⛔ Titre, référence et date de début sont obligatoires.")
+                return redirect('patrimoine_campagnes_inventaire')
 
 
             if item_id:
@@ -3424,7 +3032,6 @@ def patrimoine_campagnes_inventaire(request):
                 messages.success(request, "Nouvelle campagne d'inventaire créée.")
 
 
-
         elif action == 'delete_campagne':
 
             item_id = request.POST.get('item_id')
@@ -3440,17 +3047,12 @@ def patrimoine_campagnes_inventaire(request):
                 messages.error(request, "⛔ Impossible de supprimer cette campagne car des scans ont déjà été effectués.")
 
 
-
         return redirect('patrimoine_campagnes_inventaire')
-
 
 
     context = {'campagnes': campagnes, 'categories': categories, 'batiments': batiments}
 
     return render(request, 'patrimoine/patrimoine_campagnes_inventaire.html', context)
-
-
-
 
 
 # ==============================================================================
@@ -3470,7 +3072,6 @@ def detail_campagne_inventaire(request, campagne_id):
     campagne = get_object_or_404(CampagneInventairePatrimoine, id=campagne_id)
 
     
-
     params = ParametresPatrimoine.objects.first()
 
     validation_active = params.validation_inventaire_active if params else False
@@ -3480,13 +3081,11 @@ def detail_campagne_inventaire(request, campagne_id):
     peut_valider = request.user in validateurs or request.user.is_superuser
 
     
-
     if request.method == 'POST':
 
         action = request.POST.get('action')
 
         
-
         if action == 'generer_lignes' and campagne.statut == 'BROUILLON':
 
             with transaction.atomic():
@@ -3504,13 +3103,11 @@ def detail_campagne_inventaire(request, campagne_id):
                     biens = biens.filter(bureau__etage__batiment=campagne.batiment_cible)
 
                 
-
                 lignes_a_creer = [LigneInventairePatrimoine(campagne=campagne, immobilisation=bien) for bien in biens]
 
                 LigneInventairePatrimoine.objects.bulk_create(lignes_a_creer)
 
                 messages.success(request, f"Snapshot généré : {len(lignes_a_creer)} équipements trouvés.")
-
 
 
         elif action == 'demarrer' and campagne.statut == 'BROUILLON':
@@ -3528,7 +3125,6 @@ def detail_campagne_inventaire(request, campagne_id):
                 messages.error(request, "Générez la liste avant de démarrer.")
 
 
-
         elif action == 'cloturer' and campagne.statut == 'EN_COURS':
 
             with transaction.atomic():
@@ -3538,7 +3134,6 @@ def detail_campagne_inventaire(request, campagne_id):
                 nb_manquants = lignes_non_pointees.count()
 
                 lignes_non_pointees.update(etat_constate='MANQUANT')
-
 
 
                 if validation_active:
@@ -3556,7 +3151,6 @@ def detail_campagne_inventaire(request, campagne_id):
                     messages.success(request, f"Inventaire clôturé. {nb_manquants} manquants enregistrés.")
 
 
-
         elif action == 'valider_inventaire' and campagne.statut == 'EN_ATTENTE_VALIDATION':
 
             if peut_valider:
@@ -3570,9 +3164,7 @@ def detail_campagne_inventaire(request, campagne_id):
                 messages.error(request, "⛔ Autorisation refusée : vous n'êtes pas dans la liste des validateurs.")
 
 
-
         return redirect('patrimoine_detail_campagne', campagne_id=campagne.id)
-
 
 
     lignes = campagne.lignes.select_related('immobilisation', 'immobilisation__bureau', 'bureau_constate', 'scanne_par').all()
@@ -3582,7 +3174,6 @@ def detail_campagne_inventaire(request, campagne_id):
     pointes = lignes.exclude(etat_constate__isnull=True).count()
 
     
-
     stats = {
 
         'total': total,
@@ -3600,7 +3191,6 @@ def detail_campagne_inventaire(request, campagne_id):
     }
 
 
-
     return render(request, 'patrimoine/detail_campagne_inventaire.html', {
 
         'campagne': campagne,
@@ -3616,11 +3206,9 @@ def detail_campagne_inventaire(request, campagne_id):
     })
 
 
-
 from django.db.models import Count
 
 from django.utils import timezone
-
 
 
 def appliquer_reconciliation_inventaire(request, campagne):
@@ -3634,7 +3222,6 @@ def appliquer_reconciliation_inventaire(request, campagne):
         date_heure = timezone.localtime().strftime('%d/%m/%Y à %H:%M')
 
         
-
         tech_scan = campagne.lignes.exclude(scanne_par__isnull=True).values(
 
             'scanne_par__first_name', 'scanne_par__last_name', 'scanne_par__username'
@@ -3642,7 +3229,6 @@ def appliquer_reconciliation_inventaire(request, campagne):
         ).annotate(total=Count('id')).order_by('-total').first()
 
         
-
         if tech_scan:
 
             nom_tech = f"{tech_scan['scanne_par__first_name']} {tech_scan['scanne_par__last_name']}".strip() or tech_scan['scanne_par__username']
@@ -3650,7 +3236,6 @@ def appliquer_reconciliation_inventaire(request, campagne):
         else:
 
             nom_tech = campagne.cree_par.get_full_name() if campagne.cree_par else "Équipe technique"
-
 
 
         if a_ete_valide:
@@ -3662,7 +3247,6 @@ def appliquer_reconciliation_inventaire(request, campagne):
             phrase_tracabilite = f"Inventorié et clôturé par : {user_actuel} le {date_heure} (Sans double validation)."
 
             
-
         for ligne in campagne.lignes.filter(etat_constate='DEPLACE'):
 
             if ligne.bureau_constate:
@@ -3688,7 +3272,6 @@ def appliquer_reconciliation_inventaire(request, campagne):
                 )
 
 
-
         for ligne in campagne.lignes.filter(etat_constate='A_REFORMER'):
 
             immo = ligne.immobilisation
@@ -3710,11 +3293,9 @@ def appliquer_reconciliation_inventaire(request, campagne):
             )
 
 
-
         campagne.lignes.filter(etat_constate__isnull=True).update(etat_constate='MANQUANT')
 
         
-
         for ligne in campagne.lignes.filter(etat_constate='MANQUANT'):
 
             immo = ligne.immobilisation
@@ -3734,13 +3315,11 @@ def appliquer_reconciliation_inventaire(request, campagne):
             )
 
 
-
         campagne.statut = 'TERMINEE'
 
         campagne.date_fin_prevue = timezone.localtime().date()
 
         campagne.save()
-
 
 
 # ==============================================================================
@@ -3762,7 +3341,6 @@ def audit_scan_inventaire(request, campagne_id):
     bureaux = Bureau.objects.all().select_related('etage__batiment').order_by('etage__batiment__nom', 'nom')
 
 
-
     if request.method == 'POST':
 
         code_scanne = request.POST.get('code_patrimoine', '').strip()
@@ -3770,7 +3348,6 @@ def audit_scan_inventaire(request, campagne_id):
         ligne_id = request.POST.get('ligne_id')
 
         
-
         if code_scanne and not ligne_id:
 
             ligne = LigneInventairePatrimoine.objects.filter(campagne=campagne, immobilisation__code_patrimoine__iexact=code_scanne).first()
@@ -3800,7 +3377,6 @@ def audit_scan_inventaire(request, campagne_id):
             return render(request, 'patrimoine/audit_scan_inventaire.html', {'campagne': campagne, 'ligne_trouvee': ligne, 'bureaux': bureaux})
 
 
-
         if ligne_id:
 
             ligne = get_object_or_404(LigneInventairePatrimoine, id=ligne_id, campagne=campagne)
@@ -3822,11 +3398,7 @@ def audit_scan_inventaire(request, campagne_id):
             return redirect('patrimoine_audit_scan', campagne_id=campagne.id)
 
 
-
     return render(request, 'patrimoine/audit_scan_inventaire.html', {'campagne': campagne, 'bureaux': bureaux})
-
-
-
 
 
 from django.template.loader import render_to_string
@@ -3838,9 +3410,7 @@ from weasyprint import HTML
 import logging
 
 
-
 logger = logging.getLogger(__name__)
-
 
 
 @login_required(login_url='/auth/login/')
@@ -3860,9 +3430,7 @@ def imprimer_fiche_comptage(request, campagne_id):
     ).order_by('immobilisation__bureau__etage__batiment__nom', 'immobilisation__bureau__nom', 'immobilisation__nom_affichage')
 
 
-
     context = {'campagne': campagne, 'lignes': lignes}
-
 
 
     try:
@@ -3884,7 +3452,6 @@ def imprimer_fiche_comptage(request, campagne_id):
         raise
 
 
-
     response = HttpResponse(pdf_file, content_type='application/pdf')
 
     nom_fichier = f"Fiche_Comptage_{campagne.reference}.pdf"
@@ -3892,9 +3459,6 @@ def imprimer_fiche_comptage(request, campagne_id):
     response['Content-Disposition'] = f'inline; filename="{nom_fichier}"'
 
     return response
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -3912,7 +3476,6 @@ def registre_rebuts(request):
     ).order_by('-id')
 
     
-
     for r in rebuts:
 
         mvt_reforme = r.mouvements.filter(type_mouvement='REFORME').order_by('-date_mouvement').first()
@@ -3920,11 +3483,7 @@ def registre_rebuts(request):
         r.details_tracabilite = mvt_reforme
 
 
-
     return render(request, 'patrimoine/registre_rebuts.html', {'rebuts': rebuts})
-
-
-
 
 
 @login_required(login_url='/auth/login/')
@@ -3942,7 +3501,6 @@ def registre_pertes(request):
     ).order_by('-id')
 
     
-
     for p in pertes:
 
         mvt_perte = p.mouvements.filter(type_mouvement='PERTE').order_by('-date_mouvement').first()
@@ -3950,9 +3508,7 @@ def registre_pertes(request):
         p.details_tracabilite = mvt_perte
 
 
-
     return render(request, 'patrimoine/registre_pertes.html', {'pertes': pertes})
-
 
 
 # ══════════════════════════════════════════════════════════════════

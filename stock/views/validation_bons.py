@@ -223,7 +223,7 @@ def valider_bon(request, bon_id):
 
     if bon:
         return redirect(_get_redirect_url(bon.type_bon))
-    return redirect('liste_bons')
+    return redirect('liste_sorties')
 
 
 # ──────────────────────────────────────────────────────────────
@@ -237,7 +237,7 @@ def _get_redirect_url(type_bon):
         'SORTIE':             'liste_sorties',
         'SORTIE_HORS_STOCK':  'liste_bons_hors_stock',
         'RETOUR_SERVICE':     'liste_retours_services',
-        'RETOUR_FOURNISSEUR': 'liste_retours_fournisseurs',
+        'RETOUR_FOURNISSEUR': 'liste_retours_services',
         'AJUSTEMENT':         'liste_ajustements',
     }
-    return url_map.get(type_bon, 'liste_bons')
+    return url_map.get(type_bon, 'liste_sorties')

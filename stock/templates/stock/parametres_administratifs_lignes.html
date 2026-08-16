@@ -1,0 +1,178 @@
+{% comment %}
+Fragment AJAX pour la page ParamÃ¨tres â†’ Administratifs.
+Rendu uniquement via X-Requested-With (branche XMLHttpRequest de parametres_administratifs).
+Reproduit les 3 zones ciblÃ©es par les recherches automatiques : #zone-services, #zone-specs, #zone-fonctions.
+{% endcomment %}
+
+<div id="zone-services">
+  <table class="param-table">
+    <thead>
+      <tr>
+        <th style="width:12%;">Code</th>
+        <th style="width:28%;">Nom du Service</th>
+        <th style="width:14%;">TÃ©l. Poste</th>
+        <th style="width:14%;">TÃ©lÃ©copie</th>
+        <th style="width:22%;">TraÃ§abilitÃ©</th>
+        <th class="c" style="width:10%;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for s in services %}
+      <tr>
+        <td><code style="background: var(--bg-stripe);padding:2px 7px;border-radius:5px;font-size:12px;color: var(--text-medium);">{{ s.code|default:"â€”" }}</code></td>
+        <td><strong style="color: var(--text-dark);">{{ s.nom }}</strong></td>
+        <td style="font-size:13px;color: var(--text-medium);">{{ s.poste_telephone|default:"â€”" }}</td>
+        <td style="font-size:13px;color: var(--text-medium);">{{ s.telecopie|default:"â€”" }}</td>
+        <td>
+          <div class="tracab">
+            <div><i class="fas fa-user-plus" style="color:#28a745;"></i> {{ s.cree_par.username|default:"SystÃ¨me" }} â€” {{ s.date_creation|date:"d/m/Y H:i" }}</div>
+            {% if s.modifie_par %}<div><i class="fas fa-user-edit" style="color:#17a2b8;"></i> {{ s.modifie_par.username }} â€” {{ s.date_modification|date:"d/m/Y H:i" }}</div>{% endif %}
+          </div>
+        </td>
+        <td class="c">
+          <a href="?edit_service={{ s.id }}&open=services" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
+          <form method="POST" id="del-svc-{{ s.id }}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="service_id" value="{{ s.id }}">
+            <input type="hidden" name="supprimer_service" value="1">
+            {% if peut_annuler_services %}
+            <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-svc-{{ s.id }}','Supprimer le service Â« {{ s.nom|escapejs }} Â» ?')">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+            {% endif %}
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="empty-cell"><i class="fas fa-hospital-user" style="margin-right:6px;"></i>Aucun service enregistrÃ©.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if services.has_other_pages %}
+  <div class="pag-bar">
+    <span class="pag-info">{{ services.start_index }} â€” {{ services.end_index }} / {{ services.paginator.count }}</span>
+    <div style="display:flex;gap:16px;align-items:center;">
+      <div class="pag-per">Afficher <select onchange="document.getElementById('pp-service').value=this.value; document.getElementById('form-q-services').submit();"><option value="10" {% if per_page_service == '10' %}selected{% endif %}>10</option><option value="50" {% if per_page_service == '50' %}selected{% endif %}>50</option><option value="100" {% if per_page_service == '100' %}selected{% endif %}>100</option><option value="all" {% if per_page_service == 'all' %}selected{% endif %}>Tous</option></select></div>
+      <div class="pag-ctrl">
+        {% if services.has_previous %}<a class="pag-link" href="?open=services&page_service=1&q_service={{ q_service|default:'' }}&per_page_service={{ per_page_service }}">&laquo;</a><a class="pag-link" href="?open=services&page_service={{ services.previous_page_number }}&q_service={{ q_service|default:'' }}&per_page_service={{ per_page_service }}">PrÃ©c.</a>{% endif %}
+        <span class="pag-cur" style="background:#e83e8c;">{{ services.number }}/{{ services.paginator.num_pages }}</span>
+        {% if services.has_next %}<a class="pag-link" href="?open=services&page_service={{ services.next_page_number }}&q_service={{ q_service|default:'' }}&per_page_service={{ per_page_service }}">Suiv.</a><a class="pag-link" href="?open=services&page_service={{ services.paginator.num_pages }}&q_service={{ q_service|default:'' }}&per_page_service={{ per_page_service }}">&raquo;</a>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div id="zone-specs">
+  <table class="param-table">
+    <thead>
+      <tr>
+        <th style="width:30%;">SpÃ©cialitÃ©</th>
+        <th style="width:20%;">Description</th>
+        <th style="width:35%;">TraÃ§abilitÃ©</th>
+        <th class="c" style="width:15%;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for sp in specialites %}
+      <tr>
+        <td><strong style="color: var(--text-dark);">{{ sp.nom }}</strong></td>
+        <td><code style="background: var(--bg-stripe);padding:2px 7px;border-radius:5px;font-size:12px;color: var(--text-medium);">{{ sp.code|default:"â€”" }}</code></td>
+        <td>
+          <div class="tracab">
+            <div><i class="fas fa-user-plus" style="color:#28a745;"></i> {{ sp.cree_par.username|default:"SystÃ¨me" }} â€” {{ sp.date_creation|date:"d/m/Y H:i" }}</div>
+            {% if sp.modifie_par %}<div><i class="fas fa-user-edit" style="color:#17a2b8;"></i> {{ sp.modifie_par.username }} â€” {{ sp.date_modification|date:"d/m/Y H:i" }}</div>{% endif %}
+          </div>
+        </td>
+        <td class="c">
+          <a href="?edit_specialite={{ sp.id }}&open=specialites" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
+          <form method="POST" id="del-spc-{{ sp.id }}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="specialite_id" value="{{ sp.id }}">
+            <input type="hidden" name="supprimer_specialite" value="1">
+            {% if peut_annuler_specialites %}
+            <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-spc-{{ sp.id }}','Supprimer la spÃ©cialitÃ© Â« {{ sp.nom|escapejs }} Â» ?')">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+            {% endif %}
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="empty-cell"><i class="fas fa-id-badge" style="margin-right:6px;"></i>Aucune spÃ©cialitÃ© enregistrÃ©e.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if specialites.has_other_pages %}
+  <div class="pag-bar">
+    <span class="pag-info">{{ specialites.start_index }} â€” {{ specialites.end_index }} / {{ specialites.paginator.count }}</span>
+    <div style="display:flex;gap:16px;align-items:center;">
+      <div class="pag-per">Afficher <select onchange="document.getElementById('pp-spec').value=this.value; document.getElementById('form-q-specs').submit();"><option value="10" {% if per_page_specialite == '10' %}selected{% endif %}>10</option><option value="50" {% if per_page_specialite == '50' %}selected{% endif %}>50</option><option value="100" {% if per_page_specialite == '100' %}selected{% endif %}>100</option><option value="all" {% if per_page_specialite == 'all' %}selected{% endif %}>Tous</option></select></div>
+      <div class="pag-ctrl">
+        {% if specialites.has_previous %}<a class="pag-link" href="?open=specialites&page_specialite=1&q_specialite={{ q_specialite|default:'' }}&per_page_specialite={{ per_page_specialite }}">&laquo;</a><a class="pag-link" href="?open=specialites&page_specialite={{ specialites.previous_page_number }}&q_specialite={{ q_specialite|default:'' }}&per_page_specialite={{ per_page_specialite }}">PrÃ©c.</a>{% endif %}
+        <span class="pag-cur" style="background:#e83e8c;">{{ specialites.number }}/{{ specialites.paginator.num_pages }}</span>
+        {% if specialites.has_next %}<a class="pag-link" href="?open=specialites&page_specialite={{ specialites.next_page_number }}&q_specialite={{ q_specialite|default:'' }}&per_page_specialite={{ per_page_specialite }}">Suiv.</a><a class="pag-link" href="?open=specialites&page_specialite={{ specialites.paginator.num_pages }}&q_specialite={{ q_specialite|default:'' }}&per_page_specialite={{ per_page_specialite }}">&raquo;</a>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<div id="zone-fonctions">
+  <table class="param-table">
+    <thead>
+      <tr>
+        <th style="width:30%;">Fonction</th>
+        <th style="width:20%;">Description</th>
+        <th style="width:35%;">TraÃ§abilitÃ©</th>
+        <th class="c" style="width:15%;">Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for fn in fonctions %}
+      <tr>
+        <td><strong style="color: var(--text-dark);">{{ fn.nom }}</strong></td>
+        <td><code style="background: var(--bg-stripe);padding:2px 7px;border-radius:5px;font-size:12px;color: var(--text-medium);">{{ fn.code|default:"â€”" }}</code></td>
+        <td>
+          <div class="tracab">
+            <div><i class="fas fa-user-plus" style="color:#28a745;"></i> {{ fn.cree_par.username|default:"SystÃ¨me" }} â€” {{ fn.date_creation|date:"d/m/Y H:i" }}</div>
+            {% if fn.modifie_par %}<div><i class="fas fa-user-edit" style="color:#17a2b8;"></i> {{ fn.modifie_par.username }} â€” {{ fn.date_modification|date:"d/m/Y H:i" }}</div>{% endif %}
+          </div>
+        </td>
+        <td class="c">
+          <a href="?edit_fonction={{ fn.id }}&open=fonctions" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
+          <form method="POST" id="del-fnc-{{ fn.id }}" style="display:inline;">
+            {% csrf_token %}
+            <input type="hidden" name="fonction_id" value="{{ fn.id }}">
+            <input type="hidden" name="supprimer_fonction" value="1">
+            {% if peut_annuler_fonctions %}
+            <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-fnc-{{ fn.id }}','Supprimer la fonction Â« {{ fn.nom|escapejs }} Â» ?')">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+            {% endif %}
+          </form>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="4" class="empty-cell"><i class="fas fa-briefcase" style="margin-right:6px;"></i>Aucune fonction enregistrÃ©e.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  {% if fonctions.has_other_pages %}
+  <div class="pag-bar">
+    <span class="pag-info">{{ fonctions.start_index }} â€” {{ fonctions.end_index }} / {{ fonctions.paginator.count }}</span>
+    <div style="display:flex;gap:16px;align-items:center;">
+      <div class="pag-per">Afficher <select onchange="document.getElementById('pp-fonction').value=this.value; document.getElementById('form-q-fonctions').submit();"><option value="10" {% if per_page_fonction == '10' %}selected{% endif %}>10</option><option value="50" {% if per_page_fonction == '50' %}selected{% endif %}>50</option><option value="100" {% if per_page_fonction == '100' %}selected{% endif %}>100</option><option value="all" {% if per_page_fonction == 'all' %}selected{% endif %}>Tous</option></select></div>
+      <div class="pag-ctrl">
+        {% if fonctions.has_previous %}<a class="pag-link" href="?open=fonctions&page_fonction=1&q_fonction={{ q_fonction|default:'' }}&per_page_fonction={{ per_page_fonction }}">&laquo;</a><a class="pag-link" href="?open=fonctions&page_fonction={{ fonctions.previous_page_number }}&q_fonction={{ q_fonction|default:'' }}&per_page_fonction={{ per_page_fonction }}">PrÃ©c.</a>{% endif %}
+        <span class="pag-cur" style="background:#e83e8c;">{{ fonctions.number }}/{{ fonctions.paginator.num_pages }}</span>
+        {% if fonctions.has_next %}<a class="pag-link" href="?open=fonctions&page_fonction={{ fonctions.next_page_number }}&q_fonction={{ q_fonction|default:'' }}&per_page_fonction={{ per_page_fonction }}">Suiv.</a><a class="pag-link" href="?open=fonctions&page_fonction={{ fonctions.paginator.num_pages }}&q_fonction={{ q_fonction|default:'' }}&per_page_fonction={{ per_page_fonction }}">&raquo;</a>{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+

@@ -19,6 +19,7 @@
         <div class="icon"><i class="fas fa-check-circle"></i></div>
         <h1>Alerte envoyée !</h1>
         <p>Merci pour votre signalement.<br>L'équipe technique a été notifiée et interviendra dans les plus brefs délais.</p>
+        {% if intervention %}<p style="font-size:15px; font-weight:600;">Votre signalement n° <strong>#{{ intervention.id }}</strong> a bien été enregistré.</p>{% endif %}
         <p style="font-size:12px; margin-top:30px; opacity:0.7;">Vous pouvez fermer cette page.</p>
     </div>
 </body>

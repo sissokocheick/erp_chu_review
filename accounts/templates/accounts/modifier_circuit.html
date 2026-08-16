@@ -1,0 +1,78 @@
+{% extends "base_ui.html" %}
+{% block title %}Modifier le circuit de validation{% endblock %}
+
+{% block extra_css %}
+<style>
+  .cv-page { max-width: 720px; margin: 0 auto; }
+  .cv-hero { background: linear-gradient(135deg, #0d47a1 0%, #17a2b8 100%); border-radius: 14px; padding: 26px 30px; color: #fff; margin-bottom: 24px; }
+  .cv-hero h1 { margin: 0; font-size: 23px; font-weight: 800; }
+  .cv-hero p { margin: 8px 0 0; opacity: .9; font-size: 14px; }
+  .cv-card { background: var(--bg-card, #fff); border-radius: 14px; border: 1px solid var(--border-color, #e8ecf1); box-shadow: 0 2px 12px rgba(0,0,0,.04); padding: 26px; }
+  .cv-field { margin-bottom: 20px; }
+  .cv-field label { display: block; font-weight: 700; margin-bottom: 7px; font-size: 14px; }
+  .cv-field select { width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 8px; background: #fff; font-size: 14px; }
+  .cv-btn { display: inline-block; padding: 11px 24px; background: #0d47a1; color: #fff; border: none; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; }
+  .cv-btn:hover { background: #0a3a85; }
+  .cv-btn.secondary { background: #6c757d; text-decoration: none; margin-left: 8px; }
+  .cv-check { display: flex; align-items: center; gap: 10px; }
+  .cv-check input { width: 18px; height: 18px; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="cv-page">
+  <div class="cv-hero">
+    <h1>Modifier le circuit : {{ circuit.get_type_document_display|default:circuit.type_document }}</h1>
+    <p>Mettez à jour le statut et les validateurs du circuit.</p>
+  </div>
+
+  <div class="cv-card">
+    <form method="post" action="{% url 'accounts:modifier_circuit' circuit.id %}">
+      {% csrf_token %}
+
+      <div class="cv-field">
+        <label for="type_document">Type de document</label>
+        <select name="type_document" id="type_document" disabled>
+          {% for code, label in type_choices %}
+            <option value="{{ code }}" {% if circuit.type_document == code %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+        <small style="color:#889;">Le type de document ne peut pas être modifié (contrainte d'unicité).</small>
+        <input type="hidden" name="type_document" value="{{ circuit.type_document }}">
+      </div>
+
+      <div class="cv-field">
+        <label class="cv-check">
+          <input type="checkbox" name="est_actif" id="est_actif" {% if circuit.est_actif %}checked{% endif %}>
+          Circuit actif
+        </label>
+      </div>
+
+      <div class="cv-field">
+        <label for="valideurs">Validateurs</label>
+        <select name="valideurs" id="valideurs" multiple style="width:100%; min-height:140px;">
+          {% for user in users %}
+            <option value="{{ user.id }}" {% if user in valideurs_actuels %}selected{% endif %}>{{ user.get_full_name|default:user.username }} ({{ user.username }})</option>
+          {% endfor %}
+        </select>
+        <small style="color:#889;">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs validateurs.</small>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <button type="submit" class="cv-btn">Enregistrer les modifications</button>
+        <a href="{% url 'accounts:circuits_validation' %}" class="cv-btn secondary">Annuler</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+    jQuery('#valideurs').select2({ placeholder: 'Ajouter des validateurs...', allowClear: true, width: '100%' });
+  }
+});
+</script>
+{% endblock %}

@@ -13,7 +13,7 @@ urlpatterns = [
     path('<int:pk>/modifier/',                  views.modifier_immo,         name='patrimoine_modifier'),
     path('<int:pk>/valider-sas/',               views.valider_sas,           name='patrimoine_valider_sas'),
 
-    # ─── Mouvements ────────────────────────────────────────────────────────────    path('<int:pk>/mouvement/',                 views.creer_mouvement,       name='patrimoine_mouvement'),
+    # NB: route patrimoine_mouvement supprimee (15/08/2026) : ligne commentee retiree (404 trompeur)
     # NB: l'historique des mouvements est consultable dans chaque fiche immobilisation
     # (route liste_mouvements retirée : template patrimoine/mouvements.html inexistant)    # ─── Contrats ──────────────────────────────────────────────────────────────
     path('contrats/',                           views.liste_contrats,        name='patrimoine_contrats'),

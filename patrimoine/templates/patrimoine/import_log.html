@@ -1,0 +1,53 @@
+{% extends "base_ui.html" %}
+{% block title %}Détail de l'import{% endblock %}
+
+{% block extra_css %}
+<style>
+  .imp-page { max-width: 860px; margin: 0 auto; }
+  .imp-card { background: var(--bg-card, #fff); border-radius: 14px; border: 1px solid var(--border-color, #e8ecf1); box-shadow: 0 2px 12px rgba(0,0,0,.04); padding: 24px; margin-bottom: 18px; }
+  .imp-hero { background: linear-gradient(135deg, #1c5b96 0%, #17a2b8 100%); border-radius: 14px; padding: 24px 28px; color: #fff; margin-bottom: 20px; }
+  .imp-hero h1 { margin: 0; font-size: 22px; font-weight: 800; }
+  .imp-hero p { margin: 6px 0 0; opacity: .92; font-size: 14px; }
+  .imp-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 18px; }
+  .imp-stat { background: rgba(255,255,255,.14); border-radius: 12px; padding: 14px 16px; }
+  .imp-stat .n { font-size: 26px; font-weight: 800; line-height: 1; }
+  .imp-stat .l { font-size: 11px; text-transform: uppercase; letter-spacing: .4px; opacity: .85; margin-top: 5px; }
+  .imp-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed var(--border-color, #e8ecf1); font-size: 14px; }
+  .imp-row:last-child { border-bottom: none; }
+  .imp-row .k { color: var(--text-light, #889); }
+  .imp-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+  .imp-badge.ok { background: #d4edda; color: #155724; }
+  .imp-badge.err { background: #f8d7da; color: #721c24; }
+</style>
+{% endblock %}
+
+{% block contenu %}
+<div class="imp-page">
+  <div class="imp-hero">
+    <h1>Détail de l'import #{{ log.id }}</h1>
+    <p>Fichier Excel importé dans le registre du patrimoine</p>
+    <div class="imp-grid">
+      <div class="imp-stat"><div class="n">{{ log.nb_lignes_traitees|default:0 }}</div><div class="l">Lignes traitées</div></div>
+      <div class="imp-stat"><div class="n" style="color:#7CFC9A;">{{ log.nb_crees|default:0 }}</div><div class="l">Créées</div></div>
+      <div class="imp-stat"><div class="n" style="color:#FFD97A;">{{ log.nb_mis_a_jour|default:0 }}</div><div class="l">Mises à jour</div></div>
+      <div class="imp-stat"><div class="n" style="color:#FF9E9E;">{{ log.nb_erreurs|default:0 }}</div><div class="l">Erreurs</div></div>
+    </div>
+  </div>
+
+  <div class="imp-card">
+    <h3 style="margin-top:0; color:#1c5b96;">Informations</h3>
+    <div class="imp-row"><span class="k">Type d'équipement</span><span>{{ log.type_equipement.nom|default:"Générique" }}</span></div>
+    <div class="imp-row"><span class="k">Fichier</span><span>{{ log.fichier_original.name|default:"—" }}</span></div>
+    <div class="imp-row"><span class="k">Importé par</span><span>{{ log.cree_par.get_full_name|default:log.cree_par.username|default:"—" }}</span></div>
+    <div class="imp-row"><span class="k">Date</span><span>{{ log.date_creation|date:"d/m/Y H:i"|default:"—" }}</span></div>
+    <div class="imp-row">
+      <span class="k">Statut</span>
+      <span>{% if log.nb_erreurs > 0 %}<span class="imp-badge err">Erreurs détectées</span>{% else %}<span class="imp-badge ok">Import réussi</span>{% endif %}</span>
+    </div>
+  </div>
+
+  <div style="text-align:right;">
+    <a href="{% url 'patrimoine_import' %}" style="display:inline-block; padding:10px 20px; background:#1c5b96; color:#fff; border-radius:8px; text-decoration:none; font-weight:600;">← Retour aux imports</a>
+  </div>
+</div>
+{% endblock %}

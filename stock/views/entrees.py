@@ -81,6 +81,13 @@ def _afficher_entrees(request):
             'magasin__nom__icontains',
             'lignes_bon__article__designation__icontains',
         ],
+        colonnes_tri={
+            'numero_bon': 'numero_bon',
+            'date_bon': 'date_bon',
+            'magasin': 'magasin__nom',
+            'fournisseur': 'fournisseur__raison_sociale',
+        },
+        tri_defaut='-date_bon',
         context_extra=extra
     )
 
