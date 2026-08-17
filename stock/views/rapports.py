@@ -732,8 +732,10 @@ def api_details_sondages(request):
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_rapports')
 @magasin_requis
-@catch_errors(redirect_url='page_rapports')
+# Pas de @catch_errors ici : c'est une API JSON — Http404 doit remonter
+# (404 JSON) et les erreurs sont déjà gérées en JsonResponse 500 ci-dessous.
 def api_detail_demande(request, demande_id):
+    from django.http import Http404
     try:
         demande = get_object_or_404(
             DemandeMateriel.objects.select_related(
@@ -792,6 +794,9 @@ def api_detail_demande(request, demande_id):
         }
         return JsonResponse(data)
 
+    except Http404:
+        # Demande inexistante : laisser remonter le 404 (pas un crash serveur)
+        raise
     except Exception as e:
         logger.exception("[api_detail_demande] Crash : %s", e)
         return JsonResponse({'error': 'Erreur interne du serveur.'}, status=500)

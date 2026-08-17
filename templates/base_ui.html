@@ -2,7 +2,7 @@
 {% load static %}
 <html lang="fr">
 <head>
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none';">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self';">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}NexusERP{% endblock %}</title>
@@ -407,6 +407,8 @@
             padding: 18px 15px; text-align: center;
             border-bottom: 1px solid rgba(255,255,255,0.1);
             background: linear-gradient(180deg, #1c5b96 0%, #0d3b6e 100%);
+            /* Ancre stable : le logo reste visible pendant le défilement du menu */
+            position: sticky; top: 0; z-index: 5; flex-shrink: 0;
         }
         .logo-full { display: flex; flex-direction: column; align-items: center; gap: 6px; }
         .logo-title { font-size: 20px; font-weight: 800; letter-spacing: 2px; color: white; text-shadow: 0 2px 4px rgba(0,0,0,0.2); }
@@ -430,14 +432,14 @@
         .submenu {
             max-height: 0;
             overflow: hidden;
-            transition: max-height 0.3s ease-in-out;
+            transition: max-height 0.35s ease-in-out;
             background-color: rgba(0,0,0,0.05);
         }
         .submenu.active {
-            /* Déploiement complet : la sidebar est l'unique conteneur de scroll
-               (pas de double scrollbar), le contenu trop long défile avec le menu */
-            max-height: none;
-            overflow: visible;
+            /* Déploiement fluide : hauteur plafonnée réaliste (le plus grand
+               sous-menu fait ~500px). La sidebar reste l'unique conteneur de
+               scroll et la transition anime l'ouverture ET la fermeture. */
+            max-height: 900px;
         }
 
         .menu-item {
@@ -1055,6 +1057,39 @@
                         icon.classList.remove('fa-chevron-down');
                         icon.classList.add('fa-chevron-up');
                     }
+                    // Le lien actif est la source de vérité : on met à jour l'état mémorisé
+                    try { localStorage.setItem('nexuserp_menu_open', submenu.id); } catch (e) {}
+                    // Ramène l'élément actif dans la zone visible de la sidebar
+                    // (utile quand le menu actif est en bas d'un sous-menu long).
+                    setTimeout(function() {
+                        try {
+                            var sb = document.getElementById('sidebar-main');
+                            if (sb) {
+                                var linkRect = bestLink.getBoundingClientRect();
+                                var sbRect = sb.getBoundingClientRect();
+                                if (linkRect.top < sbRect.top || linkRect.bottom > sbRect.bottom) {
+                                    var target = sb.scrollTop + (linkRect.top - sbRect.top) - 90;
+                                    sb.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+                                }
+                            }
+                        } catch (e) {}
+                    }, 380);
+                }
+            } else {
+                // Aucun lien actif (page d'accueil, tableau de bord…) : on restaure
+                // le dernier sous-menu ouvert par l'utilisateur pour garder le contexte.
+                var remembered = null;
+                try { remembered = localStorage.getItem('nexuserp_menu_open'); } catch (e) {}
+                if (remembered) {
+                    var savedSub = document.getElementById(remembered);
+                    if (savedSub) {
+                        savedSub.classList.add('active');
+                        var savedIcon = document.getElementById('icon-' + remembered);
+                        if (savedIcon) {
+                            savedIcon.classList.remove('fa-chevron-down');
+                            savedIcon.classList.add('fa-chevron-up');
+                        }
+                    }
                 }
             }
 
@@ -1098,8 +1133,15 @@
             document.querySelectorAll('.submenu').forEach(function(sub) { sub.classList.remove('active'); });
             document.querySelectorAll('.module-title i[id^="icon-menu-"]').forEach(function(ic) { ic.classList.remove('fa-chevron-up'); ic.classList.add('fa-chevron-down'); });
 
+            // Fermeture volontaire (clic sur le module déjà ouvert) : on oublie l'état
+            if (isActive) {
+                try { localStorage.removeItem('nexuserp_menu_open'); } catch (e) {}
+            }
+
             if (!isActive && menu) {
                 menu.classList.add('active');
+                // Mémorise le sous-menu ouvert pour le restaurer à la navigation suivante
+                try { localStorage.setItem('nexuserp_menu_open', menuId); } catch (e) {}
                 if (icon) { icon.classList.remove('fa-chevron-down'); icon.classList.add('fa-chevron-up'); }
                 // Ramène le début du sous-menu dans la zone visible de la SIDEBAR
                 // (l'unique conteneur de scroll) : utile quand le menu est long et
@@ -1108,16 +1150,31 @@
                 setTimeout(function() {
                     try {
                         if (sb) {
-                            var menuTop = menu.offsetTop;
+                            var menuRect = menu.getBoundingClientRect();
+                            var sbRect = sb.getBoundingClientRect();
                             var headerH = sb.querySelector('.sidebar-header') ? sb.querySelector('.sidebar-header').offsetHeight : 0;
-                            if (menuTop < sb.scrollTop + headerH || menuTop > sb.scrollTop + sb.clientHeight - 60) {
-                                sb.scrollTo({ top: Math.max(0, menuTop - headerH - 8), behavior: 'smooth' });
+                            // Position du sous-menu APRÈS déploiement (fin de transition)
+                            var menuTop = menuRect.top - sbRect.top + sb.scrollTop;
+                            var menuBottom = menuRect.bottom - sbRect.top + sb.scrollTop;
+                            var visibleTop = sb.scrollTop + headerH;
+                            var visibleBottom = sb.scrollTop + sb.clientHeight - 8;
+                            var target = null;
+                            if (menuTop < visibleTop) {
+                                // Le sous-menu commence au-dessus de la zone visible
+                                target = Math.max(0, menuTop - headerH - 8);
+                            } else if (menuBottom > visibleBottom) {
+                                // Le sous-menu déborde en bas : on le remonte pour
+                                // que son contenu soit entièrement visible.
+                                target = Math.max(0, menuBottom - sb.clientHeight + 8);
+                            }
+                            if (target !== null) {
+                                sb.scrollTo({ top: target, behavior: 'smooth' });
                             }
                         } else {
                             menu.scrollIntoView({ block: 'nearest' });
                         }
                     } catch (e) {}
-                }, 320);
+                }, 380);
             }
         }
 

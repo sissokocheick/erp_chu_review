@@ -465,3 +465,54 @@ class PdfConsommationTest(BaseConsommationTest):
                                 'dtri': 'quantite', 'dordre': 'asc'})
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.content.startswith(b'%PDF'))
+
+
+class ApiDetailDemandeTest(TestCase):
+    """L'API de détail d'une demande : 200 pour une demande existante,
+    404 (et non 500) pour une demande inexistante, 403 hors magasin."""
+
+    def setUp(self):
+        self.user = factories.creer_superuser(username='api_detail_admin')
+        self.user.profil.doit_changer_mdp = False
+        self.user.profil.save(update_fields=['doit_changer_mdp'])
+        self.magasin = factories.creer_magasin(nom='Magasin API')
+        self.user.profil.magasins_autorises.add(self.magasin)
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['magasin_actif_id'] = str(self.magasin.id)
+        session.save()
+
+    def _demande(self):
+        from stock.models import DemandeMateriel, Service
+        from stock.tests import factories as f
+        service = Service.objects.create(code='API', nom='Service API')
+        return DemandeMateriel.objects.create(
+            service_demandeur=service,
+            demandeur=self.user,
+            magasin_cible=self.magasin,
+            statut='EN_ATTENTE',
+        )
+
+    def test_demande_inexistante_renvoie_404_pas_500(self):
+        """Régression : une demande inexistante répondait 500 (Http404 avalé
+        par le except Exception) au lieu de 404."""
+        resp = self.client.get('/api-detail-demande/999999/')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_demande_existante_renvoie_200(self):
+        demande = self._demande()
+        resp = self.client.get(f'/api-detail-demande/{demande.id}/')
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()['id'], demande.id)
+
+    def test_demande_hors_magasin_renvoie_403(self):
+        autre = factories.creer_magasin(nom='Magasin Autre API')
+        from stock.models import Service
+        service = Service.objects.create(code='API2', nom='Service API 2')
+        from stock.models import DemandeMateriel
+        demande = DemandeMateriel.objects.create(
+            service_demandeur=service, demandeur=self.user,
+            magasin_cible=autre, statut='EN_ATTENTE',
+        )
+        resp = self.client.get(f'/api-detail-demande/{demande.id}/')
+        self.assertEqual(resp.status_code, 403)

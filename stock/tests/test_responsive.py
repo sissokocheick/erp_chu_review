@@ -312,3 +312,69 @@ class ResponsiveMobileTest(TestCase):
         r = self.client.get('/patrimoine/import/')
         html = r.content.decode('utf-8', errors='replace')
         self.assertIn('minmax(200px,1fr)', html)
+
+    # ------------------------------------------------------------------
+    # MENU PRINCIPAL : défilement, sections repliables, navigation fluide
+    # ------------------------------------------------------------------
+
+    def test_menu_header_sticky(self):
+        """Le header (logo) reste ancré en haut pendant le défilement de la sidebar
+        (position: sticky) pour garder une ancre stable dans un menu long."""
+        for url in ('/articles/', '/inventaires/', '/patrimoine/'):
+            resp = self.client.get(url)
+            self.assertEqual(resp.status_code, 200, url)
+            html = resp.content.decode('utf-8', errors='replace')
+            self.assertIn('.sidebar-header', html)
+            self.assertIn('position: sticky', html)
+
+    def test_menu_sous_menu_anime(self):
+        """Le sous-menu s'ouvre/ferme avec une transition animable : max-height
+        numérique (3000px) au lieu de 'none' — 'none' rend la fermeture
+        instantanée et l'accordéon brutal."""
+        resp = self.client.get('/articles/')
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode('utf-8', errors='replace')
+        self.assertIn('.submenu', html)
+        self.assertIn('max-height: 900px', html)
+        self.assertNotIn('.submenu.active {\n            max-height: none', html)
+
+    def test_menu_accordion_un_seul_ouvert(self):
+        """L'accordéon du menu : toggleMenu ferme tous les autres sous-menus avant
+        d'ouvrir celui cliqué (un seul module déplié à la fois)."""
+        resp = self.client.get('/articles/')
+        html = resp.content.decode('utf-8', errors='replace')
+        # Le JS doit fermer tous les .submenu puis ouvrir celui cliqué
+        self.assertIn("document.querySelectorAll('.submenu').forEach(function(sub) { sub.classList.remove('active'); });", html)
+
+    def test_menu_scroll_vers_actif(self):
+        """Après ouverture du sous-menu actif, la sidebar scrolle vers l'élément
+        actif (getBoundingClientRect) — l'utilisateur voit toujours où il est."""
+        resp = self.client.get('/articles/')
+        html = resp.content.decode('utf-8', errors='replace')
+        self.assertIn('bestLink.getBoundingClientRect()', html)
+        self.assertIn('sb.scrollTo', html)
+
+    def test_menu_scroll_sous_menu_deploye(self):
+        """Quand le sous-menu déployé déborde en bas de la sidebar, toggleMenu
+        le remonte pour que son contenu soit visible (menuBottom vs visibleBottom)."""
+        resp = self.client.get('/articles/')
+        html = resp.content.decode('utf-8', errors='replace')
+        self.assertIn('menuBottom', html)
+        self.assertIn('visibleBottom', html)
+
+    def test_menu_memoire_sous_menu_ouvert(self):
+        """Le sous-menu ouvert est mémorisé dans localStorage à l'ouverture
+        (toggleMenu) et restauré quand aucun lien actif n'est trouvé
+        (updateActiveMenu) — l'utilisateur retrouve son contexte en naviguant."""
+        resp = self.client.get('/articles/')
+        self.assertEqual(resp.status_code, 200)
+        html = resp.content.decode('utf-8', errors='replace')
+        # Sauvegarde à l'ouverture (toggleMenu)
+        self.assertIn("localStorage.setItem('nexuserp_menu_open', menuId)", html)
+        # Oubli à la fermeture volontaire (clic sur le module déjà ouvert)
+        self.assertIn("localStorage.removeItem('nexuserp_menu_open')", html)
+        # Le lien actif met à jour l'état mémorisé
+        self.assertIn("localStorage.setItem('nexuserp_menu_open', submenu.id)", html)
+        # Restauration quand aucun lien actif (accueil, tableau de bord…)
+        self.assertIn("localStorage.getItem('nexuserp_menu_open')", html)
+        self.assertIn('var savedSub = document.getElementById(remembered)', html)
