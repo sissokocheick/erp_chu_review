@@ -21,7 +21,7 @@ from ..models import (
 from stock.services.isolation_service import get_magasins_autorises
 from ..decorators import magasin_requis, catch_errors
 # from ..services import StockService, PDFService  # SUPPRIMÉ : non utilisés dans ce fichier
-from .catalogue import paginer
+from .catalogue import paginer, appliquer_tri
 
 logger = logging.getLogger(__name__)
 
@@ -1047,8 +1047,8 @@ def rapport_consommation_services(request):
         'prix_unitaire', 'article__prix_reference', Value(0),
         output_field=DecimalField(max_digits=14, decimal_places=2))
 
-    # ── Tableau par service ──
-    par_service = qs.annotate(
+    # ── Tableau par service (tri par clic sur les en-têtes) ──
+    par_service_qs = qs.annotate(
         montant_ligne=montant_ligne
     ).values(
         'service_demandeur__id', 'service_demandeur__nom',
@@ -1057,13 +1057,21 @@ def rapport_consommation_services(request):
         quantite=Sum('quantite'),
         nb_mouvements=Count('id'),
         valeur=Sum('montant_ligne'),
-    ).order_by('-valeur', '-quantite')
+    )
+    par_service, tri, ordre = appliquer_tri(
+        par_service_qs, request,
+        {'service': 'service_demandeur__nom',
+         'quantite': 'quantite',
+         'valeur': 'valeur',
+         'mouvements': 'nb_mouvements'},
+        defaut='-valeur')
+    par_service = list(par_service)
 
     total_quantite = sum(r['quantite'] or 0 for r in par_service)
     total_valeur = sum(r['valeur'] or 0 for r in par_service)
     total_mouvements = sum(r['nb_mouvements'] or 0 for r in par_service)
 
-    # ── Détail par article (ligne service × article), paginé ──
+    # ── Détail par article (ligne service × article), paginé + tri ──
     detail_qs = qs.annotate(
         montant_ligne=montant_ligne
     ).values(
@@ -1075,7 +1083,29 @@ def rapport_consommation_services(request):
         quantite=Sum('quantite'),
         nb_mouvements=Count('id'),
         valeur=Sum('montant_ligne'),
-    ).order_by('service_demandeur__nom', '-valeur', '-quantite')
+    )
+    # Tri dédié au détail (params dtri/dordre pour ne pas interférer
+    # avec le tri du tableau résumé)
+    detail_colonnes = {
+        'service': 'service_demandeur__nom',
+        'article': 'article__designation',
+        'reference': 'article__reference',
+        'unite': 'article__unite_distribution',
+        'quantite': 'quantite',
+        'valeur': 'valeur',
+        'mouvements': 'nb_mouvements',
+    }
+    tri_detail = request.GET.get('dtri', '')
+    ordre_detail = request.GET.get('dordre', 'asc')
+    if tri_detail in detail_colonnes:
+        champ = detail_colonnes[tri_detail]
+        if ordre_detail == 'desc':
+            champ = '-' + champ.lstrip('-')
+        detail_qs = detail_qs.order_by(champ)
+    else:
+        detail_qs = detail_qs.order_by(
+            'service_demandeur__nom', '-valeur', '-quantite')
+        tri_detail = ''
 
     detail_page, detail_per_page = paginer(
         detail_qs, request, per_page_key='detail_per_page', default=20)
@@ -1128,6 +1158,10 @@ def rapport_consommation_services(request):
         'detail_page': detail_page,
         'detail_per_page': detail_per_page,
         'detail_total': detail_total,
+        'tri': tri,
+        'ordre': ordre,
+        'tri_detail': tri_detail,
+        'ordre_detail': ordre_detail,
     }
     return render(request, 'stock/rapport_consommation_services.html', context)
 
@@ -1153,7 +1187,14 @@ def export_consommation_services_csv(request):
         quantite=Sum('quantite'),
         nb_mouvements=Count('id'),
         valeur=Sum('montant_ligne'),
-    ).order_by('-valeur', '-quantite')
+    )
+    par_service, _, _ = appliquer_tri(
+        par_service, request,
+        {'service': 'service_demandeur__nom',
+         'quantite': 'quantite',
+         'valeur': 'valeur',
+         'mouvements': 'nb_mouvements'},
+        defaut='-valeur')
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = (
@@ -1180,6 +1221,121 @@ def export_consommation_services_csv(request):
 @verifier_permission('accounts.menu_rapports')
 @magasin_requis
 @catch_errors(redirect_url='page_rapports')
+def rapport_consommation_services_pdf(request):
+    """PDF du rapport de consommation par service (logo + entête configurés).
+
+    Mêmes filtres que la page (période, service, magasin actif) et mêmes
+    tris (tri/ordre pour le résumé, dtri/dordre pour le détail).
+    """
+    from django.db.models import DecimalField, Value
+    from django.db.models.functions import Coalesce
+    from stock.pdf_utils import get_pdf_config, render_pdf_response
+
+    base = _base_consommation(request)
+    qs, date_debut, date_fin, service_id, nb_mois, date_range = \
+        _filtres_consommation(request, base)
+
+    montant_ligne = F('quantite') * Coalesce(
+        'prix_unitaire', 'article__prix_reference', Value(0),
+        output_field=DecimalField(max_digits=14, decimal_places=2))
+
+    # ── Résumé par service (même tri que le tableau de la page) ──
+    par_service_qs = qs.annotate(
+        montant_ligne=montant_ligne
+    ).values(
+        'service_demandeur__id', 'service_demandeur__nom',
+        'service_demandeur__code'
+    ).annotate(
+        quantite=Sum('quantite'),
+        nb_mouvements=Count('id'),
+        valeur=Sum('montant_ligne'),
+    )
+    par_service, _, _ = appliquer_tri(
+        par_service_qs, request,
+        {'service': 'service_demandeur__nom',
+         'quantite': 'quantite',
+         'valeur': 'valeur',
+         'mouvements': 'nb_mouvements'},
+        defaut='-valeur')
+    par_service = list(par_service)
+
+    total_quantite = sum(r['quantite'] or 0 for r in par_service)
+    total_valeur = sum(r['valeur'] or 0 for r in par_service)
+    total_mouvements = sum(r['nb_mouvements'] or 0 for r in par_service)
+
+    # Part de valeur pour le PDF (pourcentage arrondi à 1 décimale)
+    for r in par_service:
+        r['part'] = (
+            (float(r['valeur'] or 0) / float(total_valeur) * 100)
+            if total_valeur else 0
+        )
+
+    # ── Détail par article (complet, non paginé, même tri dtri/dordre) ──
+    detail = qs.annotate(montant_ligne=montant_ligne).values(
+        'service_demandeur__id', 'service_demandeur__nom',
+        'service_demandeur__code',
+        'article__id', 'article__designation', 'article__reference',
+        'article__unite_distribution'
+    ).annotate(
+        quantite=Sum('quantite'),
+        nb_mouvements=Count('id'),
+        valeur=Sum('montant_ligne'),
+    )
+    detail_colonnes = {
+        'service': 'service_demandeur__nom',
+        'article': 'article__designation',
+        'reference': 'article__reference',
+        'unite': 'article__unite_distribution',
+        'quantite': 'quantite',
+        'valeur': 'valeur',
+        'mouvements': 'nb_mouvements',
+    }
+    tri_d = request.GET.get('dtri', '')
+    ordre_d = request.GET.get('dordre', 'asc')
+    if tri_d in detail_colonnes:
+        champ = detail_colonnes[tri_d]
+        if ordre_d == 'desc':
+            champ = '-' + champ.lstrip('-')
+        detail = detail.order_by(champ)
+    else:
+        detail = detail.order_by(
+            'service_demandeur__nom', '-valeur', '-quantite')
+    detail = list(detail)
+
+    magasin_id = _get_magasin_filtre(request)
+    magasin = None
+    if magasin_id:
+        magasin = Magasin.objects.filter(id=magasin_id).first()
+    service = None
+    if service_id:
+        service = Service.objects.filter(id=service_id).first()
+
+    pdf_config, logo_url = get_pdf_config(magasin, 'RAPPORT', request)
+
+    context = {
+        'par_service': par_service,
+        'detail': detail,
+        'total_quantite': total_quantite,
+        'total_valeur': total_valeur,
+        'total_mouvements': total_mouvements,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+        'service': service,
+        'magasin': magasin,
+        'pdf_config': pdf_config,
+        'logo_url': logo_url,
+        'edite_par': request.user,
+        'date_impression': timezone.now(),
+    }
+    return render_pdf_response(
+        request, 'stock/pdf/rapport_consommation_services.html',
+        context, 'Rapport_Consommation_par_Service.pdf')
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_rapports')
+@magasin_requis
+@catch_errors(redirect_url='page_rapports')
 def export_consommation_detail_csv(request):
     """Export CSV du détail service × article (mêmes filtres que le rapport)."""
     from django.db.models import DecimalField, Value
@@ -1199,7 +1355,27 @@ def export_consommation_detail_csv(request):
         quantite=Sum('quantite'),
         nb_mouvements=Count('id'),
         valeur=Sum('montant_ligne'),
-    ).order_by('service_demandeur__nom', '-valeur', '-quantite')
+    )
+    # Même tri que le tableau détail de la page (dtri/dordre)
+    detail_colonnes = {
+        'service': 'service_demandeur__nom',
+        'article': 'article__designation',
+        'reference': 'article__reference',
+        'unite': 'article__unite_distribution',
+        'quantite': 'quantite',
+        'valeur': 'valeur',
+        'mouvements': 'nb_mouvements',
+    }
+    tri_d = request.GET.get('dtri', '')
+    ordre_d = request.GET.get('dordre', 'asc')
+    if tri_d in detail_colonnes:
+        champ = detail_colonnes[tri_d]
+        if ordre_d == 'desc':
+            champ = '-' + champ.lstrip('-')
+        detail = detail.order_by(champ)
+    else:
+        detail = detail.order_by(
+            'service_demandeur__nom', '-valeur', '-quantite')
 
     response = HttpResponse(content_type='text/csv; charset=utf-8')
     response['Content-Disposition'] = (

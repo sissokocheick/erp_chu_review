@@ -19,10 +19,12 @@ register = template.Library()
 
 
 @register.simple_tag(takes_context=True)
-def th_tri(context, cle, libelle, tri='', ordre='asc'):
+def th_tri(context, cle, libelle, tri='', ordre='asc', prefix=''):
     """En-tête cliquable triant la colonne `cle`.
 
     tri/ordre : valeurs courantes du contexte (vides si aucun tri).
+    prefix : préfixe optionnel des paramètres GET (ex. 'd' → dtri/dordre)
+    pour gérer plusieurs tableaux triables sur la même page.
     """
     request = context.get('request')
     if request is not None:
@@ -31,9 +33,11 @@ def th_tri(context, cle, libelle, tri='', ordre='asc'):
         from django.http import QueryDict
         params = QueryDict('')
 
+    param_tri = (prefix + 'tri') if prefix else 'tri'
+    param_ordre = (prefix + 'ordre') if prefix else 'ordre'
     nouveau_ordre = 'desc' if (tri == cle and ordre == 'asc') else 'asc'
-    params['tri'] = cle
-    params['ordre'] = nouveau_ordre
+    params[param_tri] = cle
+    params[param_ordre] = nouveau_ordre
     params.pop('page', None)  # un tri relance à la page 1
     url = '?' + params.urlencode()
 

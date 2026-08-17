@@ -1,0 +1,261 @@
+{% load static custom_filters %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Rapport de Consommation par Service</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 6mm 8mm 12mm 8mm;
+            @bottom-center {
+                content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
+                white-space: pre-line;
+                font-size: 7pt;
+                color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+                font-weight: bold;
+                text-align: center;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " / " counter(pages);
+                font-size: 7pt;
+                color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+                font-weight: bold;
+            }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 10pt;
+            color: #000;
+            background: #fff;
+        }
+        .page-table { width: 100%; height: 100%; border-collapse: collapse; }
+        .cell-content { vertical-align: top; }
+
+        .top-header { width: 100%; border-bottom: 2px solid #1c5b96; padding-bottom: 4px; margin-bottom: 6px; }
+        .top-header-left { display: inline-block; font-size: 9pt; font-weight: bold; color: #1c5b96; }
+        .top-header-right { display: inline-block; float: right; text-align: right; font-size: 8pt; color: #333; }
+        .top-header-right .republic { font-weight: bold; font-size: 9pt; }
+        .top-header-right .motto { font-style: italic; font-size: 8pt; color: #555; }
+
+        .main-cartridge {
+            width: 100%;
+            border: 2px solid #1c5b96;
+            border-radius: 4px;
+            display: table;
+            margin-bottom: 8px;
+        }
+        .cart-col-logo {
+            display: table-cell; vertical-align: middle;
+            width: 20%; padding: 6px 8px; text-align: left;
+        }
+        .cart-col-logo img { max-height: 55px; max-width: 150px; object-fit: contain; }
+        .cart-col-logo .institution-text {
+            font-size: 8pt; font-weight: bold; color: #1c5b96;
+            text-align: center; margin-top: 3px;
+        }
+        .cart-col-title {
+            display: table-cell; vertical-align: middle; text-align: center;
+            width: 55%; padding: 6px 8px;
+        }
+        .cart-col-title .process { font-size: 8pt; color: #555; }
+        .cart-col-title .doc-title { font-size: 16pt; font-weight: bold; color: #1c5b96; letter-spacing: 1px; }
+        .cart-col-title .doc-subtitle { font-size: 9pt; color: #333; }
+        .cart-col-quality {
+            display: table-cell; vertical-align: middle;
+            width: 25%; padding: 6px 8px; font-size: 8pt; text-align: left;
+        }
+        .cart-col-quality .q-row { margin-bottom: 2px; white-space: nowrap; }
+        .cart-col-quality .q-label { font-weight: bold; }
+
+        .info-box {
+            margin-bottom: 8px; padding: 6px 8px;
+            background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px;
+            font-size: 9pt;
+        }
+        .info-row { margin-bottom: 3px; }
+        .info-label { font-weight: bold; color: #1c5b96; }
+
+        .summary-strip {
+            display: table; width: 100%; margin-bottom: 8px; border-collapse: collapse;
+        }
+        .summary-cell {
+            display: table-cell; width: 25%; text-align: center;
+            border: 1px solid #dee2e6; padding: 6px 8px; background: #f8f9fa;
+        }
+        .summary-cell .s-label { font-size: 8pt; text-transform: uppercase; color: #666; }
+        .summary-cell .s-value { font-size: 13pt; font-weight: bold; color: #1c5b96; }
+
+        table.data {
+            width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8.5pt;
+        }
+        table.data th {
+            background-color: #1c5b96; color: white; text-align: left;
+            padding: 5px 6px; font-size: 8pt; text-transform: uppercase;
+            border: 1px solid #1c5b96;
+        }
+        table.data td { padding: 4px 6px; border: 1px solid #999; vertical-align: middle; }
+        table.data tbody tr:nth-child(even) { background: #f2f6fa; }
+        table.data thead { display: table-header-group; }
+        table.data tr { page-break-inside: avoid; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .section-title {
+            font-size: 10pt; font-weight: bold; color: #1c5b96;
+            margin: 10px 0 4px; text-transform: uppercase;
+            border-bottom: 1px solid #1c5b96; padding-bottom: 2px;
+        }
+        .qte-col { font-weight: bold; }
+        .valeur-col { font-weight: bold; color: #1c5b96; }
+        .no-data {
+            text-align: center; padding: 25px; color: #888;
+            font-style: italic; border: 1px dashed #ccc; margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<table class="page-table">
+    <tr>
+        <td class="cell-content">
+
+            <div class="top-header">
+                <div class="top-header-left">
+                    {{ pdf_config.ministere_label|default:"Ministère de la Santé, de l'Hygiène Publique et de la Couverture Maladie Universelle" }}
+                </div>
+                <div class="top-header-right">
+                    <div class="republic">{{ pdf_config.republique_label|default:"République de Côte d'Ivoire" }}</div>
+                    <div class="motto">{{ pdf_config.devise_label|default:"Union-Discipline-Travail" }}</div>
+                </div>
+            </div>
+
+            <div class="main-cartridge">
+                <div class="cart-col-logo">
+                    {% if pdf_config.cartouche.afficher_logo and logo_url %}
+                        <img src="{{ logo_url }}" alt="Logo {{ magasin.nom|default:'' }}">
+                    {% else %}
+                        <div style="height:50px;"></div>
+                    {% endif %}
+                    <div class="institution-text">{{ magasin.nom|default:"" }}</div>
+                </div>
+                <div class="cart-col-title">
+                    <div class="process">{{ pdf_config.ps2_label|default:"PS2 : GERER LES PRESTATIONS EXTERNES" }}</div>
+                    <div class="doc-title">RAPPORT DE CONSOMMATION PAR SERVICE</div>
+                    <div class="doc-subtitle">SORTIES DE STOCK</div>
+                </div>
+                <div class="cart-col-quality">
+                    <div class="q-row"><span class="q-label">Code :</span> {{ pdf_config.code_document|default:"ENR-CONS/DAF-007" }}</div>
+                    <div class="q-row"><span class="q-label">Créé le :</span> {{ pdf_config.date_creation_doc|default:"10/06/2024" }}</div>
+                    <div class="q-row"><span class="q-label">Révisé le :</span> {{ pdf_config.date_revision_doc|default:"19/05/2025" }}</div>
+                    <div class="q-row"><span class="q-label">Version :</span> {{ pdf_config.version_doc|default:"002" }}</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-row">
+                    <span class="info-label">Période :</span>
+                    Du {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Service :</span>
+                    {% if service %}{{ service.nom|upper }}{% else %}TOUS LES SERVICES{% endif %}
+                    &nbsp;·&nbsp; <span class="info-label">Magasin :</span>
+                    {{ magasin.nom|default:"—" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Généré le :</span>
+                    {{ date_impression|date:"d/m/Y à H:i" }} par {{ edite_par.get_full_name|default:edite_par.username }}
+                </div>
+            </div>
+
+            <div class="summary-strip">
+                <div class="summary-cell">
+                    <div class="s-label">Services consommateurs</div>
+                    <div class="s-value">{{ par_service|length }}</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="s-label">Unités consommées</div>
+                    <div class="s-value">{{ total_quantite }}</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="s-label">Valeur (FCFA)</div>
+                    <div class="s-value">{{ total_valeur|floatformat:0 }}</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="s-label">Mouvements</div>
+                    <div class="s-value">{{ total_mouvements }}</div>
+                </div>
+            </div>
+
+            <div class="section-title">Consommation par service</div>
+            {% if par_service %}
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th style="width:4%;">N°</th>
+                        <th style="width:30%;">Service</th>
+                        <th style="width:10%;">Code</th>
+                        <th style="width:14%;" class="text-right">Unités</th>
+                        <th style="width:16%;" class="text-right">Valeur (FCFA)</th>
+                        <th style="width:12%;" class="text-right">Nb mvt</th>
+                        <th style="width:14%;" class="text-right">Part valeur</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in par_service %}
+                    <tr>
+                        <td class="text-center">{{ forloop.counter }}</td>
+                        <td><strong>{{ r.service_demandeur__nom }}</strong></td>
+                        <td>{{ r.service_demandeur__code|default:"—" }}</td>
+                        <td class="text-right qte-col">{{ r.quantite|default:0 }}</td>
+                        <td class="text-right valeur-col">{{ r.valeur|default:0|floatformat:0 }}</td>
+                        <td class="text-right">{{ r.nb_mouvements|default:0 }}</td>
+                        <td class="text-right">{{ r.part|default:0|floatformat:1 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-data">Aucune consommation enregistrée sur la période pour ces critères.</div>
+            {% endif %}
+
+            <div class="section-title">Détail par article (service × article)</div>
+            {% if detail %}
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th style="width:18%;">Service</th>
+                        <th style="width:26%;">Article</th>
+                        <th style="width:12%;">Référence</th>
+                        <th style="width:8%;">Unité</th>
+                        <th style="width:10%;" class="text-right">Quantité</th>
+                        <th style="width:14%;" class="text-right">Valeur (FCFA)</th>
+                        <th style="width:12%;" class="text-right">Nb mvt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in detail %}
+                    <tr>
+                        <td>{{ r.service_demandeur__nom }}</td>
+                        <td><strong>{{ r.article__designation }}</strong></td>
+                        <td>{{ r.article__reference|default:"—" }}</td>
+                        <td class="text-center">{{ r.article__unite_distribution|default:"—" }}</td>
+                        <td class="text-right qte-col">{{ r.quantite|default:0 }}</td>
+                        <td class="text-right valeur-col">{{ r.valeur|default:0|floatformat:0 }}</td>
+                        <td class="text-right">{{ r.nb_mouvements|default:0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-data">Aucun détail sur la période pour ces critères.</div>
+            {% endif %}
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

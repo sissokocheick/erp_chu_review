@@ -1,4 +1,5 @@
 {% extends "base_ui.html" %}
+{% load tri_table %}
 {% block title %}Consommation par Service{% endblock %}
 
 {% block contenu %}
@@ -94,6 +95,8 @@
     background: linear-gradient(135deg, var(--rc-accent), #2563eb); color: white;
     padding: 12px 14px; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px;
   }
+  .rc-table thead th.th-tri a:hover { color: #ffffff; opacity: 0.85; }
+  .rc-table thead th.th-tri.active a { color: #ffffff; text-decoration: underline; }
   .rc-table tbody td { padding: 11px 14px; border-top: 1px solid var(--rc-border); color: var(--rc-text); vertical-align: middle; }
   .rc-table tbody tr:hover { background: var(--rc-accent-l); }
   .rc-empty { text-align: center; padding: 36px 20px; color: var(--rc-text-2); font-size: 14px; }
@@ -178,6 +181,9 @@
   <a href="{{ export_url }}?{{ request.GET.urlencode }}" class="rc-btn-outline" title="Exporter les données affichées">
     <i class="fas fa-file-csv"></i> Export CSV
   </a>
+  <a href="{% url 'rapport_consommation_services_pdf' %}?{{ request.GET.urlencode }}" class="rc-btn-outline" title="Télécharger le PDF du rapport (logo et entête configurés)">
+    <i class="fas fa-file-pdf"></i> Export PDF
+  </a>
 </form>
 
 <div class="rc-cartes">
@@ -195,11 +201,11 @@
   <table class="rc-table">
     <thead>
       <tr>
-        <th>Service</th>
+        {% th_tri 'service' 'Service' tri ordre %}
         <th>Code</th>
-        <th>Unités consommées</th>
-        <th>Valeur (FCFA)</th>
-        <th>Nb mouvements</th>
+        {% th_tri 'quantite' 'Unités consommées' tri ordre %}
+        {% th_tri 'valeur' 'Valeur (FCFA)' tri ordre %}
+        {% th_tri 'mouvements' 'Nb mouvements' tri ordre %}
         <th>Part (valeur)</th>
       </tr>
     </thead>
@@ -242,13 +248,13 @@
   <table class="rc-table">
     <thead>
       <tr>
-        <th>Service</th>
-        <th>Article</th>
-        <th>Référence</th>
-        <th>Unité</th>
-        <th>Quantité</th>
-        <th>Valeur (FCFA)</th>
-        <th>Nb mvt</th>
+        {% th_tri 'service' 'Service' tri_detail ordre_detail 'd' %}
+        {% th_tri 'article' 'Article' tri_detail ordre_detail 'd' %}
+        {% th_tri 'reference' 'Référence' tri_detail ordre_detail 'd' %}
+        {% th_tri 'unite' 'Unité' tri_detail ordre_detail 'd' %}
+        {% th_tri 'quantite' 'Quantité' tri_detail ordre_detail 'd' %}
+        {% th_tri 'valeur' 'Valeur (FCFA)' tri_detail ordre_detail 'd' %}
+        {% th_tri 'mouvements' 'Nb mvt' tri_detail ordre_detail 'd' %}
       </tr>
     </thead>
     <tbody>

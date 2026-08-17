@@ -222,6 +222,7 @@ urlpatterns = [
     path('rapports/consommation-services/', rapports.rapport_consommation_services, name='rapport_consommation_services'),
     path('rapports/export-consommation-services/', rapports.export_consommation_services_csv, name='export_consommation_services_csv'),
     path('rapports/export-consommation-detail/', rapports.export_consommation_detail_csv, name='export_consommation_detail_csv'),
+    path('rapports/consommation-services/pdf/', rapports.rapport_consommation_services_pdf, name='rapport_consommation_services_pdf'),
     path('stock/rapports/consommation/pdf/', rapport_consommation_pdf, name='rapport_consommation_pdf'),
     path('rapports/export-stock/', rapports.export_stock_excel, name='export_stock_excel'),
     path('rapports/export-commandes/', rapports.export_commandes_excel, name='export_commandes_excel'),

@@ -460,8 +460,11 @@ Rotation du comptage **par famille / par zone** au lieu d'une campagne complète
 - **Consommation par Service** (`/rapports/consommation-services/`) : consommation mensuelle
   par service (quantités + valeur FCFA), KPIs, graphique d'évolution mensuelle et top services,
   filtres (période 1/3/6/12 mois ou plage libre, service), **détail par article
-  (ligne service × article, paginé)** et export CSV du résumé **et du détail** — scopé au
-  magasin actif, exclut le service REBUTS et les mouvements annulés.
+  (ligne service × article, paginé)**, **tri par clic sur les colonnes** des deux
+  tableaux (résumé et détail, indépendants), export CSV du résumé **et du détail**
+  **et export PDF** (logo + entête configurés, A4 paysage, numérotation des pages)
+  — mêmes filtres et même tri, scopé au magasin actif, exclut le service REBUTS
+  et les mouvements annulés.
 - **Stats Demandes** (`/stats/demandes/`) : volumes, statuts, délais.
 - **Stats Sondages** (`/stats/sondages/`) : taux de satisfaction des bons de sortie.
 - **Stats Satisfaction** (`/stats/satisfaction-services/`) : par service demandeur.

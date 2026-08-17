@@ -312,3 +312,138 @@ class DetailConsommationTest(BaseConsommationTest):
         self.assertNotIn(';40;', contenu)
         lignes = [l for l in contenu.splitlines() if l.strip()]
         self.assertEqual(len(lignes), 2)  # en-tête + 1 ligne
+
+
+class TriConsommationTest(BaseConsommationTest):
+    """Tri par clic sur les tableaux du rapport de consommation."""
+
+    def test_tri_resume_par_quantite_asc(self):
+        self._mouvement(self.article, self.service_a, 10)   # Cardio 10
+        self._mouvement(self.article2, self.service_b, 8)   # Urgences 8
+        resp = self._get_rapport(tri='quantite', ordre='asc')
+        noms = [r['service_demandeur__nom']
+                for r in resp.context['par_service']]
+        self.assertEqual(noms, ['Urgences', 'Cardiologie'])
+
+    def test_tri_resume_par_valeur_desc(self):
+        self._mouvement(self.article, self.service_a, 10)   # 5000 F
+        self._mouvement(self.article2, self.service_b, 8)   # 800 F
+        resp = self._get_rapport(tri='valeur', ordre='desc')
+        noms = [r['service_demandeur__nom']
+                for r in resp.context['par_service']]
+        self.assertEqual(noms, ['Cardiologie', 'Urgences'])
+
+    def test_tri_resume_par_nom_service_desc(self):
+        self._mouvement(self.article, self.service_a, 1)
+        self._mouvement(self.article2, self.service_b, 1)
+        resp = self._get_rapport(tri='service', ordre='desc')
+        noms = [r['service_demandeur__nom']
+                for r in resp.context['par_service']]
+        self.assertEqual(noms, ['Urgences', 'Cardiologie'])
+
+    def test_tri_invalide_revient_au_defaut(self):
+        self._mouvement(self.article, self.service_a, 1)
+        self._mouvement(self.article2, self.service_b, 1)
+        resp = self._get_rapport(tri='injection', ordre='asc')
+        # défaut : valeur décroissante → Cardiologie en premier
+        noms = [r['service_demandeur__nom']
+                for r in resp.context['par_service']]
+        self.assertEqual(noms, ['Cardiologie', 'Urgences'])
+
+    def test_tri_detail_independant_du_resume(self):
+        # Le tri du résumé (tri/ordre) ne doit pas toucher le détail
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_b, 8)
+        resp = self._get_rapport(tri='quantite', ordre='asc')
+        self.assertEqual(
+            [r['service_demandeur__nom']
+             for r in resp.context['par_service']],
+            ['Urgences', 'Cardiologie'])
+        # détail inchangé : service puis valeur décroissante
+        lignes = list(resp.context['detail_page'])
+        self.assertEqual(lignes[0]['service_demandeur__nom'],
+                         'Cardiologie')
+
+    def test_tri_detail_par_quantite_asc(self):
+        self._mouvement(self.article, self.service_a, 10)   # Gants 10
+        self._mouvement(self.article2, self.service_b, 8)   # Masques 8
+        resp = self._get_rapport(dtri='quantite', dordre='asc')
+        lignes = list(resp.context['detail_page'])
+        self.assertEqual(lignes[0]['service_demandeur__nom'], 'Urgences')
+        self.assertEqual(lignes[0]['quantite'], 8)
+
+    def test_liens_de_tri_dans_le_html(self):
+        self._mouvement(self.article, self.service_a, 10)
+        resp = self._get_rapport()
+        html = resp.content.decode()
+        self.assertIn('tri=service', html)
+        self.assertIn('tri=quantite', html)
+        self.assertIn('tri=valeur', html)
+        self.assertIn('dtri=article', html)
+        self.assertIn('dtri=valeur', html)
+        self.assertIn('dtri=mouvements', html)
+
+    def test_export_resume_respecte_le_tri(self):
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_b, 8)
+        resp = self.client.get(reverse('export_consommation_services_csv'),
+                               {'tri': 'quantite', 'ordre': 'asc'})
+        contenu = resp.content.decode('utf-8-sig')
+        lignes = [l for l in contenu.splitlines() if l.strip()]
+        self.assertEqual(len(lignes), 3)
+        idx_urg = next(i for i, l in enumerate(lignes) if 'Urgences' in l)
+        idx_car = next(i for i, l in enumerate(lignes) if 'Cardiologie' in l)
+        self.assertLess(idx_urg, idx_car)  # 8 avant 10 en asc
+
+    def test_export_detail_respecte_le_tri(self):
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_b, 8)
+        resp = self.client.get(reverse('export_consommation_detail_csv'),
+                               {'dtri': 'quantite', 'dordre': 'asc'})
+        contenu = resp.content.decode('utf-8-sig')
+        lignes = [l for l in contenu.splitlines() if l.strip()]
+        self.assertEqual(len(lignes), 3)
+        idx_urg = next(i for i, l in enumerate(lignes) if 'Urgences' in l)
+        idx_car = next(i for i, l in enumerate(lignes) if 'Cardiologie' in l)
+        self.assertLess(idx_urg, idx_car)
+
+
+class PdfConsommationTest(BaseConsommationTest):
+    """Export PDF du rapport de consommation par service."""
+
+    def test_pdf_rendu_complet(self):
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_b, 8)
+        resp = self.client.get(reverse('rapport_consommation_services_pdf'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertIn('Rapport_Consommation_par_Service.pdf',
+                      resp['Content-Disposition'])
+        # PDF généré et non vide (le template se rend sans erreur)
+        self.assertGreater(len(resp.content), 1000)
+        self.assertTrue(resp.content.startswith(b'%PDF'))
+
+    def test_pdf_respecte_filtre_service(self):
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_b, 8)
+        resp = self.client.get(reverse('rapport_consommation_services_pdf'),
+                               {'service': self.service_b.id})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertTrue(resp.content.startswith(b'%PDF'))
+
+    def test_pdf_sans_donnees_rendu_valide(self):
+        resp = self.client.get(reverse('rapport_consommation_services_pdf'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'application/pdf')
+        self.assertTrue(resp.content.startswith(b'%PDF'))
+
+    def test_pdf_respecte_le_tri(self):
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_b, 8)
+        # Tri résumé par quantité asc + détail par quantité asc
+        resp = self.client.get(reverse('rapport_consommation_services_pdf'),
+                               {'tri': 'quantite', 'ordre': 'asc',
+                                'dtri': 'quantite', 'dordre': 'asc'})
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.content.startswith(b'%PDF'))
