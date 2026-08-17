@@ -12,9 +12,23 @@
     <td>{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}</td>
     <td class="c">
         {% if not bon.est_annule %}
-        <button type="button" class="btn-pdf" onclick="event.stopPropagation(); imprimerModal('/stock/retours-services/imprimer/{{ bon.id }}/', 'Bon de Retour — {{ bon.numero_bon }}')" title="Aperçu / Imprimer" aria-label="Imprimer le bon {{ bon.numero_bon }}">
-            <i class="fas fa-print"></i>
-        </button>
+            {% if bon.statut_validation == 'ATTENTE' %}
+                <span style="display:inline-flex; align-items:center; gap:4px; background:#fff3cd; color:#856404; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: bold;" title="En attente de validation hiérarchique">
+                    <i class="fas fa-lock"></i> Attente validation
+                </span>
+                {% if circuit_retour and est_valideur_retour %}
+                <form method="POST" action="{% url 'valider_bon_retour' bon.id %}" style="display:inline; margin:0;" onsubmit="return confirm('Valider le bon de retour {{ bon.numero_bon|escapejs }} ? Le stock sera réintégré.');">
+                    {% csrf_token %}
+                    <button type="submit" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le bon de retour" aria-label="Valider le bon de retour {{ bon.numero_bon }}">
+                        <i class="fas fa-stamp"></i> Valider
+                    </button>
+                </form>
+                {% endif %}
+            {% else %}
+            <button type="button" class="btn-pdf" onclick="event.stopPropagation(); imprimerModal('/stock/retours-services/imprimer/{{ bon.id }}/', 'Bon de Retour — {{ bon.numero_bon }}')" title="Aperçu / Imprimer" aria-label="Imprimer le bon {{ bon.numero_bon }}">
+                <i class="fas fa-print"></i>
+            </button>
+            {% endif %}
         {% endif %}
     </td>
 </tr>

@@ -13,7 +13,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError, PermissionDenied
 from django.apps import apps
 
-from stock.models import Magasin, Article, FamilleArticle, StockItem, Mouvement
+from stock.models import Magasin, Article, FamilleArticle, StockItem, Mouvement, CircuitValidation
 
 User = get_user_model()
 
@@ -208,6 +208,200 @@ class BonServiceTest(TestCase):
             )
         
         self.assertIn('inactif', str(context.exception).lower())
+
+    def test_circuit_inactif_validation_auto(self):
+        """Circuit de validation désactivé → le bon de sortie est créé en VALIDE
+        et le stock est décrémenté immédiatement (validation automatique)."""
+        from stock.models import CircuitValidation
+        circuit = CircuitValidation.objects.create(
+            type_document='SORTIE', est_actif=False
+        )
+        lignes = [{'article_id': self.article.id, 'quantite': 10}]
+
+        bon = self.bon_service.creer_bon_sortie(
+            lignes=lignes,
+            utilisateur=self.user,
+            magasin=self.magasin,
+            circuit_validation=circuit,
+        )
+
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 90)
+        # Les mouvements de sortie sont créés immédiatement (liés par n° de bon)
+        self.assertTrue(
+            Mouvement.objects.filter(reference_document=bon.numero_bon).exists()
+        )
+
+    def test_circuit_actif_bon_en_attente_puis_validation(self):
+        """Circuit de validation ACTIF → le bon est créé en ATTENTE sans toucher
+        au stock, puis valider_bon_sortie le passe en VALIDE et décrémente."""
+        from stock.models import CircuitValidation
+        circuit = CircuitValidation.objects.create(
+            type_document='SORTIE', est_actif=True
+        )
+        lignes = [{'article_id': self.article.id, 'quantite': 10}]
+
+        bon = self.bon_service.creer_bon_sortie(
+            lignes=lignes,
+            utilisateur=self.user,
+            magasin=self.magasin,
+            circuit_validation=circuit,
+        )
+
+        # En attente : statut ATTENTE, stock intact, aucun mouvement
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 100)
+        self.assertFalse(
+            Mouvement.objects.filter(reference_document=bon.numero_bon).exists()
+        )
+
+        # Validation par le validateur → VALIDE + décrément
+        self.bon_service.valider_bon_sortie(bon, self.user)
+        bon.refresh_from_db()
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 90)
+        self.assertTrue(
+            Mouvement.objects.filter(reference_document=bon.numero_bon).exists()
+        )
+
+    def test_circuit_inactif_entree_auto_valide(self):
+        """Circuit ENTREE désactivé → le bon d'entrée est VALIDE immédiatement
+        et le stock est augmenté (validation automatique)."""
+        from stock.models import CircuitValidation
+        circuit = CircuitValidation.objects.create(
+            type_document='ENTREE', est_actif=False
+        )
+        lignes = [{'article_id': self.article.id, 'quantite': 10}]
+
+        bon = self.bon_service.creer_bon_entree(
+            lignes=lignes,
+            utilisateur=self.user,
+            magasin=self.magasin,
+            circuit_validation=circuit,
+        )
+
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 110)
+        self.assertTrue(
+            Mouvement.objects.filter(reference_document=bon.numero_bon).exists()
+        )
+
+    def test_circuit_actif_entree_en_attente_puis_validation(self):
+        """Circuit ENTREE actif → le bon est créé en ATTENTE sans toucher au
+        stock, puis sa validation via la vue applique les mouvements d'entrée."""
+        from stock.models import CircuitValidation
+        circuit = CircuitValidation.objects.create(
+            type_document='ENTREE', est_actif=True
+        )
+        lignes = [{'article_id': self.article.id, 'quantite': 10}]
+
+        bon = self.bon_service.creer_bon_entree(
+            lignes=lignes,
+            utilisateur=self.user,
+            magasin=self.magasin,
+            circuit_validation=circuit,
+        )
+
+        # En attente : statut ATTENTE, stock intact, aucun mouvement
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 100)
+        self.assertFalse(
+            Mouvement.objects.filter(reference_document=bon.numero_bon).exists()
+        )
+
+        # Validation via la vue dédiée valider_bon_entree
+        self.user.is_superuser = True
+        self.user.save()
+        self.user.profil.doit_changer_mdp = False
+        self.user.profil.save()
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['magasin_actif_id'] = str(self.magasin.id)
+        session.save()
+        response = self.client.post(f'/entrees/{bon.id}/valider/')
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('entrees', response.get('Location', ''))
+
+        bon.refresh_from_db()
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 110)
+        self.assertTrue(
+            Mouvement.objects.filter(reference_document=bon.numero_bon).exists()
+        )
+
+    def test_circuit_inactif_retour_auto_valide(self):
+        """Circuit ENTREE désactivé → le bon de retour est VALIDE immédiatement
+        et le stock est réintégré à la création."""
+        circuit = CircuitValidation.objects.create(
+            type_document='ENTREE', est_actif=False
+        )
+        lignes = [{'article_id': self.article.id, 'quantite': 10}]
+
+        bon = self.bon_service.creer_bon_retour(
+            lignes=lignes,
+            utilisateur=self.user,
+            magasin=self.magasin,
+            circuit_validation=circuit,
+        )
+
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 110)
+        self.assertTrue(
+            Mouvement.objects.filter(reference_document=bon.numero_bon).exists()
+        )
+
+    def test_circuit_actif_retour_en_attente_puis_validation(self):
+        """Circuit ENTREE actif → le bon de retour est créé en ATTENTE sans
+        toucher au stock, puis sa validation via la vue applique la
+        réintégration."""
+        from stock.models import CircuitValidation
+        circuit = CircuitValidation.objects.create(
+            type_document='ENTREE', est_actif=True
+        )
+        lignes = [{'article_id': self.article.id, 'quantite': 10}]
+
+        bon = self.bon_service.creer_bon_retour(
+            lignes=lignes,
+            utilisateur=self.user,
+            magasin=self.magasin,
+            circuit_validation=circuit,
+        )
+
+        # En attente : statut ATTENTE, stock intact, aucun mouvement
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 100)
+        self.assertFalse(
+            Mouvement.objects.filter(reference_document=bon.numero_bon).exists()
+        )
+
+        # Validation via la vue dédiée valider_bon_retour
+        self.user.is_superuser = True
+        self.user.save()
+        self.user.profil.doit_changer_mdp = False
+        self.user.profil.save()
+        self.client.force_login(self.user)
+        session = self.client.session
+        session['magasin_actif_id'] = str(self.magasin.id)
+        session.save()
+        response = self.client.post(f'/retours-services/{bon.id}/valider/')
+        self.assertEqual(response.status_code, 302)
+        self.assertIn('retours-services', response.get('Location', ''))
+
+        bon.refresh_from_db()
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 110)
+        self.assertTrue(
+            Mouvement.objects.filter(reference_document=bon.numero_bon).exists()
+        )
 
 
 class StockTransactionServiceTest(TestCase):

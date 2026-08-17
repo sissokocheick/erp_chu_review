@@ -76,7 +76,8 @@ class BonService:
     @transaction.atomic
     def creer_bon_entree(cls, lignes, utilisateur, magasin,
                          commentaire="", reference_document=None,
-                         fournisseur=None, reference_externe=None):
+                         fournisseur=None, reference_externe=None,
+                         circuit_validation=None):
         """Crée un bon d'entrée avec mouvements de stock.
 
         Args:
@@ -89,9 +90,16 @@ class BonService:
             reference_document: str|None
             fournisseur: Fournisseur instance|None
             reference_externe: str|None
+            circuit_validation: CircuitValidation instance|None — si un circuit
+                ENTREE est actif, le bon est créé en ATTENTE sans mouvement de
+                stock (validation par un validateur requise ensuite).
         """
         # ✅ CORRECTION MONO-TENANT : vérification utilisateur
         cls._verifier_utilisateur_actif(utilisateur, magasin)
+
+        # ✅ Circuit de validation : même règle que la sortie — circuit actif →
+        # ATTENTE (stock intact jusqu'à validation), sinon VALIDE immédiat.
+        statut = 'ATTENTE' if circuit_validation and circuit_validation.est_actif else 'VALIDE'
 
         # ✅ CORRECTION SANITAIRE : bloquer les lots déjà périmés à l'entrée,
         # AVANT toute écriture (défense en profondeur : la vue contrôle déjà,
@@ -111,7 +119,7 @@ class BonService:
             'magasin': magasin,
             'cree_par': utilisateur,
             'commentaire': commentaire,
-            'statut_validation': 'VALIDE',
+            'statut_validation': statut,
         }
         if reference_externe:
             bon_kwargs['reference_externe'] = reference_externe
@@ -174,6 +182,11 @@ class BonService:
                 ligne_kwargs['date_peremption'] = date_peremption
 
             LigneBon.objects.create(**ligne_kwargs)
+
+            # Circuit actif → bon en ATTENTE : pas de mouvement de stock maintenant
+            # (la validation créera les mouvements, cf. stock/views/validation_bons.py)
+            if statut == 'ATTENTE':
+                continue
 
             mouvement = Mouvement(
                 type_mouvement='ENTREE',
@@ -555,7 +568,8 @@ class BonService:
     @transaction.atomic
     def creer_bon_retour(cls, lignes, utilisateur, magasin,
                          commentaire="", reference_document=None,
-                         service=None, reference_externe=None):
+                         service=None, reference_externe=None,
+                         circuit_validation=None):
         """Crée un bon de retour service (entrée de stock).
 
         Args:
@@ -567,16 +581,23 @@ class BonService:
             reference_document: str|None
             service: Service instance|None
             reference_externe: str|None
+            circuit_validation: CircuitValidation instance|None — si un circuit
+                ENTREE actif est passé, le bon est créé en ATTENTE sans
+                mouvement de stock (validation différée), sinon VALIDE immédiat.
         """
         # ✅ CORRECTION MONO-TENANT : vérification utilisateur
         cls._verifier_utilisateur_actif(utilisateur, magasin)
+
+        # Même pattern que creer_bon_entree : circuit actif → ATTENTE (stock
+        # intact jusqu'à validation), sinon VALIDE immédiat avec mouvements.
+        statut = 'ATTENTE' if circuit_validation and circuit_validation.est_actif else 'VALIDE'
 
         bon_kwargs = {
             'type_bon': 'RETOUR_SERVICE',
             'magasin': magasin,
             'cree_par': utilisateur,
             'commentaire': commentaire,
-            'statut_validation': 'VALIDE',
+            'statut_validation': statut,
         }
         if service:
             bon_kwargs['service_demandeur'] = service
@@ -617,17 +638,20 @@ class BonService:
 
             LigneBon.objects.create(**ligne_kwargs)
 
-            mouvement = Mouvement(
-                type_mouvement='RETOUR_SERVICE',
-                article=article,
-                magasin=magasin,
-                quantite=quantite,
-                utilisateur=utilisateur,
-                reference_document=bon.numero_bon,
-                numero_lot=numero_lot,
-                date_peremption=date_peremption,
-            )
-            StockTransactionService.executer(mouvement)
+            # Circuit actif → bon en ATTENTE : pas de mouvement de stock
+            # maintenant (le stock sera réintégré à la validation).
+            if statut == 'VALIDE':
+                mouvement = Mouvement(
+                    type_mouvement='RETOUR_SERVICE',
+                    article=article,
+                    magasin=magasin,
+                    quantite=quantite,
+                    utilisateur=utilisateur,
+                    reference_document=bon.numero_bon,
+                    numero_lot=numero_lot,
+                    date_peremption=date_peremption,
+                )
+                StockTransactionService.executer(mouvement)
 
         # ── Snapshot : créateur = magasinier (case 3) ──
         cls._enregistrer_validation(bon, utilisateur, ordre_case=3, commentaire="Création bon de retour")

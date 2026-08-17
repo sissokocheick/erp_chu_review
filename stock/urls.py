@@ -7,14 +7,14 @@ from .views import (
 )
 from .views.entrees import (
     liste_entrees, annuler_entree, apercu_bon_entree,
-    remplacer_scan_entree,
+    remplacer_scan_entree, valider_bon_entree,
 )
 from .views.sorties import (
     liste_sorties, annuler_sortie, valider_bon_sortie,
     remplacer_scan_sortie,
 )
 from .views.retours import (
-    liste_retours_services, apercu_bon_retour,
+    liste_retours_services, apercu_bon_retour, valider_bon_retour,
 )
 from .views.hors_stock import (
     liste_bons_hors_stock, annuler_bon_hors_stock,
@@ -81,6 +81,7 @@ urlpatterns = [
     # ═══════════════════════════════════════════════════════════════════════
     path('entrees/', liste_entrees, name='liste_entrees'),
     path('entrees/<int:bon_id>/annuler/', annuler_entree, name='annuler_entree'),
+    path('entrees/<int:bon_id>/valider/', valider_bon_entree, name='valider_bon_entree'),
     path('entrees/apercu/<int:bon_id>/', apercu_bon_entree, name='apercu_bon_entree'),
     path('entrees/<int:bon_id>/pdf/', bon_entree_pdf, name='bon_entree_pdf'),
     path('entrees/<int:bon_id>/remplacer-scan/', remplacer_scan_entree, name='remplacer_scan_entree'),
@@ -105,6 +106,7 @@ urlpatterns = [
     # ═══════════════════════════════════════════════════════════════════════
     path('stock/retours-services/', liste_retours_services, name='liste_retours_services'),
     path('retours-services/apercu/<int:bon_id>/', apercu_bon_retour, name='apercu_bon_retour'),
+    path('retours-services/<int:bon_id>/valider/', valider_bon_retour, name='valider_bon_retour'),
     path('transferts/', liste_transferts, name='liste_transferts'),
     path('transferts/<int:bon_id>/annuler/', annuler_transfert, name='annuler_transfert'),
     path('stock/retours-services/imprimer/<int:bon_id>/', imprimer_bon_multi_lignes, name='imprimer_bon_retour'),

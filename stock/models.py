@@ -1231,7 +1231,10 @@ class Commande(SoftDeleteModel):
                 if not circuit.est_actif:
                     self.statut_validation = 'VALIDE'
             except CircuitValidation.DoesNotExist:
-                self.statut_validation = 'BROUILLON'
+                # Pas de circuit configuré = validation directe (même règle
+                # que circuit inactif) : la commande est approuvée à la
+                # création et l'action peut avoir lieu immédiatement.
+                self.statut_validation = 'VALIDE'
 
         super().save(*args, **kwargs)
 

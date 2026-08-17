@@ -238,6 +238,17 @@ def receptionner_commande(request, commande_id):
         )
         return redirect('liste_commandes')
 
+    # Circuit de validation : une commande non approuvée ne peut pas être
+    # réceptionnée (l'action doit attendre la validation des validateurs).
+    if commande.statut_validation != 'VALIDE':
+        messages.error(
+            request,
+            f"⛔ La commande {commande.numero_commande} n'est pas encore approuvée "
+            "— la réception est impossible tant que les validateurs du circuit "
+            "ne l'ont pas validée."
+        )
+        return redirect('liste_commandes')
+
     magasins = Magasin.objects.all()
     magasin_id_actif = request.session.get('magasin_actif_id')
     magasin_actif = Magasin.objects.filter(

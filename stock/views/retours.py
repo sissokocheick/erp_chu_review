@@ -18,7 +18,7 @@ from ..pdf_utils import get_pdf_config, paginate_lignes, ajouter_hauteurs_lignes
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
     Article, Magasin, Service,
-    Fournisseur, Beneficiaire)
+    Fournisseur, Beneficiaire, Mouvement)
 from ..services import NumeroGenerator, StockService, PDFService, NotificationService
 from ..services.bon_service import BonService
 from .catalogue import paginer
@@ -51,6 +51,17 @@ def _afficher_retours(request):
         'lignes_bon__article'
     ).order_by('-date_bon')
 
+    # Circuit ENTREE actif → les retours (réintégrations) passent par
+    # validation différée : on expose l'état + le statut de validateur.
+    from ..models import CircuitValidation
+    circuit_retour = CircuitValidation.objects.filter(
+        type_document='ENTREE', est_actif=True, is_deleted=False
+    ).prefetch_related('valideurs').first()
+    est_valideur = (
+        request.user.is_superuser
+        or (circuit_retour and circuit_retour.valideurs.filter(id=request.user.id).exists())
+    )
+
     extra = {
         'services': Service.objects.all().order_by('nom'),
         'magasins': Magasin.objects.all().order_by('nom'),
@@ -58,6 +69,8 @@ def _afficher_retours(request):
         'magasin_actif': get_magasin_actif(request),
         'peut_creer': _has_perm_bon(request.user, 'add', 'RETOUR_SERVICE'),
         'peut_annuler': _has_perm_bon(request.user, 'change', 'RETOUR_SERVICE'),
+        'circuit_retour': circuit_retour,
+        'est_valideur_retour': est_valideur,
     }
     return render_liste(
         request, qs,
@@ -153,20 +166,33 @@ def _creer_retour(request):
                 'date_peremption': peremp or None,
             })
 
+    from ..models import CircuitValidation
+    circuit_retour = CircuitValidation.objects.filter(
+        type_document='ENTREE', est_actif=True, is_deleted=False
+    ).first()
+
     try:
         bon = BonService.creer_bon_retour(
             lignes=lignes,
             utilisateur=request.user,
             magasin=magasin,
             service=service,
-            reference_externe=ref_ext
+            reference_externe=ref_ext,
+            circuit_validation=circuit_retour,
         )
     except IntegrityError as e:
         logger.exception("[RETOUR] IntegrityError création bon : %s", e)
         messages.error(request, "⛔ Erreur lors de la création du bon. Vérifiez la console pour le détail.")
         return redirect('liste_retours_services')
 
-    messages.success(request, f"✅ Bon de retour {bon.numero_bon} enregistré ! ({len(lignes)} article(s))")
+    if bon.statut_validation == 'ATTENTE':
+        messages.info(
+            request,
+            f"🕒 Bon de retour {bon.numero_bon} créé — en attente de validation "
+            "par le circuit ENTREE (le stock sera réintégré après validation)."
+        )
+    else:
+        messages.success(request, f"✅ Bon de retour {bon.numero_bon} enregistré ! ({len(lignes)} article(s))")
     return redirect(f"{reverse('liste_retours_services')}?print_bon={bon.id}")
 
 
@@ -249,3 +275,72 @@ def apercu_bon_retour(request, bon_id):
         'pdf_config': pdf_config,
     }
     return render(request, 'stock/pdf/bon_retour.html', context)
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_retours_services')
+@magasin_requis
+@catch_errors(redirect_url='liste_retours_services')
+def valider_bon_retour(request, bon_id):
+    """Valide un bon de retour en ATTENTE (circuit ENTREE actif) : applique les
+    mouvements de réintégration et met à jour le stock.
+
+    Réservé aux validateurs désignés dans le circuit ENTREE (ou superuser),
+    même pattern que valider_bon_entree / valider_bon_sortie.
+    """
+    from ..models import CircuitValidation
+    from ..services.stock_transaction_service import StockTransactionService
+    from django.db import transaction as db_transaction
+
+    bon = get_object_or_404(
+        BonMouvement, id=bon_id, type_bon='RETOUR_SERVICE'
+    )
+
+    circuit = CircuitValidation.objects.filter(
+        type_document='ENTREE', est_actif=True, is_deleted=False
+    ).prefetch_related('valideurs').first()
+
+    if not circuit:
+        messages.error(request, "❌ Aucun circuit de validation actif pour les bons de retour.")
+        return redirect('liste_retours_services')
+
+    if request.user not in circuit.valideurs.all() and not request.user.is_superuser:
+        messages.error(request, "⛔ Vous n'êtes pas autorisé à valider ce bon de retour.")
+        return redirect('liste_retours_services')
+
+    if bon.statut_validation != 'ATTENTE':
+        messages.warning(request, f"⚠️ Le bon {bon.numero_bon} n'est pas en attente de validation.")
+        return redirect('liste_retours_services')
+
+    try:
+        with db_transaction.atomic():
+            bon.statut_validation = 'VALIDE'
+            bon.date_validation = timezone.now()
+            bon.valide_par = request.user
+            bon.save(update_fields=['statut_validation', 'date_validation', 'valide_par'])
+
+            for ligne in bon.lignes_bon.all():
+                mouvement = Mouvement(
+                    type_mouvement='RETOUR_SERVICE',
+                    article=ligne.article,
+                    magasin=bon.magasin,
+                    quantite=ligne.quantite,
+                    prix_unitaire=ligne.prix_unitaire,
+                    utilisateur=request.user,
+                    reference_document=bon.numero_bon,
+                    numero_lot=ligne.numero_lot,
+                    date_peremption=ligne.date_peremption,
+                    commentaire=f"Validation du bon de retour {bon.numero_bon}",
+                )
+                StockTransactionService.executer(mouvement)
+    except Exception as e:
+        logger.exception("[RETOUR] Validation bon %s : %s", bon.numero_bon, e)
+        messages.error(request, "❌ Une erreur est survenue lors de la validation.")
+        return redirect('liste_retours_services')
+
+    messages.success(
+        request,
+        f"✅ Bon de retour {bon.numero_bon} validé par "
+        f"{request.user.get_full_name() or request.user.username} — le stock a été réintégré."
+    )
+    return redirect('liste_retours_services')

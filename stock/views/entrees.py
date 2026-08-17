@@ -58,6 +58,17 @@ def _afficher_entrees(request):
     if magasin_actif_id:
         qs = qs.filter(magasin_id=magasin_actif_id)
 
+    from stock.models import CircuitValidation
+    circuit_entree = CircuitValidation.objects.filter(
+        type_document='ENTREE', est_actif=True, is_deleted=False
+    ).first()
+    est_valideur_entree = False
+    if circuit_entree:
+        est_valideur_entree = (
+            request.user.is_superuser
+            or circuit_entree.valideurs.filter(id=request.user.id).exists()
+        )
+
     extra = {
         'magasins': get_magasins_autorises(request).order_by('nom'),
         'fournisseurs': Fournisseur.objects.all().order_by('raison_sociale'),
@@ -67,6 +78,8 @@ def _afficher_entrees(request):
         'motifs_annulation': MotifAnnulation.objects.filter(actif=True).order_by('libelle'),
         'peut_creer': _has_perm_bon(request.user, 'add', 'ENTREE'),
         'peut_annuler': _has_perm_bon(request.user, 'change', 'ENTREE'),
+        'circuit_entree': circuit_entree,
+        'est_valideur_entree': est_valideur_entree,
     }
     return render_liste(
         request, qs,
@@ -184,12 +197,17 @@ def _creer_entree(request):
             })
 
     try:
+        from stock.models import CircuitValidation
+        circuit_entree = CircuitValidation.objects.filter(
+            type_document='ENTREE', est_actif=True, is_deleted=False
+        ).first()
         bon = BonService.creer_bon_entree(
             lignes=lignes,
             utilisateur=request.user,
             magasin=magasin,
             fournisseur=fournisseur,
-            reference_externe=ref_ext
+            reference_externe=ref_ext,
+            circuit_validation=circuit_entree
         )
     except ValidationError as e:
         messages.error(request, str(e))
@@ -201,7 +219,14 @@ def _creer_entree(request):
 
     _traiter_upload_scan(request, bon)
 
-    messages.success(request, f"✅ Bon d'entrée enregistré ! ({len(lignes)} article(s))")
+    if bon.statut_validation == 'ATTENTE':
+        messages.success(
+            request,
+            f"✅ Bon d'entrée enregistré et envoyé pour validation "
+            f"({len(lignes)} article(s)) — le stock sera mis à jour après validation."
+        )
+    else:
+        messages.success(request, f"✅ Bon d'entrée enregistré ! ({len(lignes)} article(s))")
     return redirect(f"{reverse('liste_entrees')}?print_bon={bon.id}")
 
 
@@ -375,4 +400,73 @@ def remplacer_scan_entree(request, bon_id):
                 f"✅ Fichier scanné remplacé pour le bon {bon.numero_bon}."
             )
 
+    return redirect('liste_entrees')
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_entrees')
+@magasin_requis
+@catch_errors(redirect_url='liste_entrees')
+def valider_bon_entree(request, bon_id):
+    """Valide un bon d'entrée en ATTENTE (circuit ENTREE actif) : applique les
+    mouvements d'entrée (avec lots/péremptions) et met à jour le stock.
+
+    Réservé aux validateurs désignés dans le circuit ENTREE (ou superuser),
+    même pattern que valider_bon_sortie.
+    """
+    from stock.models import CircuitValidation
+    from stock.services.stock_transaction_service import StockTransactionService
+    from django.db import transaction as db_transaction
+
+    bon = get_object_or_404(
+        BonMouvement, id=bon_id, type_bon='ENTREE'
+    )
+
+    circuit = CircuitValidation.objects.filter(
+        type_document='ENTREE', est_actif=True, is_deleted=False
+    ).prefetch_related('valideurs').first()
+
+    if not circuit:
+        messages.error(request, "❌ Aucun circuit de validation actif pour les bons d'entrée.")
+        return redirect('liste_entrees')
+
+    if request.user not in circuit.valideurs.all() and not request.user.is_superuser:
+        messages.error(request, "⛔ Vous n'êtes pas autorisé à valider ce bon d'entrée.")
+        return redirect('liste_entrees')
+
+    if bon.statut_validation != 'ATTENTE':
+        messages.warning(request, f"⚠️ Le bon {bon.numero_bon} n'est pas en attente de validation.")
+        return redirect('liste_entrees')
+
+    try:
+        with db_transaction.atomic():
+            bon.statut_validation = 'VALIDE'
+            bon.date_validation = timezone.now()
+            bon.valide_par = request.user
+            bon.save(update_fields=['statut_validation', 'date_validation', 'valide_par'])
+
+            for ligne in bon.lignes_bon.all():
+                mouvement = Mouvement(
+                    type_mouvement='ENTREE',
+                    article=ligne.article,
+                    magasin=bon.magasin,
+                    quantite=ligne.quantite,
+                    prix_unitaire=ligne.prix_unitaire,
+                    utilisateur=request.user,
+                    reference_document=bon.numero_bon,
+                    numero_lot=ligne.numero_lot,
+                    date_peremption=ligne.date_peremption,
+                    commentaire=f"Validation du bon {bon.numero_bon}",
+                )
+                StockTransactionService.executer(mouvement)
+    except Exception as e:
+        logger.exception("[ENTREE] Validation bon %s : %s", bon.numero_bon, e)
+        messages.error(request, "❌ Une erreur est survenue lors de la validation.")
+        return redirect('liste_entrees')
+
+    messages.success(
+        request,
+        f"✅ Bon d'entrée {bon.numero_bon} validé par "
+        f"{request.user.get_full_name() or request.user.username} — le stock a été mis à jour."
+    )
     return redirect('liste_entrees')
