@@ -352,19 +352,10 @@
 
   var topEl = document.getElementById('chartTop');
   if (topEl && typeof Chart !== 'undefined') {
-    var topLabels = [];
-    var topData = [];
+    var topLabels = {{ chart_services_labels|safe }};
+    var topData = {{ chart_services_data|safe }};
     var topColors = ['#20c997', '#2563eb', '#fd7e14', '#6f42c1', '#dc3545',
                      '#17a2b8', '#ffc107', '#e83e8c'];
-    document.querySelectorAll('.rc-table tbody tr').forEach(function (tr, i) {
-      if (i >= 8) return;
-      var tds = tr.querySelectorAll('td');
-      if (tds.length < 4) return;
-      var nom = tds[0].innerText.trim();
-      var val = parseFloat(tds[3].innerText.replace(/[^\d.-]/g, '')) || 0;
-      topLabels.push(nom.length > 22 ? nom.slice(0, 22) + '…' : nom);
-      topData.push(val);
-    });
     new Chart(topEl, {
       type: 'doughnut',
       data: {

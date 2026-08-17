@@ -61,7 +61,7 @@
             width: 55%; padding: 6px 8px;
         }
         .cart-col-title .process { font-size: 8pt; color: #555; }
-        .cart-col-title .doc-title { font-size: 15pt; font-weight: bold; color: #1c5b96; letter-spacing: 1px; }
+        .cart-col-title .doc-title { font-size: 16pt; font-weight: bold; color: #1c5b96; letter-spacing: 1px; }
         .cart-col-title .doc-subtitle { font-size: 9pt; color: #333; }
         .cart-col-quality {
             display: table-cell; vertical-align: middle;
@@ -131,10 +131,11 @@
             <div class="main-cartridge">
                 <div class="cart-col-logo">
                     {% if pdf_config.cartouche.afficher_logo and logo_url %}
-                        <img src="{{ logo_url }}" alt="Logo">
+                        <img src="{{ logo_url }}" alt="Logo {{ nom_etablissement|default:'' }}">
                     {% else %}
                         <div style="height:50px;"></div>
                     {% endif %}
+                    <div class="institution-text">{{ nom_etablissement|default:"" }}</div>
                 </div>
                 <div class="cart-col-title">
                     <div class="process">{{ pdf_config.ps2_label|default:"PS2 : GERER LES PRESTATIONS EXTERNES" }}</div>

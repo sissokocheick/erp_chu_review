@@ -109,6 +109,26 @@
   .pv-section h5 { margin: 0; font-size: 14px; font-weight: 800; color: var(--pv-text); }
   .pv-section-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .pv-count { font-size: 12px; color: var(--pv-text-2); font-weight: 600; }
+
+  .pv-pag {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 10px; margin-top: 12px; padding: 10px 4px;
+  }
+  .pv-pag-info { font-size: 12px; color: var(--pv-text-2); }
+  .pv-pag-controls { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+  .pv-pag-btn {
+    min-width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--pv-border); border-radius: 8px; font-size: 13px; color: var(--pv-text);
+    text-decoration: none; background: var(--pv-bg);
+  }
+  .pv-pag-btn:hover { border-color: var(--pv-accent); color: var(--pv-accent); }
+  .pv-pag-btn.active { background: var(--pv-accent); border-color: var(--pv-accent); color: white; font-weight: 700; }
+  .pv-pag-btn.disabled { opacity: 0.45; pointer-events: none; }
+  .pv-pag-btn.dots { border: none; background: none; }
+  .pv-pag-per {
+    background: var(--pv-bg-alt); color: var(--pv-text); border: 1.5px solid var(--pv-border);
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; font-family: inherit;
+  }
 </style>
 
 <div class="pv-header">
@@ -142,7 +162,7 @@
 
 <form method="get" class="pv-filtres">
   <div>
-    <label>Période (plage)</label>
+    <label>Période</label>
     <select name="mois">
       <option value="1" {% if mois == 1 %}selected{% endif %}>1 mois</option>
       <option value="3" {% if mois == 3 %}selected{% endif %}>3 mois</option>
@@ -166,9 +186,6 @@
   <button type="submit" class="pv-btn"><i class="fas fa-filter"></i> Appliquer</button>
   <a href="{{ export_url }}?{{ request.GET.urlencode }}" class="pv-btn-outline" title="Exporter le résumé">
     <i class="fas fa-file-csv"></i> Export CSV
-  </a>
-  <a href="{{ export_detail_url }}?{{ request.GET.urlencode }}" class="pv-btn-outline" title="Exporter le détail par type d'équipement">
-    <i class="fas fa-file-csv"></i> Export détail
   </a>
   <a href="{{ pdf_url }}?{{ request.GET.urlencode }}" class="pv-btn-outline" title="Télécharger le PDF (logo et entête configurés)">
     <i class="fas fa-file-pdf"></i> Export PDF
@@ -230,7 +247,12 @@
 
 <div class="pv-section">
   <h5><i class="fas fa-tools"></i> Détail par service × type d'équipement</h5>
-  <span class="pv-count">{{ par_svc_type|length }} ligne{{ par_svc_type|length|pluralize }}</span>
+  <div class="pv-section-actions">
+    <span class="pv-count">{{ detail_total }} ligne{{ detail_total|pluralize }}</span>
+    <a href="{{ export_detail_url }}?{{ request.GET.urlencode }}" class="pv-btn-outline" title="Exporter le détail (toutes les lignes, mêmes filtres)">
+      <i class="fas fa-file-csv"></i> Export détail CSV
+    </a>
+  </div>
 </div>
 <div class="pv-table-wrap">
   <table class="pv-table">
@@ -244,7 +266,7 @@
       </tr>
     </thead>
     <tbody>
-      {% for r in par_svc_type %}
+      {% for r in detail_page %}
       <tr>
         <td>{{ r.service_demandeur__nom }}</td>
         <td>{{ r.type__nom }}</td>
@@ -258,6 +280,45 @@
     </tbody>
   </table>
 </div>
+
+{% if detail_page.paginator.num_pages > 1 %}
+<div class="pv-pag">
+  <div class="pv-pag-info">
+    <strong>{{ detail_page.start_index }} - {{ detail_page.end_index }}</strong> sur <strong>{{ detail_page.paginator.count }}</strong>
+  </div>
+  <div class="pv-pag-controls">
+    {% if detail_page.has_previous %}
+    <a href="?{{ request.GET.urlencode }}&page={{ detail_page.previous_page_number }}" class="pv-pag-btn" title="Précédent"><i class="fas fa-chevron-left"></i></a>
+    {% else %}
+    <span class="pv-pag-btn disabled"><i class="fas fa-chevron-left"></i></span>
+    {% endif %}
+    {% for num in detail_page.paginator.page_range %}
+      {% if num == 1 or num == detail_page.paginator.num_pages or num >= detail_page.number|add:'-2' and num <= detail_page.number|add:'2' %}
+        {% if num == detail_page.number %}
+        <span class="pv-pag-btn active">{{ num }}</span>
+        {% else %}
+        <a href="?{{ request.GET.urlencode }}&page={{ num }}" class="pv-pag-btn">{{ num }}</a>
+        {% endif %}
+      {% elif num == detail_page.number|add:'-3' or num == detail_page.number|add:'3' %}
+        <span class="pv-pag-btn dots">…</span>
+      {% endif %}
+    {% endfor %}
+    {% if detail_page.has_next %}
+    <a href="?{{ request.GET.urlencode }}&page={{ detail_page.next_page_number }}" class="pv-pag-btn" title="Suivant"><i class="fas fa-chevron-right"></i></a>
+    {% else %}
+    <span class="pv-pag-btn disabled"><i class="fas fa-chevron-right"></i></span>
+    {% endif %}
+  </div>
+  <div>
+    <select class="pv-pag-per" onchange="changerDetailParPage(this.value)">
+      <option value="20" {% if detail_per_page == 20 %}selected{% endif %}>20 / page</option>
+      <option value="50" {% if detail_per_page == 50 %}selected{% endif %}>50 / page</option>
+      <option value="100" {% if detail_per_page == 100 %}selected{% endif %}>100 / page</option>
+      <option value="all" {% if detail_per_page == 'all' %}selected{% endif %}>Tout</option>
+    </select>
+  </div>
+</div>
+{% endif %}
 
 <script>
 (function () {
@@ -313,5 +374,12 @@
     });
   }
 })();
+
+function changerDetailParPage(val) {
+  var p = new URLSearchParams(window.location.search);
+  p.set('detail_per_page', val);
+  p.delete('page');
+  window.location.href = window.location.pathname + '?' + p.toString();
+}
 </script>
 {% endblock %}

@@ -147,6 +147,47 @@ class RapportValeurServicesTest(BaseRapportValeursTest):
         self.assertIn('dtri=vnc', html)
 
 
+class DetailPaginationTest(BaseRapportValeursTest):
+    """Pagination du détail service × type (parité avec le rapport stock)."""
+
+    def _types(self, n):
+        for i in range(n):
+            typ = TypeEquipement.objects.create(
+                code=f'TP-PAG-{i}', nom=f'Type Paginé {i}',
+                categorie=self.cat)
+            self._immo(10000, self.service_a, typ)
+
+    def test_detail_pagine_20_par_page(self):
+        self._types(25)
+        resp = self._get()
+        page = resp.context['detail_page']
+        self.assertEqual(page.paginator.num_pages, 2)
+        self.assertEqual(len(list(page.object_list)), 20)
+        self.assertEqual(resp.context['detail_total'], 25)
+
+        resp2 = self._get(page=2)
+        page2 = resp2.context['detail_page']
+        self.assertEqual(page2.number, 2)
+        self.assertEqual(len(list(page2.object_list)), 5)
+
+    def test_detail_option_toutes_lignes(self):
+        self._types(25)
+        resp = self._get(detail_per_page='all')
+        page = resp.context['detail_page']
+        self.assertEqual(len(list(page.object_list)), 25)
+        self.assertEqual(page.paginator.num_pages, 1)
+
+    def test_detail_export_csv_complet_quel_que_soit_la_page(self):
+        # L'export détail reste complet (non paginé) même depuis la page 2
+        self._types(25)
+        resp = self.client.get(
+            reverse('patrimoine_rapport_valeurs_detail_csv'),
+            {'page': 2})
+        contenu = resp.content.decode('utf-8-sig')
+        lignes = [l for l in contenu.splitlines() if l.strip()]
+        self.assertEqual(len(lignes), 26)  # en-tête + 25 types
+
+
 class ExportValeursTest(BaseRapportValeursTest):
 
     def test_export_csv_resume(self):

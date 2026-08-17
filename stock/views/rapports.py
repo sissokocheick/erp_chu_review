@@ -1138,8 +1138,18 @@ def rapport_consommation_services(request):
     magasin_actif = Magasin.objects.filter(
         id=_get_magasin_filtre(request)).first()
 
+    # Top services par valeur (serveur) pour le graphique donut — indépendant
+    # du tri affiché et de la pagination du détail (parité avec le rapport
+    # patrimoine qui passe déjà ces données depuis le serveur)
+    top_services = sorted(
+        par_service, key=lambda r: r['valeur'] or 0, reverse=True)[:8]
+
     context = {
         'par_service': par_service,
+        'chart_services_labels': json.dumps(
+            [r['service_demandeur__nom'] for r in top_services]),
+        'chart_services_data': json.dumps(
+            [float(r['valeur'] or 0) for r in top_services]),
         'total_quantite': total_quantite,
         'total_valeur': total_valeur,
         'total_mouvements': total_mouvements,

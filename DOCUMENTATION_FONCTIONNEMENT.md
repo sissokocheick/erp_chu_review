@@ -475,7 +475,14 @@ Rotation du comptage **par famille / par zone** au lieu d'une campagne complète
   tableaux (résumé et détail, indépendants), export CSV du résumé **et du détail**
   **et export PDF** (logo + entête configurés, A4 paysage, numérotation des pages)
   — mêmes filtres et même tri, scopé au magasin actif, exclut le service REBUTS
-  et les mouvements annulés.
+  et les mouvements annulés. Le graphique « Top services » est alimenté par des
+  données serveur (top 8 par valeur, indépendant du tri affiché).
+- **Valeur des Immobilisations par Service** (`/patrimoine/rapports/valeur-services/`) :
+  valeur d'acquisition, amortissement cumulé et VNC par service + détail par type
+  d'équipement **paginé** (20/50/100/tout, comme le rapport stock), filtres
+  (période, service, inclusion des biens sortis), tri par clic indépendant sur les
+  deux tableaux, exports CSV (résumé + détail) et **PDF** avec logo/entête configurés
+  (nom de l'établissement dans le cartouche).
 - **Stats Demandes** (`/stats/demandes/`) : volumes, statuts, délais.
 - **Stats Sondages** (`/stats/sondages/`) : taux de satisfaction des bons de sortie.
 - **Stats Satisfaction** (`/stats/satisfaction-services/`) : par service demandeur.

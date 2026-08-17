@@ -22,7 +22,8 @@ from django.utils import timezone
 from django.urls import reverse
 
 from accounts.permissions import verifier_permission
-from core.models import Service
+from core.models import ConfigurationHopital, Service
+from stock.views.catalogue import paginer
 from .models import Immobilisation
 
 logger = logging.getLogger(__name__)
@@ -203,11 +204,20 @@ def rapport_valeur_services(request):
                           defaut=lambda r: (r['service_demandeur__nom'],
                                             r['vnc']))
 
+    # Détail paginé (même convention que le rapport de consommation :
+    # detail_per_page 20/50/100/tout + page)
+    detail_page, detail_per_page = paginer(
+        par_svc_type, request, per_page_key='detail_per_page', default=20)
+    detail_total = detail_page.paginator.count
+
     labels, nb_serie, val_serie = _evolution(qs, date_debut, date_fin)
 
     context = {
         'par_service': par_service,
         'par_svc_type': par_svc_type,
+        'detail_page': detail_page,
+        'detail_per_page': detail_per_page,
+        'detail_total': detail_total,
         'total_nb': total_nb,
         'total_acq': total_acq,
         'total_vnc': total_vnc,
@@ -322,6 +332,13 @@ def rapport_valeur_services_pdf(request):
     if service_id:
         service = Service.objects.filter(id=service_id).first()
 
+    # Nom de l'établissement pour le cartouche (le patrimoine n'est pas
+    # scopé magasin : on utilise l'identité globale du CHU)
+    try:
+        nom_etablissement = ConfigurationHopital.get_instance().nom
+    except Exception:
+        nom_etablissement = ''
+
     pdf_config, logo_url = get_pdf_config(None, 'RAPPORT', request)
 
     context = {
@@ -334,6 +351,7 @@ def rapport_valeur_services_pdf(request):
         'date_debut': date_debut,
         'date_fin': date_fin,
         'service': service,
+        'nom_etablissement': nom_etablissement,
         'inclure_sortis': inclure_sortis,
         'pdf_config': pdf_config,
         'logo_url': logo_url,

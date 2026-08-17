@@ -407,6 +407,24 @@ class TriConsommationTest(BaseConsommationTest):
         idx_car = next(i for i, l in enumerate(lignes) if 'Cardiologie' in l)
         self.assertLess(idx_urg, idx_car)
 
+    def test_top_services_graphique_donnees_serveur(self):
+        # Le donut « Top services » doit refléter le top 8 par valeur,
+        # indépendamment du tri affiché du tableau (données serveur).
+        import json
+        self._mouvement(self.article, self.service_a, 10)   # Cardio 5000 F
+        self._mouvement(self.article2, self.service_a, 5)   # Cardio +500 F
+        self._mouvement(self.article2, self.service_b, 3)   # Urgences 300 F
+        resp = self._get_rapport(tri='service', ordre='asc')
+        labels = json.loads(resp.context['chart_services_labels'])
+        data = json.loads(resp.context['chart_services_data'])
+        # Trié par valeur décroissante même si le tableau est trié par nom
+        self.assertEqual(labels, ['Cardiologie', 'Urgences'])
+        self.assertEqual(data, [5500.0, 300.0])
+        # Le HTML embarque les données (plus de parsing DOM)
+        html = resp.content.decode()
+        self.assertIn('Cardiologie', html)
+        self.assertIn('5500.0', html)
+
 
 class PdfConsommationTest(BaseConsommationTest):
     """Export PDF du rapport de consommation par service."""
