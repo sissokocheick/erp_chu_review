@@ -181,3 +181,134 @@ class ExportConsommationTest(BaseConsommationTest):
         self.assertNotIn('DESTRUCTION', contenu)
         # Seul le mouvement du magasin actif compte (10), pas 40
         self.assertNotIn(';40;', contenu)
+
+
+class DetailConsommationTest(BaseConsommationTest):
+    """Détail service × article du rapport de consommation."""
+
+    def test_detail_agrege_par_service_et_article(self):
+        # 2 mouvements du même article vers le même service → 1 ligne
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article, self.service_a, 5)
+        # Même article vers un autre service → ligne séparée
+        self._mouvement(self.article, self.service_b, 3)
+        # Autre article vers le même service → ligne séparée
+        self._mouvement(self.article2, self.service_a, 2,
+                        prix=Decimal('200.00'))
+
+        resp = self._get_rapport()
+        self.assertEqual(resp.status_code, 200)
+        lignes = list(resp.context['detail_page'])
+        self.assertEqual(len(lignes), 3)
+
+        par_cle = {
+            (r['service_demandeur__id'], r['article__id']): r
+            for r in lignes
+        }
+        a1 = par_cle[(self.service_a.id, self.article.id)]
+        self.assertEqual(a1['quantite'], 15)
+        self.assertEqual(a1['valeur'], Decimal('7500.00'))
+        self.assertEqual(a1['nb_mouvements'], 2)
+
+        b1 = par_cle[(self.service_b.id, self.article.id)]
+        self.assertEqual(b1['quantite'], 3)
+        self.assertEqual(b1['valeur'], Decimal('1500.00'))
+
+        a2 = par_cle[(self.service_a.id, self.article2.id)]
+        self.assertEqual(a2['quantite'], 2)
+        self.assertEqual(a2['valeur'], Decimal('400.00'))
+
+        # Le total du détail doit correspondre au total du rapport
+        total_detail = sum(r['quantite'] for r in lignes)
+        self.assertEqual(total_detail, resp.context['total_quantite'])
+
+    def test_detail_trie_par_service_puis_valeur(self):
+        self._mouvement(self.article, self.service_b, 1)    # Urgences, 500
+        self._mouvement(self.article, self.service_a, 10)   # Cardio, 5000
+        self._mouvement(self.article2, self.service_a, 9,   # Cardio, 900
+                        prix=Decimal('100.00'))
+        resp = self._get_rapport()
+        lignes = list(resp.context['detail_page'])
+        # Cardio (valeur 5000) avant Cardio (900) avant Urgences (500)
+        self.assertEqual(lignes[0]['service_demandeur__nom'], 'Cardiologie')
+        self.assertEqual(lignes[0]['article__id'], self.article.id)
+        self.assertEqual(lignes[1]['service_demandeur__nom'], 'Cardiologie')
+        self.assertEqual(lignes[1]['article__id'], self.article2.id)
+        self.assertEqual(lignes[2]['service_demandeur__nom'], 'Urgences')
+
+    def test_detail_pagine(self):
+        # 25 lignes service × article différentes → pagination 20/page
+        for i in range(25):
+            art = factories.creer_article(
+                famille=self.famille, designation=f'Art {i}',
+                reference=f'CONS-D-{i}', prix_reference=Decimal('100.00'))
+            self._mouvement(art, self.service_a, 1)
+        resp = self._get_rapport()
+        page = resp.context['detail_page']
+        self.assertEqual(page.paginator.num_pages, 2)
+        self.assertEqual(len(list(page.object_list)), 20)
+        self.assertEqual(resp.context['detail_total'], 25)
+
+        # Page 2 → 5 lignes restantes
+        resp2 = self._get_rapport(page=2)
+        page2 = resp2.context['detail_page']
+        self.assertEqual(page2.number, 2)
+        self.assertEqual(len(list(page2.object_list)), 5)
+
+    def test_detail_filtre_service_et_magasin(self):
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_b, 8)
+        self._mouvement(self.article2, self.service_a, 30,
+                        magasin=self.magasin2)
+        resp = self._get_rapport(service=self.service_b.id)
+        lignes = list(resp.context['detail_page'])
+        self.assertEqual(len(lignes), 1)
+        self.assertEqual(lignes[0]['service_demandeur__id'],
+                         self.service_b.id)
+        # L'autre magasin n'apparaît pas
+        self.assertEqual(resp.context['detail_total'], 1)
+
+    def test_export_detail_csv_contenu(self):
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_b, 3)
+        self._mouvement(self.article2, self.service_a, 2,
+                        prix=Decimal('200.00'))
+        resp = self.client.get(reverse('export_consommation_detail_csv'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp['Content-Type'], 'text/csv; charset=utf-8')
+        contenu = resp.content.decode('utf-8-sig')
+        lignes = [l for l in contenu.splitlines() if l.strip()]
+        self.assertEqual(
+            lignes[0],
+            'Service;Code;Article;Référence;Unité;'
+            'Quantité (unités);Valeur (FCFA);Nb mouvements;Période')
+        # 1 en-tête + 3 lignes service × article
+        self.assertEqual(len(lignes), 4)
+        self.assertTrue(any('Cardiologie;CAR;Gants;CONS-1' in l
+                            for l in lignes))
+        self.assertTrue(any('Cardiologie;CAR;Masques;CONS-2' in l
+                            for l in lignes))
+        self.assertTrue(any('Urgences;URG;Masques;CONS-2' in l
+                            for l in lignes))
+
+    def test_export_detail_respecte_filtre_service(self):
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_b, 3)
+        resp = self.client.get(
+            reverse('export_consommation_detail_csv'),
+            {'service': self.service_b.id})
+        contenu = resp.content.decode('utf-8-sig')
+        self.assertIn('Urgences', contenu)
+        self.assertNotIn('Cardiologie', contenu)
+
+    def test_export_detail_exclut_destructions_et_autre_magasin(self):
+        self._mouvement(self.article, self.service_a, 10)
+        self._mouvement(self.article2, self.service_rebuts, 40)
+        self._mouvement(self.article2, self.service_a, 30,
+                        magasin=self.magasin2)
+        resp = self.client.get(reverse('export_consommation_detail_csv'))
+        contenu = resp.content.decode('utf-8-sig')
+        self.assertNotIn('DESTRUCTION', contenu)
+        self.assertNotIn(';40;', contenu)
+        lignes = [l for l in contenu.splitlines() if l.strip()]
+        self.assertEqual(len(lignes), 2)  # en-tête + 1 ligne

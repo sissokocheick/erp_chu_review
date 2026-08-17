@@ -1063,6 +1063,24 @@ def rapport_consommation_services(request):
     total_valeur = sum(r['valeur'] or 0 for r in par_service)
     total_mouvements = sum(r['nb_mouvements'] or 0 for r in par_service)
 
+    # ── Détail par article (ligne service × article), paginé ──
+    detail_qs = qs.annotate(
+        montant_ligne=montant_ligne
+    ).values(
+        'service_demandeur__id', 'service_demandeur__nom',
+        'service_demandeur__code',
+        'article__id', 'article__designation', 'article__reference',
+        'article__unite_distribution'
+    ).annotate(
+        quantite=Sum('quantite'),
+        nb_mouvements=Count('id'),
+        valeur=Sum('montant_ligne'),
+    ).order_by('service_demandeur__nom', '-valeur', '-quantite')
+
+    detail_page, detail_per_page = paginer(
+        detail_qs, request, per_page_key='detail_per_page', default=20)
+    detail_total = detail_page.paginator.count
+
     # ── Évolution mensuelle (séries complètes, mois sans données = 0) ──
     evolution = qs.annotate(
         montant_ligne=montant_ligne,
@@ -1106,6 +1124,10 @@ def rapport_consommation_services(request):
         'chart_valeur': json.dumps(series_valeur),
         'magasin_actif': magasin_actif,
         'export_url': reverse('export_consommation_services_csv'),
+        'export_detail_url': reverse('export_consommation_detail_csv'),
+        'detail_page': detail_page,
+        'detail_per_page': detail_per_page,
+        'detail_total': detail_total,
     }
     return render(request, 'stock/rapport_consommation_services.html', context)
 
@@ -1146,6 +1168,55 @@ def export_consommation_services_csv(request):
         writer.writerow([
             r['service_demandeur__nom'],
             r['service_demandeur__code'] or '',
+            r['quantite'] or 0,
+            f"{r['valeur'] or 0:.2f}".replace('.', ','),
+            r['nb_mouvements'] or 0,
+            f"{date_debut.strftime('%d/%m/%Y')} - {date_fin.strftime('%d/%m/%Y')}",
+        ])
+    return response
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_rapports')
+@magasin_requis
+@catch_errors(redirect_url='page_rapports')
+def export_consommation_detail_csv(request):
+    """Export CSV du détail service × article (mêmes filtres que le rapport)."""
+    from django.db.models import DecimalField, Value
+    from django.db.models.functions import Coalesce
+    base = _base_consommation(request)
+    qs, date_debut, date_fin, service_id, nb_mois, date_range = \
+        _filtres_consommation(request, base)
+
+    montant_ligne = F('quantite') * Coalesce(
+        'prix_unitaire', 'article__prix_reference', Value(0),
+        output_field=DecimalField(max_digits=14, decimal_places=2))
+    detail = qs.annotate(montant_ligne=montant_ligne).values(
+        'service_demandeur__nom', 'service_demandeur__code',
+        'article__designation', 'article__reference',
+        'article__unite_distribution'
+    ).annotate(
+        quantite=Sum('quantite'),
+        nb_mouvements=Count('id'),
+        valeur=Sum('montant_ligne'),
+    ).order_by('service_demandeur__nom', '-valeur', '-quantite')
+
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = (
+        'attachment; filename="Consommation_Detail_par_Service.csv"')
+    response.write('\ufeff'.encode('utf8'))
+    writer = csv.writer(response, delimiter=';')
+    writer.writerow([
+        'Service', 'Code', 'Article', 'Référence', 'Unité',
+        'Quantité (unités)', 'Valeur (FCFA)', 'Nb mouvements', 'Période',
+    ])
+    for r in detail:
+        writer.writerow([
+            r['service_demandeur__nom'],
+            r['service_demandeur__code'] or '',
+            r['article__designation'],
+            r['article__reference'] or '',
+            r['article__unite_distribution'] or '',
             r['quantite'] or 0,
             f"{r['valeur'] or 0:.2f}".replace('.', ','),
             r['nb_mouvements'] or 0,

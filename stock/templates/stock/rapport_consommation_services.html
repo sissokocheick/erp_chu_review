@@ -97,6 +97,33 @@
   .rc-table tbody td { padding: 11px 14px; border-top: 1px solid var(--rc-border); color: var(--rc-text); vertical-align: middle; }
   .rc-table tbody tr:hover { background: var(--rc-accent-l); }
   .rc-empty { text-align: center; padding: 36px 20px; color: var(--rc-text-2); font-size: 14px; }
+
+  .rc-detail-header {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 10px; margin: 20px 0 10px;
+  }
+  .rc-detail-header h5 { margin: 0; font-size: 14px; font-weight: 800; color: var(--rc-text); }
+  .rc-detail-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .rc-detail-count { font-size: 12px; color: var(--rc-text-2); font-weight: 600; }
+  .rc-pag {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 10px; margin-top: 12px; padding: 10px 4px;
+  }
+  .rc-pag-info { font-size: 12px; color: var(--rc-text-2); }
+  .rc-pag-controls { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+  .rc-pag-btn {
+    min-width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--rc-border); border-radius: 8px; font-size: 13px; color: var(--rc-text);
+    text-decoration: none; background: var(--rc-bg);
+  }
+  .rc-pag-btn:hover { border-color: var(--rc-accent); color: var(--rc-accent); }
+  .rc-pag-btn.active { background: var(--rc-accent); border-color: var(--rc-accent); color: white; font-weight: 700; }
+  .rc-pag-btn.disabled { opacity: 0.45; pointer-events: none; }
+  .rc-pag-btn.dots { border: none; background: none; }
+  .rc-pag-per {
+    background: var(--rc-bg-alt); color: var(--rc-text); border: 1.5px solid var(--rc-border);
+    border-radius: 8px; padding: 6px 10px; font-size: 12px; font-family: inherit;
+  }
 </style>
 
 <div class="rc-header">
@@ -201,6 +228,86 @@
   </table>
 </div>
 
+<div class="rc-detail-header">
+  <h5><i class="fas fa-boxes"></i> Détail par article (service × article)</h5>
+  <div class="rc-detail-actions">
+    <span class="rc-detail-count">{{ detail_total }} ligne{{ detail_total|pluralize }}</span>
+    <a href="{{ export_detail_url }}?{{ request.GET.urlencode }}" class="rc-btn-outline" title="Exporter le détail (toutes les lignes, mêmes filtres)">
+      <i class="fas fa-file-csv"></i> Export détail CSV
+    </a>
+  </div>
+</div>
+
+<div class="rc-table-wrap">
+  <table class="rc-table">
+    <thead>
+      <tr>
+        <th>Service</th>
+        <th>Article</th>
+        <th>Référence</th>
+        <th>Unité</th>
+        <th>Quantité</th>
+        <th>Valeur (FCFA)</th>
+        <th>Nb mvt</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in detail_page %}
+      <tr>
+        <td><strong>{{ r.service_demandeur__nom }}</strong></td>
+        <td>{{ r.article__designation }}</td>
+        <td>{{ r.article__reference|default:"—" }}</td>
+        <td>{{ r.article__unite_distribution|default:"—" }}</td>
+        <td>{{ r.quantite|default:0 }}</td>
+        <td>{{ r.valeur|default:0|floatformat:0 }} F</td>
+        <td>{{ r.nb_mouvements|default:0 }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="7" class="rc-empty"><i class="fas fa-inbox" style="font-size:26px;margin-bottom:8px;"></i><br>Aucun détail sur la période pour ce filtre.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if detail_page.paginator.num_pages > 1 %}
+<div class="rc-pag">
+  <div class="rc-pag-info">
+    <strong>{{ detail_page.start_index }} - {{ detail_page.end_index }}</strong> sur <strong>{{ detail_page.paginator.count }}</strong>
+  </div>
+  <div class="rc-pag-controls">
+    {% if detail_page.has_previous %}
+    <a href="?{{ request.GET.urlencode }}&page={{ detail_page.previous_page_number }}" class="rc-pag-btn" title="Précédent"><i class="fas fa-chevron-left"></i></a>
+    {% else %}
+    <span class="rc-pag-btn disabled"><i class="fas fa-chevron-left"></i></span>
+    {% endif %}
+    {% for num in detail_page.paginator.page_range %}
+      {% if num == 1 or num == detail_page.paginator.num_pages or num >= detail_page.number|add:'-2' and num <= detail_page.number|add:'2' %}
+        {% if num == detail_page.number %}
+        <span class="rc-pag-btn active">{{ num }}</span>
+        {% else %}
+        <a href="?{{ request.GET.urlencode }}&page={{ num }}" class="rc-pag-btn">{{ num }}</a>
+        {% endif %}
+      {% elif num == detail_page.number|add:'-3' or num == detail_page.number|add:'3' %}
+        <span class="rc-pag-btn dots">…</span>
+      {% endif %}
+    {% endfor %}
+    {% if detail_page.has_next %}
+    <a href="?{{ request.GET.urlencode }}&page={{ detail_page.next_page_number }}" class="rc-pag-btn" title="Suivant"><i class="fas fa-chevron-right"></i></a>
+    {% else %}
+    <span class="rc-pag-btn disabled"><i class="fas fa-chevron-right"></i></span>
+    {% endif %}
+  </div>
+  <div>
+    <select class="rc-pag-per" onchange="changerDetailParPage(this.value)">
+      <option value="20" {% if detail_per_page == 20 %}selected{% endif %}>20 / page</option>
+      <option value="50" {% if detail_per_page == 50 %}selected{% endif %}>50 / page</option>
+      <option value="100" {% if detail_per_page == 100 %}selected{% endif %}>100 / page</option>
+      <option value="all" {% if detail_per_page == 'all' %}selected{% endif %}>Tout</option>
+    </select>
+  </div>
+</div>
+{% endif %}
+
 <script>
 (function () {
   var labels = {{ chart_labels|safe }};
@@ -265,5 +372,12 @@
     });
   }
 })();
+
+function changerDetailParPage(val) {
+  var p = new URLSearchParams(window.location.search);
+  p.set('detail_per_page', val);
+  p.delete('page');
+  window.location.href = window.location.pathname + '?' + p.toString();
+}
 </script>
 {% endblock %}
