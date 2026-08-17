@@ -36,6 +36,13 @@ BON_TYPE_TO_DOC_CODE = {
 @verifier_permission('accounts.menu_sorties')
 def imprimer_bon_multi_lignes(request, bon_id):
     """Génère le PDF d'un bon de mouvement (Entrée, Sortie, Retour)."""
+    return _imprimer_bon_multi_lignes(request, bon_id)
+
+
+def _imprimer_bon_multi_lignes(request, bon_id):
+    """Logique commune d'impression (sans contrôle de permission) — utilisée
+    par les vues d'impression dédiées (ex. retours fournisseurs) qui imposent
+    leur propre permission."""
     from stock.models import BonMouvement
 
     bon = get_object_or_404(
@@ -103,6 +110,8 @@ def imprimer_bon_multi_lignes(request, bon_id):
         'service': service,
         'service_code': getattr(service, 'code', '') if service else '',
         'service_poste': getattr(service, 'poste', '') if service else '',
+        'fournisseur': bon.fournisseur,
+        'fournisseur_code': getattr(bon.fournisseur, 'code', '') if bon.fournisseur else '',
         'sondage_data': sondage_data,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
@@ -546,3 +555,15 @@ def imprimer_bon_hors_stock(request, bon_id):
         'fournisseur': None,
     }
     return render_pdf_response(request, 'stock/pdf/bon_hors_stock.html', context, f"BS_HS_{bon.numero_bon}.pdf")
+
+
+# ═════════════════════════════════════════════════════════════════════════════
+# BON DE RETOUR FOURNISSEUR (PDF) — permission dédiée
+# ═════════════════════════════════════════════════════════════════════════════
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_retours_fournisseurs')
+def imprimer_bon_retour_fournisseur_pdf(request, bon_id):
+    """PDF du bon de retour fournisseur (mêmes règles de mise en page que les
+    bons de mouvement, config modèle 'BR')."""
+    return _imprimer_bon_multi_lignes(request, bon_id)

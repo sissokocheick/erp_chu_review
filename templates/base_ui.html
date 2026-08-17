@@ -451,6 +451,21 @@
         .menu-item.active-link { background-color: rgba(255,255,255,0.15); border-left: 3px solid #fff; color: white; font-weight: bold; }
         .menu-item .nav-icon { width: 18px; text-align: center; margin-right: 6px; font-size: 11px; }
 
+        /* Badge compteur de documents en attente de validation (validateurs) */
+        .badge-validation-menu {
+            background: #dc3545; color: white; padding: 1px 7px;
+            border-radius: 10px; font-size: 10px; font-weight: 700;
+            margin-left: auto; line-height: 1.6; flex-shrink: 0;
+            box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25);
+            animation: badge-pulse 2s ease-in-out infinite;
+        }
+        @keyframes badge-pulse {
+            0%, 100% { box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.25); }
+            50% { box-shadow: 0 0 0 4px rgba(220, 53, 69, 0.45); }
+        }
+        /* Le badge reste visible quand la sidebar est réduite */
+        .sidebar.desktop-closed .badge-validation-menu { display: none !important; }
+
         /* Active module */
         a.module-title.active-module { background-color: rgba(255,255,255,0.2) !important; }
         body.dark-mode a.module-title.active-module { background-color: rgba(255,255,255,0.15) !important; }
@@ -660,23 +675,26 @@
         {% endif %}
 
         <!-- MOUVEMENTS DE STOCK -->
-        {% if perms.accounts.menu_entrees or perms.accounts.menu_sorties or perms.accounts.menu_retours_services or perms.accounts.menu_sorties_hors_stock or perms.accounts.menu_livraisons or perms.accounts.menu_reception_commande or perms.accounts.menu_transferts %}
+        {% if perms.accounts.menu_entrees or perms.accounts.menu_sorties or perms.accounts.menu_retours_services or perms.accounts.menu_retours_fournisseurs or perms.accounts.menu_sorties_hors_stock or perms.accounts.menu_livraisons or perms.accounts.menu_reception_commande or perms.accounts.menu_transferts %}
         <div class="module-title" onclick="toggleMenu('menu-mouvements')" data-title="Mouvements">
             <span style="display:flex;align-items:center;"><i class="fas fa-exchange-alt nav-icon" style="color:#28a745;"></i><span class="nav-text">Mouvements de Stock</span></span>
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-mouvements"></i>
         </div>
         <div class="submenu" id="menu-mouvements">
             {% if perms.accounts.menu_entrees %}
-            <a href="{% url 'liste_entrees' %}" class="menu-item" data-title="Entrees"><i class="fas fa-arrow-down nav-icon" style="color:#7fe799;"></i><span class="nav-text">Entrees en Stock</span></a>
+            <a href="{% url 'liste_entrees' %}" class="menu-item" data-title="Entrees"><i class="fas fa-arrow-down nav-icon" style="color:#7fe799;"></i><span class="nav-text">Entrees en Stock</span>{% if nb_bons_entree_a_valider > 0 %}<span class="badge-validation-menu" title="Bons d'entrée en attente de validation">{{ nb_bons_entree_a_valider }}</span>{% endif %}</a>
             {% endif %}
             {% if perms.accounts.menu_sorties %}
-            <a href="{% url 'liste_sorties' %}" class="menu-item" data-title="Sorties"><i class="fas fa-sign-out-alt nav-icon" style="color:#ff9e9e;"></i><span class="nav-text">Bons de Sortie</span></a>
+            <a href="{% url 'liste_sorties' %}" class="menu-item" data-title="Sorties"><i class="fas fa-sign-out-alt nav-icon" style="color:#ff9e9e;"></i><span class="nav-text">Bons de Sortie</span>{% if nb_bons_sortie_a_valider > 0 %}<span class="badge-validation-menu" title="Bons de sortie en attente de validation">{{ nb_bons_sortie_a_valider }}</span>{% endif %}</a>
             {% endif %}
             {% if perms.accounts.menu_sorties_hors_stock %}
             <a href="{% url 'liste_bons_hors_stock' %}" class="menu-item" data-title="Hors Stock"><i class="fas fa-file-export nav-icon" style="color:#ffc58a;"></i><span class="nav-text">Sorties Hors Stock</span></a>
             {% endif %}
             {% if perms.accounts.menu_retours_services %}
-            <a href="{% url 'liste_retours_services' %}" class="menu-item" data-title="Retours"><i class="fas fa-undo-alt nav-icon" style="color:#8be0ee;"></i><span class="nav-text">Retours Services</span></a>
+            <a href="{% url 'liste_retours_services' %}" class="menu-item" data-title="Retours"><i class="fas fa-undo-alt nav-icon" style="color:#8be0ee;"></i><span class="nav-text">Retours Services</span>{% if nb_retours_a_valider > 0 %}<span class="badge-validation-menu" title="Bons de retour en attente de validation">{{ nb_retours_a_valider }}</span>{% endif %}</a>
+            {% endif %}
+            {% if perms.accounts.menu_retours_fournisseurs %}
+            <a href="{% url 'liste_retours_fournisseurs' %}" class="menu-item" data-title="Retours Fournisseurs"><i class="fas fa-truck-ramp-box nav-icon" style="color:#ff9e9e;"></i><span class="nav-text">Retours Fournisseurs</span></a>
             {% endif %}
             {% if perms.accounts.menu_transferts %}
             <a href="{% url 'liste_transferts' %}" class="menu-item" data-title="Transferts"><i class="fas fa-arrows-alt-h nav-icon" style="color:#ffd166;"></i><span class="nav-text">Transferts inter-Magasins</span></a>
@@ -701,10 +719,10 @@
             <a href="{% url 'etat_stock' %}" class="menu-item" data-title="Etat Stock"><i class="fas fa-search-location nav-icon"></i><span class="nav-text">Etat du Stock</span></a>
             {% endif %}
             {% if perms.accounts.menu_ajustements %}
-            <a href="{% url 'liste_ajustements' %}" class="menu-item" data-title="Ajustements"><i class="fas fa-balance-scale nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Ajustements Manuels</span></a>
+            <a href="{% url 'liste_ajustements' %}" class="menu-item" data-title="Ajustements"><i class="fas fa-balance-scale nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Ajustements Manuels</span>{% if nb_ajustements_a_valider > 0 %}<span class="badge-validation-menu" title="Ajustements en attente de validation">{{ nb_ajustements_a_valider }}</span>{% endif %}</a>
             {% endif %}
             {% if perms.accounts.menu_inventaires %}
-            <a href="{% url 'liste_inventaires' %}" class="menu-item" data-title="Inventaires"><i class="fas fa-clipboard-check nav-icon" style="color:#28a745;"></i><span class="nav-text">Inventaires</span></a>
+            <a href="{% url 'liste_inventaires' %}" class="menu-item" data-title="Inventaires"><i class="fas fa-clipboard-check nav-icon" style="color:#28a745;"></i><span class="nav-text">Inventaires</span>{% if nb_inventaires_a_valider > 0 %}<span class="badge-validation-menu" title="Inventaires en attente de validation">{{ nb_inventaires_a_valider }}</span>{% endif %}</a>
             {% endif %}
             {% if perms.accounts.menu_lots %}
             <a href="{% url 'liste_lots' %}" class="menu-item" data-title="Lots"><i class="fas fa-boxes nav-icon" style="color:#ffc107;"></i><span class="nav-text">Gestion des Lots</span></a>
@@ -726,7 +744,7 @@
         </div>
         <div class="submenu" id="menu-achats">
             {% if perms.accounts.menu_commandes %}
-            <a href="{% url 'liste_commandes' %}" class="menu-item" data-title="Commandes"><i class="fas fa-file-invoice-dollar nav-icon"></i><span class="nav-text">Commandes Fourn.</span></a>
+            <a href="{% url 'liste_commandes' %}" class="menu-item" data-title="Commandes"><i class="fas fa-file-invoice-dollar nav-icon"></i><span class="nav-text">Commandes Fourn.</span>{% if nb_commandes_a_valider > 0 %}<span class="badge-validation-menu" title="Commandes en attente d'approbation">{{ nb_commandes_a_valider }}</span>{% endif %}</a>
             <a href="{% url 'suggestions_reappro' %}" class="menu-item" data-title="Reappro"><i class="fas fa-cart-plus nav-icon" style="color:#20c997;"></i><span class="nav-text">Suggestions Réappro</span></a>
             {% endif %}
             {% if perms.accounts.menu_articles %}

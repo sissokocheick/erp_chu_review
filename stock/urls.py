@@ -15,6 +15,7 @@ from .views.sorties import (
 )
 from .views.retours import (
     liste_retours_services, apercu_bon_retour, valider_bon_retour,
+    liste_retours_fournisseurs, valider_bon_retour_fournisseur,
 )
 from .views.hors_stock import (
     liste_bons_hors_stock, annuler_bon_hors_stock,
@@ -58,6 +59,7 @@ from .views.pdf_views import (
     imprimer_resultat_inventaire,
     rapport_consommation_pdf,
     imprimer_bon_hors_stock,
+    imprimer_bon_retour_fournisseur_pdf,
 )
 
 
@@ -107,6 +109,13 @@ urlpatterns = [
     path('stock/retours-services/', liste_retours_services, name='liste_retours_services'),
     path('retours-services/apercu/<int:bon_id>/', apercu_bon_retour, name='apercu_bon_retour'),
     path('retours-services/<int:bon_id>/valider/', valider_bon_retour, name='valider_bon_retour'),
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # RETOURS FOURNISSEURS (sortie de stock vers le fournisseur, circuit SORTIE)
+    # ═══════════════════════════════════════════════════════════════════════
+    path('stock/retours-fournisseurs/', liste_retours_fournisseurs, name='liste_retours_fournisseurs'),
+    path('retours-fournisseurs/<int:bon_id>/valider/', valider_bon_retour_fournisseur, name='valider_bon_retour_fournisseur'),
+    path('retours-fournisseurs/imprimer/<int:bon_id>/', imprimer_bon_retour_fournisseur_pdf, name='imprimer_bon_retour_fournisseur'),
     path('transferts/', liste_transferts, name='liste_transferts'),
     path('transferts/<int:bon_id>/annuler/', annuler_transfert, name='annuler_transfert'),
     path('stock/retours-services/imprimer/<int:bon_id>/', imprimer_bon_multi_lignes, name='imprimer_bon_retour'),

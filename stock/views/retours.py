@@ -344,3 +344,227 @@ def valider_bon_retour(request, bon_id):
         f"{request.user.get_full_name() or request.user.username} — le stock a été réintégré."
     )
     return redirect('liste_retours_services')
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# RETOURS FOURNISSEURS — sortie de stock vers le fournisseur (litige)
+# Un retour fournisseur RETIRE du stock : il est gouverné par le circuit
+# SORTIE (circuit actif → ATTENTE, stock intact jusqu'à validation).
+# ═══════════════════════════════════════════════════════════════════════
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_retours_fournisseurs')
+@magasin_requis
+@catch_errors(redirect_url='liste_retours_fournisseurs')
+def liste_retours_fournisseurs(request):
+    """Dispatcher : GET affiche, POST crée un retour fournisseur."""
+    if request.method == 'POST':
+        return _creer_retour_fournisseur(request)
+    return _afficher_retours_fournisseurs(request)
+
+
+def _afficher_retours_fournisseurs(request):
+    """Branche GET : filtres, pagination, contexte."""
+    magasin_id = request.session.get('magasin_actif_id')
+
+    qs = BonMouvement.objects.filter(
+        type_bon='RETOUR_FOURNISSEUR',
+        magasin_id=magasin_id
+    ).select_related('magasin', 'fournisseur', 'cree_par').prefetch_related(
+        'lignes_bon__article'
+    ).order_by('-date_bon')
+
+    # Circuit SORTIE actif → les retours fournisseurs (sorties de stock)
+    # passent par validation différée : on expose l'état + le statut de validateur.
+    from ..models import CircuitValidation
+    circuit_sortie = CircuitValidation.objects.filter(
+        type_document='SORTIE', est_actif=True, is_deleted=False
+    ).prefetch_related('valideurs').first()
+    est_valideur = (
+        request.user.is_superuser
+        or (circuit_sortie and circuit_sortie.valideurs.filter(id=request.user.id).exists())
+    )
+
+    extra = {
+        'fournisseurs': Fournisseur.objects.all().order_by('raison_sociale'),
+        'magasins': Magasin.objects.all().order_by('nom'),
+        'articles': Article.objects.all().order_by('designation'),
+        'magasin_actif': get_magasin_actif(request),
+        'peut_creer': _has_perm_bon(request.user, 'add', 'RETOUR_FOURNISSEUR'),
+        'peut_annuler': _has_perm_bon(request.user, 'change', 'RETOUR_FOURNISSEUR'),
+        'circuit_sortie': circuit_sortie,
+        'est_valideur_retour_fournisseur': est_valideur,
+    }
+    return render_liste(
+        request, qs,
+        template='stock/liste_retours_fournisseurs.html',
+        ajax_template='stock/retours_fournisseurs_lignes.html',
+        context_object_name='retours_fournisseurs',
+        date_field='date_bon',
+        texte_champs=[
+            'numero_bon__icontains',
+            'fournisseur__raison_sociale__icontains',
+            'reference_externe__icontains',
+        ],
+        context_extra=extra
+    )
+
+
+def _creer_retour_fournisseur(request):
+    """Branche POST : validation, création via service, redirection."""
+    magasin_id = request.session.get('magasin_actif_id')
+
+    fournisseur_id = request.POST.get('fournisseur')
+    ref_ext = request.POST.get('reference_externe', '').strip()
+    article_ids = request.POST.getlist('articles[]')
+    quantites = request.POST.getlist('quantites[]')
+    lots = request.POST.getlist('lots[]')
+    peremptions = request.POST.getlist('peremptions[]')
+
+    magasin_post = request.POST.get('magasin')
+    magasin_id_effectif = magasin_post or magasin_id
+
+    # ── Vérification autorisation magasin ──
+    magasins_autorises = get_magasins_autorises(request)
+    if magasin_id_effectif and not magasins_autorises.filter(id=magasin_id_effectif).exists():
+        messages.error(request, "⛔ Vous n'avez pas accès à ce magasin.")
+        return redirect('liste_retours_fournisseurs')
+
+    if not magasin_id_effectif:
+        messages.error(request, "⛔ Aucun magasin actif sélectionné.")
+        return redirect('liste_retours_fournisseurs')
+    if not fournisseur_id:
+        messages.error(request, "❌ Vous devez sélectionner un fournisseur.")
+        return redirect('liste_retours_fournisseurs')
+    if not article_ids:
+        messages.error(request, "❌ Vous devez ajouter au moins un article.")
+        return redirect('liste_retours_fournisseurs')
+
+    # Conversion IDs → objets
+    magasin = get_object_or_404(Magasin, id=magasin_id_effectif)
+    fournisseur = get_object_or_404(Fournisseur, id=fournisseur_id)
+
+    # Validation des articles
+    articles_valides = set(
+        Article.objects.filter(
+            id__in=[aid for aid in article_ids if aid]
+        ).values_list('id', flat=True)
+    )
+
+    lignes = []
+    for aid, qte, lot, peremp in zip(article_ids, quantites, lots, peremptions):
+        if aid and qte and int(qte) > 0:
+            if int(aid) not in articles_valides:
+                messages.error(
+                    request,
+                    "⛔ Un ou plusieurs articles sélectionnés ne sont pas valides."
+                )
+                return redirect('liste_retours_fournisseurs')
+            lignes.append({
+                'article_id': aid,
+                'quantite': int(qte),
+                'numero_lot': lot or None,
+                'date_peremption': peremp or None,
+            })
+
+    from ..models import CircuitValidation
+    circuit_sortie = CircuitValidation.objects.filter(
+        type_document='SORTIE', est_actif=True, is_deleted=False
+    ).first()
+
+    try:
+        bon = BonService.creer_bon_retour_fournisseur(
+            lignes=lignes,
+            utilisateur=request.user,
+            magasin=magasin,
+            fournisseur=fournisseur,
+            reference_externe=ref_ext,
+            circuit_validation=circuit_sortie,
+        )
+    except IntegrityError as e:
+        logger.exception("[RETOUR FOURNISSEUR] IntegrityError création bon : %s", e)
+        messages.error(request, "⛔ Erreur lors de la création du bon. Vérifiez la console pour le détail.")
+        return redirect('liste_retours_fournisseurs')
+
+    if bon.statut_validation == 'ATTENTE':
+        messages.info(
+            request,
+            f"🕒 Bon de retour fournisseur {bon.numero_bon} créé — en attente de validation "
+            "par le circuit SORTIE (le stock sera retiré après validation)."
+        )
+    else:
+        messages.success(
+            request,
+            f"✅ Bon de retour fournisseur {bon.numero_bon} enregistré ! ({len(lignes)} article(s))"
+        )
+    return redirect(f"{reverse('liste_retours_fournisseurs')}?print_bon={bon.id}")
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_retours_fournisseurs')
+@magasin_requis
+@catch_errors(redirect_url='liste_retours_fournisseurs')
+def valider_bon_retour_fournisseur(request, bon_id):
+    """Valide un bon de retour fournisseur en ATTENTE (circuit SORTIE actif) :
+    exécute les mouvements de sortie (décrément) et met à jour le stock.
+
+    Réservé aux validateurs désignés dans le circuit SORTIE (ou superuser),
+    même pattern que valider_bon_sortie / valider_bon_retour.
+    """
+    from ..models import CircuitValidation
+    from ..services.stock_transaction_service import StockTransactionService
+    from django.db import transaction as db_transaction
+
+    bon = get_object_or_404(
+        BonMouvement, id=bon_id, type_bon='RETOUR_FOURNISSEUR'
+    )
+
+    circuit = CircuitValidation.objects.filter(
+        type_document='SORTIE', est_actif=True, is_deleted=False
+    ).prefetch_related('valideurs').first()
+
+    if not circuit:
+        messages.error(request, "❌ Aucun circuit de validation SORTIE actif pour les retours fournisseur.")
+        return redirect('liste_retours_fournisseurs')
+
+    if request.user not in circuit.valideurs.all() and not request.user.is_superuser:
+        messages.error(request, "⛔ Vous n'êtes pas autorisé à valider ce bon de retour fournisseur.")
+        return redirect('liste_retours_fournisseurs')
+
+    if bon.statut_validation != 'ATTENTE':
+        messages.warning(request, f"⚠️ Le bon {bon.numero_bon} n'est pas en attente de validation.")
+        return redirect('liste_retours_fournisseurs')
+
+    try:
+        with db_transaction.atomic():
+            bon.statut_validation = 'VALIDE'
+            bon.date_validation = timezone.now()
+            bon.valide_par = request.user
+            bon.save(update_fields=['statut_validation', 'date_validation', 'valide_par'])
+
+            for ligne in bon.lignes_bon.all():
+                mouvement = Mouvement(
+                    type_mouvement='RETOUR_FOURNISSEUR',
+                    article=ligne.article,
+                    magasin=bon.magasin,
+                    quantite=ligne.quantite,
+                    prix_unitaire=ligne.prix_unitaire,
+                    utilisateur=request.user,
+                    reference_document=bon.numero_bon,
+                    fournisseur=bon.fournisseur,
+                    numero_lot=ligne.numero_lot,
+                    date_peremption=ligne.date_peremption,
+                    commentaire=f"Validation du bon de retour fournisseur {bon.numero_bon}",
+                )
+                StockTransactionService.executer(mouvement)
+    except Exception as e:
+        logger.exception("[RETOUR FOURNISSEUR] Validation bon %s : %s", bon.numero_bon, e)
+        messages.error(request, "❌ Une erreur est survenue lors de la validation.")
+        return redirect('liste_retours_fournisseurs')
+
+    messages.success(
+        request,
+        f"✅ Bon de retour fournisseur {bon.numero_bon} validé par "
+        f"{request.user.get_full_name() or request.user.username} — le stock a été retiré."
+    )
+    return redirect('liste_retours_fournisseurs')

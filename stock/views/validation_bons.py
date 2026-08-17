@@ -82,11 +82,14 @@ def valider_bon(request, bon_id):
                 return redirect(_get_redirect_url(bon.type_bon))
 
             # Vérification des permissions (circuit de validation)
+            # NOTE : un retour fournisseur RETIRE du stock (mouvement décrémentant,
+            # comme une sortie) → il est gouverné par le circuit SORTIE, pas ENTREE.
+            # Seul le retour service (réintégration) relève du circuit ENTREE.
             mapping_circuit = {
                 'ENTREE':             'ENTREE',
                 'SORTIE':             'SORTIE',
                 'SORTIE_HORS_STOCK':  'SORTIE',
-                'RETOUR_FOURNISSEUR': 'ENTREE',
+                'RETOUR_FOURNISSEUR': 'SORTIE',
                 'RETOUR_SERVICE':     'ENTREE',
                 'AJUSTEMENT':         'AJUSTEMENT',
             }
@@ -237,7 +240,10 @@ def _get_redirect_url(type_bon):
         'SORTIE':             'liste_sorties',
         'SORTIE_HORS_STOCK':  'liste_bons_hors_stock',
         'RETOUR_SERVICE':     'liste_retours_services',
-        'RETOUR_FOURNISSEUR': 'liste_retours_services',
+        # Un retour fournisseur est un document de sortie de stock : la page
+        # des retours ne liste que les RETOUR_SERVICE, on redirige donc vers
+        # les sorties (où le mouvement de sortie apparaît dans l'historique).
+        'RETOUR_FOURNISSEUR': 'liste_sorties',
         'AJUSTEMENT':         'liste_ajustements',
     }
     return url_map.get(type_bon, 'liste_sorties')

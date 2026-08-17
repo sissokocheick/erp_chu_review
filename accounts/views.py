@@ -735,6 +735,9 @@ def accueil_personnalise(request):
         'menu_retours_services': {'url': '/stock/retours-services/', 'icon': 'fa-undo', 'color': '#20c997', 'label': 'Retours Services'},
 
 
+        'menu_retours_fournisseurs': {'url': '/stock/retours-fournisseurs/', 'icon': 'fa-truck-ramp-box', 'color': '#e74c3c', 'label': 'Retours Fournisseurs'},
+
+
         'menu_stock':           {'url': '/etat-stock/', 'icon': 'fa-boxes', 'color': '#1c5b96', 'label': 'État du Stock'},
 
 
@@ -2154,6 +2157,7 @@ SOUS_PERMISSIONS = {
     'menu_sorties':            ['can_add_bon_sortie', 'can_change_bon_sortie', 'can_delete_bon_sortie'],
     'menu_sorties_hors_stock': ['can_add_bon_hors_stock', 'can_change_bon_hors_stock', 'can_delete_bon_hors_stock'],
     'menu_retours_services':   ['can_add_bon_retour', 'can_change_bon_retour', 'can_delete_bon_retour'],
+    'menu_retours_fournisseurs': ['can_add_bon_retour', 'can_change_bon_retour', 'can_delete_bon_retour'],
     'menu_livraisons':         ['add_livraisonpartielle', 'change_livraisonpartielle', 'delete_livraisonpartielle'],
     'menu_reception_commande': ['change_commande', 'add_accusereception', 'change_accusereception'],
 
@@ -2588,6 +2592,9 @@ MENU_ITEMS_META = {
 
 
     'menu_retours_services': {'label': 'Retours Services', 'icon': 'fa-undo', 'color': '#20c997'},
+
+
+    'menu_retours_fournisseurs': {'label': 'Retours Fournisseurs', 'icon': 'fa-truck-ramp-box', 'color': '#e74c3c'},
 
 
     'menu_sorties_hors_stock': {'label': 'Sorties Hors Stock', 'icon': 'fa-external-link-alt', 'color': '#e83e8c'},

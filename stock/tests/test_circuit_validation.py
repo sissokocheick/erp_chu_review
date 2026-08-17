@@ -20,8 +20,10 @@ from django.urls import reverse
 
 from stock.models import (
     Article, Ajustement, BonMouvement, CircuitValidation, Commande,
-    Fournisseur, LigneCommande, Magasin, StockItem,
+    DemandeMateriel, Fournisseur, LigneBon, LigneCommande, Magasin,
+    Mouvement, StockItem,
 )
+from stock.services.bon_service import BonService
 from stock.tests import factories
 
 
@@ -262,3 +264,516 @@ class AjustementCircuitTest(BaseCircuitTest):
         self.assertEqual(ajustement.statut_validation, 'ATTENTE')
         self.stock_item.refresh_from_db()
         self.assertEqual(self.stock_item.quantite_physique, 100)
+
+
+# ════════════════════════════════════════════════════════════════════
+# DEMANDES DE MATÉRIEL — validation hiérarchique par service
+# Règle 1 (EN_ATTENTE_VALIDATION), règle 2 (directe au magasin),
+# règle 3 (page réservée aux validateurs) et règle 4 (approbation → magasin)
+# ════════════════════════════════════════════════════════════════════
+class DemandeCircuitTest(BaseCircuitTest):
+    def setUp(self):
+        super().setUp()
+        from core.models import Service
+
+        self.service = Service.objects.create(code='SVC1', nom='Cardiologie')
+        self.user.profil.service = self.service
+        self.user.profil.save(update_fields=['service'])
+        self.validateur.profil.service = self.service
+        self.validateur.profil.save(update_fields=['service'])
+
+        self._donner_permission(self.user, 'menu_demandes')
+        self._donner_permission(self.validateur, 'menu_demandes')
+        self._donner_permission(self.validateur, 'menu_valider_demandes')
+
+    def _creer_demande_via_vue(self):
+        """Crée une demande via la vraie vue mes_demandes."""
+        self._login(self.user)
+        resp = self.client.post(reverse('mes_demandes'), {
+            'magasin_cible': self.magasin.id,
+            'articles[]': [self.article.id],
+            'quantites[]': ['5'],
+            'commentaire': 'Test demande circuit',
+        })
+        self.assertEqual(resp.status_code, 302)
+        return DemandeMateriel.objects.get(demandeur=self.user)
+
+    def test_demande_circuit_actif_en_attente_validation(self):
+        """Règle 1 : circuit DEMANDE actif → demande EN_ATTENTE_VALIDATION."""
+        circuit = CircuitValidation.objects.create(
+            type_document='DEMANDE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+
+        demande = self._creer_demande_via_vue()
+        self.assertEqual(demande.statut, 'EN_ATTENTE_VALIDATION')
+
+    def test_demande_sans_circuit_directe_au_magasin(self):
+        """Règle 2 : pas de circuit DEMANDE → transmission directe au magasin."""
+        demande = self._creer_demande_via_vue()
+        self.assertEqual(demande.statut, 'EN_ATTENTE')
+
+    def test_demande_non_validateur_refuse_page_validation(self):
+        """Règle 3 : un utilisateur hors circuit n'accède pas à la validation."""
+        circuit = CircuitValidation.objects.create(
+            type_document='DEMANDE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+        demande = self._creer_demande_via_vue()
+
+        self._login(self.user)
+        resp = self.client.post(reverse('demandes_a_valider'), {
+            'action': 'approuver', 'demande_id': demande.id})
+        self.assertEqual(resp.status_code, 302)
+        demande.refresh_from_db()
+        self.assertEqual(demande.statut, 'EN_ATTENTE_VALIDATION')
+
+    def test_validateur_approuve_demande_transmise_au_magasin(self):
+        """Règle 3+4 : le validateur du circuit approuve → transmise au magasin."""
+        circuit = CircuitValidation.objects.create(
+            type_document='DEMANDE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+        demande = self._creer_demande_via_vue()
+
+        self._login(self.validateur)
+        resp = self.client.post(reverse('demandes_a_valider'), {
+            'action': 'approuver', 'demande_id': demande.id})
+        self.assertEqual(resp.status_code, 302)
+
+        demande.refresh_from_db()
+        self.assertEqual(demande.statut, 'EN_ATTENTE')
+        self.assertEqual(demande.valide_par_chef, self.validateur)
+
+    def test_validateur_refuse_demande(self):
+        """Le validateur peut refuser → demande REFUSEE avec motif."""
+        circuit = CircuitValidation.objects.create(
+            type_document='DEMANDE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+        demande = self._creer_demande_via_vue()
+
+        self._login(self.validateur)
+        resp = self.client.post(reverse('demandes_a_valider'), {
+            'action': 'refuser', 'demande_id': demande.id,
+            'motif_refus': 'Stock indisponible'})
+        self.assertEqual(resp.status_code, 302)
+
+        demande.refresh_from_db()
+        self.assertEqual(demande.statut, 'REFUSEE')
+        self.assertEqual(demande.motif_cloture, 'Stock indisponible')
+
+
+# ════════════════════════════════════════════════════════════════════
+# INVENTAIRES — soumettre → approuver
+# Règle 1 (A_VALIDER après soumission), règle 2 (approuver direct),
+# règle 3 (seul le validateur approuve) et règle 4 (écarts appliqués)
+# ════════════════════════════════════════════════════════════════════
+class InventaireCircuitTest(BaseCircuitTest):
+    def setUp(self):
+        super().setUp()
+        self._donner_permission(self.user, 'menu_inventaires')
+        self._donner_permission(self.validateur, 'menu_inventaires')
+        self.campagne = None
+
+    def _creer_campagne(self):
+        from stock.services.inventaire_service import InventaireService
+        self.campagne = InventaireService.creer_campagne(
+            titre='Inv circuit', magasin=self.magasin, user=self.user)
+        ligne = self.campagne.lignes_inventaire.get(article=self.article)
+        InventaireService.sauvegarder_saisie(
+            self.campagne, {str(ligne.id): 15}, self.user)
+        return self.campagne
+
+    def _poster_action(self, action):
+        return self.client.post(
+            reverse('saisir_inventaire', args=[self.campagne.id]),
+            {'action': action})
+
+    def test_inventaire_circuit_actif_soumettre_en_attente(self):
+        """Règle 1 : circuit INVENTAIRE actif → soumettre met A_VALIDER, le
+        stock n'est pas modifié tant que la campagne n'est pas approuvée."""
+        circuit = CircuitValidation.objects.create(
+            type_document='INVENTAIRE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+        self._creer_campagne()
+
+        self._login(self.user)
+        resp = self._poster_action('soumettre')
+        self.assertEqual(resp.status_code, 302)
+
+        self.campagne.refresh_from_db()
+        self.assertEqual(self.campagne.statut, 'A_VALIDER')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 100)
+
+    def test_inventaire_sans_circuit_approuver_direct_ajuste_stock(self):
+        """Règle 2 : pas de circuit INVENTAIRE → approbation directe, les
+        écarts sont appliqués au stock immédiatement."""
+        self._creer_campagne()
+
+        self._login(self.user)
+        resp = self._poster_action('approuver')
+        self.assertEqual(resp.status_code, 302)
+
+        self.campagne.refresh_from_db()
+        self.assertEqual(self.campagne.statut, 'VALIDE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 15)
+
+    def test_inventaire_circuit_actif_non_validateur_refuse(self):
+        """Règle 3 : avec circuit actif, un non-validateur ne peut pas
+        approuver — la campagne reste A_VALIDER et le stock inchangé."""
+        circuit = CircuitValidation.objects.create(
+            type_document='INVENTAIRE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+        self._creer_campagne()
+
+        self._login(self.user)
+        self._poster_action('soumettre')
+        self.campagne.refresh_from_db()
+        self.assertEqual(self.campagne.statut, 'A_VALIDER')
+
+        resp = self._poster_action('approuver')
+        self.assertEqual(resp.status_code, 302)
+        self.campagne.refresh_from_db()
+        self.assertEqual(self.campagne.statut, 'A_VALIDER')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 100)
+
+    def test_inventaire_circuit_actif_validateur_approuve_ajuste_stock(self):
+        """Règle 3+4 : le validateur du circuit approuve → écarts appliqués."""
+        circuit = CircuitValidation.objects.create(
+            type_document='INVENTAIRE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+        self._creer_campagne()
+
+        self._login(self.user)
+        self._poster_action('soumettre')
+        self.campagne.refresh_from_db()
+        self.assertEqual(self.campagne.statut, 'A_VALIDER')
+
+        self._login(self.validateur)
+        resp = self._poster_action('approuver')
+        self.assertEqual(resp.status_code, 302)
+
+        self.campagne.refresh_from_db()
+        self.assertEqual(self.campagne.statut, 'VALIDE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 15)
+
+
+# ════════════════════════════════════════════════════════════════════
+# Compteurs du menu — badges visibles uniquement chez les validateurs
+# ════════════════════════════════════════════════════════════════════
+class CompteurMenuValidationTest(BaseCircuitTest):
+    def _contexte(self, user):
+        from django.test import RequestFactory
+        from stock.context_processors import validation_menu_context
+        rf = RequestFactory()
+        req = rf.get('/')
+        req.user = user
+        return validation_menu_context(req)
+
+    def test_non_validateur_compteurs_a_zero(self):
+        """Un simple magasinier ne voit AUCUN badge (compteurs à 0)."""
+        ctx = self._contexte(self.user)
+        self.assertEqual(ctx['nb_bons_sortie_a_valider'], 0)
+        self.assertEqual(ctx['nb_bons_entree_a_valider'], 0)
+        self.assertEqual(ctx['nb_retours_a_valider'], 0)
+        self.assertEqual(ctx['nb_commandes_a_valider'], 0)
+        self.assertEqual(ctx['nb_ajustements_a_valider'], 0)
+        self.assertEqual(ctx['nb_inventaires_a_valider'], 0)
+
+    def test_validateur_voit_les_bons_en_attente(self):
+        """Le validateur du circuit SORTIE voit le nombre de bons à valider,
+        limité à ses magasins autorisés."""
+        circuit = CircuitValidation.objects.create(
+            type_document='SORTIE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+
+        BonMouvement.objects.create(
+            type_bon='SORTIE', magasin=self.magasin,
+            cree_par=self.user, statut_validation='ATTENTE')
+        BonMouvement.objects.create(
+            type_bon='SORTIE', magasin=self.magasin,
+            cree_par=self.user, statut_validation='VALIDE')
+
+        ctx = self._contexte(self.validateur)
+        self.assertEqual(ctx['nb_bons_sortie_a_valider'], 1)
+        # Le non-validateur ne voit toujours rien
+        ctx_non = self._contexte(self.user)
+        self.assertEqual(ctx_non['nb_bons_sortie_a_valider'], 0)
+
+    def test_validateur_hors_magasin_ne_compte_pas(self):
+        """Les bons d'un autre magasin (non autorisé) ne sont pas comptés."""
+        circuit = CircuitValidation.objects.create(
+            type_document='SORTIE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+
+        autre_magasin = factories.creer_magasin(nom='Autre Magasin')
+        BonMouvement.objects.create(
+            type_bon='SORTIE', magasin=autre_magasin,
+            cree_par=self.user, statut_validation='ATTENTE')
+
+        ctx = self._contexte(self.validateur)
+        self.assertEqual(ctx['nb_bons_sortie_a_valider'], 0)
+
+    def test_compteur_sortie_inclut_retours_fournisseur(self):
+        """Un retour fournisseur en ATTENTE (sortie de stock, circuit SORTIE)
+        compte dans le badge du validateur SORTIE."""
+        circuit = CircuitValidation.objects.create(
+            type_document='SORTIE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+
+        BonMouvement.objects.create(
+            type_bon='RETOUR_FOURNISSEUR', magasin=self.magasin,
+            cree_par=self.user, statut_validation='ATTENTE')
+
+        ctx = self._contexte(self.validateur)
+        self.assertEqual(ctx['nb_bons_sortie_a_valider'], 1)
+        # Un validateur ENTREE (hors circuit SORTIE) ne voit rien
+        circuit_entree = CircuitValidation.objects.create(
+            type_document='ENTREE', est_actif=True)
+        circuit_entree.valideurs.add(self.user)
+        ctx_entree = self._contexte(self.user)
+        self.assertEqual(ctx_entree['nb_bons_sortie_a_valider'], 0)
+
+    def test_compteur_entrees_et_retours(self):
+        """Le validateur du circuit ENTREE voit les entrées ET les retours."""
+        circuit = CircuitValidation.objects.create(
+            type_document='ENTREE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+
+        BonMouvement.objects.create(
+            type_bon='ENTREE', magasin=self.magasin,
+            cree_par=self.user, statut_validation='ATTENTE')
+        BonMouvement.objects.create(
+            type_bon='RETOUR_SERVICE', magasin=self.magasin,
+            cree_par=self.user, statut_validation='ATTENTE')
+
+        ctx = self._contexte(self.validateur)
+        self.assertEqual(ctx['nb_bons_entree_a_valider'], 1)
+        self.assertEqual(ctx['nb_retours_a_valider'], 1)
+
+    def test_compteur_demandes_limite_au_service(self):
+        """Le badge A Valider ne compte que les demandes du service du validateur."""
+        from core.models import Service
+        from stock.context_processors import menu_validation_context
+        from django.test import RequestFactory
+
+        service = Service.objects.create(code='SVC2', nom='Pédiatrie')
+        self.validateur.profil.service = service
+        self.validateur.profil.save(update_fields=['service'])
+
+        circuit = CircuitValidation.objects.create(
+            type_document='DEMANDE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+
+        DemandeMateriel.objects.create(
+            numero_demande='DM-1', demandeur=self.user,
+            service_demandeur=service, magasin_cible=self.magasin,
+            statut='EN_ATTENTE_VALIDATION')
+        autre_service = Service.objects.create(code='SVC3', nom='Urgences')
+        DemandeMateriel.objects.create(
+            numero_demande='DM-2', demandeur=self.user,
+            service_demandeur=autre_service, magasin_cible=self.magasin,
+            statut='EN_ATTENTE_VALIDATION')
+
+        rf = RequestFactory()
+        req = rf.get('/')
+        req.user = self.validateur
+        ctx = menu_validation_context(req)
+        self.assertTrue(ctx['peut_valider_demandes'])
+        self.assertEqual(ctx['nb_demandes_a_valider'], 1)
+
+
+# ════════════════════════════════════════════════════════════════════
+# RETOURS FOURNISSEUR — circuit SORTIE (un retour fournisseur RETIRE du
+# stock, comme une sortie : il est donc gouverné par le circuit SORTIE,
+# pas par le circuit ENTREE réservé aux réintégrations)
+# ════════════════════════════════════════════════════════════════════
+class RetourFournisseurCircuitTest(BaseCircuitTest):
+    def setUp(self):
+        super().setUp()
+        self._donner_permission(self.validateur, 'menu_circuits_validation')
+
+    def _creer_bon_retour_fournisseur(self, quantite=10):
+        """Crée un bon RETOUR_FOURNISSEUR en ATTENTE (aucun service de
+        création n'existe encore : le test documente le chemin de validation
+        générique `valider_bon`, seul chemin actuellement exposé)."""
+        bon = BonMouvement.objects.create(
+            type_bon='RETOUR_FOURNISSEUR',
+            magasin=self.magasin,
+            cree_par=self.user,
+            statut_validation='ATTENTE',
+        )
+        LigneBon.objects.create(
+            bon=bon, article=self.article, quantite=quantite)
+        return bon
+
+    def _valider(self, bon):
+        return self.client.post(
+            reverse('valider_bon', args=[bon.id]))
+
+    def test_retour_fournisseur_attente_stock_intact(self):
+        """Règle 1 : un bon RETOUR_FOURNISSEUR en ATTENTE ne touche pas le
+        stock tant que le circuit ne l'a pas validé."""
+        bon = self._creer_bon_retour_fournisseur()
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 100)
+
+    def test_retour_fournisseur_validateur_entree_refuse(self):
+        """Règle 3 : un validateur du circuit ENTREE n'est PAS autorisé — un
+        retour fournisseur retire du stock, il relève du circuit SORTIE."""
+        circuit_entree = CircuitValidation.objects.create(
+            type_document='ENTREE', est_actif=True)
+        circuit_entree.valideurs.add(self.validateur)
+        bon = self._creer_bon_retour_fournisseur()
+
+        self._login(self.validateur)
+        resp = self._valider(bon)
+        self.assertEqual(resp.status_code, 302)
+
+        bon.refresh_from_db()
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 100)
+
+    def test_retour_fournisseur_validateur_sortie_valide_decremente(self):
+        """Règle 3+4 : le validateur du circuit SORTIE valide → le bon passe
+        VALIDE et le stock diminue (mouvement RETOUR_FOURNISSEUR créé)."""
+        circuit_sortie = CircuitValidation.objects.create(
+            type_document='SORTIE', est_actif=True)
+        circuit_sortie.valideurs.add(self.validateur)
+        bon = self._creer_bon_retour_fournisseur()
+
+        self._login(self.validateur)
+        resp = self._valider(bon)
+        self.assertEqual(resp.status_code, 302)
+
+        bon.refresh_from_db()
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.assertEqual(bon.valide_par, self.validateur)
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 90)
+        self.assertEqual(Mouvement.objects.filter(
+            reference_document=bon.numero_bon,
+            type_mouvement='RETOUR_FOURNISSEUR').count(), 1)
+
+
+# ════════════════════════════════════════════════════════════════════
+# FLUX COMPLET RETOUR FOURNISSEUR — service, vue de création, vue de
+# validation (circuit SORTIE) et impact sur le stock
+# ════════════════════════════════════════════════════════════════════
+class RetourFournisseurFluxTest(BaseCircuitTest):
+    def setUp(self):
+        super().setUp()
+        self._donner_permission(self.user, 'menu_retours_fournisseurs')
+        self._donner_permission(self.validateur, 'menu_retours_fournisseurs')
+
+    def _creer_via_service(self, circuit=None):
+        """Crée un bon de retour fournisseur via le service (comme la vue)."""
+        return BonService.creer_bon_retour_fournisseur(
+            lignes=[{'article_id': self.article.id, 'quantite': 10}],
+            utilisateur=self.user, magasin=self.magasin,
+            fournisseur=self.fournisseur, circuit_validation=circuit)
+
+    def test_service_sans_circuit_valide_decremente(self):
+        """Règle 2 : pas de circuit SORTIE → bon VALIDE, stock décrémenté,
+        mouvement RETOUR_FOURNISSEUR créé."""
+        bon = self._creer_via_service()
+        self.assertEqual(bon.type_bon, 'RETOUR_FOURNISSEUR')
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 90)
+        self.assertTrue(Mouvement.objects.filter(
+            reference_document=bon.numero_bon,
+            type_mouvement='RETOUR_FOURNISSEUR').exists())
+
+    def test_service_circuit_sortie_actif_attente_stock_intact(self):
+        """Règle 1 : circuit SORTIE actif → bon en ATTENTE, stock intact (100),
+        aucun mouvement créé."""
+        circuit = CircuitValidation.objects.create(
+            type_document='SORTIE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+        bon = self._creer_via_service(circuit)
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 100)
+        self.assertFalse(Mouvement.objects.filter(
+            reference_document=bon.numero_bon).exists())
+
+    def test_vue_creation_retour_fournisseur(self):
+        """La vue liste_retours_fournisseurs (POST) crée le bon avec le
+        fournisseur sélectionné et décrémente le stock (pas de circuit)."""
+        self._login(self.user)
+        resp = self.client.post(reverse('liste_retours_fournisseurs'), {
+            'fournisseur': self.fournisseur.id,
+            'magasin': self.magasin.id,
+            'reference_externe': 'REF-LITIGE',
+            'articles[]': [self.article.id],
+            'quantites[]': ['5'],
+            'lots[]': [''],
+            'peremptions[]': [''],
+        })
+        self.assertEqual(resp.status_code, 302)
+        bon = BonMouvement.objects.get(type_bon='RETOUR_FOURNISSEUR')
+        self.assertEqual(bon.fournisseur, self.fournisseur)
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.assertEqual(bon.lignes_bon.count(), 1)
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 95)
+
+    def test_vue_validation_validateur_sortie_decremente(self):
+        """Règle 3+4 : le validateur du circuit SORTIE valide → VALIDE et le
+        stock est retiré (100 → 90)."""
+        circuit = CircuitValidation.objects.create(
+            type_document='SORTIE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+        bon = self._creer_via_service(circuit)
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+
+        self._login(self.validateur)
+        resp = self.client.post(
+            reverse('valider_bon_retour_fournisseur', args=[bon.id]))
+        self.assertEqual(resp.status_code, 302)
+
+        bon.refresh_from_db()
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.assertEqual(bon.valide_par, self.validateur)
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 90)
+        self.assertTrue(Mouvement.objects.filter(
+            reference_document=bon.numero_bon,
+            type_mouvement='RETOUR_FOURNISSEUR').exists())
+
+    def test_vue_validation_non_validateur_refuse(self):
+        """Règle 3 : un utilisateur hors circuit SORTIE est refusé — le bon
+        reste en ATTENTE et le stock reste intact."""
+        circuit = CircuitValidation.objects.create(
+            type_document='SORTIE', est_actif=True)
+        circuit.valideurs.add(self.validateur)
+        bon = self._creer_via_service(circuit)
+
+        self._login(self.user)
+        resp = self.client.post(
+            reverse('valider_bon_retour_fournisseur', args=[bon.id]))
+        self.assertEqual(resp.status_code, 302)
+
+        bon.refresh_from_db()
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 100)
+
+    def test_vue_liste_rend_avec_permission(self):
+        """La page liste s'affiche pour un utilisateur autorisé (GET)."""
+        self._login(self.user)
+        resp = self.client.get(reverse('liste_retours_fournisseurs'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Retours Fournisseurs')
+
+    def test_pdf_retour_fournisseur_200(self):
+        """Le PDF du bon de retour fournisseur se génère (config modèle BR)."""
+        bon = self._creer_via_service()
+        self._login(self.user)
+        resp = self.client.get(
+            reverse('imprimer_bon_retour_fournisseur', args=[bon.id]))
+        self.assertEqual(resp.status_code, 200)

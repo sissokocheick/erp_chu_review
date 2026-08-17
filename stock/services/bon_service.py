@@ -659,6 +659,106 @@ class BonService:
         return bon
 
     # ═══════════════════════════════════════════════════════════════════════
+    # BON DE RETOUR FOURNISSEUR (sortie de stock vers le fournisseur)
+    # ═══════════════════════════════════════════════════════════════════════
+    @classmethod
+    @transaction.atomic
+    def creer_bon_retour_fournisseur(cls, lignes, utilisateur, magasin,
+                                     fournisseur, commentaire="",
+                                     reference_externe=None,
+                                     reference_document=None,
+                                     circuit_validation=None):
+        """Crée un bon de retour fournisseur (litige / marchandise retournée).
+
+        Un retour fournisseur RETIRE du stock (mouvement décrémentant, comme
+        une sortie) : il est donc gouverné par le circuit SORTIE. Si un circuit
+        SORTIE actif est passé, le bon est créé en ATTENTE SANS mouvement de
+        stock (validation différée par les validateurs du circuit), sinon
+        VALIDE immédiat avec décrément du stock.
+
+        Args:
+            lignes: list[dict] — [{'article_id': int, 'quantite': int,
+                                    'numero_lot': str|None, 'date_peremption': str|None}]
+            utilisateur: User instance
+            magasin: Magasin instance
+            fournisseur: Fournisseur instance
+            circuit_validation: CircuitValidation instance|None — circuit
+                SORTIE actif le cas échéant.
+        """
+        cls._verifier_utilisateur_actif(utilisateur, magasin)
+
+        statut = 'ATTENTE' if circuit_validation and circuit_validation.est_actif else 'VALIDE'
+
+        bon_kwargs = {
+            'type_bon': 'RETOUR_FOURNISSEUR',
+            'magasin': magasin,
+            'cree_par': utilisateur,
+            'commentaire': commentaire,
+            'statut_validation': statut,
+        }
+        if fournisseur:
+            bon_kwargs['fournisseur'] = fournisseur
+        if reference_externe:
+            bon_kwargs['reference_externe'] = reference_externe
+        if reference_document:
+            bon_kwargs['reference_document'] = reference_document
+
+        bon = BonMouvement.objects.create(**bon_kwargs)
+
+        # ✅ CORRECTION : articles en bulk
+        article_ids = [l.get('article_id') for l in lignes if l.get('article_id')]
+        from stock.models import Article
+        articles_map = Article.objects.filter(id__in=article_ids).in_bulk()
+
+        for ligne_data in lignes:
+            article_id = ligne_data.get('article_id')
+            quantite = ligne_data.get('quantite')
+            numero_lot = ligne_data.get('numero_lot')
+            date_peremption = ligne_data.get('date_peremption')
+
+            if not article_id or not quantite or quantite <= 0:
+                continue
+
+            article = articles_map.get(int(article_id))
+            if not article:
+                continue
+
+            ligne_kwargs = {
+                'bon': bon,
+                'article': article,
+                'quantite': quantite,
+            }
+            if numero_lot:
+                ligne_kwargs['numero_lot'] = numero_lot
+            if date_peremption:
+                ligne_kwargs['date_peremption'] = date_peremption
+
+            LigneBon.objects.create(**ligne_kwargs)
+
+            # Circuit SORTIE actif → bon en ATTENTE : pas de mouvement de stock
+            # maintenant (le stock sera retiré à la validation).
+            if statut == 'VALIDE':
+                mouvement = Mouvement(
+                    type_mouvement='RETOUR_FOURNISSEUR',
+                    article=article,
+                    magasin=magasin,
+                    quantite=quantite,
+                    utilisateur=utilisateur,
+                    reference_document=bon.numero_bon,
+                    fournisseur=fournisseur,
+                    numero_lot=numero_lot,
+                    date_peremption=date_peremption,
+                )
+                StockTransactionService.executer(mouvement)
+
+        # ── Snapshot : créateur = magasinier (case 3) ──
+        cls._enregistrer_validation(
+            bon, utilisateur, ordre_case=3,
+            commentaire="Création bon de retour fournisseur")
+
+        return bon
+
+    # ═══════════════════════════════════════════════════════════════════════
     # VALIDATION D'UN BON DE SORTIE
     # ═══════════════════════════════════════════════════════════════════════
     @classmethod

@@ -1042,6 +1042,7 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
             mapping = {
                 'ENTREE':             ('BON_ENTREE', 'BE'),
                 'RETOUR_SERVICE':     ('BON_RETOUR', 'BR'),
+                'RETOUR_FOURNISSEUR': ('BON_RETOUR', 'BR'),
                 'SORTIE_HORS_STOCK':  ('BON_HS', 'BSHS'),
             }
             type_doc, prefix = mapping.get(self.type_bon, ('BON_SORTIE', 'BS'))

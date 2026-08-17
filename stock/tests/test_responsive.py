@@ -217,7 +217,8 @@ class ResponsiveMobileTest(TestCase):
         m = self.magasin.id
         return [
             '/', '/articles/', '/familles/', '/entrees/', '/sorties/',
-            '/bons/hors-stock/', '/stock/retours-services/', '/livraisons/',
+            '/bons/hors-stock/', '/stock/retours-services/',
+            '/stock/retours-fournisseurs/', '/livraisons/',
             '/receptions/', '/etat-stock/', '/ajustements/', '/inventaires/',
             '/administration/historique/', '/commandes/', '/mes-demandes/',
             '/gestion-demandes/', '/valider-demandes/',
