@@ -1,0 +1,254 @@
+{% load static custom_filters %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Valeur des Immobilisations par Service</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 6mm 8mm 12mm 8mm;
+            @bottom-center {
+                content: "{{ pdf_config.pied_de_page.texte_personnalise|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
+                white-space: pre-line;
+                font-size: 7pt;
+                color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+                font-weight: bold;
+                text-align: center;
+            }
+            @bottom-right {
+                content: "Page " counter(page) " / " counter(pages);
+                font-size: 7pt;
+                color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+                font-weight: bold;
+            }
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body {
+            height: 100%;
+            font-family: 'Times New Roman', Times, serif;
+            font-size: 10pt;
+            color: #000;
+            background: #fff;
+        }
+        .page-table { width: 100%; height: 100%; border-collapse: collapse; }
+        .cell-content { vertical-align: top; }
+
+        .top-header { width: 100%; border-bottom: 2px solid #1c5b96; padding-bottom: 4px; margin-bottom: 6px; }
+        .top-header-left { display: inline-block; font-size: 9pt; font-weight: bold; color: #1c5b96; }
+        .top-header-right { display: inline-block; float: right; text-align: right; font-size: 8pt; color: #333; }
+        .top-header-right .republic { font-weight: bold; font-size: 9pt; }
+        .top-header-right .motto { font-style: italic; font-size: 8pt; color: #555; }
+
+        .main-cartridge {
+            width: 100%;
+            border: 2px solid #1c5b96;
+            border-radius: 4px;
+            display: table;
+            margin-bottom: 8px;
+        }
+        .cart-col-logo {
+            display: table-cell; vertical-align: middle;
+            width: 20%; padding: 6px 8px; text-align: left;
+        }
+        .cart-col-logo img { max-height: 55px; max-width: 150px; object-fit: contain; }
+        .cart-col-logo .institution-text {
+            font-size: 8pt; font-weight: bold; color: #1c5b96;
+            text-align: center; margin-top: 3px;
+        }
+        .cart-col-title {
+            display: table-cell; vertical-align: middle; text-align: center;
+            width: 55%; padding: 6px 8px;
+        }
+        .cart-col-title .process { font-size: 8pt; color: #555; }
+        .cart-col-title .doc-title { font-size: 15pt; font-weight: bold; color: #1c5b96; letter-spacing: 1px; }
+        .cart-col-title .doc-subtitle { font-size: 9pt; color: #333; }
+        .cart-col-quality {
+            display: table-cell; vertical-align: middle;
+            width: 25%; padding: 6px 8px; font-size: 8pt; text-align: left;
+        }
+        .cart-col-quality .q-row { margin-bottom: 2px; white-space: nowrap; }
+        .cart-col-quality .q-label { font-weight: bold; }
+
+        .info-box {
+            margin-bottom: 8px; padding: 6px 8px;
+            background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px;
+            font-size: 9pt;
+        }
+        .info-row { margin-bottom: 3px; }
+        .info-label { font-weight: bold; color: #1c5b96; }
+
+        .summary-strip { display: table; width: 100%; margin-bottom: 8px; border-collapse: collapse; }
+        .summary-cell {
+            display: table-cell; width: 25%; text-align: center;
+            border: 1px solid #dee2e6; padding: 6px 8px; background: #f8f9fa;
+        }
+        .summary-cell .s-label { font-size: 8pt; text-transform: uppercase; color: #666; }
+        .summary-cell .s-value { font-size: 13pt; font-weight: bold; color: #1c5b96; }
+
+        table.data {
+            width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 8.5pt;
+        }
+        table.data th {
+            background-color: #1c5b96; color: white; text-align: left;
+            padding: 5px 6px; font-size: 8pt; text-transform: uppercase;
+            border: 1px solid #1c5b96;
+        }
+        table.data td { padding: 4px 6px; border: 1px solid #999; vertical-align: middle; }
+        table.data tbody tr:nth-child(even) { background: #f2f6fa; }
+        table.data thead { display: table-header-group; }
+        table.data tr { page-break-inside: avoid; }
+        .text-right { text-align: right; }
+        .text-center { text-align: center; }
+        .section-title {
+            font-size: 10pt; font-weight: bold; color: #1c5b96;
+            margin: 10px 0 4px; text-transform: uppercase;
+            border-bottom: 1px solid #1c5b96; padding-bottom: 2px;
+        }
+        .valeur-col { font-weight: bold; color: #1c5b96; }
+        .no-data {
+            text-align: center; padding: 25px; color: #888;
+            font-style: italic; border: 1px dashed #ccc; margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<table class="page-table">
+    <tr>
+        <td class="cell-content">
+
+            <div class="top-header">
+                <div class="top-header-left">
+                    {{ pdf_config.ministere_label|default:"Ministère de la Santé, de l'Hygiène Publique et de la Couverture Maladie Universelle" }}
+                </div>
+                <div class="top-header-right">
+                    <div class="republic">{{ pdf_config.republique_label|default:"République de Côte d'Ivoire" }}</div>
+                    <div class="motto">{{ pdf_config.devise_label|default:"Union-Discipline-Travail" }}</div>
+                </div>
+            </div>
+
+            <div class="main-cartridge">
+                <div class="cart-col-logo">
+                    {% if pdf_config.cartouche.afficher_logo and logo_url %}
+                        <img src="{{ logo_url }}" alt="Logo">
+                    {% else %}
+                        <div style="height:50px;"></div>
+                    {% endif %}
+                </div>
+                <div class="cart-col-title">
+                    <div class="process">{{ pdf_config.ps2_label|default:"PS2 : GERER LES PRESTATIONS EXTERNES" }}</div>
+                    <div class="doc-title">VALEUR DES IMMOBILISATIONS PAR SERVICE</div>
+                    <div class="doc-subtitle">PATRIMOINE</div>
+                </div>
+                <div class="cart-col-quality">
+                    <div class="q-row"><span class="q-label">Code :</span> {{ pdf_config.code_document|default:"ENR-CONS/DAF-007" }}</div>
+                    <div class="q-row"><span class="q-label">Créé le :</span> {{ pdf_config.date_creation_doc|default:"10/06/2024" }}</div>
+                    <div class="q-row"><span class="q-label">Révisé le :</span> {{ pdf_config.date_revision_doc|default:"19/05/2025" }}</div>
+                    <div class="q-row"><span class="q-label">Version :</span> {{ pdf_config.version_doc|default:"002" }}</div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-row">
+                    <span class="info-label">Parc au :</span> {{ date_fin|date:"d/m/Y" }}
+                    &nbsp;·&nbsp; <span class="info-label">Acquisitions du :</span>
+                    {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Service :</span>
+                    {% if service %}{{ service.nom|upper }}{% else %}TOUS LES SERVICES{% endif %}
+                    &nbsp;·&nbsp; <span class="info-label">Biens sortis du parc :</span>
+                    {% if inclure_sortis %}INCLUS{% else %}EXCLUS (réformés / cédés / disparus){% endif %}
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Généré le :</span>
+                    {{ date_impression|date:"d/m/Y à H:i" }} par {{ edite_par.get_full_name|default:edite_par.username }}
+                </div>
+            </div>
+
+            <div class="summary-strip">
+                <div class="summary-cell">
+                    <div class="s-label">Biens immobilisés</div>
+                    <div class="s-value">{{ total_nb }}</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="s-label">Valeur d'acquisition</div>
+                    <div class="s-value">{{ total_acq|floatformat:0 }} F</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="s-label">VNC totale</div>
+                    <div class="s-value">{{ total_vnc|floatformat:0 }} F</div>
+                </div>
+                <div class="summary-cell">
+                    <div class="s-label">Amortissement cumulé</div>
+                    <div class="s-value">{{ total_amorti|floatformat:0 }} F</div>
+                </div>
+            </div>
+
+            <div class="section-title">Valeur par service</div>
+            {% if par_service %}
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th style="width:4%;">N°</th>
+                        <th style="width:28%;">Service</th>
+                        <th style="width:10%;" class="text-right">Nb biens</th>
+                        <th style="width:17%;" class="text-right">Valeur acquisition (FCFA)</th>
+                        <th style="width:17%;" class="text-right">Amortissement (FCFA)</th>
+                        <th style="width:16%;" class="text-right">VNC (FCFA)</th>
+                        <th style="width:8%;" class="text-right">Part VNC</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in par_service %}
+                    <tr>
+                        <td class="text-center">{{ forloop.counter }}</td>
+                        <td><strong>{{ r.service_demandeur__nom }}</strong></td>
+                        <td class="text-right">{{ r.nb }}</td>
+                        <td class="text-right valeur-col">{{ r.valeur_acq|floatformat:0 }}</td>
+                        <td class="text-right">{{ r.amorti|floatformat:0 }}</td>
+                        <td class="text-right valeur-col">{{ r.vnc|floatformat:0 }}</td>
+                        <td class="text-right">{{ r.part_vnc|default:0|floatformat:1 }}%</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-data">Aucun bien sur la période pour ces critères.</div>
+            {% endif %}
+
+            <div class="section-title">Détail par service × type d'équipement</div>
+            {% if par_svc_type %}
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th style="width:24%;">Service</th>
+                        <th style="width:32%;">Type d'équipement</th>
+                        <th style="width:10%;" class="text-right">Nb biens</th>
+                        <th style="width:17%;" class="text-right">Valeur acquisition (FCFA)</th>
+                        <th style="width:17%;" class="text-right">VNC (FCFA)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in par_svc_type %}
+                    <tr>
+                        <td>{{ r.service_demandeur__nom }}</td>
+                        <td>{{ r.type__nom }}</td>
+                        <td class="text-right">{{ r.nb }}</td>
+                        <td class="text-right valeur-col">{{ r.valeur_acq|floatformat:0 }}</td>
+                        <td class="text-right valeur-col">{{ r.vnc|floatformat:0 }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="no-data">Aucun détail sur la période pour ces critères.</div>
+            {% endif %}
+
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>

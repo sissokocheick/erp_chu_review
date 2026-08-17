@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
-from django.urls import path
-from . import views
+from django.urls import path
+from . import views
+from . import rapports
 
 urlpatterns = [
 
@@ -66,10 +67,13 @@ urlpatterns = [
     
     path('contrats/<int:contrat_id>/assigner-equipements/', views.assigner_equipements_contrat, name='patrimoine_assigner_equipements_contrat'),
 
-    path('interventions/<int:pk>/bon-sortie/', views.imprimer_bon_sortie_reparation, name='patrimoine_imprimer_bon_sortie'),
-
-
-path('inventaires/', views.patrimoine_campagnes_inventaire, name='patrimoine_campagnes_inventaire'),
+    path('interventions/<int:pk>/bon-sortie/', views.imprimer_bon_sortie_reparation, name='patrimoine_imprimer_bon_sortie'),
+
+    path('rapports/valeur-services/',      rapports.rapport_valeur_services,          name='patrimoine_rapport_valeurs'),
+    path('rapports/valeur-services/csv/',  rapports.export_valeur_services_csv,        name='patrimoine_rapport_valeurs_csv'),
+    path('rapports/valeur-services/detail-csv/', rapports.export_valeur_services_detail_csv, name='patrimoine_rapport_valeurs_detail_csv'),
+    path('rapports/valeur-services/pdf/',  rapports.rapport_valeur_services_pdf,       name='patrimoine_rapport_valeurs_pdf'),
+    path('inventaires/', views.patrimoine_campagnes_inventaire, name='patrimoine_campagnes_inventaire'),
 
 path('inventaires/<int:campagne_id>/', views.detail_campagne_inventaire, name='patrimoine_detail_campagne'),
 

@@ -409,6 +409,17 @@ Rotation du comptage **par famille / par zone** au lieu d'une campagne complète
 - Fiche détaillée par bien, **modification rapide** (quick-edit AJAX), étiquette **QR code**.
 - Recherche, filtres, pagination.
 
+### Rapport Valeur par Service (`/patrimoine/rapports/valeur-services/`)
+- **Valeur des immobilisations par service** : nombre de biens, valeur d'acquisition,
+  amortissement cumulé et **VNC** par service, avec part de VNC.
+- **Détail par service × type d'équipement** (nb, valeur, VNC).
+- **Filtres** : période (1/3/6/12 mois ou plage libre), service, inclusion ou non des
+  biens sortis (réformés / cédés / disparus — exclus par défaut).
+- **Graphiques** : acquisitions par mois (valeur + nb) et répartition de la VNC par service.
+- **Tri par clic** sur les colonnes des deux tableaux (indépendants).
+- **Exports** : CSV résumé, CSV détail, **PDF** (logo + entête configurés, A4 paysage,
+  numérotation des pages). Accessible depuis le bouton « Rapport Valeurs » du registre.
+
 ### Sas Immatriculation (`/patrimoine/sas/`)
 - Zone d'attente des **biens à immatriculer** (nouveaux achats en attente).
 - Validation d'entrée, **éclatement d'un bien composite** en plusieurs sous-biens.

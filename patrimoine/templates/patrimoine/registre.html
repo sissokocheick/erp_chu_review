@@ -174,6 +174,7 @@
       <span class="s-chip s-sas"><i class="fas fa-clock"></i> {{ stats.en_attente }} en attente</span>
     </a>
     {% endif %}
+    <a href="{% url 'patrimoine_rapport_valeurs' %}" class="btn-header"><i class="fas fa-chart-pie" style="color:#1e3a8a;"></i> Rapport Valeurs</a>
     <a href="{% url 'patrimoine_import' %}" class="btn-header"><i class="fas fa-file-import"></i> Importer</a>
     <a href="{% url 'patrimoine_export' %}?{{ request.GET.urlencode }}" class="btn-header">
       <i class="fas fa-file-excel" style="color:#10b981;"></i> Exporter

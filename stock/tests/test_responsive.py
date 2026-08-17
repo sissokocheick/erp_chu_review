@@ -233,6 +233,7 @@ class ResponsiveMobileTest(TestCase):
             '/patrimoine/interventions/', '/patrimoine/import/',
             '/patrimoine/parametres/', '/patrimoine/inventaires/',
             '/patrimoine/rebuts/', '/patrimoine/pertes/',
+            '/patrimoine/rapports/valeur-services/',
             '/patrimoine/mes-tickets/', '/patrimoine/mes-interventions/',
             '/magasin/%d/modele-pdf/BS/' % m,
             '/articles/%d/historique/' % self.article.id,
