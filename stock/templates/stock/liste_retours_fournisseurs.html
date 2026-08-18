@@ -347,6 +347,16 @@ const ALL_ARTICLES = [
     {% endfor %}
 ];
 
+/* ═════ PRÉ-REMPLISSAGE (retour fournisseur en 1 clic) ═════ */
+const PREFILL = {% if prefill_retour %}{
+  fournisseur_id: {{ prefill_retour.fournisseur_id }},
+  lignes: [
+    {% for l in prefill_retour.lignes %}
+    {article_id: {{ l.article_id }}, designation: "{{ l.designation|escapejs }}", reference: "{{ l.reference|escapejs }}", quantite: {{ l.quantite }}, numero_lot: "{{ l.numero_lot|escapejs }}", date_peremption: "{{ l.date_peremption }}"}{% if not forloop.last %},{% endif %}
+    {% endfor %}
+  ]
+}{% else %}null{% endif %};
+
 /* ═════ MODAL PDF ═════ */
 window.imprimerModal = function(url, titre) {
         if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
@@ -480,7 +490,12 @@ document.addEventListener('keydown', function(e){
         msgVide.style.display = nb === 0 ? 'block' : 'none';
     }
 
-    function ajouterLigneArticle(article) {
+    function ajouterLigneArticle(article, extra) {
+        extra = extra || {};
+        var qte = extra.quantite || 1;
+        var lot = extra.numero_lot || '';
+        var peremp = extra.date_peremption || '';
+
         var existant = zoneLignes.querySelector('[data-article-id="' + article.id + '"]');
         if (existant) {
             Swal.fire({ icon: 'info', title: 'Déjà présent', text: 'Cet article est déjà dans la liste.', confirmButtonColor: '#e74c3c', timer: 2000 });
@@ -508,17 +523,17 @@ document.addEventListener('keydown', function(e){
                 </div>
                 <div class="fg" style="margin:0;">
                     <label>Quantité *</label>
-                    <input type="number" name="quantites[]" min="1" required value="1"
+                    <input type="number" name="quantites[]" min="1" required value="${qte}"
                            style="width:100%; padding:8px; border:2px solid #e74c3c; border-radius:6px; text-align:center; font-weight:bold; color:#e74c3c; font-size:14px; outline:none; box-sizing:border-box;">
                 </div>
                 <div class="fg" style="margin:0;">
                     <label>N° Lot</label>
-                    <input type="text" name="lots[]" placeholder="Optionnel"
+                    <input type="text" name="lots[]" placeholder="Optionnel" value="${lot}"
                            style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font-size:13px; outline:none; background:var(--bg-input); color:var(--text-dark); box-sizing:border-box;">
                 </div>
                 <div class="fg" style="margin:0;">
                     <label>Péremption</label>
-                    <input type="date" name="peremptions[]"
+                    <input type="date" name="peremptions[]" value="${peremp}"
                            style="width:100%; padding:8px; border:1px solid var(--border-color); border-radius:6px; font-size:13px; outline:none; background:var(--bg-input); color:var(--text-dark); box-sizing:border-box;">
                 </div>
                 <button type="button" class="btn-rm" onclick="this.closest('.ligne-item').remove(); updateCompteur();" title="Retirer la ligne" aria-label="Retirer la ligne"><i class="fas fa-trash"></i></button>
@@ -560,8 +575,27 @@ document.addEventListener('keydown', function(e){
         });
     }
 
+    function appliquerPrefill() {
+        if (!PREFILL) return;
+        var sel = document.getElementById('sel-fournisseur');
+        if (sel && PREFILL.fournisseur_id) {
+            sel.value = String(PREFILL.fournisseur_id);
+            if (window.jQuery && jQuery.fn.select2) { jQuery(sel).trigger('change'); }
+        }
+        (PREFILL.lignes || []).forEach(function(l) {
+            ajouterLigneArticle(
+                {id: l.article_id, designation: l.designation, reference: l.reference},
+                {quantite: l.quantite, numero_lot: l.numero_lot, date_peremption: l.date_peremption}
+            );
+        });
+        var modal = document.getElementById('modal-retour');
+        if (modal) modal.classList.add('open');
+    }
+    if (PREFILL) document.addEventListener('DOMContentLoaded', appliquerPrefill);
+
     window.updateCompteur = updateCompteur;
     window.ajouterLigneArticle = ajouterLigneArticle;
+    window.appliquerPrefill = appliquerPrefill;
 })();
 </script>
 {% endblock %}

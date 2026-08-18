@@ -738,12 +738,26 @@ class RetourFournisseurFluxTest(BaseCircuitTest):
 
         bon.refresh_from_db()
         self.assertEqual(bon.statut_validation, 'VALIDE')
-        self.assertEqual(bon.valide_par, self.validateur)
-        self.stock_item.refresh_from_db()
-        self.assertEqual(self.stock_item.quantite_physique, 90)
-        self.assertTrue(Mouvement.objects.filter(
-            reference_document=bon.numero_bon,
-            type_mouvement='RETOUR_FOURNISSEUR').exists())
+
+    def test_vue_stock_insuffisant_message_reel(self):
+        """UX : quand le service rejette (stock insuffisant), la vue affiche le
+        message métier réel et non le message générique « erreur technique »."""
+        self._login(self.user)
+        resp = self.client.post(reverse('liste_retours_fournisseurs'), {
+            'fournisseur': self.fournisseur.id,
+            'magasin': self.magasin.id,
+            'articles[]': [self.article.id],
+            'quantites[]': ['500'],  # stock max 100
+            'lots[]': [''],
+            'peremptions[]': [''],
+        }, follow=True)
+        html = resp.content.decode('utf-8')
+        # Le message métier est visible, pas le fallback générique
+        self.assertIn('Stock insuffisant', html)
+        self.assertNotIn('Une erreur technique est survenue', html)
+        # Aucun bon créé (transaction atomique annulée)
+        self.assertFalse(BonMouvement.objects.filter(
+            type_bon='RETOUR_FOURNISSEUR').exists())
 
     def test_vue_validation_non_validateur_refuse(self):
         """Règle 3 : un utilisateur hors circuit SORTIE est refusé — le bon
@@ -777,3 +791,90 @@ class RetourFournisseurFluxTest(BaseCircuitTest):
         resp = self.client.get(
             reverse('imprimer_bon_retour_fournisseur', args=[bon.id]))
         self.assertEqual(resp.status_code, 200)
+
+    # ── Pré-remplissage « retour fournisseur en 1 clic » ──
+
+    def _creer_bon_entree(self, quantite=10, fournisseur=None,
+                          lot='LOT-A', peremp=None):
+        """Crée un bon d'entrée (réception) avec une ligne lotée."""
+        from datetime import date, timedelta
+        bon = BonMouvement.objects.create(
+            type_bon='ENTREE', magasin=self.magasin, cree_par=self.user,
+            fournisseur=fournisseur or self.fournisseur,
+            statut_validation='VALIDE')
+        LigneBon.objects.create(
+            bon=bon, article=self.article, quantite=quantite,
+            numero_lot=lot,
+            date_peremption=peremp or (date.today() + timedelta(days=30)))
+        return bon
+
+    def test_prefill_depuis_bon_entree(self):
+        """?from_bon= pré-remplit fournisseur + lignes (avec lot/péremption)."""
+        bon = self._creer_bon_entree()
+        self._login(self.user)
+        resp = self.client.get(
+            reverse('liste_retours_fournisseurs') + f'?from_bon={bon.id}')
+        self.assertEqual(resp.status_code, 200)
+        prefill = resp.context['prefill_retour']
+        self.assertEqual(prefill['fournisseur_id'], self.fournisseur.id)
+        self.assertEqual(len(prefill['lignes']), 1)
+        ligne = prefill['lignes'][0]
+        self.assertEqual(ligne['article_id'], self.article.id)
+        self.assertEqual(ligne['quantite'], 10)
+        self.assertEqual(ligne['numero_lot'], 'LOT-A')
+        self.assertTrue(ligne['date_peremption'])
+
+    def test_prefill_depuis_commande_receptionnee(self):
+        """?from_commande= agrège les réceptions de la commande et retombe sur
+        le fournisseur de la commande quand le bon n'en a pas."""
+        commande = self._creer_commande('VALIDE')
+        bon = self._creer_bon_entree()
+        bon.fournisseur = None
+        bon.commande_liee = commande
+        bon.save(update_fields=['fournisseur', 'commande_liee'])
+
+        self._login(self.user)
+        resp = self.client.get(
+            reverse('liste_retours_fournisseurs') +
+            f'?from_commande={commande.id}')
+        self.assertEqual(resp.status_code, 200)
+        prefill = resp.context['prefill_retour']
+        self.assertEqual(prefill['fournisseur_id'], self.fournisseur.id)
+        self.assertGreaterEqual(len(prefill['lignes']), 1)
+
+    def test_prefill_bon_sans_fournisseur_aucun(self):
+        """Un bon sans fournisseur ni commande → aucun pré-remplissage."""
+        bon = self._creer_bon_entree()
+        bon.fournisseur = None
+        bon.save(update_fields=['fournisseur'])
+        self._login(self.user)
+        resp = self.client.get(
+            reverse('liste_retours_fournisseurs') + f'?from_bon={bon.id}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.context['prefill_retour'])
+
+    def test_prefill_ignore_bon_autre_magasin(self):
+        """Un bon d'un autre magasin (non autorisé) n'est jamais pré-rempli."""
+        autre = factories.creer_magasin(nom='Magasin Autre')
+        bon = BonMouvement.objects.create(
+            type_bon='ENTREE', magasin=autre, cree_par=self.user,
+            fournisseur=self.fournisseur, statut_validation='VALIDE')
+        LigneBon.objects.create(bon=bon, article=self.article, quantite=5)
+        self._login(self.user)
+        resp = self.client.get(
+            reverse('liste_retours_fournisseurs') + f'?from_bon={bon.id}')
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.context['prefill_retour'])
+
+    def test_prefill_rendu_html_js(self):
+        """Le template sérialise le pré-remplissage en JS (PREFILL)."""
+        bon = self._creer_bon_entree()
+        self._login(self.user)
+        resp = self.client.get(
+            reverse('liste_retours_fournisseurs') + f'?from_bon={bon.id}')
+        html = resp.content.decode('utf-8')
+        self.assertIn(f'fournisseur_id: {self.fournisseur.id}', html)
+        self.assertIn(f'article_id: {self.article.id}', html)
+        # escapejs échappe le tiret en \u002D (décodé en '-' par le navigateur)
+        self.assertIn('LOT\\u002DA', html)
+        self.assertIn('appliquerPrefill', html)

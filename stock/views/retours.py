@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
@@ -374,6 +375,12 @@ def _afficher_retours_fournisseurs(request):
         'lignes_bon__article'
     ).order_by('-date_bon')
 
+    # ── Pré-remplissage « retour fournisseur en 1 clic » ──
+    # Depuis un bon d'entrée (?from_bon=) ou une commande réceptionnée
+    # (?from_commande=) : on pré-charge le fournisseur et les lignes dans la
+    # modale de création. L'utilisateur ajuste les quantités puis enregistre.
+    prefill_retour = _build_prefill_retour(request, magasin_id)
+
     # Circuit SORTIE actif → les retours fournisseurs (sorties de stock)
     # passent par validation différée : on expose l'état + le statut de validateur.
     from ..models import CircuitValidation
@@ -394,6 +401,7 @@ def _afficher_retours_fournisseurs(request):
         'peut_annuler': _has_perm_bon(request.user, 'change', 'RETOUR_FOURNISSEUR'),
         'circuit_sortie': circuit_sortie,
         'est_valideur_retour_fournisseur': est_valideur,
+        'prefill_retour': prefill_retour,
     }
     return render_liste(
         request, qs,
@@ -408,6 +416,73 @@ def _afficher_retours_fournisseurs(request):
         ],
         context_extra=extra
     )
+
+
+def _build_prefill_retour(request, magasin_id):
+    """Construit le pré-remplissage de la modale de retour fournisseur.
+
+    Sources :
+    - `?from_bon=<id>` : un bon d'entrée (ENTREE) du magasin actif
+    - `?from_commande=<id>` : une commande réceptionnée (toutes ses réceptions)
+
+    Retourne None si aucune source valide ou aucun fournisseur trouvé.
+    """
+    from ..models import Commande
+
+    from_bon_id = request.GET.get('from_bon')
+    from_commande_id = request.GET.get('from_commande')
+    if not from_bon_id and not from_commande_id:
+        return None
+
+    fournisseur = None
+    lignes = []
+    vus = set()
+
+    def _ajouter_ligne(ligne_bon):
+        """Ajoute une ligne avec dédoublonnage (article + lot + péremption)."""
+        article = ligne_bon.article
+        lot = (ligne_bon.numero_lot or '').strip()
+        peremp = ligne_bon.date_peremption.isoformat() if ligne_bon.date_peremption else ''
+        cle = (ligne_bon.article_id, lot, peremp)
+        if cle in vus:
+            return
+        vus.add(cle)
+        lignes.append({
+            'article_id': article.id,
+            'designation': article.designation,
+            'reference': getattr(article, 'reference', '') or '',
+            'quantite': ligne_bon.quantite,
+            'numero_lot': lot,
+            'date_peremption': peremp,
+        })
+
+    if from_bon_id:
+        bon_source = BonMouvement.objects.filter(
+            id=from_bon_id, type_bon='ENTREE',
+            magasin_id=magasin_id, est_annule=False,
+        ).select_related('fournisseur', 'commande_liee__fournisseur').first()
+        if bon_source:
+            fournisseur = bon_source.fournisseur or (
+                bon_source.commande_liee.fournisseur
+                if bon_source.commande_liee else None
+            )
+            for ligne in bon_source.lignes_bon.select_related('article').all():
+                _ajouter_ligne(ligne)
+
+    elif from_commande_id:
+        commande = Commande.objects.filter(
+            id=from_commande_id, magasin_id=magasin_id
+        ).select_related('fournisseur').first()
+        if commande:
+            fournisseur = commande.fournisseur
+            bons = commande.bons_reception.filter(est_annule=False)
+            for bon in bons.prefetch_related('lignes_bon__article').all():
+                for ligne in bon.lignes_bon.all():
+                    _ajouter_ligne(ligne)
+
+    if not fournisseur:
+        return None
+    return {'fournisseur_id': fournisseur.id, 'lignes': lignes}
 
 
 def _creer_retour_fournisseur(request):
@@ -484,6 +559,16 @@ def _creer_retour_fournisseur(request):
     except IntegrityError as e:
         logger.exception("[RETOUR FOURNISSEUR] IntegrityError création bon : %s", e)
         messages.error(request, "⛔ Erreur lors de la création du bon. Vérifiez la console pour le détail.")
+        return redirect('liste_retours_fournisseurs')
+    except (ValidationError, ValueError) as e:
+        # Erreur métier (ex. stock insuffisant pour un lot) : on affiche le
+        # message réel au lieu du message générique « erreur technique ».
+        logger.warning("[RETOUR FOURNISSEUR] Validation échouée : %s", e)
+        if isinstance(e, ValidationError):
+            detail = ' '.join(e.messages) if hasattr(e, 'messages') else str(e)
+        else:
+            detail = str(e)
+        messages.error(request, f"⛔ {detail}")
         return redirect('liste_retours_fournisseurs')
 
     if bon.statut_validation == 'ATTENTE':

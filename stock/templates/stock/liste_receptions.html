@@ -736,6 +736,15 @@
               </button>
             {% endif %}
 
+            {# Retour fournisseur en 1 clic : pré-remplit la modale depuis les réceptions #}
+            {% if item.commande.bons_reception.all %}
+              <a href="{% url 'liste_retours_fournisseurs' %}?from_commande={{ item.commande.id }}" class="rec-btn-view"
+                 style="background: rgba(231,76,60,0.08); color: #c0392b; border-color: rgba(231,76,60,0.35);"
+                 title="Créer un retour fournisseur à partir des réceptions de cette commande">
+                <i class="fas fa-undo-alt"></i> Retour Fourn.
+              </a>
+            {% endif %}
+
             {% if onglet != 'terminees' and peut_creer %}
             <a href="{% url 'receptionner_commande' item.commande.id %}" class="rec-btn-recept">
               <i class="fas fa-box-open"></i> Récept.
