@@ -828,8 +828,8 @@ def remplacer_bon_livraison(request, bon_id):
 
     try:
         bon.fichier.delete(save=False)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("[joindre_bon_livraison] Suppression ancien fichier BL %s échouée : %s", bon.id, e)
 
     bon.fichier = fichier
     bon.date_upload = timezone.now()

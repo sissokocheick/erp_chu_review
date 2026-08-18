@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import logging
 from django.shortcuts import render, get_object_or_404, redirect
 
 from django.contrib.auth.decorators import login_required
@@ -45,6 +46,8 @@ from accounts.permissions import verifier_permission
 
 
 from core.models import Service
+
+logger = logging.getLogger(__name__)
 
 
 from stock.models import Fournisseur
@@ -377,8 +380,8 @@ def valider_sas(request, pk):
             # (valeur brute invalide) -> 500 au lieu d'un simple message.
             try:
                 immo.refresh_from_db()
-            except Exception:
-                pass
+            except Exception as e:
+                logger.warning("[valider_sas] refresh_from_db immo %s échoué : %s", getattr(immo, 'pk', '?'), e)
 
 
     return render(request, 'patrimoine/valider_sas.html', {
@@ -1213,9 +1216,17 @@ def portail_prestataire(request):
 
         compte = request.user.compte_prestataire
 
-    except Exception:
+    except AttributeError:
 
-        messages.error(request, "⛔ Accès non autorisé.")
+        messages.error(request, "⛔ Accès non autorisé — aucun compte prestataire.")
+
+        return redirect('/')
+
+    except Exception as e:
+
+        logger.warning("[portail_prestataire] Erreur accès compte %s : %s", request.user, e)
+
+        messages.error(request, "⛔ Erreur d'accès.")
 
         return redirect('/')
 
@@ -2472,7 +2483,7 @@ def import_excel(request):
 
                             try: date_acq = datetime.strptime(str(date_acq_raw)[:10], fmt).date(); break
 
-                            except ValueError: pass
+                            except ValueError: continue
 
 
                     valeur = Decimal('0.00')
@@ -2481,7 +2492,9 @@ def import_excel(request):
 
                         try: valeur = Decimal(str(valeur_raw).replace(' ', '').replace(',', '.'))
 
-                        except Exception: pass
+                        except Exception:
+
+                            logger.debug("[import_excel] Valeur '%s' non convertible en Decimal", valeur_raw)
 
 
                     garantie = None
@@ -2938,12 +2951,9 @@ def declarer_panne_pc(request):
             elif params.perimetre_declaration == 'BUREAU' and profil.bureau:
 
                 equipements = equipements.filter(bureau=profil.bureau)
+    except Exception as e:
+        logger.warning("[declarer_panne_pc] Filtre périmètre échoué : %s", e)
 
-    except Exception:
-
-        pass
-
-            
     return render(request, 'patrimoine/declarer_panne_pc.html', {'equipements': equipements})
 
 

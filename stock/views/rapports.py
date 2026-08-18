@@ -36,8 +36,8 @@ def parse_date_range(date_range, default_days=365):
                 if start > end:
                     start, end = end, start
                 return start, end
-        except Exception:
-            pass
+        except (ValueError, TypeError) as e:
+            logger.debug("[parse_date_range] Format de date invalide ignoré : %s", e)
     end = timezone.now().date()
     start = end - timedelta(days=default_days)
     return start, end

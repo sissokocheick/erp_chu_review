@@ -27,7 +27,9 @@ def get_magasins_autorises(request):
         return Magasin.objects.all()
     try:
         return user.profil.magasins_autorises.all()
-    except Exception:
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning("[get_magasins_autorises] profil inaccessible pour %s : %s", user, e)
         return Magasin.objects.none()
 
 

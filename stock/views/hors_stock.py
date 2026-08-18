@@ -86,8 +86,8 @@ def _afficher_bons_hors_stock(request):
                 d1 = datetime.strptime(parts[0].strip(), '%d/%m/%Y')
                 d2 = datetime.strptime(parts[1].strip(), '%d/%m/%Y')
                 qs = qs.filter(date_bon__date__gte=d1, date_bon__date__lte=d2)
-        except Exception:
-            pass
+        except (ValueError, TypeError) as e:
+            logger.debug("[liste_hors_stock] Filtre date invalide ignoré : %s", e)
 
     per_page = request.GET.get('per_page', '15')
     bons, _ = paginer(qs, request, per_page_key='per_page', default=15)
