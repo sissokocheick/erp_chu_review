@@ -459,11 +459,8 @@ def custom_login(request):
                     return redirect('accounts:changer_mdp_obligatoire')
 
 
-            except Exception:
-
-
-                pass
-
+            except Exception as e:
+                logger.warning("[login] Verification profil doit_changer_mdp echouee: %s", e)
 
             messages.success(request, f"✅ Bienvenue {user.get_full_name() or user.username} !")
 
@@ -511,11 +508,8 @@ def custom_login(request):
                 )
 
 
-            except Exception:
-
-
-                pass
-
+            except Exception as e:
+                logger.warning("[login] Enregistrement echec connexion echoue: %s", e)
 
     return render(request, 'accounts/login.html', _login_ctx)
 
@@ -554,11 +548,8 @@ def custom_logout(request):
             )
 
 
-        except Exception:
-
-
-            pass
-
+        except Exception as e:
+            logger.warning("[logout] Enregistrement deconnexion echoue: %s", e)
 
     logout(request)
 
@@ -659,11 +650,8 @@ def changer_mdp_obligatoire(request):
             profil.save(update_fields=['doit_changer_mdp'])
 
 
-        except Exception:
-
-
-            pass
-
+        except Exception as e:
+            logger.warning("[changer_mdp] Mise a jour profil doit_changer_mdp echouee: %s", e)
 
         request.session.pop('must_change_password', None)
 
@@ -1835,11 +1823,8 @@ def reinitialiser_mdp(request, user_id):
                     profil.save(update_fields=['doit_changer_mdp'])
 
 
-                except Exception:
-
-
-                    pass
-
+                except Exception as e:
+                    logger.warning("[reset_mdp_admin] Mise a jour profil doit_changer_mdp echouee pour %s: %s", user.username, e)
 
                 log_audit(request, f"Reinitialisation mdp {user.username}", type_action='UPDATE',
 

@@ -3,8 +3,10 @@
 Tests étendus du module core.
 
 Couvre : le singleton ConfigurationHopital, ses validations, la configuration
-PDF, le formulaire d'édition et le modèle Service.
+PDF, le formulaire d'édition, le modèle Service et la qualité du code vues.
 """
+import ast
+import os
 from decimal import Decimal
 
 from django.test import TestCase
@@ -176,3 +178,141 @@ class ServiceModelTest(TestCase):
             code="REA", nom="Réanimation", poste_telephone="200",
             telephone="22 00 00 00", telecopie="22 00 00 01")
         self.assertEqual(service.poste_telephone, "200")
+
+
+# ─── Audit qualité : aucune vue ne contient `except Exception: pass` ────
+
+def _scan_views_for_silent_exception_pass():
+    """
+    Parcourt toutes les vues (FBV + CBV) et retourne la liste des
+    ``except Exception: pass`` sans aucun logger/warning.
+
+    Utilise l'AST pour être invariant au style (indentation, commentaires).
+    """
+    base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    view_dirs = [
+        os.path.join(base, 'stock', 'views'),
+        os.path.join(base, 'patrimoine', 'views'),
+    ]
+    view_files = [
+        os.path.join(base, 'accounts', 'views.py'),
+        os.path.join(base, 'core', 'views.py'),
+    ]
+    for d in view_dirs:
+        if not os.path.isdir(d):
+            continue
+        for root, _, files in os.walk(d):
+            for f in files:
+                if f.endswith('.py'):
+                    view_files.append(os.path.join(root, f))
+
+    violations = []
+    for fpath in view_files:
+        if not os.path.exists(fpath):
+            continue
+        try:
+            with open(fpath, 'r', encoding='utf-8') as fh:
+                source = fh.read()
+            tree = ast.parse(source, filename=fpath)
+        except SyntaxError:
+            continue
+
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ExceptHandler) or not node.type:
+                continue
+            exc_name = getattr(node.type, 'id', None) or getattr(
+                node.type, 'attr', None)
+            if not exc_name or 'Exception' not in exc_name:
+                continue
+
+            # except Exception: pass  (uniquement pass, rien d'autre)
+            body = node.body
+            is_pass_only = (
+                len(body) == 1 and isinstance(body[0], ast.Pass)
+            )
+            if not is_pass_only:
+                continue
+
+            # Vérifier s'il y a un appel de logger / logging / print
+            has_log = False
+            for child in ast.walk(node):
+                if not isinstance(child, ast.Call):
+                    continue
+                func = child.func
+                if isinstance(func, ast.Attribute):
+                    if func.attr in (
+                        'warning', 'error', 'info', 'debug',
+                        'critical', 'log', 'exception',
+                    ):
+                        has_log = True
+                elif isinstance(func, ast.Name):
+                    if func.id in ('log', 'debug', 'info', 'warning',
+                                   'error', 'critical', 'print'):
+                        has_log = True
+            if not has_log:
+                rel = os.path.relpath(fpath, base)
+                violations.append(f'{rel}:{node.lineno}')
+
+    return violations
+
+
+class TestCodeQualiteVues(TestCase):
+    """Vérifie automatiquement que les vues ne contiennent pas de
+    ``except Exception: pass`` silencieux (sans logger)."""
+
+    def test_aucun_except_exception_pass_silencieux(self):
+        """
+        Aucune vue ne doit contenir ``except Exception: pass`` sans
+        aucun logging (logger.warning, logger.error, etc.).
+
+        Si ce test échoue, ajoutez un ``logger.warning(…)`` ou
+        ``logger.error(…)`` dans le bloc except concerné.
+        """
+        violations = _scan_views_for_silent_exception_pass()
+        if violations:
+            msg = (
+                f'{len(violations)} except Exception: pass silencieux '
+                f'dans les vues:\n' + '\n'.join(
+                    f'  - {v}' for v in violations
+                ) + '\nAjoutez un logger.warning() ou logger.error() '
+                'dans chaque bloc except.'
+            )
+            self.fail(msg)
+
+    def test_toutes_les_vues_sont_parsables(self):
+        """Vérifie qu'aucun fichier de vue ne contient d'erreur de syntaxe."""
+        base = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        view_dirs = [
+            os.path.join(base, 'stock', 'views'),
+            os.path.join(base, 'patrimoine', 'views'),
+        ]
+        view_files = [
+            os.path.join(base, 'accounts', 'views.py'),
+            os.path.join(base, 'core', 'views.py'),
+        ]
+        for d in view_dirs:
+            if not os.path.isdir(d):
+                continue
+            for root, _, files in os.walk(d):
+                for f in files:
+                    if f.endswith('.py'):
+                        view_files.append(os.path.join(root, f))
+
+        syntax_errors = []
+        for fpath in view_files:
+            if not os.path.exists(fpath):
+                continue
+            try:
+                with open(fpath, 'r', encoding='utf-8') as fh:
+                    ast.parse(fh.read(), filename=fpath)
+            except SyntaxError as e:
+                rel = os.path.relpath(fpath, base)
+                syntax_errors.append(f'{rel}: {e}')
+
+        if syntax_errors:
+            self.fail(
+                f'{len(syntax_errors)} fichiers vues avec erreurs de '
+                f'syntaxe:\n' + '\n'.join(
+                    f'  - {e}' for e in syntax_errors
+                )
+            )
