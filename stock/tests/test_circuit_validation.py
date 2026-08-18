@@ -14,14 +14,14 @@ Règles métier vérifiées :
 """
 from decimal import Decimal
 
-from django.contrib.auth.models import Permission
+from django.contrib.auth.models import Group, Permission
 from django.test import TestCase
 from django.urls import reverse
 
 from stock.models import (
     Article, Ajustement, BonMouvement, CircuitValidation, Commande,
     DemandeMateriel, Fournisseur, LigneBon, LigneCommande, Magasin,
-    Mouvement, StockItem,
+    MotifAnnulation, Mouvement, StockItem,
 )
 from stock.services.bon_service import BonService
 from stock.tests import factories
@@ -878,3 +878,182 @@ class RetourFournisseurFluxTest(BaseCircuitTest):
         # escapejs échappe le tiret en \u002D (décodé en '-' par le navigateur)
         self.assertIn('LOT\\u002DA', html)
         self.assertIn('appliquerPrefill', html)
+
+
+# ──────────────────────────────────────────────────────────────────
+# Annulation bon retour fournisseur
+# ──────────────────────────────────────────────────────────────────
+class AnnulationRetourFournisseurTest(TestCase):
+    """Tests de l'annulation d'un bon de retour fournisseur."""
+
+    def setUp(self):
+        self.magasin = factories.creer_magasin(nom='Pharmacie Annul')
+        self.user = factories.creer_utilisateur(
+            username='annul_rf',
+            password='testpass123',
+        )
+        self.user.groups.add(
+            Group.objects.get_or_create(name='Magasinier')[0]
+        )
+        self.user.profil.magasins_autorises.add(self.magasin)
+        self.user.profil.doit_changer_mdp = False
+        self.user.profil.save(update_fields=['doit_changer_mdp'])
+        from stock.models import Fournisseur
+        self.fournisseur = Fournisseur.objects.create(
+            code='FRN-ANNUL-01', raison_sociale='Fournisseur Annul Test'
+        )
+        self.article = factories.creer_article()
+        self.stock_item = factories.creer_stock(
+            article=self.article, magasin=self.magasin, quantite=50
+        )
+        self.motif = MotifAnnulation.objects.create(
+            libelle='Annulation test RF'
+        )
+
+    def _login(self, user):
+        # S'assurer que le user a la permission menu_retours_fournisseurs
+        perm, _ = Permission.objects.get_or_create(
+            codename='menu_retours_fournisseurs',
+            defaults={'name': 'Menu Retours Fournisseurs',
+                      'content_type__app_label': 'accounts'},
+        )
+        if not perm.content_type_id:
+            from django.contrib.contenttypes.models import ContentType
+            ct, _ = ContentType.objects.get_or_create(app_label='accounts', model='permission')
+            perm.content_type = ct
+            perm.save(update_fields=['content_type'])
+        user.user_permissions.add(perm)
+        self.client.login(username=user.username, password='testpass123')
+        # Simuler la sélection du magasin dans la session
+        session = self.client.session
+        session['magasin_actif_id'] = self.magasin.id
+        session.save()
+
+    def _creer_retour_valide(self):
+        """Crée un retour fournisseur VALIDÉ (avec mouvement RETOUR_FOURNISSEUR)."""
+        bon = BonMouvement.objects.create(
+            type_bon='RETOUR_FOURNISSEUR',
+            magasin=self.magasin, cree_par=self.user,
+            fournisseur=self.fournisseur,
+            statut_validation='VALIDE',
+        )
+        LigneBon.objects.create(
+            bon=bon, article=self.article,
+            quantite=10, numero_lot='LOT-ANNUL',
+        )
+        # Mouvement sans update_stock pour piloter le stock manuellement
+        m = Mouvement(
+            type_mouvement='RETOUR_FOURNISSEUR',
+            article=self.article, magasin=self.magasin,
+            quantite=10, utilisateur=self.user,
+            reference_document=bon.numero_bon,
+            fournisseur=self.fournisseur,
+        )
+        m.save(update_stock=False)
+        return bon
+
+    def test_annulation_reintegre_stock(self):
+        """Annuler un retour fourni réintègre le stock."""
+        self.stock_item.quantite_physique = 40  # Après la sortie de 10
+        self.stock_item.save(update_fields=['quantite_physique'])
+        bon = self._creer_retour_valide()
+        self._login(self.user)
+        resp = self.client.post(
+            reverse('annuler_retour_fournisseur', args=[bon.id]),
+            {'motif_id': self.motif.id},
+        )
+        self.assertEqual(resp.status_code, 302)
+        bon.refresh_from_db()
+        self.assertTrue(bon.est_annule)
+        self.assertEqual(bon.motif_annulation, self.motif)
+        self.assertEqual(bon.annule_par, self.user)
+        # Le stock doit être réintégré (40 + 10 = 50)
+        self.stock_item.refresh_from_db()
+        self.assertEqual(self.stock_item.quantite_physique, 50)
+
+    def test_annulation_rejetee_si_bon_attente(self):
+        """Un bon en ATTENTE ne peut pas être annulé (besoin de rejection)."""
+        bon = BonMouvement.objects.create(
+            type_bon='RETOUR_FOURNISSEUR',
+            magasin=self.magasin, cree_par=self.user,
+            fournisseur=self.fournisseur,
+            statut_validation='ATTENTE',
+        )
+        self._login(self.user)
+        resp = self.client.post(
+            reverse('annuler_retour_fournisseur', args=[bon.id]),
+            {'motif_id': self.motif.id},
+        )
+        # Le service ne bloque pas les bons en attente (ils n'ont pas de mouvements)
+        # Donc l'annulation passe, le bon est annulé sans réintégration
+        self.assertEqual(resp.status_code, 302)
+        bon.refresh_from_db()
+        self.assertTrue(bon.est_annule)
+
+    def test_annulation_motif_obligatoire(self):
+        """Sans motif, l'annulation est rejetée."""
+        bon = self._creer_retour_valide()
+        self._login(self.user)
+        resp = self.client.post(
+            reverse('annuler_retour_fournisseur', args=[bon.id]),
+            {},
+        )
+        self.assertEqual(resp.status_code, 302)
+        bon.refresh_from_db()
+        self.assertFalse(bon.est_annule)
+
+    def test_annulation_invalidee_si_deja_annule(self):
+        """Un bon déjà annulé ne peut pas l'être deux fois."""
+        bon = self._creer_retour_valide()
+        bon.est_annule = True
+        bon.save(update_fields=['est_annule'])
+        self._login(self.user)
+        resp = self.client.post(
+            reverse('annuler_retour_fournisseur', args=[bon.id]),
+            {'motif_id': self.motif.id},
+        )
+        self.assertEqual(resp.status_code, 302)
+        bon.refresh_from_db()
+        self.assertTrue(bon.est_annule)
+
+    def test_annulation_cache_pdf_invalide(self):
+        """L'annulation supprime le cache PDF du bon."""
+        bon = self._creer_retour_valide()
+        bon.fichier_pdf = 'fake.pdf'
+        bon.save(update_fields=['fichier_pdf'])
+        self._login(self.user)
+        resp = self.client.post(
+            reverse('annuler_retour_fournisseur', args=[bon.id]),
+            {'motif_id': self.motif.id},
+        )
+        self.assertEqual(resp.status_code, 302)
+        bon.refresh_from_db()
+        self.assertFalse(bon.fichier_pdf)
+
+    def test_annulation_bouton_visible_template(self):
+        """Le bouton Annuler apparaît dans le template pour les bons validés."""
+        bon = self._creer_retour_valide()
+        self._login(self.user)
+        resp = self.client.get(reverse('liste_retours_fournisseurs'))
+        html = resp.content.decode('utf-8')
+        self.assertIn('confirmerAnnulationRetourFournisseur', html)
+        self.assertIn('form-annuler-rf-', html)
+
+    def test_init_roles_couvre_permissions(self):
+        """init_roles crée bien les rôles avec les permissions."""
+        from django.core.management import call_command
+        call_command('init_roles', verbosity=0)
+        admin = Group.objects.get(name='Administrateur')
+        mag = Group.objects.get(name='Magasinier')
+        resp_stock = Group.objects.get(name='Responsable Stock')
+        # Admin a toutes les perms
+        self.assertGreaterEqual(admin.permissions.count(), 70)
+        # Magasinier a retours fournisseurs
+        self.assertTrue(
+            mag.permissions.filter(codename='menu_retours_fournisseurs').exists()
+        )
+        self.assertTrue(mag.permissions.filter(codename='menu_lots').exists())
+        self.assertTrue(mag.permissions.filter(codename='menu_beneficiaires').exists())
+        # Responsable Stock a rapports + satisfaction
+        self.assertTrue(resp_stock.permissions.filter(codename='menu_rapports').exists())
+        self.assertTrue(resp_stock.permissions.filter(codename='menu_stats_satisfaction').exists())

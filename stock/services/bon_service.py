@@ -992,6 +992,49 @@ class BonService:
 
         return bon
 
+    # ─────────────────────────────────────────────────────
+    # Annulation bon retour fournisseur
+    # ─────────────────────────────────────────────────────
+    @classmethod
+    @transaction.atomic
+    def annuler_bon_retour_fournisseur(cls, bon, motif, utilisateur):
+        """Annule un bon de retour fournisseur et réintègre le stock.
+
+        Un retour fournisseur retire du stock (mouvement SORTIE de type
+        RETOUR_FOURNISSEUR). Annuler crée des contre-mouvements (ENTREE)
+        pour rétablir les quantités dans le magasin.
+        """
+        if bon.est_annule:
+            raise ValueError("Bon déjà annulé.")
+
+        cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
+
+        motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
+
+        # Contre-mouvements : réintégration du stock sorti
+        mouvements = Mouvement.objects.filter(
+            reference_document__startswith=bon.numero_bon,
+            type_mouvement='RETOUR_FOURNISSEUR'
+        )
+
+        nb_reintegres = 0
+        for mouvement_original in mouvements:
+            StockTransactionService.annuler_par_contre_mouvement(
+                mouvement_original=mouvement_original,
+                utilisateur=utilisateur,
+                commentaire=f"Annulation retour fournisseur {bon.numero_bon}. Motif : {motif_libelle}"
+            )
+            nb_reintegres += 1
+
+        bon.est_annule = True
+        if hasattr(motif, 'pk'):
+            bon.motif_annulation = motif
+        bon.annule_par = utilisateur
+        bon.date_annulation = timezone.now()
+        bon.save(update_fields=['est_annule', 'motif_annulation', 'annule_par', 'date_annulation'])
+
+        return bon, nb_reintegres
+
     @classmethod
     @transaction.atomic
     def calculer_numero_livraison(cls, commande):

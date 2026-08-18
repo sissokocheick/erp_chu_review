@@ -28,6 +28,14 @@
             <button type="button" class="btn-pdf" onclick="event.stopPropagation(); imprimerModal('{% url 'imprimer_bon_retour_fournisseur' bon.id %}', 'Bon de Retour Fournisseur — {{ bon.numero_bon }}')" title="Aperçu / Imprimer" aria-label="Imprimer le bon {{ bon.numero_bon }}">
                 <i class="fas fa-print"></i>
             </button>
+            {% if peut_annuler %}
+            <button type="button" class="btn-sm btn-outline-danger" onclick="event.stopPropagation(); confirmerAnnulationRetourFournisseur({{ bon.id }}, '{{ bon.numero_bon|escapejs }}')" title="Annuler le retour fournisseur" aria-label="Annuler {{ bon.numero_bon }}">
+                <i class="fas fa-ban"></i> Annuler
+            </button>
+            <form id="form-annuler-rf-{{ bon.id }}" method="POST" action="{% url 'annuler_retour_fournisseur' bon.id %}" style="display:none;">
+                {% csrf_token %}
+            </form>
+            {% endif %}
             {% endif %}
         {% endif %}
     </td>

@@ -597,5 +597,55 @@ document.addEventListener('keydown', function(e){
     window.ajouterLigneArticle = ajouterLigneArticle;
     window.appliquerPrefill = appliquerPrefill;
 })();
+
+function confirmerAnnulationRetourFournisseur(bonId, numeroBon) {
+    Swal.fire({
+        title: 'Annuler le retour ' + numeroBon,
+        html: '<div style="text-align:left; margin-top:10px;">
+            <label style="font-weight:bold;">Motif :</label>
+            <select id="swal-motif-select-rf" class="form-control" style="width:100%;margin-top:10px;">
+                <option value="">-- Sélectionner --</option>
+                {% for m in motifs_annulation %}
+                <option value="{{ m.id }}">{{ m.libelle }}</option>
+                {% endfor %}
+            </select>
+        </div>',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        confirmButtonText: 'Confirmer l\'annulation',
+        cancelButtonText: 'Retour',
+        didOpen: () => {
+            if (typeof $ !== 'undefined') {
+                $('#swal-motif-select-rf').select2({
+                    dropdownParent: $('.swal2-container'),
+                    placeholder: 'Tapez pour chercher...'
+                });
+            }
+        },
+        preConfirm: () => {
+            const motifId = document.getElementById('swal-motif-select-rf').value;
+            if (!motifId) {
+                Swal.showValidationMessage('Veuillez sélectionner un motif');
+            }
+            return motifId;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            let form = document.getElementById('form-annuler-rf-' + bonId);
+            let inputMotif = document.createElement('input');
+            inputMotif.type = 'hidden';
+            inputMotif.name = 'motif_id';
+            inputMotif.value = result.value;
+            form.appendChild(inputMotif);
+            Swal.fire({
+                title: 'Annulation en cours...',
+                allowOutsideClick: false,
+                didOpen: () => { Swal.showLoading(); }
+            });
+            form.submit();
+        }
+    });
+}
 </script>
 {% endblock %}

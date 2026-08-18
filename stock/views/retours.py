@@ -402,6 +402,7 @@ def _afficher_retours_fournisseurs(request):
         'circuit_sortie': circuit_sortie,
         'est_valideur_retour_fournisseur': est_valideur,
         'prefill_retour': prefill_retour,
+        'motifs_annulation': MotifAnnulation.objects.filter(is_deleted=False).order_by('libelle'),
     }
     return render_liste(
         request, qs,
@@ -652,4 +653,72 @@ def valider_bon_retour_fournisseur(request, bon_id):
         f"✅ Bon de retour fournisseur {bon.numero_bon} validé par "
         f"{request.user.get_full_name() or request.user.username} — le stock a été retiré."
     )
+    return redirect('liste_retours_fournisseurs')
+
+
+# ──────────────────────────────────────────────────────────────────
+# Annulation bon retour fournisseur
+# ──────────────────────────────────────────────────────────────────
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_retours_fournisseurs')
+@magasin_requis
+@catch_errors(redirect_url='liste_retours_fournisseurs')
+def annuler_retour_fournisseur(request, bon_id):
+    """Annule un bon de retour fournisseur et réintègre le stock."""
+    if request.method != 'POST':
+        return redirect('liste_retours_fournisseurs')
+
+    magasins_autorises = get_magasins_autorises(request)
+    bon = get_object_or_404(
+        BonMouvement, id=bon_id, type_bon='RETOUR_FOURNISSEUR',
+        magasin__in=magasins_autorises
+    )
+
+    if bon.est_annule:
+        messages.error(request, f"Le bon {bon.numero_bon} est déjà annulé.")
+        return redirect('liste_retours_fournisseurs')
+
+    motif_id = request.POST.get('motif_id')
+    if not motif_id:
+        messages.error(request, "Le motif d'annulation est obligatoire.")
+        return redirect('liste_retours_fournisseurs')
+
+    motif = get_object_or_404(MotifAnnulation, id=motif_id)
+
+    try:
+        _, nb_reintegres = BonService.annuler_bon_retour_fournisseur(
+            bon, motif, request.user
+        )
+    except ValueError as e:
+        logger.exception("[RETOUR FOURNISSEUR] Annulation %s : %s", bon.numero_bon, e)
+        messages.error(request, f"❌ {e}")
+        return redirect('liste_retours_fournisseurs')
+    except Exception as e:
+        logger.exception("[RETOUR FOURNISSEUR] Erreur annulation %s : %s", bon.numero_bon, e)
+        messages.error(request, "❌ Une erreur est survenue lors de l'annulation.")
+        return redirect('liste_retours_fournisseurs')
+
+    # Invalidation cache PDF
+    if bon.fichier_pdf and bon.fichier_pdf.name:
+        try:
+            from django.core.files.storage import default_storage
+            if default_storage.exists(bon.fichier_pdf.name):
+                default_storage.delete(bon.fichier_pdf.name)
+        except Exception as e:
+            logger.warning("[Annulation BR %s] Échec suppression cache PDF : %s", bon.numero_bon, e)
+        bon.fichier_pdf = None
+        bon.save(update_fields=['fichier_pdf'])
+
+    if nb_reintegres > 0:
+        messages.success(
+            request,
+            f"✅ Retour fournisseur {bon.numero_bon} annulé — "
+            f"{nb_reintegres} mouvement(s) réintégré(s) dans le stock."
+        )
+    else:
+        messages.success(
+            request,
+            f"✅ Retour fournisseur {bon.numero_bon} annulé "
+            f"(aucun stock à réintégrer — bon en attente)."
+        )
     return redirect('liste_retours_fournisseurs')

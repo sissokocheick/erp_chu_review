@@ -5,7 +5,6 @@ Usage: python manage.py init_roles
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import Group, Permission
 
-
 ROLE_DEFS = {
     'Administrateur': {
         'description': 'Tous les droits',
@@ -23,6 +22,8 @@ ROLE_DEFS = {
             'menu_stock', 'menu_peremptions', 'menu_destructions',
             'menu_ajustements', 'menu_inventaires', 'menu_historique',
             'menu_articles', 'menu_familles', 'menu_fournisseurs',
+            'menu_beneficiaires', 'menu_lots',
+            'menu_motifs_annulation',
         ],
     },
     'Responsable Stock': {
@@ -31,8 +32,10 @@ ROLE_DEFS = {
             'menu_accueil', 'menu_dashboard',
             'menu_valider_demandes', 'menu_commandes',
             'menu_stock', 'menu_ajustements', 'menu_inventaires',
-            'menu_historique',
+            'menu_historique', 'menu_peremptions',
             'menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages',
+            'menu_stats_satisfaction',
+            'menu_lots',
         ],
     },
     'Directeur': {
@@ -41,6 +44,7 @@ ROLE_DEFS = {
             'menu_accueil', 'menu_dashboard',
             'menu_stock', 'menu_historique',
             'menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages',
+            'menu_stats_satisfaction', 'menu_journal_audit',
             'menu_pat_registre', 'menu_pat_historique', 'menu_pat_contrats',
             'menu_param_admin', 'menu_parametres',
         ],
@@ -56,6 +60,8 @@ ROLE_DEFS = {
             'menu_pat_suivi_ticket', 'menu_pat_bon_sortie_reparation',
             'menu_pat_inventaire', 'menu_pat_fiche_comptage',
             'menu_pat_qr_codes',
+            'menu_pat_portail_prestataire',
+            'menu_pat_valider_intervention',
         ],
     },
     'Gestionnaire Patrimoine': {
@@ -80,8 +86,7 @@ ROLE_DEFS = {
             'menu_accueil', 'menu_dashboard',
             'menu_pat_registre', 'menu_pat_historique',
             'menu_stock', 'menu_historique',
-            'menu_rapports', 'menu_stats_demandes',
-            'menu_journal_audit',
+            'menu_rapports', 'menu_stats_demandes', 'menu_journal_audit',
         ],
     },
 }
