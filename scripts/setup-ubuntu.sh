@@ -19,17 +19,25 @@
 set -euo pipefail
 
 # ── Paramètres ────────────────────────────────────────────────────────────
-DOMAIN="${1:-erp.chu.example}"
-# IPs supplémentaires pour le réseau interne (ex: --ip 192.168.0.27,192.168.35.27)
+DOMAIN=""
 EXTRA_IPS=""
 DEV_MODE=0
+shift_next=""
 for arg in "$@"; do
   case "$arg" in
     --dev) DEV_MODE=1 ;;
-    --ip) shift_next=1 ;;
-    *) if [ -n "${shift_next:-}" ]; then EXTRA_IPS="$arg"; shift_next=; fi ;;
+    --ip) shift_next=ip ;;
+    *)
+      if [ -n "${shift_next:-}" ]; then
+        [ "$shift_next" = "ip" ] && EXTRA_IPS="$arg"
+        shift_next=""
+      elif [ -z "$DOMAIN" ]; then
+        DOMAIN="$arg"
+      fi
+      ;;
   esac
 done
+DOMAIN="${DOMAIN:-erp.chu.example}"
 
 APP_DIR="/opt/erp_chu_review"
 APP_USER="nexuserp"
