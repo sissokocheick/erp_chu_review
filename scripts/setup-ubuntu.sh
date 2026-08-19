@@ -240,7 +240,7 @@ dj "venv/bin/python manage.py collectstatic --noinput"
 
 # Import des données SAGE (idempotent — get_or_create)
 info "Import des données initiales (familles, fournisseurs, services, articles)..."
-dj "venv/bin/python manage.py import_sage_data --quiet" 2>/dev/null || \
+dj "venv/bin/python manage.py import_sage_data -v0" 2>/dev/null || \
   warn "Import SAGE échoué (à relancer manuellement : python manage.py import_sage_data)"
 
 # Rôles et permissions
