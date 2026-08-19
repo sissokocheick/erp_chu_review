@@ -216,31 +216,36 @@ fi
 info "ÉTAPE 7/10 — Base de données..."
 
 cd "$APP_DIR"
-# Charger les variables du .env pour les commandes Django
-set -a; source "$APP_DIR/.env"; set +a
 
-sudo -u "$APP_USER" venv/bin/python manage.py migrate --noinput
-sudo -u "$APP_USER" venv/bin/python manage.py collectstatic --noinput
+# Helper : lance une commande Django avec les variables du .env
+# (sudo -u reset l'environnement sur Ubuntu, donc on passe tout via bash -c)
+dj() {
+  sudo -u "$APP_USER" bash -c "set -a; source '$APP_DIR/.env'; set +a; $*"
+}
+
+info "ÉTAPE 7/10 — Base de données..."
+dj "venv/bin/python manage.py migrate --noinput"
+dj "venv/bin/python manage.py collectstatic --noinput"
 
 # Import des données SAGE (idempotent — get_or_create)
 info "Import des données initiales (familles, fournisseurs, services, articles)..."
-sudo -u "$APP_USER" venv/bin/python manage.py import_sage_data --quiet 2>/dev/null || \
+dj "venv/bin/python manage.py import_sage_data --quiet" 2>/dev/null || \
   warn "Import SAGE échoué (à relancer manuellement : python manage.py import_sage_data)"
 
 # Rôles et permissions
 info "Création des rôles et permissions..."
-sudo -u "$APP_USER" venv/bin/python manage.py init_roles 2>/dev/null || true
+dj "venv/bin/python manage.py init_roles" 2>/dev/null || true
 
 # Superutilisateur
 if [ -n "${DJANGO_ADMIN_USERNAME:-}" ]; then
-  sudo -u "$APP_USER" venv/bin/python manage.py shell -c "
+  dj "venv/bin/python manage.py shell -c \"
 from django.contrib.auth.models import User
 if not User.objects.filter(username='$DJANGO_ADMIN_USERNAME').exists():
     User.objects.create_superuser('$DJANGO_ADMIN_USERNAME', '${DJANGO_ADMIN_EMAIL:-admin@$DOMAIN}', '${DJANGO_ADMIN_PASSWORD:-admin}')
     print('Superutilisateur créé : $DJANGO_ADMIN_USERNAME')
 else:
     print('Superutilisateur $DJANGO_ADMIN_USERNAME existe déjà')
-" 2>/dev/null
+\"" 2>/dev/null
 fi
 
 # Répertoires
