@@ -35,7 +35,7 @@ EnvironmentFile=/opt/erp_chu_review/.env
 
 # ── Lancement gunicorn (avant-plan, systemd gère le cycle de vie) ──
 ExecStart=/opt/erp_chu_review/venv/bin/gunicorn config.wsgi:application \
-  --bind 127.0.0.1:8000 \
+  --bind 0.0.0.0:8000 \
   --workers 3 \
   --timeout 120 \
   --max-requests 1000 \

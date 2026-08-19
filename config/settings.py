@@ -181,6 +181,14 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SILENCED_SYSTEM_CHECKS = ['security.W019']
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
 
+# ── Dual IP : mode TRUSTED� correspond à des serveurs internes sans SSL ──
+# En mode interne (pas de proxy HTTPS), désactive la redirection SSL.
+if not DEBUG and os.environ.get('TRUSTED_INTERNAL', '0') == '1':
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+    SECURE_HSTS_SECONDS = 0
+
 # --- CONFIGURATION DE LA CONNEXION (Module accounts) ---
 LOGIN_URL = '/auth/login/'
 LOGIN_REDIRECT_URL = '/'

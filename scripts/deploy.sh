@@ -128,7 +128,7 @@ fi
 mkdir -p "$LOG_DIR"
 GUNICORN_ARGS=(
   config.wsgi:application
-  --bind "127.0.0.1:$PORT"
+  --bind "0.0.0.0:$PORT"
   --workers "$WORKERS"
   --timeout "$TIMEOUT"
   --access-logfile "$LOG_DIR/gunicorn-access.log"

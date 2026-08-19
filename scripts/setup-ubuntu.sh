@@ -20,9 +20,15 @@ set -euo pipefail
 
 # ── Paramètres ────────────────────────────────────────────────────────────
 DOMAIN="${1:-erp.chu.example}"
+# IPs supplémentaires pour le réseau interne (ex: --ip 192.168.0.27,192.168.35.27)
+EXTRA_IPS=""
 DEV_MODE=0
 for arg in "$@"; do
-  [ "$arg" = "--dev" ] && DEV_MODE=1
+  case "$arg" in
+    --dev) DEV_MODE=1 ;;
+    --ip) shift_next=1 ;;
+    *) if [ -n "${shift_next:-}" ]; then EXTRA_IPS="$arg"; shift_next=; fi ;;
+  esac
 done
 
 APP_DIR="/opt/erp_chu_review"
@@ -166,8 +172,9 @@ if [ ! -f "$APP_DIR/.env" ]; then
 # ── NexusERP Production ── Généré par setup-ubuntu.sh le $(date +%Y-%m-%d)
 DJANGO_DEBUG=False
 DJANGO_SECRET_KEY=$SECRET_KEY
-DJANGO_ALLOWED_HOSTS=$DOMAIN,www.$DOMAIN
-CSRF_TRUSTED_ORIGINS=https://$DOMAIN,https://www.$DOMAIN
+DJANGO_ALLOWED_HOSTS=$DOMAIN,www.$DOMAIN${EXTRA_IPS:+,$EXTRA_IPS}
+CSRF_TRUSTED_ORIGINS=https://$DOMAIN,https://www.$DOMAIN${EXTRA_IPS:+,http://$EXTRA_IPS}
+TRUSTED_INTERNAL=1
 
 DB_NAME=$DB_NAME
 DB_USER=$DB_USER
@@ -255,10 +262,15 @@ apt-get install -y -qq nginx
 
 if [ "$DEV_MODE" -eq 1 ]; then
   # Mode dev : pas de SSL, juste reverse proxy
+  # Construire la liste des server_name (domaine + IPs)
+  NGINX_NAMES="$DOMAIN"
+  [ -n "$EXTRA_IPS" ] && NGINX_NAMES="$NGINX_NAMES $EXTRA_IPS"
+
   cat > /etc/nginx/sites-available/nexuserp <<NGINXEOF
 server {
     listen 80;
-    server_name $DOMAIN;
+    listen 8080;
+    server_name $NGINX_NAMES;
 
     client_max_body_size 20M;
 
@@ -286,16 +298,20 @@ NGINXEOF
   ok "Nginx configuré (mode dev, pas de SSL)"
 else
   # Mode prod : HTTP → HTTPS
+  NGINX_NAMES="$DOMAIN www.$DOMAIN"
+  [ -n "$EXTRA_IPS" ] && NGINX_NAMES="$NGINX_NAMES $EXTRA_IPS"
+
   cat > /etc/nginx/sites-available/nexuserp <<NGINXEOF
 server {
     listen 80;
-    server_name $DOMAIN www.$DOMAIN;
+    server_name $NGINX_NAMES;
     return 301 https://\$host\$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name $DOMAIN www.$DOMAIN;
+    listen 8443 ssl;
+    server_name $NGINX_NAMES;
 
     # SSL — Certbot créera les certificats ci-dessous
     ssl_certificate     /etc/letsencrypt/live/$DOMAIN/fullchain.pem;
@@ -377,6 +393,7 @@ info "Configuration du firewall..."
 ufw allow 22/tcp   >/dev/null 2>&1  # SSH
 ufw allow 80/tcp   >/dev/null 2>&1  # HTTP
 ufw allow 443/tcp  >/dev/null 2>&1  # HTTPS
+ufw allow 8080/tcp  >/dev/null 2>&1  # HTTP alternatif (réseau interne)
 ufw --force enable >/dev/null 2>&1
 
 # ── Fail2ban ──────────────────────────────────────────────────────────────
@@ -412,6 +429,7 @@ echo "║              ✅ Installation terminée !                 ║"
 echo "╚══════════════════════════════════════════════════════════╝"
 echo ""
 echo "  URL        : https://$DOMAIN"
+[ -n "$EXTRA_IPS" ] && echo "  Réseau     : http://$(echo $EXTRA_IPS | cut -d, -f1)"
 echo "  Dossier    : $APP_DIR"
 echo "  Base       : $DB_NAME (user: $DB_USER)"
 echo "  Secret     : $DB_PASSWORD (dans $APP_DIR/.env)"

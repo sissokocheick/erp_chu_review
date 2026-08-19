@@ -104,3 +104,4 @@ media/
 logs/
 .gunicorn.pid
 backups/
+cookies.txt
