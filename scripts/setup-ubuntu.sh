@@ -79,6 +79,8 @@ apt-get install -y -qq \
   git curl wget build-essential \
   libpq-dev libjpeg-dev zlib1g-dev libfreetype6-dev \
   libffi-dev libssl-dev libxml2-dev libxslt1-dev \
+  libpango-1.0-0 libpangocairo-1.0-0 libgdk-pixbuf-2.0-0 \
+  libcairo2 libglib2.0-0 libharfbuzz0b \
   ufw fail2ban
 
 ok "Paquets système installés"
