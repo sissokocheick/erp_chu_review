@@ -93,8 +93,9 @@ if ! command -v python3.14 &>/dev/null; then
   apt-get install -y -qq software-properties-common
   add-apt-repository -y ppa:deadsnakes/ppa
   apt-get update -qq
-  apt-get install -y -qq python3.14 python3.14-venv python3.14-dev python3-pip
 fi
+# Installer python3.14-venv même si python3.14 existe déjà (requis pour le venv)
+apt-get install -y -qq python3.14-venv python3.14-dev python3-pip
 
 PYTHON=$(command -v python3.14 || command -v python3)
 info "Python : $($PYTHON --version)"
