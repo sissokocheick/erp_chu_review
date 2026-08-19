@@ -216,6 +216,9 @@ fi
 info "ÉTAPE 7/10 — Base de données..."
 
 cd "$APP_DIR"
+# Charger les variables du .env pour les commandes Django
+set -a; source "$APP_DIR/.env"; set +a
+
 sudo -u "$APP_USER" venv/bin/python manage.py migrate --noinput
 sudo -u "$APP_USER" venv/bin/python manage.py collectstatic --noinput
 
