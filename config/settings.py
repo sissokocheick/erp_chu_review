@@ -119,6 +119,8 @@ else:
             'PASSWORD': os.environ.get('DB_PASSWORD', 'admin'),
             'HOST': os.environ.get('DB_HOST', 'localhost'),
             'PORT': os.environ.get('DB_PORT', '5432'),
+            'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '600')),  # pool connexions (10 min)
+            'CONN_HEALTH_CHECKS': True,  # Django 5.1+ : vérifie la santé des connexions
         }
     }
 
@@ -149,6 +151,22 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = 'static/'
+
+# ── Cache en mémoire (évite les requêtes répétées sur les mêmes données)
+# En production, remplacer par Redis si dispo : CACHES = { 'default': { 'BACKEND': 'django.core.cache.backends.redis.RedisCache', ... } }
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'nexuserp-unique-snowflake',  # isole ce cache du cache global Django
+        'TIMEOUT': 300,  # 5 minutes par défaut
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
+
+# Clé primaire par défaut : BigInt (évite les overflow sur 2^31)
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Securite renforcee (ERP sante)
 SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
 SECURE_HSTS_INCLUDE_SUBDOMAINS = not DEBUG
@@ -171,7 +189,10 @@ LOGOUT_REDIRECT_URL = '/auth/login/'
 # --- SÉCURITÉ DES SESSIONS ---
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 SESSION_COOKIE_AGE = 1200               # 20 minutes = 1200 secondes
-SESSION_SAVE_EVERY_REQUEST = True       # Rafraîchit le timer à chaque clic
+# ✅ False : ne sauvegarde PAS la session à chaque clic (réduit la charge DB).
+# La session expire 20 min après le dernier rechargement de page
+# (suffisant car la plupart des pages rechargent déjà).
+SESSION_SAVE_EVERY_REQUEST = False
 
 
 # Autoriser l'affichage des fenêtres pop-up (iframes) sur le même site
