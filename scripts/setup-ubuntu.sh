@@ -185,7 +185,7 @@ if [ -n "$EXTRA_IPS" ]; then
   for ip in "${_IPS[@]}"; do
     CSRF_IPS="${CSRF_IPS:+$CSRF_IPS,}http://$ip"
   done
-dfi
+fi
 
 if [ ! -f "$APP_DIR/.env" ]; then
   cat > "$APP_DIR/.env" <<ENVEOF
