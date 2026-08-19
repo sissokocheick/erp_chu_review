@@ -296,12 +296,14 @@ USE_X_FORWARDED_FOR = False
 # ── Durcissement production (actif UNIQUEMENT hors DEBUG) ────────────
 # SECURE_SSL_REDIRECT suppose un reverse proxy qui termine le HTTPS
 # (nginx/traefik) et écrase X-Forwarded-Proto (cf. USE_X_FORWARDED_FOR).
+# Si TRUSTED_INTERNAL=1, on désactive SSL (accès direct par IP en réseau interne).
+_is_trusted_internal = os.environ.get('TRUSTED_INTERNAL', '0') == '1'
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_HSTS_PRELOAD = True
+    SECURE_SSL_REDIRECT = not _is_trusted_internal
+    SESSION_COOKIE_SECURE = not _is_trusted_internal
+    CSRF_COOKIE_SECURE = not _is_trusted_internal
+    SECURE_HSTS_SECONDS = 0 if _is_trusted_internal else 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = not _is_trusted_internal
+    SECURE_HSTS_PRELOAD = not _is_trusted_internal
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_REFERRER_POLICY = 'same-origin'
