@@ -178,13 +178,22 @@ ok "Dépendances installées ($(wc -l < requirements.txt) paquets)"
 # ═══════════════════════════════════════════════════════════════════════════
 info "ÉTAPE 6/10 — Configuration .env..."
 
+# Construire CSRF_TRUSTED_ORIGINS avec http:// devant chaque IP
+CSRF_IPS=""
+if [ -n "$EXTRA_IPS" ]; then
+  IFS=',' read -ra _IPS <<< "$EXTRA_IPS"
+  for ip in "${_IPS[@]}"; do
+    CSRF_IPS="${CSRF_IPS:+$CSRF_IPS,}http://$ip"
+  done
+dfi
+
 if [ ! -f "$APP_DIR/.env" ]; then
   cat > "$APP_DIR/.env" <<ENVEOF
 # ── NexusERP Production ── Généré par setup-ubuntu.sh le $(date +%Y-%m-%d)
 DJANGO_DEBUG=False
 DJANGO_SECRET_KEY=$SECRET_KEY
 DJANGO_ALLOWED_HOSTS=$DOMAIN,www.$DOMAIN${EXTRA_IPS:+,$EXTRA_IPS}
-CSRF_TRUSTED_ORIGINS=https://$DOMAIN,https://www.$DOMAIN${EXTRA_IPS:+,http://$EXTRA_IPS}
+CSRF_TRUSTED_ORIGINS=https://$DOMAIN,https://www.$DOMAIN${CSRF_IPS:+,$CSRF_IPS}
 TRUSTED_INTERNAL=1
 
 DB_NAME=$DB_NAME
