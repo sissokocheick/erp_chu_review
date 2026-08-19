@@ -10,11 +10,15 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.db import transaction
 
+from django.db.models import ProtectedError
 from accounts.permissions import verifier_permission
+from weasyprint import HTML
 
 from ..models import (
     Immobilisation, CampagneInventairePatrimoine,
-    LigneInventairePatrimoine,
+    LigneInventairePatrimoine, ParametresPatrimoine,
+    MouvementPatrimoine, CategoriePatrimoine,
+    Batiment, Bureau,
 )
 from .common import patrimoine_required
 

@@ -6,14 +6,16 @@ from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
-from django.db.models import Q
+from django.db.models import Q, Count
 from django.utils import timezone
 
 from accounts.permissions import verifier_permission
 
+from stock.models import Fournisseur
+from core.models import Service
 from ..models import (
     Immobilisation, ContratMaintenance, TypeContrat,
-    Intervention,
+    Intervention, Batiment, TypeEquipement,
 )
 from .common import patrimoine_required
 
@@ -128,7 +130,7 @@ def detail_contrat(request, pk):
 
 def assigner_equipements_contrat(request, contrat_id):
 
-    from django.db.models import Q
+    from django.db.models import Q, Count
 
     contrat = get_object_or_404(ContratMaintenance, id=contrat_id)
 

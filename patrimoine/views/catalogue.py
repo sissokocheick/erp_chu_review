@@ -17,10 +17,11 @@ import qrcode
 
 from stock.models import Article
 from accounts.permissions import verifier_permission
+from core.models import Service
 
 from ..models import (
     Immobilisation, TypeEquipement, CategoriePatrimoine,
-    Batiment,
+    Batiment, Bureau, Marque,
 )
 from .common import patrimoine_required
 

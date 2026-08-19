@@ -17,8 +17,11 @@ from accounts.permissions import verifier_permission
 
 from ..models import (
     Immobilisation, Intervention, ComptePrestataire,
-    TechnicienPrestataire,
+    TechnicienPrestataire, ParametresPatrimoine,
+    MouvementPatrimoine, TypeEquipement,
 )
+from stock.models import Fournisseur, DemandeMateriel, LigneDemande
+from django.contrib.auth.models import User
 from .common import patrimoine_required
 
 logger = logging.getLogger(__name__)

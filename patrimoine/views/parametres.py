@@ -10,11 +10,16 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from django.db import transaction
 
+from django.db.models import ProtectedError
+from django.contrib.auth.models import User
 from accounts.permissions import verifier_permission
+from core.models import Service
 
 from ..models import (
     TypeEquipement, CategoriePatrimoine,
     Batiment, Etage, Bureau, Marque, Modele,
+    ParametresPatrimoine, TechnicienPrestataire,
+    TypeContrat,
 )
 from .common import patrimoine_required
 

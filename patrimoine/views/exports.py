@@ -20,7 +20,7 @@ from accounts.permissions import verifier_permission
 from ..models import (
     Immobilisation, TypeEquipement, CategoriePatrimoine,
     MouvementPatrimoine, ImportPatrimoine, ParametresPatrimoine,
-    Batiment, Marque, Modele,
+    Batiment, Marque, Modele, Bureau, Etage,
 )
 from .common import patrimoine_required
 

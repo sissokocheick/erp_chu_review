@@ -12,6 +12,7 @@ from django.views.decorators.http import require_POST
 from django.db import transaction
 
 from accounts.permissions import verifier_permission
+from core.models import Service
 
 from ..models import (
     Immobilisation, TypeEquipement, CategoriePatrimoine,
