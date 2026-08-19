@@ -118,9 +118,9 @@ fi
 PG_VERSION=$(psql --version | grep -oP '\d+\.\d+' | head -1)
 info "PostgreSQL : $PG_VERSION"
 
-# Créer la base et l'utilisateur
-sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='$DB_USER'" | grep -q 1 || \
-  sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD' CREATEDB;"
+# Créer ou mettre à jour l'utilisateur (ALTER si existe déjà — cas ré-install)
+sudo -u postgres psql -c "CREATE USER $DB_USER WITH PASSWORD '$DB_PASSWORD' CREATEDB;" 2>/dev/null || \
+  sudo -u postgres psql -c "ALTER USER $DB_USER WITH PASSWORD '$DB_PASSWORD';"
 
 sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$DB_NAME'" | grep -q 1 || \
   sudo -u postgres psql -c "CREATE DATABASE $DB_NAME OWNER $DB_USER;"
