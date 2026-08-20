@@ -23,6 +23,7 @@ from ..services import (
 )
 from ..services.livraison_service import LivraisonService
 from ..services.parametre_service import get_or_create_logistique_config
+from core.pdf_service import DocumentGenerator
 from ..services.isolation_service import get_magasins_autorises
 
 from .catalogue import paginer

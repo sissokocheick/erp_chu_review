@@ -47,7 +47,7 @@ def _requirements_contient(nom_dependance):
         ligne = ligne.split("#", 1)[0].strip()
         if not ligne:
             continue
-        nom = ligne.split("==", 1)[0].split("[", 1)[0].strip().lower()
+        nom = ligne.split("==", 1)[0].split(">=", 1)[0].split("<=", 1)[0].split("[", 1)[0].strip().lower()
         if nom == nom_dependance:
             return True
     return False

@@ -24,7 +24,7 @@ from ...services.parametre_service import (
 from ...models import FamilleArticle, Fournisseur, MotifAnnulation, Magasin, Beneficiaire
 from core.models import Service
 from ...forms import FamilleArticleForm, MagasinForm
-from accounts.models import ConfigDocument
+from core.models import ConfigDocument
 
 
 @login_required(login_url='/auth/login/')

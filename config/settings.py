@@ -153,17 +153,25 @@ USE_TZ = True
 STATIC_URL = 'static/'
 
 # ── Cache en mémoire (évite les requêtes répétées sur les mêmes données)
-# En production, remplacer par Redis si dispo : CACHES = { 'default': { 'BACKEND': 'django.core.cache.backends.redis.RedisCache', ... } }
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'nexuserp-unique-snowflake',  # isole ce cache du cache global Django
-        'TIMEOUT': 300,  # 5 minutes par défaut
-        'OPTIONS': {
-            'MAX_ENTRIES': 1000,
+if os.environ.get('REDIS_URL'):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.environ.get('REDIS_URL'),
+            'TIMEOUT': 300,
         }
     }
-}
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'nexuserp-unique-snowflake',
+            'TIMEOUT': 300,
+            'OPTIONS': {
+                'MAX_ENTRIES': 1000,
+            }
+        }
+    }
 
 # Clé primaire par défaut : BigInt (évite les overflow sur 2^31)
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -3,7 +3,7 @@
 import logging
 import json
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import JsonResponse
@@ -19,8 +19,9 @@ from ..models import (
     TypeEquipement, CategoriePatrimoine,
     Batiment, Etage, Bureau, Marque, Modele,
     ParametresPatrimoine, TechnicienPrestataire,
-    TypeContrat,
+    TypeContrat, Immobilisation
 )
+from stock.models import Fournisseur
 from .common import patrimoine_required
 
 logger = logging.getLogger(__name__)

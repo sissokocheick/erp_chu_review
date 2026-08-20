@@ -2001,7 +2001,7 @@ class ModeleDocumentMagasin(TracabiliteModel):
         """
         Retourne la configuration fusionnée avec les valeurs par défaut.
         """
-        from accounts.models import ConfigDocument
+        from core.models import ConfigDocument, TypeDocument
 
         cfg_doc = {}
         try:

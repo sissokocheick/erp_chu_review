@@ -36,7 +36,7 @@ def get_pdf_config(magasin, type_doc_code, request):
             - logo_url: URL absolue du logo à utiliser
     """
     from stock.models import ModeleDocumentMagasin
-    from accounts.models import ConfigDocument
+    from core.models import ConfigDocument, TypeDocument
 
     # ═══════════════════════════════════════════════════════════════════════
     # Cartographie code court -> type legacy attendu par get_config_complete
@@ -108,7 +108,14 @@ def get_pdf_config(magasin, type_doc_code, request):
     else:
         pied_texte = pied or ''
 
-    pdf_config['couleur_principale'] = pdf_config.get('couleur_principale') or '#1c5b96'
+    from core.models import ConfigurationHopital
+    hopital = ConfigurationHopital.objects.first()
+
+    if hopital:
+        pdf_config['couleur_principale'] = hopital.couleur_principale or '#1c5b96'
+    else:
+        pdf_config['couleur_principale'] = pdf_config.get('couleur_principale') or '#1c5b96'
+    
     pdf_config['code_document'] = metadonnees.get('code_document') or type_doc_code
     pdf_config['date_creation_doc'] = metadonnees.get('date_creation_doc') or ''
     pdf_config['date_revision_doc'] = metadonnees.get('date_revision_doc') or ''
@@ -120,34 +127,33 @@ def get_pdf_config(magasin, type_doc_code, request):
         or "Direction des Affaires Financières / Sous-Direction de la Logistique"
     )
 
-    # Alias plats pour compatibilité (accès pdf_config.afficher_*)
-    cartouche = pdf_config.get('cartouche') or {}
-    pdf_config['afficher_logo'] = cartouche.get('afficher_logo', True)
-    pdf_config['afficher_cc'] = cartouche.get('afficher_cc', True)
-    pdf_config['afficher_ifu'] = cartouche.get('afficher_ifu', True)
-    pdf_config['afficher_rccm'] = cartouche.get('afficher_rccm', True)
-    pdf_config['afficher_telephone'] = cartouche.get('afficher_telephone', True)
+    # Parametres unifies globaux
+    pdf_config['afficher_logo'] = getattr(hopital, 'afficher_logo', True) if hopital else True
+    pdf_config['afficher_cachet'] = getattr(hopital, 'afficher_cachet', True) if hopital else True
+    pdf_config['afficher_cc'] = getattr(hopital, 'afficher_cc', True) if hopital else True
+    pdf_config['afficher_ifu'] = getattr(hopital, 'afficher_ifu', True) if hopital else True
+    pdf_config['afficher_rccm'] = getattr(hopital, 'afficher_rccm', True) if hopital else True
+    pdf_config['afficher_telephone'] = getattr(hopital, 'afficher_telephone', True) if hopital else True
+    pdf_config['afficher_republique'] = getattr(hopital, 'afficher_republique', True) if hopital else True
+    pdf_config['afficher_devise'] = getattr(hopital, 'afficher_devise', True) if hopital else True
+    pdf_config['afficher_direction'] = getattr(hopital, 'afficher_direction', True) if hopital else True
+    pdf_config['afficher_sous_direction'] = getattr(hopital, 'afficher_sous_direction', True) if hopital else True
+    pdf_config['afficher_service'] = getattr(hopital, 'afficher_service', True) if hopital else True
+    pdf_config['direction_label'] = getattr(hopital, 'direction_label', '') if hopital else ''
+    pdf_config['sous_direction_label'] = getattr(hopital, 'sous_direction_label', '') if hopital else ''
+    pdf_config['service_label'] = getattr(hopital, 'service_label', '') if hopital else ''
+    
+    # La signature reste parametrable par bon/document
     pdf_config['afficher_signatures'] = pdf_config.get('afficher_signatures', True)
-    config_globale = ConfigDocument.objects.filter(type_doc=type_doc_code).first()
-    pdf_config['afficher_cachet'] = (
-        pdf_config.get('afficher_cachet')
-        if pdf_config.get('afficher_cachet') is not None
-        else (config_globale.afficher_cachet if config_globale else False)
-    )
 
-    # Pied de page : s'assurer qu'il s'agit d'un dict (texte + options d'affichage)
-    if not isinstance(pdf_config.get('pied_de_page'), dict):
-        pdf_config['pied_de_page'] = {
-            'texte_personnalise': pied_texte,
-            'afficher_numero_page': True,
-            'afficher_date_generation': True,
-            'afficher_trait_couleur': True,
-            'trait_couleur': '#17a2b8',
-        }
-
-    # Fallback pied de page : ConfigurationHopital (identité CHU) -> magasin -> défaut
-    if not pdf_config['pied_de_page'].get('texte_personnalise'):
-        pdf_config['pied_de_page']['texte_personnalise'] = _pied_de_page_par_defaut()
+    # Pied de page unifie globalement
+    pdf_config['pied_de_page'] = {
+        'texte_personnalise': getattr(hopital, 'pied_page_pdf', _pied_de_page_par_defaut()) if hopital else _pied_de_page_par_defaut(),
+        'afficher_numero_page': True,
+        'afficher_date_generation': True,
+        'afficher_trait_couleur': True,
+        'trait_couleur': pdf_config.get('couleur_principale', '#17a2b8'),
+    }
 
     pdf_config['logo_url'] = logo_url
 
@@ -191,7 +197,7 @@ def _pied_de_page_par_defaut():
 
 def _config_document_flat(type_doc_code):
     """Renvoie les valeurs ConfigDocument (globales) pour un type de document."""
-    from accounts.models import ConfigDocument
+    from core.models import ConfigDocument, TypeDocument
     config = ConfigDocument.objects.filter(type_doc=type_doc_code).first()
     if not config:
         return {}
@@ -537,3 +543,4 @@ def sauver_pdf_cache(bon, filename, pdf_bytes):
         bon.fichier_pdf.save(filename, ContentFile(pdf_bytes), save=True)
     except Exception as e:
         logger.warning("[PDF] Sauvegarde cache échouée : %s", e)
+

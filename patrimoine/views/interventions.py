@@ -14,10 +14,12 @@ from django.utils import timezone
 from stock.models import Article, Magasin
 from core.models import Service
 from accounts.permissions import verifier_permission
+from decimal import Decimal
 
 from ..models import (
     Immobilisation, Intervention, ComptePrestataire,
     TechnicienPrestataire, ParametresPatrimoine,
+    ContratMaintenance,
     MouvementPatrimoine, TypeEquipement,
 )
 from stock.models import Fournisseur, DemandeMateriel, LigneDemande

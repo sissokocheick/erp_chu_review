@@ -90,14 +90,8 @@ def _parse_post_to_config(request_post, type_doc='BS'):
         'service_demandeur': {},
     }
 
-    # CARTOUCHE
-    for key in [
-        'afficher_logo', 'afficher_republique', 'afficher_devise',
-        'afficher_direction', 'afficher_sous_direction', 'afficher_service',
-        'afficher_telephone', 'afficher_cc', 'afficher_ifu',
-        'afficher_rccm', 'afficher_code_iso'
-    ]:
-        cfg['cartouche'][key] = request_post.get(f'cartouche_{key}') == 'on'
+        # CARTOUCHE
+    cfg['cartouche']['afficher_code_iso'] = request_post.get('cartouche_afficher_code_iso') == 'on'
     cfg['cartouche']['position_logo'] = request_post.get('cartouche_position_logo', 'left')
     cfg['cartouche']['trait_separation_epaisseur'] = int(request_post.get('cartouche_trait_separation_epaisseur', 1) or 1)
     cfg['cartouche']['trait_separation_couleur'] = request_post.get('cartouche_trait_separation_couleur', '#000000')
@@ -144,25 +138,12 @@ def _parse_post_to_config(request_post, type_doc='BS'):
         cfg['sondage']['trait_separation'] = request_post.get('sondage_trait_separation') == 'on'
         cfg['sondage']['style_cases'] = request_post.get('sondage_style_cases') == 'on'
 
-    # PIED DE PAGE
-    cfg['pied_de_page']['texte_personnalise'] = request_post.get('pied_de_page_texte_personnalise', '')
-    cfg['pied_de_page']['afficher_numero_page'] = request_post.get('pied_de_page_afficher_numero_page') == 'on'
-    cfg['pied_de_page']['afficher_date_generation'] = request_post.get('pied_de_page_afficher_date_generation') == 'on'
-    cfg['pied_de_page']['afficher_trait_couleur'] = request_post.get('pied_de_page_afficher_trait_couleur') == 'on'
-    cfg['pied_de_page']['trait_couleur'] = request_post.get('pied_de_page_trait_couleur', '#17a2b8')
-
     # MÉTADONNÉES
     cfg['metadonnees']['code_document'] = request_post.get('metadonnees_code_document', '')
     cfg['metadonnees']['date_creation_doc'] = request_post.get('metadonnees_date_creation_doc', '')
     cfg['metadonnees']['date_revision_doc'] = request_post.get('metadonnees_date_revision_doc', '')
     cfg['metadonnees']['version_doc'] = request_post.get('metadonnees_version_doc', '')
     cfg['metadonnees']['ps2_label'] = request_post.get('metadonnees_ps2_label', '')
-
-    # LABELS GLOBAUX
-    cfg['direction_label'] = request_post.get('direction_label', '')
-    cfg['sous_direction_label'] = request_post.get('sous_direction_label', '')
-    cfg['service_label'] = request_post.get('service_label', '')
-    cfg['couleur_principale'] = request_post.get('couleur_principale', '#1c5b96')
 
     return cfg
 
@@ -186,14 +167,8 @@ def _config_to_form_context(cfg):
     ctx['afficher_fonction_signataire'] = cfg.get('afficher_fonction_signataire', False)
     for k, v in cfg.get('service_demandeur', {}).items():
         ctx[f'service_demandeur_{k}'] = v
-    for k, v in cfg.get('pied_de_page', {}).items():
-        ctx[f'pied_de_page_{k}'] = v
     for k, v in cfg.get('metadonnees', {}).items():
         ctx[f'metadonnees_{k}'] = v
-    ctx['direction_label'] = cfg.get('direction_label', '')
-    ctx['sous_direction_label'] = cfg.get('sous_direction_label', '')
-    ctx['service_label'] = cfg.get('service_label', '')
-    ctx['couleur_principale'] = cfg.get('couleur_principale', '#1c5b96')
     return ctx
 
 

@@ -4,8 +4,11 @@ from django.db import transaction
 from django.db.models import Case, Value, When
 from django.core.exceptions import ValidationError
 from django.utils import timezone
-from stock.models import Mouvement, StockItem
+from datetime import timedelta
+import logging
 from decimal import Decimal
+import decimal
+from stock.models import Mouvement, StockItem
 
 class StockTransactionService:
     """Service pour l'exécution des mouvements de stock."""

@@ -11,7 +11,7 @@ from django.test import TestCase, RequestFactory
 from django.contrib.auth import get_user_model
 
 from stock.models import Magasin, ModeleDocumentMagasin
-from accounts.models import ConfigDocument
+from core.models import ConfigDocument, TypeDocument
 from stock.pdf_utils import get_pdf_config
 
 User = get_user_model()
@@ -83,12 +83,7 @@ class ConfigurationPDFTest(TestCase):
         # Créer une configuration globale pour BS
         ConfigDocument.objects.create(
             type_doc='BS',
-            afficher_logo=True,
-            afficher_cachet=True,  # Différent du défaut
-            afficher_cc=True,      # Différent du défaut
-            afficher_ifu=True,     # Différent du défaut
-            afficher_rccm=True,    # Différent du défaut
-            afficher_telephone=False,  # Différent du défaut
+afficher_cachet=True,  # Différent du défaut
             afficher_signatures=True,
             code_document='BS-FORM-001',
             version_doc='2.0',
@@ -112,7 +107,6 @@ class ConfigurationPDFTest(TestCase):
         # Créer config seulement pour BE
         ConfigDocument.objects.create(
             type_doc='BE',
-            afficher_cachet=True,
         )
 
         request = self._create_request()
@@ -130,8 +124,6 @@ class ConfigurationPDFTest(TestCase):
         # Créer config globale
         ConfigDocument.objects.create(
             type_doc='BS',
-            afficher_cachet=True,
-            afficher_cc=True,
         )
 
         # Créer modèle spécifique au magasin
@@ -158,7 +150,6 @@ class ConfigurationPDFTest(TestCase):
         # Créer config globale
         ConfigDocument.objects.create(
             type_doc='BS',
-            afficher_cachet=True,
         )
 
         # Créer modèle INACTIF
@@ -206,12 +197,7 @@ class ConfigurationPDFTest(TestCase):
         # Niveau 1 : ConfigDocument
         ConfigDocument.objects.create(
             type_doc='BS',
-            afficher_logo=True,
-            afficher_cachet=True,
-            afficher_cc=True,
-            afficher_ifu=True,
-            afficher_rccm=True,
-            afficher_telephone=True,
+afficher_cachet=True,
             afficher_signatures=True,
             code_document='BS-GLOBAL',
             version_doc='1.5',
@@ -272,7 +258,6 @@ class ConfigurationPDFTest(TestCase):
         """Si magasin=None, utilise seulement ConfigDocument."""
         ConfigDocument.objects.create(
             type_doc='BS',
-            afficher_cachet=True,
         )
 
         request = self._create_request()
@@ -319,3 +304,4 @@ class ConfigurationPDFTest(TestCase):
         # Le logo du magasin prime : le repli statique ne doit pas être utilisé
         self.assertIsNotNone(logo_url)
         self.assertNotIn('static/img/logo.jpg', logo_url)
+

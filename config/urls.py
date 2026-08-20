@@ -13,6 +13,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # 🔐 URLs accounts (auth + profil + gestion) — namespace géré par app_name dans accounts/urls.py
     path('auth/', include('accounts.urls')),
+    path('core/', include('core.urls')),
 
     path('', include('stock.urls')), 
 

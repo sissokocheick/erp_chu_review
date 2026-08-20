@@ -15,49 +15,6 @@ from simple_history.models import HistoricalRecords
 
 
 # ==========================================================
-# 📄 CONFIGURATION DES DOCUMENTS PDF (MONO-TENANT)
-# ==========================================================
-class ConfigDocument(models.Model):
-    """Configuration personnalisable par type de document PDF."""
-    TYPE_DOC_CHOICES = [
-        ('BS', 'Bon de Sortie'),
-        ('BE', "Bon d'Entrée"),
-        ('BR', 'Bon de Retour'),
-        ('BSHS', 'Bon Hors Stock'),
-        ('BDM', 'Bon de Demande de Matériel'),
-        ('BC', 'Bon de Commande'),
-    ]
-
-    type_doc = models.CharField(max_length=10, choices=TYPE_DOC_CHOICES, unique=True)
-    # 💡 Après déduplication éventuelle des données historiques,
-    #    tu pourras passer type_doc en unique=True.
-
-    # Métadonnées ISO
-    code_document = models.CharField(max_length=50, blank=True, verbose_name="Code document")
-    date_creation_doc = models.CharField(max_length=20, blank=True, verbose_name="Date création")
-    date_revision_doc = models.CharField(max_length=20, blank=True, verbose_name="Date révision")
-    version_doc = models.CharField(max_length=10, blank=True, verbose_name="Version")
-    ps2_label = models.CharField(max_length=100, blank=True, verbose_name="Label PS2")
-
-    # Affichage conditionnel
-    afficher_logo = models.BooleanField(default=True, verbose_name="Afficher le logo")
-    afficher_cachet = models.BooleanField(default=True, verbose_name="Afficher le cachet")
-    afficher_cc = models.BooleanField(default=True, verbose_name="Afficher le CC")
-    afficher_ifu = models.BooleanField(default=True, verbose_name="Afficher l'IFU")
-    afficher_rccm = models.BooleanField(default=True, verbose_name="Afficher le RCCM")
-    afficher_telephone = models.BooleanField(default=True, verbose_name="Afficher le téléphone")
-    afficher_signatures = models.BooleanField(default=True, verbose_name="Afficher les signatures")
-
-    class Meta:
-        verbose_name = "Configuration document"
-        verbose_name_plural = "Configurations documents"
-        ordering = ['type_doc']
-
-    def __str__(self):
-        return self.get_type_doc_display()
-
-
-# ==========================================================
 # 🏥 SPÉCIALITÉ
 # ==========================================================
 class Specialite(models.Model):

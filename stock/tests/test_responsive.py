@@ -229,7 +229,7 @@ class ResponsiveMobileTest(TestCase):
             '/stats/satisfaction-services/', '/notifications/',
             '/auth/', '/auth/profil/', '/auth/roles/', '/auth/utilisateurs/',
             '/auth/journal-audit/', '/auth/securite/mots-de-passe/',
-            '/auth/circuits-validation/', '/auth/parametres/documents-pdf/',
+            '/auth/circuits-validation/', '/core/parametres/documents-pdf/',
             '/patrimoine/', '/patrimoine/sas/', '/patrimoine/contrats/',
             '/patrimoine/interventions/', '/patrimoine/import/',
             '/patrimoine/parametres/', '/patrimoine/inventaires/',

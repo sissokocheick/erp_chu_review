@@ -58,6 +58,62 @@
             </div>
         </div>
 
+
+        <!-- SECTION 1B - AFFICHAGE GLOBAL -->
+        <div class="nx-card" style="margin-bottom: 20px;">
+            <div class="nx-card-header">
+                <h4><i class="fas fa-eye" style="color: var(--primary-blue);"></i> Éléments d'en-tête affichés sur tous les PDF</h4>
+            </div>
+            <div class="nx-card-body">
+                <div class="nx-row" style="flex-wrap: wrap; gap: 20px;">
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_logo" {% if afficher_logo %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-image" style="color: var(--text-light); width: 18px; text-align: center;"></i> Logo
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_cachet" {% if afficher_cachet %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-stamp" style="color: var(--text-light); width: 18px; text-align: center;"></i> Cachet / Tampon
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_cc" {% if afficher_cc %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-file-invoice" style="color: var(--text-light); width: 18px; text-align: center;"></i> Compte Contribuable (CC)
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_ifu" {% if afficher_ifu %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-id-card" style="color: var(--text-light); width: 18px; text-align: center;"></i> IFU
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_rccm" {% if afficher_rccm %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-landmark" style="color: var(--text-light); width: 18px; text-align: center;"></i> RCCM
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_telephone" {% if afficher_telephone %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-phone" style="color: var(--text-light); width: 18px; text-align: center;"></i> Téléphone
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_republique" {% if afficher_republique %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-flag" style="color: var(--text-light); width: 18px; text-align: center;"></i> République
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_devise" {% if afficher_devise %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-quote-left" style="color: var(--text-light); width: 18px; text-align: center;"></i> Devise
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_direction" {% if afficher_direction %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-building" style="color: var(--text-light); width: 18px; text-align: center;"></i> Direction
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_sous_direction" {% if afficher_sous_direction %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-sitemap" style="color: var(--text-light); width: 18px; text-align: center;"></i> Sous-Direction
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 14px; color: var(--text-dark);">
+                        <input type="checkbox" name="global_afficher_service" {% if afficher_service %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
+                        <i class="fas fa-hospital" style="color: var(--text-light); width: 18px; text-align: center;"></i> Service
+                    </label>
+                </div>
+            </div>
+        </div>
+
         <!-- SECTION 2 — PRÉFIXES DE NUMÉROTATION -->
         <div class="nx-card" style="margin-bottom: 20px;">
             <div class="nx-card-header">
@@ -196,32 +252,8 @@
                             </div>
                         </div>
                         <div class="nx-col" style="flex: 1; background: var(--bg-hover); border-radius: var(--radius); padding: 16px;">
-                            <p style="margin: 0 0 12px; font-size: 12px; font-weight: 700; color: var(--text-medium); text-transform: uppercase;">Éléments affichés</p>
+                            <p style="margin: 0 0 12px; font-size: 12px; font-weight: 700; color: var(--text-medium); text-transform: uppercase;">Paramètres Spécifiques</p>
 
-                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
-                                <input type="checkbox" name="config_{{ item.code }}_afficher_logo" {% if item.afficher_logo %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
-                                <i class="fas fa-image" style="color: var(--text-light); width: 18px; text-align: center;"></i> Logo
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
-                                <input type="checkbox" name="config_{{ item.code }}_afficher_cachet" {% if item.afficher_cachet %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
-                                <i class="fas fa-stamp" style="color: var(--text-light); width: 18px; text-align: center;"></i> Cachet / Tampon
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
-                                <input type="checkbox" name="config_{{ item.code }}_afficher_cc" {% if item.afficher_cc %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
-                                <i class="fas fa-file-invoice" style="color: var(--text-light); width: 18px; text-align: center;"></i> Compte Contribuable (CC)
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
-                                <input type="checkbox" name="config_{{ item.code }}_afficher_ifu" {% if item.afficher_ifu %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
-                                <i class="fas fa-id-card" style="color: var(--text-light); width: 18px; text-align: center;"></i> IFU
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
-                                <input type="checkbox" name="config_{{ item.code }}_afficher_rccm" {% if item.afficher_rccm %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
-                                <i class="fas fa-landmark" style="color: var(--text-light); width: 18px; text-align: center;"></i> RCCM
-                            </label>
-                            <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
-                                <input type="checkbox" name="config_{{ item.code }}_afficher_telephone" {% if item.afficher_telephone %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
-                                <i class="fas fa-phone" style="color: var(--text-light); width: 18px; text-align: center;"></i> Téléphone
-                            </label>
                             <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 13px; color: var(--text-dark);">
                                 <input type="checkbox" name="config_{{ item.code }}_afficher_signatures" {% if item.afficher_signatures %}checked{% endif %} style="width: 16px; height: 16px; accent-color: var(--primary-blue);">
                                 <i class="fas fa-signature" style="color: var(--text-light); width: 18px; text-align: center;"></i> Bloc Signatures

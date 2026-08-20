@@ -4,7 +4,7 @@ import logging
 import base64
 from io import BytesIO
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -12,6 +12,7 @@ from django.db.models import Q, Sum
 from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.urls import reverse
+from decimal import Decimal
 
 import qrcode
 

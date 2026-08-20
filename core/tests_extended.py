@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 
 from core.models import ConfigurationHopital, Service
 from core.forms import ConfigurationHopitalForm
-from accounts.models import ConfigDocument
+from core.models import ConfigDocument, TypeDocument
 
 
 class ConfigurationHopitalTest(TestCase):
@@ -68,7 +68,7 @@ class ConfigurationHopitalTest(TestCase):
 
     def test_map_type_doc(self):
         obj = ConfigurationHopital.get_instance()
-        self.assertEqual(obj._map_type_doc('BON_SORTIE'), 'BS')
+        self.assertEqual(obj._map_type_doc(TypeDocument.BS), 'BS')
         self.assertEqual(obj._map_type_doc('BON_ENTREE'), 'BE')
         self.assertEqual(obj._map_type_doc('BON_RETOUR'), 'BR')
         self.assertEqual(obj._map_type_doc('BON_HS'), 'BSHS')
@@ -78,7 +78,7 @@ class ConfigurationHopitalTest(TestCase):
 
     def test_get_pdf_config_retourne_dict(self):
         obj = ConfigurationHopital.get_instance()
-        cfg = obj.get_pdf_config('BON_SORTIE')
+        cfg = obj.get_pdf_config(TypeDocument.BS)
         self.assertIsInstance(cfg, dict)
         for champ in ('afficher_logo', 'afficher_cachet', 'afficher_signatures',
                       'code_document', 'direction_label', 'couleur_principale',
@@ -87,7 +87,7 @@ class ConfigurationHopitalTest(TestCase):
 
     def test_get_pdf_config_valeurs_defaut(self):
         obj = ConfigurationHopital.get_instance()
-        cfg = obj.get_pdf_config('BON_SORTIE')
+        cfg = obj.get_pdf_config(TypeDocument.BS)
         self.assertTrue(cfg['afficher_logo'])
         self.assertTrue(cfg['afficher_signatures'])
         self.assertEqual(cfg['direction_label'], obj.direction_label)
@@ -100,7 +100,7 @@ class ConfigurationHopitalTest(TestCase):
         cd.code_document = 'CODE-CUSTOM'
         cd.save()
         obj = ConfigurationHopital.get_instance()
-        cfg = obj.get_pdf_config('BON_SORTIE')
+        cfg = obj.get_pdf_config(TypeDocument.BS)
         self.assertEqual(cfg['code_document'], 'CODE-CUSTOM')
 
     def test_creer_configs_documents_par_defaut(self):
@@ -116,7 +116,7 @@ class ConfigurationHopitalTest(TestCase):
 
     def test_signataires_config_six_roles(self):
         obj = ConfigurationHopital.get_instance()
-        cfg = obj.get_pdf_config('BON_SORTIE')
+        cfg = obj.get_pdf_config(TypeDocument.BS)
         self.assertEqual(len(cfg['signataires']), 6)
         self.assertEqual(cfg['signataires'][0]['ordre'], 1)
 

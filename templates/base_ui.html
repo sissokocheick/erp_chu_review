@@ -364,6 +364,9 @@
             display: flex; flex-direction: column; overflow-y: auto; z-index: 999999;
             transition: width 0.3s ease;
         }
+        .sidebar > div, .sidebar > a {
+            flex-shrink: 0;
+        }
         .sidebar.desktop-closed { width: 50px !important; overflow: visible; }
         .sidebar.desktop-closed .sidebar-header { padding: 14px 2px; }
         .sidebar.desktop-closed .logo-text, .sidebar.desktop-closed .logo-subtitle { display: none !important; }
@@ -843,7 +846,7 @@
             {% if magasin_actif %}
             <a href="{% url 'modele_pdf_config' magasin_actif.id 'BS' %}" class="menu-item" data-title="PDF"><i class="fas fa-file-pdf nav-icon" style="color:#dc3545;"></i><span class="nav-text">Modeles PDF</span></a>
             {% else %}
-            <a href="{% url 'accounts:config_documents_globaux' %}" class="menu-item" data-title="PDF"><i class="fas fa-file-pdf nav-icon" style="color:#dc3545;"></i><span class="nav-text">Modeles PDF</span></a>
+            <a href="{% url 'core:config_documents_globaux' %}" class="menu-item" data-title="PDF"><i class="fas fa-file-pdf nav-icon" style="color:#dc3545;"></i><span class="nav-text">Modeles PDF</span></a>
             {% endif %}
             {% endif %}
             {% if perms.accounts.menu_notifications_config %}

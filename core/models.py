@@ -50,6 +50,46 @@ class TraceabiliteMixin(models.Model):
         abstract = True
 
 
+
+# ==========================================================
+# 📄 TYPES DE DOCUMENTS PDF
+# ==========================================================
+class TypeDocument(models.TextChoices):
+    BS = 'BS', 'Bon de Sortie'
+    BE = 'BE', "Bon d'Entrée"
+    BR = 'BR', 'Bon de Retour'
+    BSHS = 'BSHS', 'Bon Hors Stock'
+    BDM = 'BDM', 'Bon de Demande de Matériel'
+    BC = 'BC', 'Bon de Commande'
+
+# ==========================================================
+# 📄 CONFIGURATION DES DOCUMENTS PDF (MONO-TENANT)
+# ==========================================================
+class ConfigDocument(models.Model):
+    """Configuration personnalisable par type de document PDF."""
+    type_doc = models.CharField(max_length=10, choices=TypeDocument.choices, unique=True)
+    # 💡 Après déduplication éventuelle des données historiques,
+    #    tu pourras passer type_doc en unique=True.
+
+    # Métadonnées ISO
+    code_document = models.CharField(max_length=50, blank=True, verbose_name="Code document")
+    date_creation_doc = models.CharField(max_length=20, blank=True, verbose_name="Date création")
+    date_revision_doc = models.CharField(max_length=20, blank=True, verbose_name="Date révision")
+    version_doc = models.CharField(max_length=10, blank=True, verbose_name="Version")
+    ps2_label = models.CharField(max_length=100, blank=True, verbose_name="Label PS2")
+
+    # Affichage conditionnel
+    afficher_signatures = models.BooleanField(default=True, verbose_name="Afficher les signatures")
+
+    class Meta:
+        verbose_name = "Configuration document"
+        verbose_name_plural = "Configurations documents"
+        ordering = ['type_doc']
+
+    def __str__(self):
+        return self.get_type_doc_display()
+
+
 # ==========================================================
 # 🏥 CONFIGURATION UNIQUE DE L'ÉTABLISSEMENT (SINGLETON)
 # ==========================================================
@@ -150,7 +190,20 @@ class ConfigurationHopital(TraceabiliteMixin):
     direction_label = models.CharField(max_length=200, default="DIRECTION DES AFFAIRES FINANCIÈRES", verbose_name="Label Direction")
     sous_direction_label = models.CharField(max_length=200, default="SOUS-DIRECTION DE LA LOGISTIQUE", verbose_name="Label Sous-Direction")
     service_label = models.CharField(max_length=200, default="SERVICE APPROVISIONNEMENT ET GESTION DES STOCKS", verbose_name="Label Service")
-    pied_page_pdf = models.TextField(default="Document généré par NexusERP – Tous droits réservés.", verbose_name="Pied de page PDF")
+    pied_page_pdf = models.TextField(default="Document gǸnǸrǸ par NexusERP \u2014 Tous droits rǸservǸs.", verbose_name="Pied de page PDF")
+
+    # 🔧 Affichage global PDF 🔧
+    afficher_logo = models.BooleanField(default=True, verbose_name="Afficher le logo sur les PDF")
+    afficher_cachet = models.BooleanField(default=True, verbose_name="Afficher le cachet sur les PDF")
+    afficher_cc = models.BooleanField(default=True, verbose_name="Afficher le CC sur les PDF")
+    afficher_ifu = models.BooleanField(default=True, verbose_name="Afficher l'IFU sur les PDF")
+    afficher_rccm = models.BooleanField(default=True, verbose_name="Afficher le RCCM sur les PDF")
+    afficher_telephone = models.BooleanField(default=True, verbose_name="Afficher le téléphone sur les PDF")
+    afficher_republique = models.BooleanField(default=True, verbose_name="Afficher la République")
+    afficher_devise = models.BooleanField(default=True, verbose_name="Afficher la Devise")
+    afficher_direction = models.BooleanField(default=True, verbose_name="Afficher la Direction")
+    afficher_sous_direction = models.BooleanField(default=True, verbose_name="Afficher la Sous-Direction")
+    afficher_service = models.BooleanField(default=True, verbose_name="Afficher le Service")
 
     # ── Numérotation personnalisable (hérité de l'ancien modèle) ──
     prefixe_bon_sortie = models.CharField(max_length=10, default="BS", verbose_name="Préfixe Bon de Sortie")
@@ -223,20 +276,18 @@ class ConfigurationHopital(TraceabiliteMixin):
     def generer_numero(self, type_doc, annee=None):
         """
         Génère le prochain numéro de document.
-
-        Génère le prochain numéro de document (format sans suffixe tenant).
         """
         from stock.models import CompteurDocument
         if annee is None:
             annee = timezone.now().year
 
         prefix_map = {
-            'BON_SORTIE': self.prefixe_bon_sortie,
-            'BON_ENTREE': self.prefixe_bon_entree,
-            'BON_RETOUR': self.prefixe_bon_retour,
-            'BON_HS': self.prefixe_bon_hors_stock,
-            'COMMANDE': self.prefixe_commande,
-            'DEMANDE': 'DM',
+            TypeDocument.BS: self.prefixe_bon_sortie,
+            TypeDocument.BE: self.prefixe_bon_entree,
+            TypeDocument.BR: self.prefixe_bon_retour,
+            TypeDocument.BSHS: self.prefixe_bon_hors_stock,
+            TypeDocument.BC: self.prefixe_commande,
+            TypeDocument.BDM: 'DM',
         }
         prefixe = prefix_map.get(type_doc, 'DOC')
 
@@ -262,24 +313,23 @@ class ConfigurationHopital(TraceabiliteMixin):
             self.label_signataire_4, self.label_signataire_5, self.label_signataire_6,
         ]
 
-    def get_pdf_config(self, type_doc='BON_SORTIE'):
+    def get_pdf_config(self, type_doc=TypeDocument.BS):
         """Retourne toute la config personnalisable pour les templates PDF."""
-        # Import lazy pour éviter la dépendance circulaire core <-> accounts
-        from accounts.models import ConfigDocument
-
-        config_doc = ConfigDocument.objects.filter(
-            type_doc=self._map_type_doc(type_doc)
-        ).first()
+        config_doc = ConfigDocument.objects.filter(type_doc=type_doc).first()
 
         return {
-            'afficher_logo': getattr(config_doc, 'afficher_logo', True) if config_doc else True,
-            'afficher_cachet': getattr(config_doc, 'afficher_cachet', True) if config_doc else True,
+            'afficher_logo': getattr(self, 'afficher_logo', True),
+            'afficher_cachet': getattr(self, 'afficher_cachet', True),
             'afficher_signatures': getattr(config_doc, 'afficher_signatures', True) if config_doc else True,
-            'afficher_cc': getattr(config_doc, 'afficher_cc', True) if config_doc else True,
-            'afficher_ifu': getattr(config_doc, 'afficher_ifu', True) if config_doc else True,
-            'afficher_rccm': getattr(config_doc, 'afficher_rccm', True) if config_doc else True,
-            'afficher_telephone': getattr(config_doc, 'afficher_telephone', True) if config_doc else True,
-            'afficher_republique': True,
+            'afficher_cc': getattr(self, 'afficher_cc', True),
+            'afficher_ifu': getattr(self, 'afficher_ifu', True),
+            'afficher_rccm': getattr(self, 'afficher_rccm', True),
+            'afficher_telephone': getattr(self, 'afficher_telephone', True),
+            'afficher_republique': getattr(self, 'afficher_republique', True),
+            'afficher_devise': getattr(self, 'afficher_devise', True),
+            'afficher_direction': getattr(self, 'afficher_direction', True),
+            'afficher_sous_direction': getattr(self, 'afficher_sous_direction', True),
+            'afficher_service': getattr(self, 'afficher_service', True),
             'republique_label': "RÉPUBLIQUE DE CÔTE D'IVOIRE",
             'devise_label': "Union - Discipline - Travail",
             'direction_label': self.direction_label,
@@ -295,17 +345,6 @@ class ConfigurationHopital(TraceabiliteMixin):
             'ps2_label': getattr(config_doc, 'ps2_label', '') if config_doc else '',
         }
 
-    def _map_type_doc(self, type_doc):
-        mapping = {
-            'BON_SORTIE': 'BS',
-            'BON_ENTREE': 'BE',
-            'BON_RETOUR': 'BR',
-            'BON_HS': 'BSHS',
-            'COMMANDE': 'BC',
-            'DEMANDE': 'BDM',
-        }
-        return mapping.get(type_doc, 'BS')
-
     def _build_signataires_config(self):
         labels = self.labels_signatures
         roles = ['demandeur', 'magasinier', 'responsable', 'directeur', 'controleur', 'receptionnaire']
@@ -316,8 +355,6 @@ class ConfigurationHopital(TraceabiliteMixin):
 
     def creer_configs_documents_par_defaut(self):
         """Crée les 6 configurations documentaires par défaut si elles n'existent pas."""
-        from accounts.models import ConfigDocument
-
         defaults = {
             'BS':   {'code_document': 'ENR-BSM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '002', 'ps2_label': 'PS2 : GERER LES PRESTATIONS EXTERNES'},
             'BE':   {'code_document': 'ENR-BEM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},

@@ -3,7 +3,7 @@ from django.contrib.auth.models import User, Group
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.html import format_html
 from .models import (
-    Profil, Specialite, Fonction, ConfigDocument,
+    Profil, Specialite, Fonction, 
     MenuAccess, Notification, JournalAudit, AuditConnexion,
     ConfigSecurite,
 )
@@ -78,14 +78,6 @@ class FonctionAdmin(admin.ModelAdmin):
     search_fields = ('nom',)
 
 
-# ==========================================================
-# CONFIG DOCUMENT
-# ==========================================================
-@admin.register(ConfigDocument)
-class ConfigDocumentAdmin(admin.ModelAdmin):
-    list_display = ('type_doc', 'code_document', 'version_doc', 'afficher_logo', 'afficher_signatures')
-    list_filter = ('type_doc', 'afficher_logo', 'afficher_signatures')
-
 
 # ==========================================================
 # MENU ACCESS
@@ -144,4 +136,5 @@ class ConfigSecuriteAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
 

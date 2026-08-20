@@ -4,12 +4,13 @@ import logging
 import json
 from decimal import Decimal
 
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db import transaction, IntegrityError
+from django.db.models import Q
 
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
@@ -23,6 +24,24 @@ from ..models import (
     Batiment, Marque, Modele, Bureau, Etage,
 )
 from .common import patrimoine_required
+
+COLONNES_FIXES = [
+    'Batiment',
+    'Etage',
+    'Bureau/Salle',
+    'Service Utilisateur',
+    'Marque',
+    'Modele',
+    'Code Inventaire (Asset)',
+    'Numéro de Série',
+    'Nom Affichage',
+    'Date Acquisition',
+    'Valeur',
+    'Date Expiration Garantie',
+    'Action (Creer/MAJ)',
+    'Notes',
+    'Fournisseur'
+]
 
 logger = logging.getLogger(__name__)
 

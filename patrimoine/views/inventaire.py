@@ -6,10 +6,11 @@ import json
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.utils import timezone
 from django.db import transaction
-
+from django.db.models import Count
+from django.template.loader import render_to_string
 from django.db.models import ProtectedError
 from accounts.permissions import verifier_permission
 from weasyprint import HTML

@@ -37,3 +37,5 @@ zopfli>=0.4.1
 playwright>=1.62.0
 # Tests PDF multi-pages : assertions de contenu (nombre de pages, numérotation)
 pymupdf>=1.28.2
+
+redis>=5.0.0

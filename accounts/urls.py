@@ -1,7 +1,6 @@
 from django.urls import path
 from . import views
 from . import views_fonctions
-from . import config_documents_views
 from . import views_reset
 
 app_name = 'accounts'
@@ -60,5 +59,4 @@ urlpatterns = [
     path('circuits-validation/<int:circuit_id>/modifier/', views.modifier_circuit, name='modifier_circuit'),
 
     # Configuration des documents PDF
-    path('parametres/documents-pdf/', config_documents_views.config_documents_globaux, name='config_documents_globaux'),
 ]
