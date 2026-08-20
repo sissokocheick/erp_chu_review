@@ -4,6 +4,7 @@ from django.db.models import Q
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.core.paginator import Paginator
+from core.utils import paginer
 from django.urls import reverse
 from urllib.parse import urlencode
 from django.contrib import messages
@@ -54,27 +55,6 @@ def appliquer_tri(queryset, request, colonnes, defaut):
     return queryset, tri, ordre
 
 
-def paginer(queryset, request, per_page_key='per_page', default=15):
-    """Pagination. Si per_page='all', pas de pagination."""
-    per_page_raw = request.GET.get(per_page_key, str(default))
-
-    if per_page_raw == 'all':
-        if hasattr(queryset, 'count'):
-            liste = list(queryset)
-        else:
-            liste = list(queryset)
-        count = len(liste)
-        paginator = Paginator(liste, max(count, 1))
-        page = paginator.get_page(1)
-        return page, 'all'
-
-    try:
-        per_page = int(per_page_raw)
-    except ValueError:
-        per_page = default
-
-    page = request.GET.get('page')
-    return Paginator(queryset, per_page).get_page(page), per_page
 
 
 def build_redirect_url(base_name, query=None, per_page=None, default_per_page=15, famille_id=None):

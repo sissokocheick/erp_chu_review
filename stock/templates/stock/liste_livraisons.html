@@ -3,6 +3,11 @@
 
 {% block contenu %}
 <style>
+  table:not(.vd-table) th:not(.c):not([style*='text-align']) { text-align: left; }
+  table:not(.vd-table) td:not(.c):not([style*='text-align']) { text-align: left; }
+</style>
+
+<style>
   .swal2-container { z-index: 9999999 !important; }
 
   .lv-header {
@@ -146,7 +151,6 @@
         <th style="width:5%;"></th>
         <th style="width:14%;">N° Livraison</th>
         <th style="width:16%;">Service demandeur</th>
-        <th style="width:14%;">Magasin</th>
         <th style="width:11%;">Date</th>
         <th style="width:12%;">Livré par</th>
         <th class="c" style="width:12%;">Taux service</th>
@@ -168,7 +172,7 @@
           <div class="num-dem">{{ lv.demande.numero_demande }}</div>
         </td>
         <td><span class="service-tag">{{ lv.demande.service_demandeur.nom }}</span></td>
-        <td><span class="mag-tag"><i class="fas fa-warehouse" style="margin-right:3px;"></i>{{ lv.demande.magasin_cible.nom }}</span></td>
+        
         <td style="font-size:12px;color: var(--text-medium);">
           {{ lv.date_livraison|date:"d/m/Y" }}<br>
           <span style="color: var(--text-light);font-size:11px;">{{ lv.date_livraison|date:"H:i" }}</span>

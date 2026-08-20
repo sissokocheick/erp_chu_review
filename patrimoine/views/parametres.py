@@ -3,6 +3,7 @@
 import logging
 import json
 
+from core.utils import paginer
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -301,27 +302,6 @@ def parametres(request):
                 Marque.objects.get(pk=item_id).delete()
 
                 messages.success(request, "Marque supprimée.")
-
-
-            elif action == 'save_fournisseur':
-
-                if item_id:
-
-                    Fournisseur.objects.filter(id=item_id).update(raison_sociale=request.POST.get('raison_sociale'), telephone=request.POST.get('telephone'))
-
-                    messages.success(request, "🏢 Fournisseur modifié.")
-
-                else:
-
-                    Fournisseur.objects.create(raison_sociale=request.POST.get('raison_sociale'), telephone=request.POST.get('telephone'), cree_par=request.user)
-
-                    messages.success(request, "🏢 Nouveau fournisseur ajouté.")
-
-            elif action == 'delete_fournisseur':
-
-                Fournisseur.objects.filter(id=item_id).delete()
-
-                messages.success(request, "🗑️ Fournisseur supprimé.")
 
 
             elif action == 'save_tech_externe':

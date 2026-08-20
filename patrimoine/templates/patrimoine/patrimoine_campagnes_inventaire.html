@@ -369,16 +369,15 @@ document.addEventListener('keydown', function(e) {
 
 function confirmerSuppression(action, id, nom) {
   NxUX.confirm({
-                title: 'Supprimer "',
-                text: 'Cette action est irréversible.',
-                icon: 'warning',
-                onConfirm: function() {
-                    document.getElementById('suppr-action').value = action;
-      document.getElementById('suppr-id').value = id;
-      document.getElementById('form-suppr').submit();
-                }
-            })
-  });
+        title: 'Supprimer "' + nom + '" ?',
+        text: 'Cette action est irréversible.',
+        icon: 'warning',
+        onConfirm: function() {
+            document.getElementById('suppr-action').value = action;
+            document.getElementById('suppr-id').value = id;
+            document.getElementById('form-suppr').submit();
+        }
+    });
 }
 </script>
 {% endblock %}

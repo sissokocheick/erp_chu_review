@@ -41,10 +41,19 @@ def liste_transferts(request):
 
     # Le magasin sélectionné dans l'en-tête s'applique partout :
     # seuls les transferts impliquant le magasin actif sont visibles.
+    onglet = request.GET.get('onglet', 'a_receptionner')
+    
     if magasin_actif:
-        transferts = transferts.filter(
-            Q(magasin=magasin_actif) | Q(magasin_destination=magasin_actif)
-        )
+        if onglet == 'a_receptionner':
+            transferts = transferts.filter(magasin_destination=magasin_actif, statut_validation='ATTENTE', est_annule=False)
+        elif onglet == 'en_transit':
+            transferts = transferts.filter(magasin=magasin_actif, statut_validation='ATTENTE', est_annule=False)
+        else: # historique
+            transferts = transferts.filter(
+                Q(magasin=magasin_actif) | Q(magasin_destination=magasin_actif)
+            ).filter(
+                Q(statut_validation='VALIDE') | Q(est_annule=True)
+            )
 
     q = request.GET.get('q', '')
     if q:
@@ -142,6 +151,7 @@ def liste_transferts(request):
             is_deleted=True).order_by('nom'),
         'articles': Article.objects.filter(is_deleted=False).order_by('designation'),
         'q_transfert': q,
+        'onglet': onglet,
         'per_page': per_page,
     }
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -185,4 +195,42 @@ def annuler_transfert(request, bon_id):
         request,
         f"✅ Transfert {bon.numero_bon} annulé — le stock a été restitué "
         f"au magasin {bon.magasin.nom}.")
+    return redirect('liste_transferts')
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_transferts')
+@magasin_requis
+@catch_errors(redirect_url='liste_transferts')
+def receptionner_transfert(request, bon_id):
+    if request.method != 'POST':
+        return redirect('liste_transferts')
+
+    bon = get_object_or_404(
+        BonMouvement.objects.select_related('magasin', 'magasin_destination'),
+        id=bon_id,
+        type_bon='TRANSFERT',
+    )
+
+    magasins_autorises = get_magasins_autorises(request)
+    if not magasins_autorises.filter(id=bon.magasin_destination_id).exists():
+        messages.error(request, "Vous n'avez pas accès au magasin de destination de ce transfert.")
+        return redirect('liste_transferts')
+
+    commentaire = request.POST.get('commentaire', '').strip()
+
+    try:
+        TransfertService.receptionner_transfert(bon, request.user, commentaire=commentaire)
+    except ValidationError as e:
+        messages.error(request, f"{e}")
+        return redirect('liste_transferts')
+    except Exception as e:
+        logger.exception("[TRANSFERT] Erreur réception : %s", e)
+        messages.error(request, "Erreur lors de la réception du transfert.")
+        return redirect('liste_transferts')
+
+    messages.success(
+        request,
+        f"Transfert {bon.numero_bon} réceptionné ! Le stock a été ajouté "
+        f"au magasin {bon.magasin_destination.nom}."
+    )
     return redirect('liste_transferts')

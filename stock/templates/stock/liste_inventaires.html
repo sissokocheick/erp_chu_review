@@ -3,6 +3,11 @@
 
 {% block contenu %}
 <style>
+  table:not(.vd-table) th:not(.c):not([style*='text-align']) { text-align: left; }
+  table:not(.vd-table) td:not(.c):not([style*='text-align']) { text-align: left; }
+</style>
+
+<style>
   .inv-header {
     background: linear-gradient(135deg, #5a189a, #6f42c1);
     color: white; border-radius: 12px; padding: 20px 25px;
@@ -704,7 +709,6 @@
         <tr>
           <th style="width:12%;">Date</th>
           <th style="width:26%;">Titre</th>
-          <th style="width:16%;">Magasin</th>
           <th style="width:14%;">Statut</th>
           <th style="width:18%;">Traçabilité</th>
           <th class="c" style="width:14%;">Actions</th>
@@ -909,11 +913,16 @@
         </div>
         <div class="pl-fg">
           <label>Magasin *</label>
-          <select name="magasin_id" required>
+          {% if magasin_actif %}
+<input type="hidden" name="magasin_id" value="{{ magasin_actif.id }}">
+<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
+{% else %}
+<select name="magasin_id" required>
             {% for m in magasins %}
             <option value="{{ m.id }}" {% if magasin_actif and m.id == magasin_actif.id %}selected{% endif %}>{{ m.nom }}</option>
             {% endfor %}
           </select>
+{% endif %}
         </div>
         <div class="pl-fg">
           <label>Type de rotation</label>

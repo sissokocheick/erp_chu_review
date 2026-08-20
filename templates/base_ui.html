@@ -516,6 +516,40 @@
         .select2-container--default .select2-results__option--highlighted[aria-selected] { background: var(--primary-blue); color: white; }
         .swal2-container { z-index: 9999999 !important; }
 
+        
+        .selector-magasin {
+            background: white !important;
+            padding: 6px 16px !important;
+            border-radius: 20px !important;
+            border: 1.5px solid #1c5b96 !important;
+            box-shadow: 0 2px 6px rgba(28,91,150,0.15) !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+            transition: all 0.2s ease !important;
+            cursor: pointer;
+        }
+        .selector-magasin:hover {
+            box-shadow: 0 4px 12px rgba(28,91,150,0.3) !important;
+            transform: translateY(-1px);
+        }
+        .selector-magasin select {
+            background: transparent !important;
+            border: none !important;
+            color: #1c5b96 !important;
+            font-weight: 800 !important;
+            font-size: 13px !important;
+            cursor: pointer !important;
+            outline: none !important;
+            appearance: none !important;
+            -webkit-appearance: none !important;
+            padding-right: 5px !important;
+            font-family: inherit !important;
+        }
+        .selector-magasin i {
+            color: #1c5b96 !important;
+        }
+
         /* Dark mode overrides for selectors */
         body.dark-mode .selector-entreprise { background: #2a2510 !important; border-color: #ffc107 !important; }
         body.dark-mode .selector-entreprise select { color: #ffc107 !important; }
@@ -808,7 +842,7 @@
         {% endif %}
 
         <!-- RAPPORTS & EXPORTS -->
-        {% if perms.accounts.menu_rapports or perms.accounts.menu_stats_demandes or perms.accounts.menu_stats_sondages or perms.accounts.menu_stats_satisfaction %}
+        {% if perms.accounts.menu_rapports or perms.accounts.menu_stats_demandes or perms.accounts.menu_stats_sondages or perms.accounts.menu_stats_satisfaction or perms.accounts.menu_rapport_conso_service %}
         <div class="module-title" onclick="toggleMenu('menu-rapports')" data-title="Rapports">
             <span style="display:flex;align-items:center;"><i class="fas fa-chart-pie nav-icon" style="color:#28a745;"></i><span class="nav-text">Rapports & Exports</span></span>
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-rapports"></i>
@@ -816,6 +850,9 @@
         <div class="submenu" id="menu-rapports">
             {% if perms.accounts.menu_rapports %}
             <a href="{% url 'page_rapports' %}" class="menu-item" data-title="Exports"><i class="fas fa-file-export nav-icon"></i><span class="nav-text">Exports CSV / PDF</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_rapport_conso_service %}
+            <a href="{% url 'rapport_consommation_services' %}" class="menu-item" data-title="Conso Services"><i class="fas fa-chart-line nav-icon" style="color:#fd7e14;"></i><span class="nav-text">Conso par Service</span></a>
             {% endif %}
             {% if perms.accounts.menu_stats_demandes %}
             <a href="{% url 'stats_demandes' %}" class="menu-item" data-title="Stats Demandes"><i class="fas fa-chart-bar nav-icon" style="color:#0d6efd;"></i><span class="nav-text">Stats Demandes</span></a>
@@ -845,8 +882,6 @@
             {% if perms.accounts.menu_modeles_pdf or perms.accounts.menu_parametres_doc %}
             {% if magasin_actif %}
             <a href="{% url 'modele_pdf_config' magasin_actif.id 'BS' %}" class="menu-item" data-title="PDF"><i class="fas fa-file-pdf nav-icon" style="color:#dc3545;"></i><span class="nav-text">Modeles PDF</span></a>
-            {% else %}
-            <a href="{% url 'core:config_documents_globaux' %}" class="menu-item" data-title="PDF"><i class="fas fa-file-pdf nav-icon" style="color:#dc3545;"></i><span class="nav-text">Modeles PDF</span></a>
             {% endif %}
             {% endif %}
             {% if perms.accounts.menu_notifications_config %}
@@ -898,19 +933,19 @@
                         {% if mes_magasins|length > 1 %}
                             <form method="POST" action="{% url 'changer_magasin' %}" style="margin: 0;">
                                 {% csrf_token %}
-                                <div class="selector-magasin" style="background: #e3f2fd; padding: 6px 15px; border-radius: 20px; border: 1px solid #1c5b96; display: flex; align-items: center; gap: 8px;">
-                                    <i class="fas fa-warehouse" style="color: #1c5b96;"></i>
-                                    <select name="magasin_id" onchange="this.form.submit()" style="background: transparent; border: none; color: #1c5b96; font-weight: bold; font-size: 13px; cursor: pointer; outline: none;">
+                                <div class="selector-magasin">
+                                    <i class="fas fa-warehouse"></i>
+                                    <select name="magasin_id" onchange="this.form.submit()" >
                                         {% if not magasin_actif %}<option value="" disabled selected>— Sélectionner —</option>{% endif %}
                                         {% for m in mes_magasins %}
                                             <option value="{{ m.id }}" {% if magasin_actif and magasin_actif.id == m.id %}selected{% endif %}>{{ m.nom|upper }}</option>
                                         {% endfor %}
                                     </select>
-                                    <i class="fas fa-chevron-down" style="color: #1c5b96; font-size: 10px;"></i>
+                                    <i class="fas fa-chevron-down" style="font-size: 11px; margin-left: 2px;"></i>
                                 </div>
                             </form>
                         {% elif magasin_actif %}
-                            <div class="selector-magasin" style="background: #e3f2fd; color: #1c5b96; padding: 6px 15px; border-radius: 20px; font-size: 13px; font-weight: bold; border: 1px solid #b6d4fe; display: flex; align-items: center; gap: 8px;">
+                            <div class="selector-magasin" style="font-weight: 800;">
                                 <i class="fas fa-warehouse"></i> {{ magasin_actif.nom|upper }}
                             </div>
                         {% endif %}

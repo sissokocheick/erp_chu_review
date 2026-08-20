@@ -7,7 +7,7 @@
     </td>
     <td>{{ bon.date_bon|date:"d/m/Y H:i" }}</td>
     <td><span class="svc-tag">{{ bon.service_demandeur.nom|default:"—" }}</span></td>
-    <td><span class="mag-tag">{{ bon.magasin.nom|default:"—" }}</span></td>
+    
     <td class="c"><span class="count-tag">{{ bon.lignes_bon.count }}</span></td>
     <td>{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}</td>
     <td class="c">

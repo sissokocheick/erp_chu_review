@@ -1019,10 +1019,14 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
             ('can_add_bon_sortie',      'Peut créer des bons de sortie'),
             ('can_add_bon_retour',      'Peut créer des bons de retour'),
             ('can_add_bon_hors_stock',  'Peut créer des bons hors stock'),
-            ('can_change_bon_entree',   "Peut modifier/annuler des bons d'entrée"),
-            ('can_change_bon_sortie',   'Peut modifier/annuler des bons de sortie'),
-            ('can_change_bon_retour',   'Peut modifier/annuler des bons de retour'),
-            ('can_change_bon_hors_stock','Peut modifier/annuler des bons hors stock'),
+            ('can_change_bon_entree',   "Peut modifier des bons d'entrée"),
+            ('can_change_bon_sortie',   'Peut modifier des bons de sortie'),
+            ('can_change_bon_retour',   'Peut modifier des bons de retour'),
+            ('can_change_bon_hors_stock','Peut modifier des bons hors stock'),
+            ('can_cancel_bon_entree',   "Peut annuler des bons d'entrée"),
+            ('can_cancel_bon_sortie',   'Peut annuler des bons de sortie'),
+            ('can_cancel_bon_retour',   'Peut annuler des bons de retour'),
+            ('can_cancel_bon_hors_stock','Peut annuler des bons hors stock'),
             ('can_delete_bon_entree',   "Peut supprimer des bons d'entrée"),
             ('can_delete_bon_sortie',   'Peut supprimer des bons de sortie'),
             ('can_delete_bon_retour',   'Peut supprimer des bons de retour'),
@@ -2001,83 +2005,10 @@ class ModeleDocumentMagasin(TracabiliteModel):
         """
         Retourne la configuration fusionnée avec les valeurs par défaut.
         """
-        from core.models import ConfigDocument, TypeDocument
-
-        cfg_doc = {}
-        try:
-            # ✅ CORRECTION MONO-TENANT : ConfigDocument.type_doc stocke les codes courts
-            # (BS, BE, BR...) et non les libellés legacy (BON_SORTIE, BON_ENTREE...)
-            _mapping_type_doc = {
-                'BON_SORTIE': 'BS', 'BON_ENTREE': 'BE', 'BON_RETOUR': 'BR',
-                'BON_HS': 'BSHS', 'COMMANDE': 'BC', 'DEMANDE': 'BDM',
-            }
-            _code_court = _mapping_type_doc.get(type_doc_legacy, type_doc_legacy)
-            config = ConfigDocument.objects.filter(type_doc=_code_court).first()
-            if config:
-                cfg_doc = {
-                    'afficher_logo': config.afficher_logo,
-                    'afficher_cachet': config.afficher_cachet,
-                    'afficher_cc': config.afficher_cc,
-                    'afficher_ifu': config.afficher_ifu,
-                    'afficher_rccm': config.afficher_rccm,
-                    'afficher_telephone': config.afficher_telephone,
-                    'afficher_signatures': config.afficher_signatures,
-                    'code_document': config.code_document,
-                    'date_creation_doc': config.date_creation_doc,
-                    'date_revision_doc': config.date_revision_doc,
-                    'version_doc': config.version_doc,
-                    'ps2_label': config.ps2_label,
-                }
-        except Exception:
-            pass
-
         cfg = self.config or {}
-        cfg_key = self._freeze_dict(cfg_doc) if cfg_doc else ()
-        defaults = self._default_config_structured(cfg_key, type_doc_legacy)
+        defaults = self._default_config_structured((), type_doc_legacy)
         return self._deep_merge(defaults, cfg)
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PARAMÈTRES PDF GLOBAUX (Logo unique pour tous les magasins)
 # ══════════════════════════════════════════════════════════════════════════════
-class ParametrePDF(models.Model):
-    """Paramètres globaux pour les documents PDF (logo unique pour tous les magasins)."""
-
-    logo = models.ImageField(
-        upload_to='pdf/logos/',
-        null=True,
-        blank=True,
-        verbose_name="Logo global",
-        help_text="Logo affiché sur tous les documents PDF. Format recommandé : PNG transparent, 300x300px minimum."
-    )
-    modifie_le = models.DateTimeField(auto_now=True)
-    modifie_par = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='parametres_pdf_modifies'
-    )
-
-    class Meta:
-        verbose_name = "Paramètre PDF global"
-        verbose_name_plural = "Paramètres PDF globaux"
-
-    def __str__(self):
-        return "Logo PDF global"
-
-    @classmethod
-    def get_instance(cls):
-        """Retourne l'instance unique (singleton). Crée si inexistant."""
-        obj, created = cls.objects.get_or_create(pk=1)
-        return obj
-
-    @classmethod
-    def get_logo_url(cls, request):
-        """Retourne l'URL absolue du logo global, ou None."""
-        obj = cls.get_instance()
-        if obj.logo:
-            try:
-                return request.build_absolute_uri(obj.logo.url)
-            except Exception:
-                pass
-        return None

@@ -2,6 +2,11 @@
 {% block title %}Retours Fournisseurs{% endblock %}
 
 {% block contenu %}
+<style>
+  table:not(.vd-table) th:not(.c):not([style*='text-align']) { text-align: left; }
+  table:not(.vd-table) td:not(.c):not([style*='text-align']) { text-align: left; }
+</style>
+
 <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
@@ -224,7 +229,6 @@
           <th style="width:15%;">N° Bon</th>
           <th style="width:12%;">Date</th>
           <th style="width:22%;">Fournisseur</th>
-          <th style="width:16%;">Magasin</th>
           <th class="c" style="width:10%;">Articles</th>
           <th style="width:13%;">Créé par</th>
           <th class="c" style="width:8%;">Actions</th>
@@ -601,7 +605,7 @@ document.addEventListener('keydown', function(e){
 function confirmerAnnulationRetourFournisseur(bonId, numeroBon) {
     Swal.fire({
         title: 'Annuler le retour ' + numeroBon,
-        html: '<div style="text-align:left; margin-top:10px;">
+        html: `<div style="text-align:left; margin-top:10px;">
             <label style="font-weight:bold;">Motif :</label>
             <select id="swal-motif-select-rf" class="form-control" style="width:100%;margin-top:10px;">
                 <option value="">-- Sélectionner --</option>
@@ -609,7 +613,7 @@ function confirmerAnnulationRetourFournisseur(bonId, numeroBon) {
                 <option value="{{ m.id }}">{{ m.libelle }}</option>
                 {% endfor %}
             </select>
-        </div>',
+        </div>`,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#dc3545',

@@ -6,6 +6,7 @@ from datetime import datetime
 import unicodedata
 from django.db.models import Q
 from django.core.paginator import Paginator
+from core.utils import paginer
 from django.shortcuts import render
 from ..models import Magasin
 from django.urls import reverse
@@ -68,20 +69,6 @@ def get_magasin_actif(request):
         id=magasin_id
     ).first()
 
-def paginer(qs, request, per_page_key='per_page', default=15, max_all=500):
-    """Pagination identique à catalogue.paginer()."""
-    per_page = request.GET.get(per_page_key, str(default))
-    is_list = isinstance(qs, list)
-    if per_page == 'all':
-        count = len(qs) if is_list else qs.count()
-        limite = min(count, max_all) if count > 0 else 1
-    else:
-        try:
-            limite = int(per_page)
-        except ValueError:
-            limite = default
-    page = request.GET.get('page')
-    return Paginator(qs, limite).get_page(page), per_page
 
 def filtrer_par_date(qs, request, date_field='date_creation'):
     """Applique le filtre date_range sur un queryset."""

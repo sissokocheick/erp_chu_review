@@ -106,18 +106,23 @@
       <div>
         <label class="flabel">Magasin de destination *</label>
         {% if magasin_actif %}
-          <input type="hidden" name="magasin" value="{{ magasin_actif.id }}">
+          <input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="sel-magasin">
           <div class="magasin-locked">
             <i class="fas fa-store" style="color:#1c5b96;"></i>
             <strong>{{ magasin_actif.nom|upper }}</strong>
           </div>
         {% else %}
-          <select name="magasin" id="sel-magasin" required class="finput">
+          {% if magasin_actif %}
+<input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="sel-magasin">
+<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
+{% else %}
+<select name="magasin" id="sel-magasin" required class="finput">
             <option value="">— Choisir le magasin —</option>
             {% for m in magasins %}
             <option value="{{ m.id }}">{{ m.nom }}</option>
             {% endfor %}
           </select>
+{% endif %}
         {% endif %}
       </div>
       <div>

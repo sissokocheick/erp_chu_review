@@ -751,6 +751,28 @@ document.addEventListener('DOMContentLoaded', function() {
         el.addEventListener('input', updateLivePreview);
     });
 
+    
+    var logoInput = document.getElementById('id_logo');
+    if (logoInput) {
+        logoInput.addEventListener('change', function(e) {
+            var file = e.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var box = document.getElementById('liveLogoBox');
+                    if (box) {
+                        box.innerHTML = '<img src="' + e.target.result + '" id="liveLogoImg" alt="Logo" style="height: 55px; max-width: 120px; object-fit: contain;">';
+                    }
+                    var preview = document.getElementById('previewLogo');
+                    if (preview) {
+                        preview.src = e.target.result;
+                    }
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
     var colorInput = document.getElementById('id_couleur_principale');
     if (colorInput) {
         colorInput.addEventListener('input', function() {

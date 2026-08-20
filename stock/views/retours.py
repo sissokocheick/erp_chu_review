@@ -69,7 +69,7 @@ def _afficher_retours(request):
         'articles': Article.objects.all().order_by('designation'),
         'magasin_actif': get_magasin_actif(request),
         'peut_creer': _has_perm_bon(request.user, 'add', 'RETOUR_SERVICE'),
-        'peut_annuler': _has_perm_bon(request.user, 'change', 'RETOUR_SERVICE'),
+        'peut_annuler': _has_perm_bon(request.user, 'cancel', 'RETOUR_SERVICE'),
         'circuit_retour': circuit_retour,
         'est_valideur_retour': est_valideur,
     }
@@ -398,7 +398,7 @@ def _afficher_retours_fournisseurs(request):
         'articles': Article.objects.all().order_by('designation'),
         'magasin_actif': get_magasin_actif(request),
         'peut_creer': _has_perm_bon(request.user, 'add', 'RETOUR_FOURNISSEUR'),
-        'peut_annuler': _has_perm_bon(request.user, 'change', 'RETOUR_FOURNISSEUR'),
+        'peut_annuler': _has_perm_bon(request.user, 'cancel', 'RETOUR_FOURNISSEUR'),
         'circuit_sortie': circuit_sortie,
         'est_valideur_retour_fournisseur': est_valideur,
         'prefill_retour': prefill_retour,

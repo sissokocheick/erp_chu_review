@@ -36,8 +36,7 @@ def get_pdf_config(magasin, type_doc_code, request):
             - logo_url: URL absolue du logo à utiliser
     """
     from stock.models import ModeleDocumentMagasin
-    from core.models import ConfigDocument, TypeDocument
-
+    
     # ═══════════════════════════════════════════════════════════════════════
     # Cartographie code court -> type legacy attendu par get_config_complete
     # ═══════════════════════════════════════════════════════════════════════
@@ -88,6 +87,15 @@ def get_pdf_config(magasin, type_doc_code, request):
             logo_url = _make_absolute_url(request, magasin.logo.url)
         except Exception as e:
             logger.warning("[PDF] Erreur lecture logo magasin: %s", e)
+
+    if not logo_url:
+        try:
+            from core.models import ConfigurationHopital
+            hopital_config = ConfigurationHopital.get_instance()
+            if hopital_config.logo:
+                logo_url = _make_absolute_url(request, hopital_config.logo.url)
+        except Exception as e:
+            logger.warning("[PDF] Erreur lecture logo global hopital: %s", e)
 
     if not logo_url:
         logo_url = _static_logo_data_uri()
@@ -194,27 +202,6 @@ def _pied_de_page_par_defaut():
 
     return "Direction des Affaires Financières / Sous-Direction de la Logistique"
 
-
-def _config_document_flat(type_doc_code):
-    """Renvoie les valeurs ConfigDocument (globales) pour un type de document."""
-    from core.models import ConfigDocument, TypeDocument
-    config = ConfigDocument.objects.filter(type_doc=type_doc_code).first()
-    if not config:
-        return {}
-    return {
-        'afficher_logo': config.afficher_logo,
-        'afficher_cachet': config.afficher_cachet,
-        'afficher_cc': config.afficher_cc,
-        'afficher_ifu': config.afficher_ifu,
-        'afficher_rccm': config.afficher_rccm,
-        'afficher_telephone': config.afficher_telephone,
-        'afficher_signatures': config.afficher_signatures,
-        'code_document': config.code_document or '',
-        'date_creation_doc': config.date_creation_doc or '',
-        'date_revision_doc': config.date_revision_doc or '',
-        'version_doc': config.version_doc or '',
-        'ps2_label': config.ps2_label or '',
-    }
 
 
 def _make_absolute_url(request, url):
@@ -424,11 +411,17 @@ def _role_utilisateur(doc, role):
     cree_par = getattr(doc, 'cree_par', None)
     demandeur = getattr(doc, 'demandeur', None)
     valide_par = getattr(doc, 'valide_par', None)
-    if role in ('demandeur', 'magasinier'):
-        return cree_par or demandeur
-    if role in ('responsable', 'sous_directeur', 'chef_service', 'receptionnaire'):
-        return valide_par or cree_par or demandeur
-    # economat / communication : aucune signature individuelle (cachet du service)
+    
+    if role == 'demandeur':
+        return demandeur or (cree_par if hasattr(doc, 'service_demandeur') else None)
+    if role == 'magasinier':
+        return cree_par
+    if role in ('responsable', 'sous_directeur', 'chef_service'):
+        return valide_par # ONLY the validator, do not fallback to the creator
+    if role == 'receptionnaire':
+        # currently no reception tracking on BonMouvement, so we leave it empty for manual signing
+        return getattr(doc, 'receptionnaire', None)
+        
     return None
 
 
@@ -448,7 +441,7 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
         role = sig.get('role', '')
         user = _role_utilisateur(bon, role) if bon is not None else None
         user_name = ''
-        fonction = sig.get('role', '')
+        fonction = sig.get('role', '').replace('_', ' ').capitalize()
         date = None
         signature_path = None
         if user is not None:
@@ -456,6 +449,9 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
             profil = getattr(user, 'profil', None)
             if profil is not None and getattr(profil, 'fonction', None):
                 fonction = profil.fonction
+            elif fonction:
+                # Format internal codes like 'sous_directeur' to 'Sous-directeur'
+                fonction = fonction.replace('_', ' ').capitalize()
             valide_par = getattr(bon, 'valide_par', None)
             date = (getattr(bon, 'date_validation', None)
                     if user == valide_par

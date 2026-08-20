@@ -1034,7 +1034,7 @@ def _filtres_consommation(request, qs):
 
 
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_rapports')
+@verifier_permission('accounts.menu_rapport_conso_service')
 @magasin_requis
 @catch_errors(redirect_url='page_rapports')
 def rapport_consommation_services(request):
@@ -1182,7 +1182,7 @@ def rapport_consommation_services(request):
 
 
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_rapports')
+@verifier_permission('accounts.menu_rapport_conso_service')
 @magasin_requis
 @catch_errors(redirect_url='page_rapports')
 def export_consommation_services_csv(request):
@@ -1233,7 +1233,7 @@ def export_consommation_services_csv(request):
 
 
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_rapports')
+@verifier_permission('accounts.menu_rapport_conso_service')
 @magasin_requis
 @catch_errors(redirect_url='page_rapports')
 def rapport_consommation_services_pdf(request):
@@ -1348,7 +1348,7 @@ def rapport_consommation_services_pdf(request):
 
 
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_rapports')
+@verifier_permission('accounts.menu_rapport_conso_service')
 @magasin_requis
 @catch_errors(redirect_url='page_rapports')
 def export_consommation_detail_csv(request):

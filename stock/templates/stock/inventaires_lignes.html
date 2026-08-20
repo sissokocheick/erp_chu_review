@@ -109,11 +109,7 @@
       <span class="badge-type badge-type-perso">Perso</span>
     {% endif %}
   </td>
-  <td class="inv-cell">
-    <span style="font-weight:600;color:var(--text-dark);">
-      <i class="fas fa-warehouse" class="inv-icon"></i>{{ campagne.magasin.nom }}
-    </span>
-  </td>
+  
   <td class="inv-cell">
     {% if campagne.statut == 'EN_COURS' %}
       <span class="badge-en-cours"><i class="fas fa-edit"></i> En cours</span>

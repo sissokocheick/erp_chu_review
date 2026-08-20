@@ -11,7 +11,7 @@ from django.test import TestCase, RequestFactory
 from django.contrib.auth import get_user_model
 
 from stock.models import Magasin, ModeleDocumentMagasin
-from core.models import ConfigDocument, TypeDocument
+, TypeDocument
 from stock.pdf_utils import get_pdf_config
 
 User = get_user_model()

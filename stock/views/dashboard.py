@@ -241,12 +241,17 @@ def dashboard_directeur(request):
             f'color:#{"155724" if h.history_type=="+" else "004085" if h.history_type=="~" else "721c24"};'
             f'padding:3px 8px;border-radius:12px;font-size:11px;font-weight:bold;">{action_text}</span>'
         )
+        try:
+            element_str = str(h)
+        except Exception:
+            element_str = "Élément (lié à une donnée supprimée)"
+            
         journal_activites.append({
             'date': h.history_date,
             'utilisateur': h.history_user.username.capitalize() if h.history_user else "Système",
             'action': action_html,
             'modele': h.__class__.__name__.replace('Historical', ''),
-            'element': str(h),
+            'element': element_str,
         })
 
     # ═══════════════════════════════════════════════════════════════════════

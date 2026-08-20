@@ -107,7 +107,7 @@ def _afficher_bons_hors_stock(request):
         'beneficiaires': Beneficiaire.objects.all().order_by('nom_complet'),
         'motifs_annulation': MotifAnnulation.objects.filter(actif=True),
         'peut_creer': _has_perm_bon(request.user, 'add', 'SORTIE_HORS_STOCK'),
-        'peut_annuler': _has_perm_bon(request.user, 'change', 'SORTIE_HORS_STOCK'),
+        'peut_annuler': _has_perm_bon(request.user, 'cancel', 'SORTIE_HORS_STOCK'),
     }
     return render(request, 'stock/liste_bons_hors_stock.html', context)
 

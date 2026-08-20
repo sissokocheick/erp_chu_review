@@ -1,6 +1,11 @@
 {% extends "base_ui.html" %}
 
 {% block contenu %}
+<style>
+  table:not(.vd-table) th:not(.c):not([style*='text-align']) { text-align: left; }
+  table:not(.vd-table) td:not(.c):not([style*='text-align']) { text-align: left; }
+</style>
+
 <script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
 <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
 <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
@@ -206,7 +211,7 @@
                     <th style="width: 40px;"></th>
                     {% th_tri 'numero_bon' 'N° Bon' tri ordre %}
                     {% th_tri 'date_bon' 'Date' tri ordre %}
-                    {% th_tri 'magasin' 'Magasin de Dest.' tri ordre %}
+                    
                     {% th_tri 'fournisseur' 'Fournisseur' tri ordre %}
                     <th>Articles</th>
                     <th>Traçabilité</th>
@@ -264,10 +269,15 @@
                                 </div>
                             {% endfor %}
                         {% else %}
-                            <select name="magasin" id="vd-magasin" required class="vd-input select2" style="width: 100%; background: var(--bg-input); color: var(--text-dark);">
+                            {% if magasin_actif %}
+<input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="vd-magasin">
+<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
+{% else %}
+<select name="magasin" id="vd-magasin" required class="vd-input select2" style="width: 100%; background: var(--bg-input); color: var(--text-dark);">
                                 <option value="">-- Choisir le magasin --</option>
                                 {% for m in magasins %}<option value="{{ m.id }}">{{ m.nom }}</option>{% endfor %}
                             </select>
+{% endif %}
                         {% endif %}
                     </div>
                     <div>

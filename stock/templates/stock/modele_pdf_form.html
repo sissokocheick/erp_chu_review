@@ -372,50 +372,8 @@
     </div>
     {% endif %}
 
-    <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- LOGO GLOBAL (form séparé pour upload multipart) -->
-    <!-- ═══════════════════════════════════════════════════════════════ -->
-    <div class="config-card">
-        <div class="config-card-header" style="cursor: default;">
-            <div class="icon">🖼️</div>
-            <h2>Logo global <span class="label-help">— S'applique à tous les magasins et tous les documents PDF</span></h2>
-        </div>
-        <div class="config-card-body open">
-            <form method="post" enctype="multipart/form-data" id="logoForm">
-                {% csrf_token %}
-                <div class="logo-preview-box">
-                    {% if logo_global %}
-                    <div>
-                        <label>Logo actuel</label>
-                        <img src="{{ logo_global.url }}" class="logo-preview-img" alt="Logo actuel">
-                    </div>
-                    {% else %}
-                    <div>
-                        <label>Logo actuel</label>
-                        <div class="logo-no-img">Aucun logo</div>
-                    </div>
-                    {% endif %}
-
-                    <div class="logo-upload-zone">
-                        <label>Changer le logo</label>
-                        <input type="file" name="logo_global" accept="image/png,image/jpeg,image/jpg" onchange="document.getElementById('logoForm').submit();">
-                        <p class="label-help" style="margin-top: 4px;">Formats acceptés : PNG, JPG. Taille max : 2 Mo. Format recommandé : fond transparent, 300×300px minimum.</p>
-                    </div>
-                </div>
-
-                {% if logo_global %}
-                <div style="margin-top: 12px;">
-                    <button type="submit" name="action_logo" value="supprimer" class="btn btn-danger btn-sm" onclick="return confirm('Supprimer le logo global ?');">
-                        🗑️ Supprimer le logo
-                    </button>
-                </div>
-                {% endif %}
-            </form>
-        </div>
-    </div>
-
-    <!-- ═══════════════════════════════════════════════════════════════ -->
-    <!-- CONFIGURATION DU MODÈLE -->
+    <!-- ==================================================================================================== -->
+    <!-- CONFIGURATION DU MODÈLEÈLE -->
     <!-- ═══════════════════════════════════════════════════════════════ -->
     <form method="post" id="configForm">
         {% csrf_token %}
@@ -425,8 +383,255 @@
             <!-- COLONNE GAUCHE -->
             <div class="left-col">
 
-                <!-- ── CARTOUCHE ── -->
-                
+                <!-- ── TABLEAU ── -->
+                <div class="config-card">
+                    <div class="config-card-header" onclick="toggleCard(this)">
+                        <div class="icon">📊</div>
+                        <h2>Tableau de données</h2>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="config-card-body open">
+                        <div class="form-group">
+                            <label>Colonnes visibles <span class="label-help">(☑️ = obligatoire)</span></label>
+                            <div class="columns-grid">
+                                {% for col in colonnes_def %}
+                                <label class="column-item {% if col.obligatoire %}obligatoire{% endif %}">
+                                    <input type="checkbox" name="tableau_colonnes" value="{{ col.code }}"
+                                        {% if col.code in tableau_colonnes or col.obligatoire %}checked{% endif %}
+                                        {% if col.obligatoire %}disabled{% endif %}>
+                                    {{ col.label }}
+                                    {% if col.obligatoire %}<small style="color:#856404;">(oblig.)</small>{% endif %}
+                                </label>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Lignes dynamiques <span class="label-help">ajuste selon le contenu</span></label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item {% if tableau_lignes_dynamiques %}checked{% endif %}">
+                                    <input type="checkbox" name="tableau_lignes_dynamiques" {% if tableau_lignes_dynamiques %}checked{% endif %}>
+                                    Activer
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Lignes minimum (si lignes dynamiques désactivé)</label>
+                            <input type="number" name="tableau_lignes_minimum" value="{{ tableau_lignes_minimum|default:10 }}" min="1" max="50">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Alternance de couleurs</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item {% if tableau_alternance_couleurs %}checked{% endif %}">
+                                    <input type="checkbox" name="tableau_alternance_couleurs" {% if tableau_alternance_couleurs %}checked{% endif %}>
+                                    Activer
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Style de bordure</label>
+                            <select name="tableau_bordure_style">
+                                <option value="solid" {% if tableau_bordure_style == 'solid' %}selected{% endif %}>Solide</option>
+                                <option value="dashed" {% if tableau_bordure_style == 'dashed' %}selected{% endif %}>Tirets</option>
+                                <option value="dotted" {% if tableau_bordure_style == 'dotted' %}selected{% endif %}>Pointillés</option>
+                                <option value="none" {% if tableau_bordure_style == 'none' %}selected{% endif %}>Aucune</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Épaisseur de bordure</label>
+                            <select name="tableau_bordure_epaisseur">
+                                <option value="fine" {% if tableau_bordure_epaisseur == 'fine' %}selected{% endif %}>Fine</option>
+                                <option value="normal" {% if tableau_bordure_epaisseur == 'normal' %}selected{% endif %}>Normale</option>
+                                <option value="strong" {% if tableau_bordure_epaisseur == 'strong' %}selected{% endif %}>Épaisse</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── SIGNATURES ── -->
+                <div class="config-card">
+                    <div class="config-card-header" onclick="toggleCard(this)">
+                        <div class="icon">✍️</div>
+                        <h2>Signatures (max {{ nb_signatures_max }})</h2>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="config-card-body open">
+                        <div class="form-group">
+                            <label>Afficher la fonction du signataire</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item {% if afficher_fonction_signataire %}checked{% endif %}">
+                                    <input type="checkbox" name="afficher_fonction_signataire" {% if afficher_fonction_signataire %}checked{% endif %}>
+                                    Oui
+                                </label>
+                            </div>
+                        </div>
+
+                        {% if nb_signatures_max >= 1 %}
+                        <div class="signature-block">
+                            <h4>Signature #1</h4>
+                            <div class="sig-grid">
+                                <div class="form-group"><label>Label</label><input type="text" name="signatures_1_label" value="{{ signatures_1_label|default:'' }}" placeholder="ex: Le Magasinier"></div>
+                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_1_role" value="{{ signatures_1_role|default:'' }}" placeholder="ex: Responsable Stock"></div>
+                                <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_1_visible %}checked{% endif %}"><input type="checkbox" name="signatures_1_visible" {% if signatures_1_visible %}checked{% endif %}> Afficher</label></div></div>
+                                <div class="form-group"><label>Position</label><select name="signatures_1_position"><option value="left" {% if signatures_1_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_1_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_1_position == 'right' %}selected{% endif %}>Droite</option></select></div>
+                                <div class="form-group"><label>Style</label><select name="signatures_1_style"><option value="ligne_pointillee" {% if signatures_1_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_1_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_1_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_1_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
+                                <div class="form-group"><label>Condition</label><select name="signatures_1_condition"><option value="toujours" {% if signatures_1_condition == 'toujours' %}selected{% endif %}>Toujours</option><option value="si_valide" {% if signatures_1_condition == 'si_valide' %}selected{% endif %}>Si validé</option><option value="si_rejete" {% if signatures_1_condition == 'si_rejete' %}selected{% endif %}>Si rejeté</option></select></div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if nb_signatures_max >= 2 %}
+                        <div class="signature-block">
+                            <h4>Signature #2</h4>
+                            <div class="sig-grid">
+                                <div class="form-group"><label>Label</label><input type="text" name="signatures_2_label" value="{{ signatures_2_label|default:'' }}" placeholder="ex: Le Demandeur"></div>
+                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_2_role" value="{{ signatures_2_role|default:'' }}" placeholder="ex: Chef de Service"></div>
+                                <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_2_visible %}checked{% endif %}"><input type="checkbox" name="signatures_2_visible" {% if signatures_2_visible %}checked{% endif %}> Afficher</label></div></div>
+                                <div class="form-group"><label>Position</label><select name="signatures_2_position"><option value="left" {% if signatures_2_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_2_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_2_position == 'right' %}selected{% endif %}>Droite</option></select></div>
+                                <div class="form-group"><label>Style</label><select name="signatures_2_style"><option value="ligne_pointillee" {% if signatures_2_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_2_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_2_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_2_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
+                                <div class="form-group"><label>Condition</label><select name="signatures_2_condition"><option value="toujours" {% if signatures_2_condition == 'toujours' %}selected{% endif %}>Toujours</option><option value="si_valide" {% if signatures_2_condition == 'si_valide' %}selected{% endif %}>Si validé</option><option value="si_rejete" {% if signatures_2_condition == 'si_rejete' %}selected{% endif %}>Si rejeté</option></select></div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if nb_signatures_max >= 3 %}
+                        <div class="signature-block">
+                            <h4>Signature #3</h4>
+                            <div class="sig-grid">
+                                <div class="form-group"><label>Label</label><input type="text" name="signatures_3_label" value="{{ signatures_3_label|default:'' }}" placeholder="ex: Le Responsable"></div>
+                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_3_role" value="{{ signatures_3_role|default:'' }}" placeholder="ex: Directeur"></div>
+                                <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_3_visible %}checked{% endif %}"><input type="checkbox" name="signatures_3_visible" {% if signatures_3_visible %}checked{% endif %}> Afficher</label></div></div>
+                                <div class="form-group"><label>Position</label><select name="signatures_3_position"><option value="left" {% if signatures_3_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_3_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_3_position == 'right' %}selected{% endif %}>Droite</option></select></div>
+                                <div class="form-group"><label>Style</label><select name="signatures_3_style"><option value="ligne_pointillee" {% if signatures_3_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_3_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_3_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_3_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
+                                <div class="form-group"><label>Condition</label><select name="signatures_3_condition"><option value="toujours" {% if signatures_3_condition == 'toujours' %}selected{% endif %}>Toujours</option><option value="si_valide" {% if signatures_3_condition == 'si_valide' %}selected{% endif %}>Si validé</option><option value="si_rejete" {% if signatures_3_condition == 'si_rejete' %}selected{% endif %}>Si rejeté</option></select></div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if nb_signatures_max >= 4 %}
+                        <div class="signature-block">
+                            <h4>Signature #4</h4>
+                            <div class="sig-grid">
+                                <div class="form-group"><label>Label</label><input type="text" name="signatures_4_label" value="{{ signatures_4_label|default:'' }}" placeholder="ex: Vu pour exécution"></div>
+                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_4_role" value="{{ signatures_4_role|default:'' }}" placeholder="ex: DAF"></div>
+                                <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_4_visible %}checked{% endif %}"><input type="checkbox" name="signatures_4_visible" {% if signatures_4_visible %}checked{% endif %}> Afficher</label></div></div>
+                                <div class="form-group"><label>Position</label><select name="signatures_4_position"><option value="left" {% if signatures_4_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_4_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_4_position == 'right' %}selected{% endif %}>Droite</option></select></div>
+                                <div class="form-group"><label>Style</label><select name="signatures_4_style"><option value="ligne_pointillee" {% if signatures_4_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_4_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_4_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_4_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
+                                <div class="form-group"><label>Condition</label><select name="signatures_4_condition"><option value="toujours" {% if signatures_4_condition == 'toujours' %}selected{% endif %}>Toujours</option><option value="si_valide" {% if signatures_4_condition == 'si_valide' %}selected{% endif %}>Si validé</option><option value="si_rejete" {% if signatures_4_condition == 'si_rejete' %}selected{% endif %}>Si rejeté</option></select></div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- ── SERVICE DEMANDEUR (BS, BR, BSHS) ── -->
+                {% if type_doc == 'BS' or type_doc == 'BR' or type_doc == 'BSHS' %}
+                <div class="config-card">
+                    <div class="config-card-header" onclick="toggleCard(this)">
+                        <div class="icon">🏥</div>
+                        <h2>Service Demandeur</h2>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="config-card-body open">
+                        <div class="form-group">
+                            <label>Encadrer le service</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item {% if service_demandeur_encadrer %}checked{% endif %}">
+                                    <input type="checkbox" name="service_demandeur_encadrer" {% if service_demandeur_encadrer %}checked{% endif %}>
+                                    Oui
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Position</label>
+                            <select name="service_demandeur_position">
+                                <option value="left" {% if service_demandeur_position == 'left' %}selected{% endif %}>Gauche</option>
+                                <option value="center" {% if service_demandeur_position == 'center' %}selected{% endif %}>Centre</option>
+                                <option value="right" {% if service_demandeur_position == 'right' %}selected{% endif %}>Droite</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ── SONDAGE (BS uniquement) ── -->
+                {% if type_doc == 'BS' %}
+                <div class="config-card">
+                    <div class="config-card-header" onclick="toggleCard(this)">
+                        <div class="icon">📋</div>
+                        <h2>Sondage de satisfaction</h2>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="config-card-body open">
+                        <div class="form-group">
+                            <label>Afficher le sondage</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item {% if sondage_afficher %}checked{% endif %}">
+                                    <input type="checkbox" name="sondage_afficher" {% if sondage_afficher %}checked{% endif %}>
+                                    Activer
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Trait de séparation sous le sondage</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item {% if sondage_trait_separation %}checked{% endif %}">
+                                    <input type="checkbox" name="sondage_trait_separation" {% if sondage_trait_separation %}checked{% endif %}>
+                                    Afficher
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Style cases à cocher</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item {% if sondage_style_cases %}checked{% endif %}">
+                                    <input type="checkbox" name="sondage_style_cases" {% if sondage_style_cases %}checked{% endif %}>
+                                    Cases modernes
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
+            </div>
+
+            <!-- COLONNE DROITE -->
+            <div class="right-col">
+
+                <!-- ── MÉTADONNÉES ── -->
+                <div class="config-card">
+                    <div class="config-card-header" onclick="toggleCard(this)">
+                        <div class="icon">📋</div>
+                        <h2>Métadonnées du document</h2>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="config-card-body open">
+                        <div class="form-group">
+                            <label>Code document</label>
+                            <input type="text" name="metadonnees_code_document" value="{{ metadonnees_code_document|default:'' }}" placeholder="ENR-BDC/DAF-001">
+                        </div>
+                        <div class="form-group">
+                            <label>Date de création</label>
+                            <input type="text" name="metadonnees_date_creation_doc" value="{{ metadonnees_date_creation_doc|default:'' }}" placeholder="10/06/2024">
+                        </div>
+                        <div class="form-group">
+                            <label>Date de révision</label>
+                            <input type="text" name="metadonnees_date_revision_doc" value="{{ metadonnees_date_revision_doc|default:'' }}" placeholder="19/05/2025">
+                        </div>
+                        <div class="form-group">
+                            <label>Version</label>
+                            <input type="text" name="metadonnees_version_doc" value="{{ metadonnees_version_doc|default:'' }}" placeholder="001">
+                        </div>
+                        <div class="form-group">
+                            <label>Label PS2 / Processus</label>
+                            <input type="text" name="metadonnees_ps2_label" value="{{ metadonnees_ps2_label|default:'' }}" placeholder="PS2 : GERER LES APPROVISIONNEMENTS">
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ── RÉCAPITULATIF ── -->
@@ -499,4 +704,3 @@
     });
 </script>
 {% endblock %}
-

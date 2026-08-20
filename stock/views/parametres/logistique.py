@@ -1,3 +1,4 @@
+from core.utils import paginer
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
@@ -7,7 +8,7 @@ from accounts.permissions import verifier_permission
 from ...decorators import catch_errors
 from ...services.parametre_service import (
     get_or_create_logistique_config,
-    paginer_donnees,
+    
     get_dependances,
     redirect_url_with_tab,
     save_delai_remplacement,
@@ -24,7 +25,6 @@ from ...services.parametre_service import (
 from ...models import FamilleArticle, Fournisseur, MotifAnnulation, Magasin, Beneficiaire
 from core.models import Service
 from ...forms import FamilleArticleForm, MagasinForm
-from core.models import ConfigDocument
 
 
 @login_required(login_url='/auth/login/')
@@ -72,11 +72,11 @@ def _handle_get(request):
             Q(nom_complet__icontains=q_beneficiaire) | Q(poste__icontains=q_beneficiaire)
         )
 
-    familles_paginees, per_page_famille = paginer_donnees(familles, request, 'famille')
-    fournisseurs_pagines, per_page_fournisseur = paginer_donnees(fournisseurs, request, 'fournisseur')
-    motifs_pagines, per_page_motif = paginer_donnees(motifs, request, 'motif')
-    magasins_pagines, per_page_magasin = paginer_donnees(magasins, request, 'magasin')
-    beneficiaires_pagines, per_page_beneficiaire = paginer_donnees(beneficiaires, request, 'beneficiaire')
+    familles_paginees, per_page_famille = paginer(familles, request, per_page_key='famille')
+    fournisseurs_pagines, per_page_fournisseur = paginer(fournisseurs, request, per_page_key='fournisseur')
+    motifs_pagines, per_page_motif = paginer(motifs, request, per_page_key='motif')
+    magasins_pagines, per_page_magasin = paginer(magasins, request, per_page_key='magasin')
+    beneficiaires_pagines, per_page_beneficiaire = paginer(beneficiaires, request, per_page_key='beneficiaire')
 
     for page in (magasins_pagines, fournisseurs_pagines, beneficiaires_pagines, motifs_pagines, familles_paginees):
         for obj in page:
@@ -94,8 +94,6 @@ def _handle_get(request):
     instance_magasin = get_object_or_404(Magasin, id=edit_magasin_id) if edit_magasin_id else None
     form_magasin = MagasinForm(instance=instance_magasin)
 
-    # Config documents (mono-tenant)
-    configs_documents = {c.type_doc: c for c in ConfigDocument.objects.all()}
 
     context = {
         'familles': familles_paginees,
@@ -119,7 +117,6 @@ def _handle_get(request):
         'per_page_beneficiaire': per_page_beneficiaire,
         'services': Service.objects.all().order_by('nom'),
         'config': config,
-        'configs_documents': configs_documents,
         'perm_config': request.user.has_perm('accounts.menu_parametres') or request.user.is_superuser,
         'perm_fournisseurs': request.user.has_perm('accounts.menu_fournisseurs') or request.user.is_superuser,
         'perm_magasins': request.user.has_perm('accounts.menu_magasins') or request.user.is_superuser,

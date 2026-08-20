@@ -67,6 +67,7 @@ class TransfertService:
             magasin_destination=magasin_destination,
             commentaire=commentaire or None,
             cree_par=utilisateur,
+            statut_validation='ATTENTE'
         )
         bon.save()
 
@@ -99,10 +100,10 @@ class TransfertService:
     def _transferer_ligne(bon, utilisateur, article, magasin_source,
                           magasin_destination, quantite, numero_lot,
                           date_peremption):
-        """Exécute la sortie (source) puis l'entrée (destination) d'une ligne."""
+        """Exécute UNIQUEMENT la sortie (source). L'entrée se fera à la réception."""
         ref = bon.numero_bon
 
-        # ── Sortie du magasin source (vérifie le stock, décrémente) ──
+        # Sortie du magasin source (vérifie le stock, décrémente)
         mvt_sortie = Mouvement(
             type_mouvement='TRANSFERT_SORTIE',
             article=article,
@@ -116,25 +117,11 @@ class TransfertService:
         )
         StockTransactionService.executer(mvt_sortie)
 
-        # Prix transféré = CMUP du stock source (pour valoriser l'entrée).
+        # Prix transféré = CMUP du stock source (pour valoriser l'entrée plus tard)
         stock_source = getattr(mvt_sortie, '_stock_item', None)
         prix = stock_source.valeur_cmup if stock_source else None
 
-        # ── Entrée dans le magasin destination (incrémente, conserve lot) ──
-        mvt_entree = Mouvement(
-            type_mouvement='TRANSFERT_ENTREE',
-            article=article,
-            magasin=magasin_destination,
-            quantite=quantite,
-            utilisateur=utilisateur,
-            reference_document=ref,
-            numero_lot=numero_lot,
-            date_peremption=date_peremption,
-            prix_unitaire=prix,
-            commentaire=f"Transfert depuis {magasin_source.nom}",
-        )
-        StockTransactionService.executer(mvt_entree)
-
+        # On sauvegarde la ligne dans le bon pour la future réception
         LigneBon.objects.create(
             bon=bon,
             article=article,
@@ -143,6 +130,44 @@ class TransfertService:
             date_peremption=date_peremption,
             prix_unitaire=prix,
         )
+
+    @classmethod
+    @transaction.atomic
+    def receptionner_transfert(cls, bon, utilisateur, commentaire=""):
+        """
+        Réceptionne un transfert en attente dans le magasin destination.
+        """
+        cls._verifier_utilisateur(utilisateur)
+        if bon.type_bon != 'TRANSFERT':
+            raise ValidationError("Ce document n'est pas un transfert.")
+        if bon.statut_validation != 'ATTENTE':
+            raise ValidationError("Ce transfert n'est pas en attente de réception.")
+            
+        ref = bon.numero_bon
+        
+        for ligne in bon.lignes_bon.all():
+            mvt_entree = Mouvement(
+                type_mouvement='TRANSFERT_ENTREE',
+                article=ligne.article,
+                magasin=bon.magasin_destination,
+                quantite=ligne.quantite,
+                utilisateur=utilisateur,
+                reference_document=ref,
+                numero_lot=ligne.numero_lot,
+                date_peremption=ligne.date_peremption,
+                prix_unitaire=ligne.prix_unitaire,
+                commentaire=f"Réception transfert depuis {bon.magasin.nom}",
+            )
+            StockTransactionService.executer(mvt_entree)
+            
+        bon.statut_validation = 'VALIDE'
+        bon.valide_par = utilisateur
+        from django.utils import timezone
+        bon.date_validation = timezone.now()
+        if commentaire:
+            bon.commentaire = (bon.commentaire or "") + f" [REÇU] {commentaire}".strip()
+        bon.save(update_fields=['statut_validation', 'valide_par', 'date_validation', 'commentaire'])
+        return bon
 
     @classmethod
     @transaction.atomic

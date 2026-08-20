@@ -14,6 +14,7 @@ from django.core.validators import EmailValidator
 from django.core.exceptions import ValidationError
 from urllib.parse import urlencode
 from django.db import transaction
+from core.utils import paginer
 
 from accounts.models import Specialite
 from core.models import ConfigurationHopital
@@ -57,23 +58,6 @@ def get_dependances(instance):
             )
             dependances.append(f"{nom} ({count})")
     return dependances
-
-
-def paginer_donnees(queryset, request, prefixe):
-    """Paginate a queryset with per-page control via GET parameters."""
-    from django.core.paginator import Paginator
-    per_page = request.GET.get(f'per_page_{prefixe}', '10')
-    try:
-        if per_page == 'all':
-            count = queryset.count()
-            limite = min(count, 1000) if count > 0 else 1
-        else:
-            limite = int(per_page)
-    except ValueError:
-        limite = 10
-    paginator = Paginator(queryset, limite)
-    page_number = request.GET.get(f'page_{prefixe}')
-    return paginator.get_page(page_number), per_page
 
 
 def redirect_url_with_tab(url_name, tab, base_url=None):

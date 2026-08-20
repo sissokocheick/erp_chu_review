@@ -1041,27 +1041,6 @@
   </div>
 </div>
 
-<div class="mo" id="mo-fournisseur" onclick="if(event.target===this)fermer('mo-fournisseur')">
-  <div class="mb" onclick="event.stopPropagation()">
-    <div class="mh" style="background: linear-gradient(135deg, #0ea5e9, #0369a1);">
-      <h5 id="mo-fourn-titre"><i class="fas fa-building me-2"></i> Prestataire / Fournisseur</h5>
-      <button class="mc" onclick="fermer('mo-fournisseur')"><i class="fas fa-times"></i></button>
-    </div>
-    <form method="POST">{% csrf_token %}
-      <input type="hidden" name="action" value="save_fournisseur">
-      <input type="hidden" name="item_id" id="fourn-id">
-      <div class="mbody">
-        <div class="fg"><label>Raison Sociale *</label><input type="text" name="raison_sociale" id="fourn-nom" placeholder="Ex: CFAO Technology" required></div>
-        <div class="fg"><label>Téléphone</label><input type="text" name="telephone" id="fourn-tel" placeholder="Ex: 0102030405"></div>
-      </div>
-      <div class="mfoot">
-        <button type="button" class="btn-nok" onclick="fermer('mo-fournisseur')">Annuler</button>
-        <button type="submit" class="btn-ok" style="background:#0ea5e9;"><i class="fas fa-save me-1"></i>Enregistrer</button>
-      </div>
-    </form>
-  </div>
-</div>
-
 <div class="mo" id="mo-tech-externe" onclick="if(event.target===this)fermer('mo-tech-externe')">
   <div class="mb" onclick="event.stopPropagation()">
     <div class="mh" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
@@ -1231,7 +1210,7 @@ document.addEventListener('DOMContentLoaded', function() {
     [
         'tbody-categories', 'tbody-types', 'liste-batiments', 'tbody-affectations', 
         'tbody-marques', 'tbody-equipe', 
-        'tbody-types-contrats', 'tbody-fournisseurs', 'tbody-techs'
+        'tbody-types-contrats', 'tbody-techs'
     ].forEach(id => majPagination(id));
 
     if (typeof $ !== 'undefined') {
@@ -1475,21 +1454,6 @@ function editerTypeContrat(id, nom, desc) {
     document.getElementById('tc-desc').value = desc;
     document.getElementById('mo-tc-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier le Type';
     document.getElementById('mo-type-contrat').classList.add('open');
-}
-
-function ouvrirModalFournisseur() {
-    document.getElementById('fourn-id').value = '';
-    document.getElementById('fourn-nom').value = '';
-    document.getElementById('fourn-tel').value = '';
-    document.getElementById('mo-fourn-titre').innerHTML = '<i class="fas fa-plus me-2"></i> Nouveau Prestataire';
-    document.getElementById('mo-fournisseur').classList.add('open');
-}
-function editerFournisseur(id, nom, tel) {
-    document.getElementById('fourn-id').value = id;
-    document.getElementById('fourn-nom').value = nom;
-    document.getElementById('fourn-tel').value = tel;
-    document.getElementById('mo-fourn-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier Prestataire';
-    document.getElementById('mo-fournisseur').classList.add('open');
 }
 
 function ouvrirModalTechExterne() {

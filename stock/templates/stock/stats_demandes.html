@@ -558,7 +558,7 @@
 
         if (d.bon_sortie && d.bon_sortie_id) {
           h += '<div style="margin-top:14px;text-align:right;">';
-          h += '<button type="button" onclick="imprimerModal('/bon/' + d.bon_sortie_id + '/imprimer/', 'Bon ' + e(d.bon_sortie) + '')" ';
+          h += '<button type="button" onclick="imprimerModal(\'/bon/' + d.bon_sortie_id + '/imprimer/\', \'Bon ' + e(d.bon_sortie) + '\')" ';
           h += 'style="display:inline-flex;align-items:center;gap:8px;background:linear-gradient(135deg,#fd7e14,#e65100);color:white;padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-weight:600;font-size:13px;">';
           h += '<i class="fas fa-file-pdf"></i> Voir le bon ' + e(d.bon_sortie);
           h += '</button></div>';

@@ -201,7 +201,7 @@ def liste_sorties(request):
         'circuit_sortie': circuit_sortie,
         'est_valideur': est_valideur,
         'peut_creer': _has_perm_bon(request.user, 'add', 'SORTIE'),
-        'peut_annuler': _has_perm_bon(request.user, 'change', 'SORTIE'),
+        'peut_annuler': _has_perm_bon(request.user, 'cancel', 'SORTIE'),
     }
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return render(request, 'stock/sorties_lignes.html', context)

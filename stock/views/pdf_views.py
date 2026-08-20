@@ -434,7 +434,7 @@ def imprimer_resultat_inventaire(request, campagne_id):
 # ═════════════════════════════════════════════════════════════════════════════
 
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_rapports')
+@verifier_permission('accounts.menu_rapport_conso_service')
 def rapport_consommation_pdf(request):
     """Génère le PDF du rapport de consommation."""
     from stock.models import Mouvement, Magasin

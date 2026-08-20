@@ -24,7 +24,7 @@ try:
 except ImportError:
     weasyprint = None
 
-from stock.models import Magasin, ModeleDocumentMagasin, ParametrePDF
+from stock.models import Magasin, ModeleDocumentMagasin
 
 logger = logging.getLogger(__name__)
 
@@ -41,11 +41,6 @@ def _user_peut_configurer_magasin(user, magasin):
     if profil and profil.magasins_autorises.filter(pk=magasin.pk).exists():
         return True
     return False
-
-
-def _get_logo_url(request):
-    """Retourne l'URL absolue du logo global pour les PDF."""
-    return ParametrePDF.get_logo_url(request)
 
 
 def _colonnes_par_type(type_doc):
@@ -224,11 +219,6 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
         form_ctx['nb_signatures_max'] = _nb_signatures_max(type_doc)
         form_ctx['colonnes_def'] = _colonnes_par_type(type_doc)
 
-        # Logo global
-        param_pdf = ParametrePDF.get_instance()
-        form_ctx['logo_global'] = param_pdf.logo
-        form_ctx['logo_global_url'] = ParametrePDF.get_logo_url(request)
-
         return render(request, 'stock/modele_pdf_form.html', form_ctx)
 
     def post(self, request, magasin_id, type_doc='BS'):
@@ -238,24 +228,7 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
             return redirect('accueil_personnalise')
 
         # ═══════════════════════════════════════════════════════════════
-        # GESTION DU LOGO GLOBAL (upload ou suppression)
-        # ═══════════════════════════════════════════════════════════════
-        if request.FILES.get('logo_global'):
-            param_pdf = ParametrePDF.get_instance()
-            # Supprimer l'ancien logo s'il existe
-            if param_pdf.logo:
-                try:
-                    old_path = param_pdf.logo.path
-                    if os.path.isfile(old_path):
-                        os.remove(old_path)
-                except Exception:
-                    pass
-            param_pdf.logo = request.FILES['logo_global']
-            param_pdf.modifie_par = request.user
-            param_pdf.save()
-            messages.success(request, "Logo global mis à jour avec succès.")
-            return redirect('modele_pdf_config', magasin_id=magasin.id, type_doc=type_doc)
-
+        # Le logo global n'est plus géré ici, il l'est via ConfigurationHopital
         if request.POST.get('action_logo') == 'supprimer':
             param_pdf = ParametrePDF.get_instance()
             if param_pdf.logo:

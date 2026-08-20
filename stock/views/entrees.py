@@ -77,7 +77,7 @@ def _afficher_entrees(request):
         ).order_by('designation'),
         'motifs_annulation': MotifAnnulation.objects.filter(actif=True).order_by('libelle'),
         'peut_creer': _has_perm_bon(request.user, 'add', 'ENTREE'),
-        'peut_annuler': _has_perm_bon(request.user, 'change', 'ENTREE'),
+        'peut_annuler': _has_perm_bon(request.user, 'cancel', 'ENTREE'),
         'circuit_entree': circuit_entree,
         'est_valideur_entree': est_valideur_entree,
     }

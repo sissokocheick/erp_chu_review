@@ -28,8 +28,7 @@ class ConfigurationHopitalForm(forms.ModelForm):
             'prefixe_bon_sortie', 'prefixe_bon_entree', 'prefixe_bon_retour',
             'prefixe_bon_hors_stock', 'prefixe_commande',
             # Signatures
-            'label_signataire_1', 'label_signataire_2', 'label_signataire_3',
-            'label_signataire_4', 'label_signataire_5', 'label_signataire_6',
+            
         ]
         widgets = {
             'nom': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
@@ -53,12 +52,7 @@ class ConfigurationHopitalForm(forms.ModelForm):
             'prefixe_bon_retour': forms.TextInput(attrs={'class': 'form-control'}),
             'prefixe_bon_hors_stock': forms.TextInput(attrs={'class': 'form-control'}),
             'prefixe_commande': forms.TextInput(attrs={'class': 'form-control'}),
-            'label_signataire_1': forms.TextInput(attrs={'class': 'form-control'}),
-            'label_signataire_2': forms.TextInput(attrs={'class': 'form-control'}),
-            'label_signataire_3': forms.TextInput(attrs={'class': 'form-control'}),
-            'label_signataire_4': forms.TextInput(attrs={'class': 'form-control'}),
-            'label_signataire_5': forms.TextInput(attrs={'class': 'form-control'}),
-            'label_signataire_6': forms.TextInput(attrs={'class': 'form-control'}),
+            
         }
 
 

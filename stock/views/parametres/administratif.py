@@ -1,3 +1,4 @@
+from core.utils import paginer
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -7,19 +8,17 @@ from django.http import JsonResponse
 from accounts.permissions import verifier_permission
 from ...decorators import catch_errors
 from ...services.parametre_service import (
-    paginer_donnees,
+    
     get_dependances,
     redirect_url_with_tab,
     parse_optional_id,
     safe_delete_entity,
     save_specialite,
     save_service,
-    save_magasin_admin,
 )
 from core.models import Service, ConfigurationHopital
 from core.forms import ConfigurationHopitalForm
-from stock.models import Magasin
-from stock.forms import ServiceForm, MagasinForm, SpecialiteForm
+from stock.forms import ServiceForm, SpecialiteForm
 from accounts.models import Specialite, Fonction
 
 
@@ -28,7 +27,6 @@ from accounts.models import Specialite, Fonction
     'accounts.menu_param_admin',
     'accounts.menu_services',
     'accounts.menu_specialites',
-    'accounts.menu_magasins',
     'accounts.menu_fonctions')
 @catch_errors(redirect_url='/')
 def parametres_administratifs(request):
@@ -39,30 +37,25 @@ def parametres_administratifs(request):
 
 def _handle_get(request):
     services = Service.objects.all().order_by('nom')
-    magasins = Magasin.objects.all().order_by('nom')
     specialites = Specialite.objects.all().order_by('nom')
     fonctions = Fonction.objects.all().order_by('nom')
 
     q_service = request.GET.get('q_service', '').strip()
-    q_magasin = request.GET.get('q_magasin', '').strip()
     q_specialite = request.GET.get('q_specialite', '').strip()
     q_fonction = request.GET.get('q_fonction', '').strip()
 
     if q_service:
         services = services.filter(nom__icontains=q_service)
-    if q_magasin:
-        magasins = magasins.filter(nom__icontains=q_magasin)
     if q_specialite:
         specialites = specialites.filter(nom__icontains=q_specialite)
     if q_fonction:
         fonctions = fonctions.filter(nom__icontains=q_fonction)
 
-    magasins_pagines, per_page_magasin = paginer_donnees(magasins, request, 'magasin')
-    services_pagines, per_page_service = paginer_donnees(services, request, 'service')
-    specialites_pagines, per_page_specialite = paginer_donnees(specialites, request, 'specialite')
-    fonctions_paginees, per_page_fonction = paginer_donnees(fonctions, request, 'fonction')
+    services_pagines, per_page_service = paginer(services, request, per_page_key='service')
+    specialites_pagines, per_page_specialite = paginer(specialites, request, per_page_key='specialite')
+    fonctions_paginees, per_page_fonction = paginer(fonctions, request, per_page_key='fonction')
 
-    for page in (services_pagines, specialites_pagines, magasins_pagines, fonctions_paginees):
+    for page in (services_pagines, specialites_pagines, fonctions_paginees):
         for obj in page:
             obj._deps = get_dependances(obj)
             obj.is_deletable = not bool(obj._deps)
@@ -71,10 +64,6 @@ def _handle_get(request):
     edit_service_id = request.GET.get('edit_service', '').strip()
     instance_service = get_object_or_404(Service, id=edit_service_id) if edit_service_id else None
     form_service = ServiceForm(instance=instance_service)
-
-    edit_magasin_id = request.GET.get('edit_magasin', '').strip()
-    instance_magasin = get_object_or_404(Magasin, id=edit_magasin_id) if edit_magasin_id else None
-    form_magasin = MagasinForm(instance=instance_magasin)
 
     edit_specialite_id = request.GET.get('edit_specialite', '').strip()
     instance_specialite = get_object_or_404(Specialite, id=edit_specialite_id) if edit_specialite_id else None
@@ -92,9 +81,6 @@ def _handle_get(request):
         'services': services_pagines,
         'q_service': q_service,
         'per_page_service': per_page_service,
-        'magasins': magasins_pagines,
-        'q_magasin': q_magasin,
-        'per_page_magasin': per_page_magasin,
         'specialites': specialites_pagines,
         'q_specialite': q_specialite,
         'per_page_specialite': per_page_specialite,
@@ -103,22 +89,17 @@ def _handle_get(request):
         'per_page_fonction': per_page_fonction,
         'instance_fonction': instance_fonction,
         'form_service': form_service,
-        'form_magasin': form_magasin,
         'form_specialite': form_specialite,
         'instance_service': instance_service,
         'instance_specialite': instance_specialite,
-        'instance_magasin': instance_magasin,
         'perm_config': request.user.has_perm('accounts.menu_param_admin') or request.user.is_superuser,
         'perm_fonctions': request.user.has_perm('accounts.menu_fonctions') or request.user.is_superuser,
         'perm_services': request.user.has_perm('accounts.menu_services') or request.user.is_superuser,
         'perm_specialites': request.user.has_perm('accounts.menu_specialites') or request.user.is_superuser,
-        'perm_magasins': request.user.has_perm('accounts.menu_magasins') or request.user.is_superuser,
         'peut_creer_services': request.user.has_perm('accounts.menu_services') or request.user.is_superuser,
-        'peut_creer_magasins': request.user.has_perm('accounts.menu_magasins') or request.user.is_superuser,
         'peut_creer_specialites': request.user.has_perm('accounts.menu_specialites') or request.user.is_superuser,
         'peut_creer_fonctions': request.user.has_perm('accounts.menu_fonctions') or request.user.is_superuser,
         'peut_annuler_services': request.user.has_perm('accounts.menu_services') or request.user.is_superuser,
-        'peut_annuler_magasins': request.user.has_perm('accounts.menu_magasins') or request.user.is_superuser,
         'peut_annuler_specialites': request.user.has_perm('accounts.menu_specialites') or request.user.is_superuser,
         'peut_annuler_fonctions': request.user.has_perm('accounts.menu_fonctions') or request.user.is_superuser,
         # Configuration de l'établissement
@@ -138,7 +119,6 @@ def _handle_post(request):
         'enregistrer_specialite': _post_specialite,
         'enregistrer_fonction': _post_fonction,
         'enregistrer_service': _post_service,
-        'enregistrer_magasin': _post_magasin,
     }
     for key, handler in dispatch.items():
         if key in request.POST:
@@ -148,8 +128,6 @@ def _handle_post(request):
         return _post_supprimer_specialite(request)
     if 'supprimer_fonction' in request.POST:
         return _post_supprimer_fonction(request)
-    if 'supprimer_magasin' in request.POST:
-        return _post_supprimer_magasin(request)
     if 'supprimer_service' in request.POST:
         return _post_supprimer_service(request)
 
@@ -215,28 +193,6 @@ def _post_service(request):
     if ok:
         messages.success(request, msg)
         return redirect(redirect_url_with_tab('parametres_administratifs', 'services'))
-    messages.error(request, msg)
-    return redirect('parametres_administratifs')
-
-
-def _post_magasin(request):
-    if not request.user.has_perm('accounts.menu_magasins') and not request.user.is_superuser:
-        messages.error(request, "⛔ Accès refusé.")
-        return redirect('parametres_administratifs')
-
-    edit_id = parse_optional_id(request, 'magasin_id', 'edit_magasin')
-    instance = None
-    if edit_id:
-        try:
-            instance = Magasin.objects.get(id=edit_id)
-        except Magasin.DoesNotExist:
-            instance = None
-
-    form = MagasinForm(request.POST, instance=instance)
-    ok, msg, _ = save_magasin_admin(form, instance, request.user)
-    if ok:
-        messages.success(request, msg)
-        return redirect(redirect_url_with_tab('parametres_administratifs', 'magasins'))
     messages.error(request, msg)
     return redirect('parametres_administratifs')
 
@@ -318,21 +274,6 @@ def _post_supprimer_specialite(request):
         messages.success(request, "🗑️ Spécialité supprimée.")
     return redirect(redirect_url_with_tab('parametres_administratifs', 'specialites'))
 
-
-def _post_supprimer_magasin(request):
-    if not request.user.has_perm('accounts.menu_magasins') and not request.user.is_superuser:
-        messages.error(request, "⛔ Accès refusé.")
-        return redirect('parametres_administratifs')
-
-    raw_id = request.POST.get('magasin_id', '').strip()
-    if not raw_id:
-        messages.error(request, "❌ Identifiant du magasin manquant.")
-        return redirect(redirect_url_with_tab('parametres_administratifs', 'magasins'))
-    try:
-        pk = int(raw_id)
-    except (ValueError, TypeError):
-        messages.error(request, "❌ Identifiant du magasin invalide.")
-        return redirect(redirect_url_with_tab('parametres_administratifs', 'magasins'))
 
     magasin = get_object_or_404(Magasin, id=pk)
     deps = get_dependances(magasin)

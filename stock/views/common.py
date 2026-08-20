@@ -50,16 +50,16 @@ def _has_perm_bon(user, action, type_bon):
     type_bon: 'ENTREE', 'SORTIE', 'RETOUR_SERVICE', 'SORTIE_HORS_STOCK'
     """
     mapping = {
-        'ENTREE': ('can_add_bon_entree', 'can_change_bon_entree', 'can_delete_bon_entree'),
-        'SORTIE': ('can_add_bon_sortie', 'can_change_bon_sortie', 'can_delete_bon_sortie'),
-        'RETOUR_SERVICE': ('can_add_bon_retour', 'can_change_bon_retour', 'can_delete_bon_retour'),
-        'RETOUR_FOURNISSEUR': ('can_add_bon_retour', 'can_change_bon_retour', 'can_delete_bon_retour'),
-        'SORTIE_HORS_STOCK': ('can_add_bon_hors_stock', 'can_change_bon_hors_stock', 'can_delete_bon_hors_stock'),
+        'ENTREE': ('can_add_bon_entree', 'can_change_bon_entree', 'can_delete_bon_entree', 'can_cancel_bon_entree'),
+        'SORTIE': ('can_add_bon_sortie', 'can_change_bon_sortie', 'can_delete_bon_sortie', 'can_cancel_bon_sortie'),
+        'RETOUR_SERVICE': ('can_add_bon_retour', 'can_change_bon_retour', 'can_delete_bon_retour', 'can_cancel_bon_retour'),
+        'RETOUR_FOURNISSEUR': ('can_add_bon_retour', 'can_change_bon_retour', 'can_delete_bon_retour', 'can_cancel_bon_retour'),
+        'SORTIE_HORS_STOCK': ('can_add_bon_hors_stock', 'can_change_bon_hors_stock', 'can_delete_bon_hors_stock', 'can_cancel_bon_hors_stock'),
     }
     perms = mapping.get(type_bon)
     if not perms:
         return user.is_superuser
-    idx = {'add': 0, 'change': 1, 'delete': 2}.get(action, 0)
+    idx = {'add': 0, 'change': 1, 'delete': 2, 'cancel': 3}.get(action, 0)
     codename = perms[idx]
     return user.has_perm(f'stock.{codename}') or user.is_superuser
 # ══════════════════════════════════════════════════════════════════════════════

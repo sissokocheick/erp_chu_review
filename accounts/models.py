@@ -244,7 +244,8 @@ MENU_ACCESS_PERMISSIONS = [
     ('menu_magasins', 'Magasins'),
     
     # === MODULE STOCK - RAPPORTS ===
-    ('menu_rapports', 'Rapports'),
+        ('menu_rapports', 'Rapports'),
+      ('menu_rapport_conso_service', 'Consommation par Service'),
     ('menu_stats_demandes', 'Stats Demandes'),
     ('menu_stats_sondages', 'Stats Sondages'),
     ('menu_stats_satisfaction', 'Stats Satisfaction'),

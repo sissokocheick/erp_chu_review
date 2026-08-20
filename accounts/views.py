@@ -41,6 +41,7 @@ from django.db.models import Q, Count
 
 
 from django.core.paginator import Paginator
+from core.utils import paginer
 from django.template.loader import render_to_string
 
 
@@ -126,43 +127,6 @@ MIN_USERNAME_LENGTH = 3
 # ==========================================================
 
 
-def paginer(queryset, request, per_page_key='per_page', default=15, max_all=500):
-
-
-    per_page = request.GET.get(per_page_key, str(default))
-
-
-    is_list = isinstance(queryset, list)
-
-
-    if per_page == 'all':
-
-
-        count = len(queryset) if is_list else queryset.count()
-
-
-        limite = min(count, max_all) if count > 0 else 1
-
-
-    else:
-
-
-        try:
-
-
-            limite = int(per_page)
-
-
-        except ValueError:
-
-
-            limite = default
-
-
-    page = request.GET.get('page')
-
-
-    return Paginator(queryset, limite).get_page(page), per_page
 
 
 def get_client_ip(request):
@@ -2133,35 +2097,35 @@ def api_verifier_champ_utilisateur(request):
 SOUS_PERMISSIONS = {
 
     # ── DEMANDES ──
-    'menu_demandes':           ['add_demandemateriel', 'change_demandemateriel', 'delete_demandemateriel'],
+    'menu_demandes':           ['add_demandemateriel', 'change_demandemateriel'],
     'menu_guichet':            ['change_demandemateriel', 'add_livraisonpartielle', 'change_livraisonpartielle'],
     'menu_valider_demandes':   ['change_demandemateriel'],
 
     # ── MOUVEMENTS DE STOCK ──
-    'menu_entrees':            ['can_add_bon_entree', 'can_change_bon_entree', 'can_delete_bon_entree'],
-    'menu_sorties':            ['can_add_bon_sortie', 'can_change_bon_sortie', 'can_delete_bon_sortie'],
-    'menu_sorties_hors_stock': ['can_add_bon_hors_stock', 'can_change_bon_hors_stock', 'can_delete_bon_hors_stock'],
-    'menu_retours_services':   ['can_add_bon_retour', 'can_change_bon_retour', 'can_delete_bon_retour'],
-    'menu_retours_fournisseurs': ['can_add_bon_retour', 'can_change_bon_retour', 'can_delete_bon_retour'],
-    'menu_livraisons':         ['add_livraisonpartielle', 'change_livraisonpartielle', 'delete_livraisonpartielle'],
+    'menu_entrees':            ['can_add_bon_entree', 'can_change_bon_entree', 'can_cancel_bon_entree'],
+    'menu_sorties':            ['can_add_bon_sortie', 'can_change_bon_sortie', 'can_cancel_bon_sortie'],
+    'menu_sorties_hors_stock': ['can_add_bon_hors_stock', 'can_change_bon_hors_stock', 'can_cancel_bon_hors_stock'],
+    'menu_retours_services':   ['can_add_bon_retour', 'can_change_bon_retour', 'can_cancel_bon_retour'],
+    'menu_retours_fournisseurs': ['can_add_bon_retour', 'can_change_bon_retour', 'can_cancel_bon_retour'],
+    'menu_livraisons':         ['add_livraisonpartielle', 'change_livraisonpartielle'],
     'menu_reception_commande': ['change_commande', 'add_accusereception', 'change_accusereception'],
 
     # ── GESTION DES STOCKS ──
-    'menu_ajustements':        ['add_ajustement', 'change_ajustement', 'delete_ajustement'],
+    'menu_ajustements':        ['add_ajustement', 'change_ajustement'],
     'menu_inventaires':        ['add_campagneinventaire', 'change_campagneinventaire', 'add_ligneinventaire', 'change_ligneinventaire'],
 
     # ── ACHATS & CATALOGUE ──
-    'menu_commandes':          ['add_commande', 'change_commande', 'delete_commande'],
-    'menu_articles':           ['add_article', 'change_article', 'delete_article'],
-    'menu_familles':           ['add_famillearticle', 'change_famillearticle', 'delete_famillearticle'],
+    'menu_commandes':          ['add_commande', 'change_commande'],
+    'menu_articles':           ['add_article', 'change_article'],
+    'menu_familles':           ['add_famillearticle', 'change_famillearticle'],
 
     # ── PATRIMOINE & SAV ──
-    'menu_pat_tickets':        ['add_intervention', 'change_intervention', 'delete_intervention'],
+    'menu_pat_tickets':        ['add_intervention', 'change_intervention'],
     'menu_pat_tech':           ['add_intervention', 'change_intervention', 'add_technicienprestataire', 'change_technicienprestataire'],
     'menu_pat_dispatch':       ['change_intervention'],
-    'menu_pat_registre':       ['add_immobilisation', 'change_immobilisation', 'delete_immobilisation', 'add_mouvementpatrimoine', 'change_mouvementpatrimoine'],
+    'menu_pat_registre':       ['add_immobilisation', 'change_immobilisation', 'add_mouvementpatrimoine', 'change_mouvementpatrimoine'],
     'menu_pat_sas':            ['add_immobilisation', 'change_immobilisation'],
-    'menu_pat_contrats':       ['add_contratmaintenance', 'change_contratmaintenance', 'delete_contratmaintenance', 'add_typecontrat', 'change_typecontrat'],
+    'menu_pat_contrats':       ['add_contratmaintenance', 'change_contratmaintenance', 'add_typecontrat', 'change_typecontrat'],
     'menu_pat_import':         ['add_importpatrimoine'],
     'menu_pat_inventaire':     ['add_campagneinventairepatrimoine', 'change_campagneinventairepatrimoine', 'add_ligneinventairepatrimoine', 'change_ligneinventairepatrimoine'],
     'menu_pat_rebuts':         ['change_immobilisation'],
@@ -2169,22 +2133,14 @@ SOUS_PERMISSIONS = {
     'menu_pat_parametres':     ['add_categoriepatrimoine', 'change_categoriepatrimoine', 'add_marque', 'change_marque', 'add_modele', 'change_modele', 'add_batiment', 'change_batiment', 'add_etage', 'change_etage', 'add_bureau', 'change_bureau', 'add_typeequipement', 'change_typeequipement', 'add_parametrespatrimoine', 'change_parametrespatrimoine'],
 
     # ── PARAMÈTRES (3 pages cochables, fonctionnalités en dessous) ──
-    'menu_param_admin':        ['menu_services', 'add_service', 'change_service', 'delete_service',
-                                'menu_specialites', 'add_specialite', 'change_specialite', 'delete_specialite',
-                                'menu_fonctions', 'add_fonction', 'change_fonction', 'delete_fonction',
-                                'change_configurationhopital'],
-    'menu_param_logistique':   ['menu_fournisseurs', 'add_fournisseur', 'change_fournisseur', 'delete_fournisseur',
-                                'menu_magasins', 'add_magasin', 'change_magasin', 'delete_magasin',
-                                'menu_motifs_annulation', 'add_motifannulation', 'change_motifannulation', 'delete_motifannulation',
-                                'menu_beneficiaires', 'add_beneficiaire', 'change_beneficiaire', 'delete_beneficiaire',
-                                'change_configurationhopital'],
-    'menu_modeles_pdf':        ['menu_parametres_doc', 'add_configdocument', 'change_configdocument', 'delete_configdocument',
-                                'can_configurer_modeles_pdf', 'add_modeledocumentmagasin', 'change_modeledocumentmagasin'],
+    'menu_param_admin':        ['menu_services', 'add_service', 'change_service', 'menu_specialites', 'add_specialite', 'change_specialite', 'menu_fonctions', 'add_fonction', 'change_fonction', 'change_configurationhopital'],
+    'menu_param_logistique':   ['menu_fournisseurs', 'add_fournisseur', 'change_fournisseur', 'menu_magasins', 'add_magasin', 'change_magasin', 'menu_motifs_annulation', 'add_motifannulation', 'change_motifannulation', 'menu_beneficiaires', 'add_beneficiaire', 'change_beneficiaire', 'change_configurationhopital'],
+    'menu_modeles_pdf':        ['menu_parametres_doc', 'add_configdocument', 'change_configdocument', 'can_configurer_modeles_pdf', 'add_modeledocumentmagasin', 'change_modeledocumentmagasin'],
     'menu_notifications_config': ['change_configurationnotification'],
 
     # ── SÉCURITÉ & ACCÈS ──
-    'menu_utilisateurs':       ['add_user', 'change_user', 'delete_user', 'add_profil', 'change_profil'],
-    'menu_roles':              ['add_group', 'change_group', 'delete_group'],
+    'menu_utilisateurs':       ['add_user', 'change_user', 'add_profil', 'change_profil'],
+    'menu_roles':              ['add_group', 'change_group'],
     'menu_circuits_validation':['add_circuitvalidateur', 'change_circuitvalidateur', 'add_circuitvalidation', 'change_circuitvalidation'],
     'menu_journal_audit':      ['view_journalaudit'],
 
@@ -2197,37 +2153,37 @@ SOUS_PERM_LABELS = {
     'can_add_bon_entree':       {'label': 'Creer', 'icon': 'fa-plus', 'color': '#28a745'},
 
 
-    'can_change_bon_entree':    {'label': 'Modifier / Annuler', 'icon': 'fa-edit', 'color': '#ffc107'},
+    'can_change_bon_entree':    {'label': 'Modifier', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'can_delete_bon_entree':    {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
+    'can_cancel_bon_entree':    {'label': 'Annuler', 'icon': 'fa-ban', 'color': '#e74c3c'},
 
 
     'can_add_bon_sortie':       {'label': 'Creer', 'icon': 'fa-plus', 'color': '#28a745'},
 
 
-    'can_change_bon_sortie':    {'label': 'Modifier / Annuler', 'icon': 'fa-edit', 'color': '#ffc107'},
+    'can_change_bon_sortie':    {'label': 'Modifier', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'can_delete_bon_sortie':    {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
+    'can_cancel_bon_sortie':    {'label': 'Annuler', 'icon': 'fa-ban', 'color': '#e74c3c'},
 
 
     'can_add_bon_retour':       {'label': 'Creer', 'icon': 'fa-plus', 'color': '#28a745'},
 
 
-    'can_change_bon_retour':    {'label': 'Modifier / Annuler', 'icon': 'fa-edit', 'color': '#ffc107'},
+    'can_change_bon_retour':    {'label': 'Modifier', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'can_delete_bon_retour':    {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
+    'can_cancel_bon_retour':    {'label': 'Annuler', 'icon': 'fa-ban', 'color': '#e74c3c'},
 
 
     'can_add_bon_hors_stock':   {'label': 'Creer', 'icon': 'fa-plus', 'color': '#28a745'},
 
 
-    'can_change_bon_hors_stock':{'label': 'Modifier / Annuler', 'icon': 'fa-edit', 'color': '#ffc107'},
+    'can_change_bon_hors_stock':{'label': 'Modifier', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'can_delete_bon_hors_stock':{'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
+    'can_cancel_bon_hors_stock':{'label': 'Annuler', 'icon': 'fa-ban', 'color': '#e74c3c'},
 
 
     'add_commande':           {'label': 'Creer', 'icon': 'fa-plus', 'color': '#28a745'},
@@ -2236,7 +2192,6 @@ SOUS_PERM_LABELS = {
     'change_commande':        {'label': 'Modifier / Valider', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'delete_commande':        {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
     'add_ajustement':         {'label': 'Creer', 'icon': 'fa-plus', 'color': '#28a745'},
@@ -2257,7 +2212,6 @@ SOUS_PERM_LABELS = {
     'change_article':         {'label': 'Modifier', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'delete_article':         {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
     'add_famillearticle':     {'label': 'Ajouter familles', 'icon': 'fa-plus', 'color': '#fd7e14'},
@@ -2302,7 +2256,6 @@ SOUS_PERM_LABELS = {
     'change_demandemateriel': {'label': 'Modifier / Traiter', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'delete_demandemateriel': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
     'add_livraisonpartielle': {'label': 'Creer livraisons', 'icon': 'fa-plus', 'color': '#28a745'},
@@ -2323,7 +2276,6 @@ SOUS_PERM_LABELS = {
     'change_ligneinventaire': {'label': 'Modifier lignes inventaire', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'delete_ajustement': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
     'add_accusereception': {'label': 'Creer accuses reception', 'icon': 'fa-plus', 'color': '#28a745'},
@@ -2344,7 +2296,6 @@ SOUS_PERM_LABELS = {
     'change_intervention': {'label': 'Modifier / Traiter', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'delete_intervention': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
     'add_technicienprestataire': {'label': 'Ajouter techniciens', 'icon': 'fa-plus', 'color': '#28a745'},
@@ -2359,7 +2310,6 @@ SOUS_PERM_LABELS = {
     'change_immobilisation': {'label': 'Modifier equipement', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'delete_immobilisation': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
     'add_mouvementpatrimoine': {'label': 'Ajouter mouvement', 'icon': 'fa-plus', 'color': '#28a745'},
@@ -2449,10 +2399,8 @@ SOUS_PERM_LABELS = {
     'change_configurationhopital': {'label': 'Modifier configuration', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'delete_service': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
-    'delete_specialite': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
     'add_fonction': {'label': 'Ajouter', 'icon': 'fa-plus', 'color': '#28a745'},
@@ -2461,19 +2409,14 @@ SOUS_PERM_LABELS = {
     'change_fonction': {'label': 'Modifier', 'icon': 'fa-edit', 'color': '#ffc107'},
 
 
-    'delete_fonction': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
-    'delete_fournisseur': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
-    'delete_magasin': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
-    'delete_motifannulation': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
-    'delete_beneficiaire': {'label': 'Supprimer', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
     'can_configurer_modeles_pdf': {'label': 'Configurer modeles PDF', 'icon': 'fa-file-pdf', 'color': '#dc3545'},

@@ -2,6 +2,17 @@
 
 {% block contenu %}
 <style>
+  table:not(.vd-table) th:not(.c):not([style*='text-align']) { text-align: left; }
+  table:not(.vd-table) td:not(.c):not([style*='text-align']) { text-align: left; }
+
+    .tabs-container { margin-bottom: 15px; border-bottom: 2px solid var(--border-light); display: flex; gap: 25px; padding: 0 10px; }
+    .tab-item { padding: 10px 15px; font-weight: 600; color: var(--text-medium); text-decoration: none; font-size: 14px; position: relative; transition: .2s; }
+    .tab-item:hover { color: #b8860b; }
+    .tab-item.active { color: #b8860b; }
+    .tab-item.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: #b8860b; border-radius: 3px 3px 0 0; }
+</style>
+
+<style>
     .page-header-bar {
         display: flex; justify-content: space-between; align-items: center;
         border-bottom: 2px solid var(--border-color);
@@ -178,6 +189,12 @@
     body.dark-mode .modal-body { background: var(--bg-hover, #334155); }
     body.dark-mode .vd-section { background: var(--bg-card, #1e293b); }
     body.dark-mode .vd-table td { color: var(--text-dark, #cbd5e1); }
+
+    .tabs-container { margin-bottom: 15px; border-bottom: 2px solid var(--border-light); display: flex; gap: 25px; padding: 0 10px; }
+    .tab-item { padding: 10px 15px; font-weight: 600; color: var(--text-medium); text-decoration: none; font-size: 14px; position: relative; transition: .2s; }
+    .tab-item:hover { color: #b8860b; }
+    .tab-item.active { color: #b8860b; }
+    .tab-item.active::after { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 3px; background: #b8860b; border-radius: 3px 3px 0 0; }
 </style>
 
 <div class="page-header-bar">
@@ -187,6 +204,13 @@
     </button>
 </div>
 
+
+<div class="tabs-container">
+    <a href="?onglet=a_receptionner{% if q_transfert %}&q={{ q_transfert }}{% endif %}" class="tab-item {% if onglet == 'a_receptionner' %}active{% endif %}"><i class="fas fa-inbox"></i> À Réceptionner</a>
+    <a href="?onglet=en_transit{% if q_transfert %}&q={{ q_transfert }}{% endif %}" class="tab-item {% if onglet == 'en_transit' %}active{% endif %}"><i class="fas fa-shipping-fast"></i> En Transit</a>
+    <a href="?onglet=historique{% if q_transfert %}&q={{ q_transfert }}{% endif %}" class="tab-item {% if onglet == 'historique' %}active{% endif %}"><i class="fas fa-history"></i> Historique</a>
+</div>
+
 <form method="get" class="search-bar">
     <input type="text" name="q" value="{{ q_transfert }}" placeholder="🔍 Rechercher par n° de bon, article, magasin…" class="search-input-q">
     <a href="{% url 'liste_transferts' %}" class="btn-reset"><i class="fas fa-undo-alt"></i> Réinitialiser</a>
@@ -194,7 +218,8 @@
 
 <div class="per-page-bar">
     <form method="get" style="display:flex;align-items:center;gap:8px;">
-        {% if q_transfert %}<input type="hidden" name="q" value="{{ q_transfert }}">{% endif %}
+        {% if q_transfert %}<input type="hidden" name="onglet" value="{{ onglet }}">
+          <input type="hidden" name="q" value="{{ q_transfert }}">{% endif %}
         <label style="font-size:13px;color:var(--text-medium);">Afficher :</label>
         <select name="per_page" onchange="this.form.submit()">
             <option value="15" {% if per_page == 15 %}selected{% endif %}>15</option>
@@ -209,10 +234,10 @@
     <table class="main-table">
         <thead>
             <tr>
-                <th>N° Bon</th>
+                  <th style="width: 40px;"></th>
+                  <th>N° Bon</th>
                 <th>Date</th>
                 <th>Source → Destination</th>
-                <th>Articles (Qté)</th>
                 <th>Créé par</th>
                 <th>Statut</th>
                 <th style="text-align:right;">Actions</th>
@@ -220,36 +245,58 @@
         </thead>
         <tbody>
             {% for t in transferts %}
-            <tr>
-                <td data-label="N° Bon"><strong>{{ t.numero_bon }}</strong></td>
-                <td data-label="Date">{{ t.date_bon|date:"d/m/Y H:i" }}</td>
-                <td data-label="Source → Destination">
+            <tr onclick="toggleDetail(\'detail-{{ t.id }}\', \'icon-{{ t.id }}\')" style="cursor: pointer;" title="Cliquez pour voir les articles">
+                  <td style="text-align:center; color:var(--text-light);"><i class="fas fa-chevron-right" id="icon-{{ t.id }}" style="transition: transform 0.2s;"></i></td>
+                  <td data-label="N° Bon"><strong>{{ t.numero_bon }}</strong></td>
+                  <td data-label="Date">{{ t.date_bon|date:"d/m/Y H:i" }}</td>
+                  <td data-label="Source → Destination">
                     <span class="badge badge-ok">{{ t.magasin.nom }}</span>
                     <i class="fas fa-arrow-right" style="margin:0 6px;color:var(--text-light);"></i>
                     <span class="badge" style="background:rgba(184,134,11,0.15);color:#7a5c08;">{{ t.magasin_destination.nom }}</span>
                 </td>
-                <td data-label="Articles">
-                    {% for ligne in t.lignes_bon.all %}
-                        {{ ligne.article.designation }} ({{ ligne.quantite }}){% if not forloop.last %}, {% endif %}
-                    {% empty %}—{% endfor %}
-                </td>
-                <td data-label="Créé par">{{ t.cree_par.get_full_name|default:t.cree_par.username|default:"—" }}</td>
-                <td data-label="Statut">
+                  <td data-label="Créé par">{{ t.cree_par.get_full_name|default:t.cree_par.username|default:"—" }}</td>
+                  <td data-label="Statut">
                     {% if t.est_annule %}
                         <span class="badge badge-annule">Annulé</span>
+                    {% elif t.statut_validation == 'ATTENTE' %}
+                        <span class="badge" style="background:#ffc107; color:#212529;">En transit</span>
                     {% else %}
-                        <span class="badge badge-ok">Effectué</span>
+                        <span class="badge badge-ok">Réceptionné</span>
                     {% endif %}
                 </td>
                 <td data-label="Actions" style="text-align:right;white-space:nowrap;">
-                    <a href="{% url 'imprimer_bon_multi_lignes' t.id %}" target="_blank" class="btn-action btn-print" title="Imprimer le bon de transfert">
-                        <i class="fas fa-print"></i> Imprimer
+                    <a href="{% url 'imprimer_bon_multi_lignes' t.id %}" target="_blank" class="btn-action btn-print" style="padding: 8px 10px;" title="Imprimer le bon de transfert">
+                        <i class="fas fa-print"></i>
                     </a>
                     {% if not t.est_annule %}
-                    <button class="btn-action btn-cancel" onclick="annulerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Annuler le transfert (le stock revient au magasin source)">
-                        <i class="fas fa-ban"></i> Annuler
+                    <button class="btn-action btn-cancel" style="padding: 8px 10px;" onclick="annulerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Annuler le transfert (le stock revient au magasin source)">
+                        <i class="fas fa-ban"></i>
                     </button>
                     {% endif %}
+                </td>
+            </tr>
+            <tr id="detail-{{ t.id }}" style="display: none; background: #f8fafc;">
+                <td colspan="7" style="padding: 15px; border-bottom: 2px solid var(--border-color);">
+                    <div style="background: white; border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="background: var(--bg-hover);">
+                                <tr>
+                                    <th style="padding: 10px 15px; text-align: left; font-size: 12px; color: var(--text-medium); border-bottom: 1px solid var(--border-light);">Référence</th>
+                                    <th style="padding: 10px 15px; text-align: left; font-size: 12px; color: var(--text-medium); border-bottom: 1px solid var(--border-light);">Article</th>
+                                    <th style="padding: 10px 15px; text-align: center; font-size: 12px; color: var(--text-medium); border-bottom: 1px solid var(--border-light);">Qté Transférée</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ligne in t.lignes_bon.all %}
+                                <tr>
+                                    <td style="padding: 10px 15px; font-size: 12px; color: var(--text-light); border-bottom: 1px solid var(--border-light);">{{ ligne.article.reference|default:"-" }}</td>
+                                    <td style="padding: 10px 15px; border-bottom: 1px solid var(--border-light);"><strong>{{ ligne.article.designation }}</strong></td>
+                                    <td style="padding: 10px 15px; text-align: center; font-weight: bold; color: var(--primary-blue); border-bottom: 1px solid var(--border-light);">{{ ligne.quantite }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </td>
             </tr>
             {% empty %}
@@ -315,15 +362,20 @@
                     <div class="vd-header-grid">
                         <div>
                             <label class="vd-label">Magasin source *</label>
-                            <select name="magasin_source" class="vd-input" required>
+                            {% if magasin_actif %}
+<input type="hidden" name="magasin_source" value="{{ magasin_actif.id }}">
+<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
+{% else %}
+<select name="magasin_source" class="vd-input select2" required>
                                 {% for m in magasins_sources %}
                                 <option value="{{ m.id }}" {% if m.id == request.session.magasin_actif_id %}selected{% endif %}>{{ m.nom }}</option>
                                 {% endfor %}
                             </select>
+{% endif %}
                         </div>
                         <div>
                             <label class="vd-label">Magasin destination *</label>
-                            <select name="magasin_destination" class="vd-input" required>
+                            <select name="magasin_destination" class="vd-input select2" required>
                                 {% for m in magasins_destinations %}
                                 <option value="{{ m.id }}">{{ m.nom }}</option>
                                 {% endfor %}
@@ -336,35 +388,58 @@
                     </div>
                 </div>
 
-                <div class="vd-section">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-                        <label class="vd-label" style="margin:0;">Articles à transférer *</label>
-                        <button type="button" class="btn-add-ligne" onclick="ajouterLigne()"><i class="fas fa-plus"></i> Ajouter un article</button>
+                <div class="vd-section" style="position: relative; z-index: 50; background: rgba(0,123,255,0.05); border-left: 5px solid #007bff;">
+                    <label class="vd-label" style="color: #007bff;"><i class="fas fa-search"></i> Scanner ou chercher un produit à transférer</label>
+                    <input type="text" id="vd-search-input" class="vd-input" placeholder="Taper le nom ou la référence de l'article..." oninput="filtrerProduits()" style="border: 2px solid #80bdff; height: 50px; font-size: 15px; background: var(--bg-input);">
+                    <div id="vd-dropdown" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; background: var(--bg-card); border: 1px solid #007bff; border-radius: 8px; box-shadow: 0 10px 25px var(--shadow); max-height: 300px; overflow-y: auto; margin-top: 5px;">
+                        <table style="width: 100%; border-collapse: collapse; margin: 0;">
+                            <thead style="background: rgba(0,123,255,0.1); position: sticky; top: 0; box-shadow: 0 2px 5px var(--shadow);">
+                                <tr>
+                                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #007bff;">Réf</th>
+                                    <th style="padding: 10px; text-align: left; font-size: 12px; color: #007bff;">Désignation</th>
+                                    <th style="padding: 10px; text-align: right; font-size: 12px; color: #007bff;">Stock Source</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vd-dropdown-body">
+                                {% for a in articles %}
+                                <tr class="dropdown-item"
+                                    data-id="{{ a.id }}"
+                                    data-ref="{{ a.reference|default:'-'|escapejs }}"
+                                    data-nom="{{ a.designation|escapejs }}"
+                                    data-stocks='{ {% for s in a.stocks.all %}"{{ s.magasin.id }}": {{ s.quantite_physique }}{% if not forloop.last %}, {% endif %}{% endfor %} }'
+                                    onclick="ajouterArticleDirect(this)"
+                                    style="cursor: pointer; border-bottom: 1px solid var(--border-light);">
+                                    <td style="padding: 12px; font-weight: bold; width: 20%; color: var(--text-medium);">{{ a.reference|default:'-' }}</td>
+                                    <td style="padding: 12px; width: 60%; font-size: 14px;"><strong style="color: var(--text-dark);">{{ a.designation }}</strong></td>
+                                    <td style="padding: 12px; width: 20%; text-align: right;"><span class="badge-stock">Calcul...</span></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    <table class="vd-table">
+                </div>
+
+                <div class="vd-section" style="padding: 0; overflow-x: auto;">
+                    <table class="vd-table" style="width: 100%; border-collapse: collapse; text-align: left;">
                         <thead class="vd-table-header">
                             <tr>
-                                <th style="width:60%;">Article</th>
-                                <th style="width:25%;">Quantité</th>
-                                <th style="width:15%;"></th>
+                                <th style="width: 5%; text-align: center;">#</th>
+                                <th style="width: 20%;">Réf.</th>
+                                <th style="width: 50%;">Désignation de l'article</th>
+                                <th style="width: 15%; text-align: center;">Qté à transférer</th>
+                                <th style="width: 10%; text-align: center;">Action</th>
                             </tr>
                         </thead>
-                        <tbody id="lignes-transfert">
-                            <tr class="ligne-transfert">
-                                <td>
-                                    <select name="articles[]" class="vd-input" required>
-                                        <option value="">— Sélectionner un article —</option>
-                                        {% for a in articles %}
-                                        <option value="{{ a.id }}">{{ a.designation }}</option>
-                                        {% endfor %}
-                                    </select>
+                        <tbody id="vd-lignes-tbody">
+                            <tr id="vd-ligne-vide">
+                                <td colspan="5" style="text-align: center; padding: 50px; color: var(--text-light);">
+                                    <i class="fas fa-box" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.4;"></i>
+                                    Aucun article ajouté. Cherchez ci-dessus.
                                 </td>
-                                <td><input type="number" name="quantites[]" min="1" value="1" class="vd-input" required></td>
-                                <td style="text-align:center;"></td>
                             </tr>
                         </tbody>
                     </table>
-                    <p style="font-size:12px;color:var(--text-light);margin-top:10px;">
+                    <p style="padding:15px; font-size:12px;color:var(--text-light);margin:0;border-top:1px solid var(--border-light);background:var(--bg-stripe);">
                         <i class="fas fa-info-circle"></i> Pour les articles gérés en lot, la sortie se fait en FEFO (lots les plus proches de péremption d'abord, lots périmés bloqués). Le lot et la péremption sont conservés à l'arrivée.
                     </p>
                 </div>
@@ -379,6 +454,15 @@
 
 {% if request.GET.print_bon %}
 <script>
+    
+
+
+    
+
+    
+    if (typeof jQuery !== 'undefined') {
+        $('.select2').select2({ dropdownParent: $('#modal-transfert') });
+    }
     document.addEventListener('DOMContentLoaded', function() {
         const urlImpression = "{% url 'imprimer_bon_multi_lignes' request.GET.print_bon %}";
         imprimerModal(urlImpression, "Bon de Transfert — {{ request.GET.print_bon }}");
@@ -408,15 +492,113 @@
         }
     };
 
-    function ajouterLigne() {
-        const tbody = document.getElementById('lignes-transfert');
-        const template = document.querySelector('.ligne-transfert');
-        const clone = template.cloneNode(true);
-        clone.querySelector('select').value = '';
-        clone.querySelector('input').value = 1;
-        const td = clone.querySelector('td:last-child');
-        td.innerHTML = '<button type="button" class="btn-del-ligne" onclick="this.closest(\'tr\').remove()"><i class="fas fa-trash"></i></button>';
-        tbody.appendChild(clone);
+    
+    function toggleDetail(rowId, iconId) {
+        var row = document.getElementById(rowId);
+        var icon = document.getElementById(iconId);
+        if (row.style.display === "none" || row.style.display === "") {
+            document.querySelectorAll('tr[id^="detail-"]').forEach(function(r) { r.style.display = 'none'; });
+            document.querySelectorAll('i[id^="icon-"]').forEach(function(i) { i.style.transform = 'rotate(0deg)'; });
+            row.style.display = "table-row";
+            if(icon) icon.style.transform = "rotate(90deg)";
+        } else {
+            row.style.display = "none";
+            if(icon) icon.style.transform = "rotate(0deg)";
+        }
+    }
+
+    function filtrerProduits() {
+        let input = document.getElementById('vd-search-input').value.toLowerCase();
+        let dropdown = document.getElementById('vd-dropdown');
+        let items = document.querySelectorAll('.dropdown-item');
+        let hasVisible = false;
+
+        let magasinSourceId = document.querySelector('input[name="magasin_source"][type="hidden"]') ? document.querySelector('input[name="magasin_source"][type="hidden"]').value : document.querySelector('select[name="magasin_source"]').value;
+
+        if (input.length > 0) {
+            dropdown.style.display = 'block';
+            items.forEach(function(item) {
+                let ref = item.getAttribute('data-ref').toLowerCase();
+                let nom = item.getAttribute('data-nom').toLowerCase();
+                
+                // Mettre à jour le stock affiché pour le magasin source sélectionné
+                let stocks = JSON.parse(item.getAttribute('data-stocks') || '{}');
+                let qte = stocks[magasinSourceId] || 0;
+                
+                let spanStock = item.querySelector('.badge-stock');
+                spanStock.innerText = qte + " en stock";
+                if(qte > 0) { spanStock.style.color = '#28a745'; spanStock.style.fontWeight = 'bold'; }
+                else { spanStock.style.color = '#dc3545'; spanStock.style.fontWeight = 'normal'; }
+
+                if (ref.includes(input) || nom.includes(input)) {
+                    item.style.display = '';
+                    hasVisible = true;
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        } else {
+            dropdown.style.display = 'none';
+        }
+    }
+
+    let compteurLignes = 0;
+
+    function ajouterArticleDirect(element) {
+        let id = element.getAttribute('data-id');
+        let ref = element.getAttribute('data-ref');
+        let nom = element.getAttribute('data-nom');
+        
+        let magasinSourceId = document.querySelector('input[name="magasin_source"][type="hidden"]') ? document.querySelector('input[name="magasin_source"][type="hidden"]').value : document.querySelector('select[name="magasin_source"]').value;
+        let stocks = JSON.parse(element.getAttribute('data-stocks') || '{}');
+        let qteDispo = stocks[magasinSourceId] || 0;
+        
+        if (qteDispo <= 0) {
+            Swal.fire({icon: 'error', title: 'Stock insuffisant', text: 'Cet article n\'est pas en stock dans le magasin source.'});
+            document.getElementById('vd-dropdown').style.display = 'none';
+            return;
+        }
+
+        // Vérifier si l'article est déjà dans le tableau
+        let trExistant = document.querySelector('tr[data-article-id="' + id + '"]');
+        if (trExistant) {
+            let inputQte = trExistant.querySelector('input[name="quantites[]"]');
+            inputQte.value = parseInt(inputQte.value) + 1;
+        } else {
+            document.getElementById('vd-ligne-vide')?.remove();
+            compteurLignes++;
+
+            let tbody = document.getElementById('vd-lignes-tbody');
+            let tr = document.createElement('tr');
+            tr.setAttribute('data-article-id', id);
+            tr.innerHTML = 
+                '<td class="col-num" style="text-align: center; font-weight: bold; color: var(--text-medium);">' + compteurLignes + '</td>' +
+                '<td style="font-family: monospace; font-size: 13px;">' + (ref !== '-' ? ref : '') + '</td>' +
+                '<td style="font-weight: 500; font-size: 14px; color: var(--text-dark);">' + nom + '</td>' +
+                '<td style="text-align: center;">' +
+                '<input type="number" name="quantites[]" value="1" min="1" max="' + qteDispo + '" class="input-ligne-qte" style="width: 80px; padding:6px; border:1px solid #ccc; border-radius:4px; text-align:center;" title="Max: ' + qteDispo + '">' +
+                '<input type="hidden" name="articles[]" value="' + id + '">' +
+                '<div style="font-size:11px; color:#6c757d; margin-top:4px;">Dispo: ' + qteDispo + '</div>' +
+                '</td>' +
+                '<td style="text-align: center;">' +
+                '<button type="button" onclick="supprimerLigneVD(this)" style="color: #dc3545; border: none; background: var(--bg-hover); width: 32px; height: 32px; border-radius: 6px; cursor: pointer;"><i class="fas fa-trash-alt"></i></button>' +
+                '</td>';
+            tbody.appendChild(tr);
+        }
+        document.getElementById('vd-search-input').value = '';
+        document.getElementById('vd-dropdown').style.display = 'none';
+        document.getElementById('vd-search-input').focus();
+    }
+
+    function supprimerLigneVD(btn) {
+        btn.closest('tr').remove();
+        let lignes = document.querySelectorAll('#vd-lignes-tbody tr:not(#vd-ligne-vide)');
+        compteurLignes = 0;
+        lignes.forEach(ligne => { compteurLignes++; ligne.querySelector('.col-num').innerText = compteurLignes; });
+        if (document.getElementById('vd-lignes-tbody').children.length === 0) {
+            document.getElementById('vd-lignes-tbody').innerHTML = '<tr id="vd-ligne-vide"><td colspan="5" style="text-align: center; padding: 50px; color: var(--text-light);"><i class="fas fa-box" style="font-size: 40px; margin-bottom: 15px; display: block; opacity: 0.4;"></i>Aucun article ajouté. Cherchez ci-dessus.</td></tr>';
+            compteurLignes = 0;
+        }
     }
 
     function annulerTransfert(id, numero) {
@@ -443,6 +625,15 @@
         });
     }
 
+    
+
+
+    
+
+    
+    if (typeof jQuery !== 'undefined') {
+        $('.select2').select2({ dropdownParent: $('#modal-transfert') });
+    }
     document.addEventListener('DOMContentLoaded', function() {
         // Fermeture modales au clic extérieur
         const modalTransfert = document.getElementById('modal-transfert');

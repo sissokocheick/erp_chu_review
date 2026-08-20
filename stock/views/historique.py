@@ -45,8 +45,11 @@ def _element_historique(h):
     """Description d'un enregistrement historique sans accès FK par ligne (anti N+1)."""
     modele = h.__class__.__name__.replace('Historical', '')
     if modele == 'Mouvement':
-        art = getattr(h, 'article', None)
-        designation = getattr(art, 'designation', '') or '' if art is not None else ''
+        try:
+            art = h.article
+            designation = art.designation if art else ''
+        except Exception:
+            designation = '(Article supprimé)'
         return f"{getattr(h, 'type_mouvement', '') or ''} — {designation} x{getattr(h, 'quantite', '') or ''}"
     if modele == 'Group':
         return getattr(h, 'name', '') or ''

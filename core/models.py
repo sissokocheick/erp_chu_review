@@ -63,34 +63,6 @@ class TypeDocument(models.TextChoices):
     BC = 'BC', 'Bon de Commande'
 
 # ==========================================================
-# 📄 CONFIGURATION DES DOCUMENTS PDF (MONO-TENANT)
-# ==========================================================
-class ConfigDocument(models.Model):
-    """Configuration personnalisable par type de document PDF."""
-    type_doc = models.CharField(max_length=10, choices=TypeDocument.choices, unique=True)
-    # 💡 Après déduplication éventuelle des données historiques,
-    #    tu pourras passer type_doc en unique=True.
-
-    # Métadonnées ISO
-    code_document = models.CharField(max_length=50, blank=True, verbose_name="Code document")
-    date_creation_doc = models.CharField(max_length=20, blank=True, verbose_name="Date création")
-    date_revision_doc = models.CharField(max_length=20, blank=True, verbose_name="Date révision")
-    version_doc = models.CharField(max_length=10, blank=True, verbose_name="Version")
-    ps2_label = models.CharField(max_length=100, blank=True, verbose_name="Label PS2")
-
-    # Affichage conditionnel
-    afficher_signatures = models.BooleanField(default=True, verbose_name="Afficher les signatures")
-
-    class Meta:
-        verbose_name = "Configuration document"
-        verbose_name_plural = "Configurations documents"
-        ordering = ['type_doc']
-
-    def __str__(self):
-        return self.get_type_doc_display()
-
-
-# ==========================================================
 # 🏥 CONFIGURATION UNIQUE DE L'ÉTABLISSEMENT (SINGLETON)
 # ==========================================================
 class ConfigurationHopital(TraceabiliteMixin):
@@ -116,26 +88,8 @@ class ConfigurationHopital(TraceabiliteMixin):
     pays = models.CharField(max_length=100, blank=True, default="Côte d'Ivoire")
 
     # ── Paramètres fonctionnels ──
-    TYPE_MDP_CHOICES = [
-        ('ALEATOIRE', '🔀 Aléatoire (sécurisé) — Le système génère un mot de passe fort'),
-        ('FIXE', "🔒 Mot de passe fixe — L'admin définit un mot de passe par défaut"),
-    ]
 
-    type_mot_de_passe = models.CharField(
-        max_length=20,
-        choices=TYPE_MDP_CHOICES,
-        default='ALEATOIRE',
-        verbose_name="Politique de mot de passe pour les nouveaux utilisateurs",
-        help_text="Choisissez comment les mots de passe sont attribués lors de la création de comptes."
-    )
 
-    mot_de_passe_defaut = models.CharField(
-        max_length=50,
-        blank=True,
-        null=True,
-        verbose_name="Mot de passe par défaut (si mode 'Fixe' choisit)",
-        help_text="Ce mot de passe sera utilisé pour tous les nouveaux comptes créés par les admins."
-    )
 
     delai_remplacement_bon_jours = models.PositiveIntegerField(
         default=2,
@@ -187,10 +141,10 @@ class ConfigurationHopital(TraceabiliteMixin):
     rccm = models.CharField(max_length=50, blank=True, verbose_name="RCCM")
 
     # ── Hiérarchie affichée sur les documents (hérité de l'ancien modèle) ──
-    direction_label = models.CharField(max_length=200, default="DIRECTION DES AFFAIRES FINANCIÈRES", verbose_name="Label Direction")
-    sous_direction_label = models.CharField(max_length=200, default="SOUS-DIRECTION DE LA LOGISTIQUE", verbose_name="Label Sous-Direction")
-    service_label = models.CharField(max_length=200, default="SERVICE APPROVISIONNEMENT ET GESTION DES STOCKS", verbose_name="Label Service")
-    pied_page_pdf = models.TextField(default="Document gǸnǸrǸ par NexusERP \u2014 Tous droits rǸservǸs.", verbose_name="Pied de page PDF")
+    direction_label = models.CharField(max_length=200, default="DIRECTION DES AFFAIRES FINANCIÈRES", verbose_name="Label Direction", blank=True)
+    sous_direction_label = models.CharField(max_length=200, default="SOUS-DIRECTION DE LA LOGISTIQUE", verbose_name="Label Sous-Direction", blank=True)
+    service_label = models.CharField(max_length=200, default="SERVICE APPROVISIONNEMENT ET GESTION DES STOCKS", verbose_name="Label Service", blank=True)
+    pied_page_pdf = models.TextField(default="Document gǸnǸrǸ par NexusERP \u2014 Tous droits rǸservǸs.", verbose_name="Pied de page PDF", blank=True)
 
     # 🔧 Affichage global PDF 🔧
     afficher_logo = models.BooleanField(default=True, verbose_name="Afficher le logo sur les PDF")
@@ -206,19 +160,13 @@ class ConfigurationHopital(TraceabiliteMixin):
     afficher_service = models.BooleanField(default=True, verbose_name="Afficher le Service")
 
     # ── Numérotation personnalisable (hérité de l'ancien modèle) ──
-    prefixe_bon_sortie = models.CharField(max_length=10, default="BS", verbose_name="Préfixe Bon de Sortie")
-    prefixe_bon_entree = models.CharField(max_length=10, default="BE", verbose_name="Préfixe Bon d'Entrée")
-    prefixe_bon_retour = models.CharField(max_length=10, default="BR", verbose_name="Préfixe Bon de Retour")
-    prefixe_bon_hors_stock = models.CharField(max_length=10, default="BSHS", verbose_name="Préfixe Bon Hors Stock")
-    prefixe_commande = models.CharField(max_length=10, default="BC", verbose_name="Préfixe Commande")
+    prefixe_bon_sortie = models.CharField(max_length=10, default="BS", verbose_name="Préfixe Bon de Sortie", blank=True)
+    prefixe_bon_entree = models.CharField(max_length=10, default="BE", verbose_name="Préfixe Bon d'Entrée", blank=True)
+    prefixe_bon_retour = models.CharField(max_length=10, default="BR", verbose_name="Préfixe Bon de Retour", blank=True)
+    prefixe_bon_hors_stock = models.CharField(max_length=10, default="BSHS", verbose_name="Préfixe Bon Hors Stock", blank=True)
+    prefixe_commande = models.CharField(max_length=10, default="BC", verbose_name="Préfixe Commande", blank=True)
 
     # ── Labels des 6 emplacements de signature (hérité de l'ancien modèle) ──
-    label_signataire_1 = models.CharField(max_length=100, default="Le Demandeur", verbose_name="Signataire 1")
-    label_signataire_2 = models.CharField(max_length=100, default="Le Magasinier", verbose_name="Signataire 2")
-    label_signataire_3 = models.CharField(max_length=100, default="Le Responsable Service", verbose_name="Signataire 3")
-    label_signataire_4 = models.CharField(max_length=100, default="Le Directeur", verbose_name="Signataire 4")
-    label_signataire_5 = models.CharField(max_length=100, default="Le Contrôleur", verbose_name="Signataire 5")
-    label_signataire_6 = models.CharField(max_length=100, default="Le Réceptionnaire", verbose_name="Signataire 6")
 
     history = HistoricalRecords()
 
@@ -305,13 +253,6 @@ class ConfigurationHopital(TraceabiliteMixin):
     # ======================================================
     # CONFIGURATION PDF (hérité de l'ancien modèle)
     # ======================================================
-    @property
-    def labels_signatures(self):
-        """Retourne la liste des labels des 6 signataires."""
-        return [
-            self.label_signataire_1, self.label_signataire_2, self.label_signataire_3,
-            self.label_signataire_4, self.label_signataire_5, self.label_signataire_6,
-        ]
 
     def get_pdf_config(self, type_doc=TypeDocument.BS):
         """Retourne toute la config personnalisable pour les templates PDF."""

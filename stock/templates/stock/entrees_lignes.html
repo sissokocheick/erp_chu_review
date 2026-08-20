@@ -37,9 +37,7 @@
         <td style="padding: 12px; {% if bon.est_annule %}text-decoration: line-through; color: #888;{% endif %}">
             {{ bon.date_bon|date:"d/m/Y" }}
         </td>
-        <td style="padding: 12px; {% if bon.est_annule %}text-decoration: line-through; color: #888;{% endif %}">
-            {{ bon.magasin.nom }}
-        </td>
+
         <td style="padding: 12px; {% if bon.est_annule %}text-decoration: line-through; color: #888;{% endif %}">
             {{ bon.fournisseur.raison_sociale|default:"-" }}
         </td>
@@ -85,14 +83,7 @@
     <i class="fas fa-print"></i>
 </button>
 
-                <!-- RETOUR FOURNISSEUR : pré-remplit la modale avec le fournisseur + lignes du bon -->
-                {% if not bon.est_annule and bon.fournisseur or not bon.est_annule and bon.commande_liee.fournisseur %}
-                <a href="{% url 'liste_retours_fournisseurs' %}?from_bon={{ bon.id }}" onclick="event.stopPropagation();"
-                   style="background: #e74c3c; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;"
-                   title="Créer un retour fournisseur à partir de ce bon d'entrée">
-                    <i class="fas fa-undo-alt"></i> Retour Fourn.
-                </a>
-                {% endif %}
+
                 
                 {% if not bon.est_annule %}
                     {% if bon.statut_validation == 'ATTENTE' %}

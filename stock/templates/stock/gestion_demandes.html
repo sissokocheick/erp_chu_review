@@ -358,7 +358,7 @@
               {% if demande.a_bon_en_attente %}
               <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-left: 5px solid #ffc107;">
                   <h4 style="margin: 0 0 10px; color: #856404; font-weight: 700; font-size: 15px;">
-                      <i class="fas fa-lock" style="margin-right:5px;"></i> Bon en attente de validation hierarchique
+                      <i class="fas fa-lock" style="margin-right:5px;"></i> Bon en attente de validation hiérarchique <a href="{% url 'liste_sorties' %}" style="font-size:12px; margin-left:10px; background:#ffc107; color:#856404; padding:4px 8px; border-radius:4px; text-decoration:none; font-weight:bold;"><i class="fas fa-external-link-alt"></i> Aller valider dans Bons de Sortie</a>
                   </h4>
                   <p style="margin: 0 0 8px; color: #856404; font-size: 13px;">
                       {% for liv in demande.livraisons.all %}
@@ -488,7 +488,7 @@
                           {% if livraison.bon_sortie %}
                               {% if livraison.bon_sortie.statut_validation == 'ATTENTE' %}
                                   <span style="background:#fff3cd; border:1px solid #ffc107; padding:10px 15px; border-radius:6px; color:#856404; font-size:12px; font-weight:bold; display:inline-flex; align-items:center; gap:6px;">
-                                      <i class="fas fa-lock"></i> {{ livraison.bon_sortie.numero_bon }} — Attente validation
+                                      <i class="fas fa-lock"></i> {{ livraison.bon_sortie.numero_bon }} — Attente validation <a href="{% url 'liste_sorties' %}" style="margin-left:5px; color:#856404; text-decoration:underline;" title="Aller dans les bons de sortie pour valider"><i class="fas fa-external-link-alt"></i></a>
                                   </span>
                               {% else %}
                                   <button type="button" data-action="imprimer" data-url="{% url 'imprimer_bon_multi_lignes' livraison.bon_sortie.id %}" data-titre="Bon de Sortie — {{ livraison.bon_sortie.numero_bon }}" 
