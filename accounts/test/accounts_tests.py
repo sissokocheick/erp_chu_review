@@ -3,7 +3,6 @@
 Tests pour le module accounts (mono-tenant) :
   - Profil (get_fonction_display, peut_changer_photo, doit_changer_mdp, signal)
   - Fonction, Specialite
-  - ConfigDocument
   - Notification, JournalAudit, AuditConnexion
   - MenuAccess
 """
@@ -13,7 +12,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from accounts.models import (
-    Profil, Fonction, Specialite, ConfigDocument,
+    Profil, Fonction, Specialite,
     Notification, JournalAudit, AuditConnexion, MenuAccess,
 )
 from core.models import Service

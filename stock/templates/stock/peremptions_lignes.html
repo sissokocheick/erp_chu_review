@@ -182,7 +182,7 @@
 
     <td class="no-print" style="padding: 12px; text-align: center;">
     {% if lot.stock_physique > 0 and lot.quantite_restante > 0 and lot.jours_restants < 0 %}
-    <form method="POST" action="{% url 'retirer_lot_perime' lot.id %}" style="margin: 0; display: inline;" onsubmit="confirmerDestruction(event, '{{ lot.numero_lot|default:'Sans lot' }}', '{{ lot.quantite_restante }}')">
+    <form method="POST" action="{% url 'retirer_lot_perime' lot.id %}" style="margin: 0; display: inline;" onsubmit="confirmerDestruction(event, '{{ lot.numero_lot|default:'Sans lot'|escapejs }}', '{{ lot.quantite_restante }}')">
       {% csrf_token %}
       <button type="submit" class="btn-detruire">
         <i class="fas fa-trash-alt" aria-hidden="true"></i> Détruire

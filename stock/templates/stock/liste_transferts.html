@@ -99,6 +99,8 @@
     }
     .btn-print { background: rgba(23,162,184,0.12); color: #0c7d8a; border-color: rgba(23,162,184,0.3); }
     .btn-print:hover { background: rgba(23,162,184,0.25); }
+    .btn-receive { background: rgba(40,167,69,0.12); color: #1e7e34; border-color: rgba(40,167,69,0.3); }
+    .btn-receive:hover { background: rgba(40,167,69,0.25); }
     .btn-cancel { background: rgba(220,53,69,0.1); color: #a71d2a; border-color: rgba(220,53,69,0.3); }
     .btn-cancel:hover { background: rgba(220,53,69,0.22); }
 
@@ -268,6 +270,11 @@
                     <a href="{% url 'imprimer_bon_multi_lignes' t.id %}" target="_blank" class="btn-action btn-print" style="padding: 8px 10px;" title="Imprimer le bon de transfert">
                         <i class="fas fa-print"></i>
                     </a>
+                    {% if t.statut_validation == 'ATTENTE' and not t.est_annule %}
+                    <button class="btn-action btn-receive" style="padding: 8px 10px;" onclick="receptionnerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Confirmer la réception du stock dans le magasin destination">
+                        <i class="fas fa-check-double"></i>
+                    </button>
+                    {% endif %}
                     {% if not t.est_annule %}
                     <button class="btn-action btn-cancel" style="padding: 8px 10px;" onclick="annulerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Annuler le transfert (le stock revient au magasin source)">
                         <i class="fas fa-ban"></i>
@@ -620,6 +627,30 @@
             form.action = "{% url 'liste_transferts' %}".replace('liste_transferts', 'transferts/' + id + '/annuler/');
             form.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + CSRF_TOKEN + '">' +
                 '<input type="hidden" name="motif" value="' + (result.value || '') + '">';
+            document.body.appendChild(form);
+            form.submit();
+        });
+    }
+
+    function receptionnerTransfert(id, numero) {
+        Swal.fire({
+            title: 'Réceptionner le transfert ' + numero + ' ?',
+            text: 'Le stock sera crédité dans le magasin de destination.',
+            icon: 'question',
+            input: 'text',
+            inputPlaceholder: 'Commentaire de réception (optionnel)',
+            showCancelButton: true,
+            confirmButtonText: 'Oui, réceptionner',
+            cancelButtonText: 'Non',
+            confirmButtonColor: '#28a745',
+            inputValidator: () => undefined
+        }).then((result) => {
+            if (!result.isConfirmed) return;
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{% url 'receptionner_transfert' 0 %}".replace('/0/', '/' + id + '/');
+            form.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + CSRF_TOKEN + '">' +
+                '<input type="hidden" name="commentaire" value="' + (result.value || '') + '">';
             document.body.appendChild(form);
             form.submit();
         });

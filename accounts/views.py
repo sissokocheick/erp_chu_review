@@ -343,7 +343,20 @@ def custom_login(request):
             adresse_ip=get_client_ip(request),
             date_creation__gte=timezone.now() - timedelta(seconds=LOGIN_FENETRE_ECHECS),
         ).count()
-        if nb_echecs >= LOGIN_MAX_ECHECS:
+
+        # ── Compteur PAR COMPTE également : un attaquant qui rotationne les
+        # IP (proxies/IPv6) ne doit pas pouvoir marteler un compte précis ;
+        # la limite par IP seule privait aussi toute une NAT d'accès.
+        username_brut = request.POST.get('username', '').lower().strip().replace(' ', '')
+        if '@' in username_brut:
+            username_brut = username_brut.split('@', 1)[0]
+        nb_echecs_compte = AuditConnexion.objects.filter(
+            type_action='ECHEC',
+            description=f"Tentative echouee pour {username_brut}",
+            date_creation__gte=timezone.now() - timedelta(seconds=LOGIN_FENETRE_ECHECS),
+        ).count() if username_brut else 0
+
+        if nb_echecs >= LOGIN_MAX_ECHECS or nb_echecs_compte >= LOGIN_MAX_ECHECS:
             messages.error(
                 request,
                 '⛔ Trop de tentatives échouées. Connexion temporairement bloquée — réessayez dans 15 minutes.',
@@ -805,51 +818,63 @@ def profil_utilisateur(request):
 
         if action == 'photo':
 
-
             photo = request.FILES.get('photo')
-
 
             if photo:
 
-
-                # CORRECTION : verification MIME
-
-
-                if photo.content_type not in ('image/jpeg', 'image/png'):
-
-
-                    messages.error(request, "⛔ Seuls les formats JPG et PNG sont acceptes.")
-
-
+                # Anti-abus : le cooldown de changement de photo doit être
+                # vérifié côté serveur (le template seul est contournable).
+                # @property (bool) — ne pas l'appeler
+                peut = (profil.peut_changer_photo
+                        if hasattr(profil, 'peut_changer_photo') else True)
+                if not peut and not request.user.is_superuser:
+                    reste = max(1, profil.temps_restant_photo // 60)                         if hasattr(profil, 'temps_restant_photo') else 0
+                    messages.error(
+                        request,
+                        f"⛔ Vous devez patienter {reste} minute(s) avant de "
+                        "pouvoir changer votre photo à nouveau.")
                     return redirect(f'{request.path}?onglet=infos')
 
+                # Vérification du contenu réel (magic bytes via Pillow) : le
+                # Content-Type et l'extension sont contrôlés par le client et
+                # ne suffisent pas (XSS stocké via fichier HTML/SVG renommé).
+                try:
+                    from PIL import Image as PILImage
+                    from io import BytesIO
+                    photo.seek(0)
+                    img = PILImage.open(BytesIO(photo.read()))
+                    img.verify()
+                    photo.seek(0)
+                    format_reel = (img.format or '').upper()
+                except Exception:
+                    messages.error(request, "⛔ Fichier image invalide ou corrompu.")
+                    return redirect(f'{request.path}?onglet=infos')
+
+                if format_reel not in ('JPEG', 'PNG'):
+                    messages.error(request, "⛔ Seuls les formats JPG et PNG sont acceptés.")
+                    return redirect(f'{request.path}?onglet=infos')
 
                 if photo.size > 2 * 1024 * 1024:
-
-
                     messages.error(request, "⛔ L'image ne doit pas depasser 2 Mo.")
-
-
                     return redirect(f'{request.path}?onglet=infos')
 
+                # Forcer une extension saine : le nom d'origine peut être x.html
+                import os as _os
+                if _os.splitext(photo.name)[1].lower() not in ('.jpg', '.jpeg', '.png'):
+                    photo.name = f"photo_{request.user.id}" + (
+                        '.jpg' if format_reel == 'JPEG' else '.png')
 
                 profil.photo = photo
 
-
                 profil.nb_changements_photo = getattr(profil, 'nb_changements_photo', 0) + 1
-
 
                 profil.date_derniere_photo = timezone.now()
 
-
                 profil.save()
-
 
                 messages.success(request, "✅ Photo mise a jour.")
 
-
             return redirect(f'{request.path}?onglet=infos')
-
 
         elif action == 'password':
 
@@ -1065,6 +1090,12 @@ def page_utilisateurs(request):
                 messages.error(request, "❌ Vous ne pouvez pas vous desactiver.")
 
 
+            elif user.is_superuser and not request.user.is_superuser:
+
+
+                messages.error(request, "⛔ Seul un superutilisateur peut activer/desactiver un compte superutilisateur.")
+
+
             else:
 
 
@@ -1155,7 +1186,7 @@ def page_utilisateurs(request):
                 'fonction': request.POST.get('fonction') or '',
 
 
-                'magasin_ids': request.POST.getlist('magasins'),
+                'magasin_ids': [int(m) for m in request.POST.getlist('magasins') if str(m).isdigit()],
 
 
             }
@@ -1216,7 +1247,7 @@ def page_utilisateurs(request):
             fonction_id = request.POST.get('fonction')
 
 
-            magasin_ids = request.POST.getlist('magasins')
+            magasin_ids = [int(m) for m in request.POST.getlist('magasins') if str(m).isdigit()]
 
 
             # Donnees du formulaire pour pre-remplissage en cas d'erreur
@@ -1287,6 +1318,11 @@ def page_utilisateurs(request):
 
                 user = get_object_or_404(User, id=uid)
 
+                # Garde : seul un superuser peut modifier un compte superuser
+                if user.is_superuser and not request.user.is_superuser:
+                    err = "⛔ Seul un superutilisateur peut modifier un compte superutilisateur."
+                    return render(request, 'accounts/utilisateurs.html',
+                                  _ctx_utilisateurs(request, page_obj, q, statut, form_data, show_modal=True, form_error=err))
 
                 user.first_name = first_name
 
@@ -1675,8 +1711,13 @@ def page_utilisateurs(request):
                 profil.magasins_autorises.clear()
 
 
-            if groupe_id:
-                user.groups.set([groupe_id])
+            # groupe_id peut être vide ou non numérique : valider avant le set
+            try:
+                groupe_id_valide = int(groupe_id) if groupe_id else None
+            except (TypeError, ValueError):
+                groupe_id_valide = None
+            if groupe_id_valide and Group.objects.filter(id=groupe_id_valide).exists():
+                user.groups.set([groupe_id_valide])
             else:
                 user.groups.clear()
 
@@ -1738,9 +1779,13 @@ def reinitialiser_mdp(request, user_id):
 
     user = get_object_or_404(User, id=user_id)
 
+    # Garde : seul un superuser peut toucher au mot de passe d'un superuser
+    # (sinon tout porteur de menu_utilisateurs prend le contrôle du compte admin).
+    if user.is_superuser and not request.user.is_superuser:
+        messages.error(request, "⛔ Seul un superutilisateur peut réinitialiser le mot de passe d'un superutilisateur.")
+        return redirect('accounts:page_utilisateurs')
 
     if request.method == 'POST':
-
 
         nouveau = request.POST.get('nouveau_mdp', '')
 
@@ -2918,9 +2963,17 @@ def page_roles(request):
                 messages.success(request, f"✅ Role '{nom}' cree.")
 
 
+            # Allowlist serveur : seules les permissions exposées par l'UI
+            # (menus + sous-permissions) peuvent être attachées à un rôle.
+            # Un POST forgé ne peut plus s'auto-attribuer n'importe quelle
+            # Permission (delete_*, menu_utilisateurs, etc.).
+            ids_autorises = {p.id for p in perms_disponibles}
+
             if perm_ids:
 
-                perms = Permission.objects.filter(id__in=perm_ids)
+                perm_ids_filtrés = [int(pid) for pid in perm_ids
+                                    if str(pid).isdigit() and int(pid) in ids_autorises]
+                perms = Permission.objects.filter(id__in=perm_ids_filtrés)
 
             else:
 
@@ -3245,6 +3298,14 @@ def journal_audit(request):
         response.write('\ufeff')  # BOM Excel
 
 
+        def _anti_formulaire(valeur):
+            # CSV injection : une cellule commençant par = + - @ est exécutée
+            # comme formule par Excel ; on la neutralise par un apostrophe.
+            valeur = str(valeur or '')
+            if valeur[:1] in ('=', '+', '-', '@'):
+                return "'" + valeur
+            return valeur
+
         writer = csv.writer(response, delimiter=';')
 
 
@@ -3260,16 +3321,16 @@ def journal_audit(request):
                 evt.date_creation.strftime('%d/%m/%Y %H:%M:%S') if evt.date_creation else '',
 
 
-                evt.utilisateur.username if evt.utilisateur else '',
+                _anti_formulaire(evt.utilisateur.username if evt.utilisateur else ''),
 
 
-                evt.type_action,
+                _anti_formulaire(evt.type_action),
 
 
-                evt.description or '',
+                _anti_formulaire(evt.description or ''),
 
 
-                evt.adresse_ip or '',
+                _anti_formulaire(evt.adresse_ip or ''),
 
 
             ])
@@ -3984,27 +4045,35 @@ def enregistrer_signature(request):
 
         if signature:
 
-
-            # CORRECTION : verification MIME
-
-
-            if signature.content_type not in ('image/jpeg', 'image/png'):
-
-
-                messages.error(request, "⛔ Seuls les formats JPG et PNG sont acceptes.")
-
-
+            # Vérification du contenu réel (magic bytes via Pillow) : le
+            # Content-Type est contrôlé par le client (XSS stocké possible).
+            try:
+                from PIL import Image as PILImage
+                from io import BytesIO
+                signature.seek(0)
+                img = PILImage.open(BytesIO(signature.read()))
+                img.verify()
+                signature.seek(0)
+                format_reel = (img.format or '').upper()
+            except Exception:
+                messages.error(request, "⛔ Fichier image invalide ou corrompu.")
                 return redirect('accounts:profil_utilisateur')
 
+            if format_reel not in ('JPEG', 'PNG'):
+                messages.error(request, "⛔ Seuls les formats JPG et PNG sont acceptés.")
+                return redirect('accounts:profil_utilisateur')
 
             if signature.size > 2 * 1024 * 1024:
 
-
                 messages.error(request, "⛔ La signature ne doit pas depasser 2 Mo.")
-
 
                 return redirect('accounts:profil_utilisateur')
 
+            # Forcer une extension saine (le nom d'origine peut être x.html)
+            import os as _os
+            if _os.splitext(signature.name)[1].lower() not in ('.jpg', '.jpeg', '.png'):
+                signature.name = f"signature_{request.user.id}" + (
+                    '.jpg' if format_reel == 'JPEG' else '.png')
 
             profil.signature = signature
 
@@ -4075,9 +4144,6 @@ def circuits_validation(request):
         circuit.est_actif = request.POST.get('est_actif') == 'on'
 
 
-        circuit.save(update_fields=['est_actif'])
-
-
         valideur_ids = request.POST.getlist('valideurs')
 
 
@@ -4091,6 +4157,14 @@ def circuits_validation(request):
 
 
             with transaction.atomic():
+
+
+                # est_actif et la liste des validateurs sont sauvegardés dans
+                # la MÊME transaction : impossible de se retrouver avec un
+                # circuit à moitié mis à jour si une erreur survient.
+
+
+                circuit.save(update_fields=['est_actif'])
 
 
                 CircuitValidateur.objects.filter(circuit=circuit).delete()

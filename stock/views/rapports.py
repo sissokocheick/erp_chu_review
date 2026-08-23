@@ -26,6 +26,11 @@ from .catalogue import paginer, appliquer_tri
 logger = logging.getLogger(__name__)
 
 
+def _json_pour_script(obj):
+    """JSON sûr à injecter dans un <script> : échappe « </ » (anti-XSS)."""
+    return json.dumps(obj).replace('</', '<\\/')
+
+
 def parse_date_range(date_range, default_days=365):
     if date_range:
         try:
@@ -973,7 +978,7 @@ def stats_satisfaction_services(request):
             'taux_reponse': g_taux_rep,
             'note_moyenne': round(g_note, 1),
         },
-        'chart_labels': json.dumps(labels),
+        'chart_labels': _json_pour_script(labels),
         'chart_sat': json.dumps(data_sat),
         'chart_rep': json.dumps(data_rep),
         'chart_notes': json.dumps(data_notes),
@@ -1151,7 +1156,7 @@ def rapport_consommation_services(request):
 
     context = {
         'par_service': par_service,
-        'chart_services_labels': json.dumps(
+        'chart_services_labels': _json_pour_script(
             [r['service_demandeur__nom'] for r in top_services]),
         'chart_services_data': json.dumps(
             [float(r['valeur'] or 0) for r in top_services]),
@@ -1164,7 +1169,7 @@ def rapport_consommation_services(request):
         'service_id': service_id,
         'mois': nb_mois,
         'services': Service.objects.all().order_by('nom'),
-        'chart_labels': json.dumps(labels),
+        'chart_labels': _json_pour_script(labels),
         'chart_qte': json.dumps(series_qte),
         'chart_valeur': json.dumps(series_valeur),
         'magasin_actif': magasin_actif,

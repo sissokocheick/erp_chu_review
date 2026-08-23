@@ -242,9 +242,13 @@ def _creer_ma_demande(request):
             commentaire=commentaire
         )
         for aid, qte in zip(article_ids, quantites):
-            if aid and qte and int(qte) > 0:
+            try:
+                qte_val = int(qte) if qte and str(qte).strip() else 0
+            except (TypeError, ValueError):
+                qte_val = 0
+            if aid and qte_val > 0:
                 LigneDemande.objects.create(
-                    demande=demande, article_id=aid, quantite_demandee=int(qte)
+                    demande=demande, article_id=aid, quantite_demandee=qte_val
                 )
 
     # ── Génération du Bon de Demande PDF ──

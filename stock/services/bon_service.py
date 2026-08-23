@@ -266,6 +266,10 @@ class BonService:
         # ✅ CORRECTION MONO-TENANT : vérification utilisateur
         cls._verifier_utilisateur_actif(utilisateur, magasin)
 
+        # Garde-fou : jamais de bon sans ligne valide
+        if not any(l.get('article_id') and (l.get('quantite') or 0) > 0 for l in lignes):
+            raise ValidationError("Aucune ligne valide : le bon ne peut pas être créé vide.")
+
         statut = 'ATTENTE' if circuit_validation and circuit_validation.est_actif else 'VALIDE'
 
         # ✅ CORRECTION : charger articles_map UNE SEULE FOIS (factorisé avant le if)
@@ -588,6 +592,10 @@ class BonService:
         # ✅ CORRECTION MONO-TENANT : vérification utilisateur
         cls._verifier_utilisateur_actif(utilisateur, magasin)
 
+        # Garde-fou : jamais de bon sans ligne valide
+        if not any(l.get('article_id') and (l.get('quantite') or 0) > 0 for l in lignes):
+            raise ValidationError("Aucune ligne valide : le bon ne peut pas être créé vide.")
+
         # Même pattern que creer_bon_entree : circuit actif → ATTENTE (stock
         # intact jusqu'à validation), sinon VALIDE immédiat avec mouvements.
         statut = 'ATTENTE' if circuit_validation and circuit_validation.est_actif else 'VALIDE'
@@ -687,6 +695,10 @@ class BonService:
         """
         cls._verifier_utilisateur_actif(utilisateur, magasin)
 
+        # Garde-fou : jamais de bon sans ligne valide
+        if not any(l.get('article_id') and (l.get('quantite') or 0) > 0 for l in lignes):
+            raise ValidationError("Aucune ligne valide : le bon ne peut pas être créé vide.")
+
         statut = 'ATTENTE' if circuit_validation and circuit_validation.est_actif else 'VALIDE'
 
         bon_kwargs = {
@@ -765,6 +777,8 @@ class BonService:
     @transaction.atomic
     def valider_bon_sortie(cls, bon, utilisateur):
         """Passe un bon ATTENTE en VALIDE et crée les mouvements de sortie."""
+        if bon.est_annule:
+            raise ValueError("Bon annulé, impossible de valider.")
         if bon.statut_validation == 'VALIDE':
             raise ValueError("Bon déjà validé.")
         if bon.statut_validation == 'REJETE':
@@ -835,6 +849,26 @@ class BonService:
 
         return bon
 
+    # ─────────────────────────────────────────────────────
+    # Helper : mouvements rattachés à un bon
+    # ─────────────────────────────────────────────────────
+    @staticmethod
+    def _qs_mouvements_du_bon(bon, type_mouvement):
+        """Mouvements d'un bon SANS collision de préfixe.
+
+        Les numéros (« BS-2025-123 ») sont des préfixes d'autres numéros dès
+        que le compteur passe à 4 chiffres (« BS-2025-1234 ») : un simple
+        ``startswith`` attraperait les mouvements de l'autre bon. On matche
+        le numéro exact, ou le numéro suivi d'un espace (références enrichies
+        du type « BE 012-2025 (Réf Cmd: BC 001-2025) »).
+        """
+        from django.db.models import Q
+        return Mouvement.objects.filter(
+            Q(reference_document=bon.numero_bon)
+            | Q(reference_document__startswith=bon.numero_bon + ' '),
+            type_mouvement=type_mouvement,
+        )
+
     # ═══════════════════════════════════════════════════════════════════════
     # ANNULATIONS
     # ═══════════════════════════════════════════════════════════════════════
@@ -851,10 +885,7 @@ class BonService:
         # ✅ CORRECTION : gérer motif comme string ou objet
         motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
 
-        mouvements = Mouvement.objects.filter(
-            reference_document__startswith=bon.numero_bon,
-            type_mouvement='ENTREE'
-        )
+        mouvements = cls._qs_mouvements_du_bon(bon, 'ENTREE')
 
         for mouvement_original in mouvements:
             try:
@@ -943,10 +974,7 @@ class BonService:
                 demande_liee.bon_sortie_lie = None
                 demande_liee.save(update_fields=['statut', 'bon_sortie_lie'])
 
-        mouvements = Mouvement.objects.filter(
-            reference_document__startswith=bon.numero_bon,
-            type_mouvement='SORTIE'
-        )
+        mouvements = cls._qs_mouvements_du_bon(bon, 'SORTIE')
 
         for mouvement_original in mouvements:
             StockTransactionService.annuler_par_contre_mouvement(
@@ -1012,10 +1040,7 @@ class BonService:
         motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
 
         # Contre-mouvements : réintégration du stock sorti
-        mouvements = Mouvement.objects.filter(
-            reference_document__startswith=bon.numero_bon,
-            type_mouvement='RETOUR_FOURNISSEUR'
-        )
+        mouvements = cls._qs_mouvements_du_bon(bon, 'RETOUR_FOURNISSEUR')
 
         nb_reintegres = 0
         for mouvement_original in mouvements:

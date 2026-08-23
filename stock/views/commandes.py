@@ -292,8 +292,22 @@ def receptionner_commande(request, commande_id):
             peremptions.append('')
 
         # ✅ CORRECTION SANITAIRE : bloquer les lots déjà périmés AVANT toute écriture
+        # Les lignes doivent appartenir à CETTE commande (sinon un ID forgé
+        # permettrait de recevoir les lignes d'une autre commande).
         ids = [int(l) for l in ligne_ids if l.strip().isdigit()]
-        lc_map = {lc.id: lc for lc in LigneCommande.objects.filter(id__in=ids).select_related('article')}
+        lc_map = {
+            lc.id: lc
+            for lc in LigneCommande.objects.filter(
+                id__in=ids, commande=commande
+            ).select_related('article')
+        }
+        ids_inconnus = [l for l in ids if l not in lc_map]
+        if ids_inconnus:
+            messages.error(
+                request,
+                "⛔ Certaines lignes de réception n'appartiennent pas à cette commande."
+            )
+            return redirect('receptionner_commande', commande_id=commande.id)
         erreurs_peremption = []
         for lid, peremp in zip(ligne_ids, peremptions):
             if not (peremp and peremp.strip()):
@@ -344,6 +358,11 @@ def receptionner_commande(request, commande_id):
                 ):
                     qte_recue = int(qte) if qte.strip().isdigit() else 0
                     if qte_recue > 0:
+                        if not lid.strip().isdigit() or int(lid) not in lc_map:
+                            raise ValueError(
+                                f"Ligne de réception {lid} inconnue pour la "
+                                f"commande {commande.numero_commande}."
+                            )
                         ligne_cmd = LigneCommande.objects.select_for_update().get(id=lid)
                         if qte_recue > ligne_cmd.reliquat:
                             raise ValueError(
@@ -423,7 +442,11 @@ def receptionner_commande(request, commande_id):
 def valider_commande(request, commande_id):
     commande = get_object_or_404(
         Commande, id=commande_id)
-    
+
+    if request.method != 'POST':
+        messages.error(request, "❌ Cette action doit être effectuée en POST.")
+        return redirect('liste_commandes')
+
     # ✅ CORRECTION : Fail-closed complet
     peut_valider = request.user.is_superuser
     try:
@@ -442,9 +465,8 @@ def valider_commande(request, commande_id):
         # FAIL-CLOSED : pas de circuit = seul le superuser peut valider
         peut_valider = False
         logger.warning(
-
-            f"[COMMANDE] Pas de circuit de validation configuré "
-            f"None"
+            "[COMMANDE] Pas de circuit de validation configuré "
+            "pour le type COMMANDE"
         )
 
     if not peut_valider:

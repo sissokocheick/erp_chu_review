@@ -120,7 +120,10 @@ def valider_sas(request, pk):
             prefix = f"{annee}-{cat_code}-"
 
 
-            while True:
+            # Garde : les FK brutes du POST peuvent lever IntegrityError de
+            # contrainte (FK invalide), pas seulement une collision de code —
+            # une boucle « while True » sans borne bloquerait le worker.
+            for tentatives in range(1, 11):
 
                 dernier_immo = Immobilisation.objects.filter(code_patrimoine__startswith=prefix).order_by('-code_patrimoine').first()
 
@@ -144,11 +147,19 @@ def valider_sas(request, pk):
 
                         )
 
-                    break 
+                    break
 
-                except IntegrityError:
-
+                except IntegrityError as e:
+                    # Collision de code → régénérer et retenter. Une FK
+                    # invalide échoue de façon déterministe : abandonner
+                    # plutôt que de boucler à l'infini.
+                    if 'code_patrimoine' not in str(e) and tentatives >= 3:
+                        raise
                     continue
+            else:
+                raise ValueError(
+                    "Impossible de générer un code patrimoine unique "
+                    f"après {tentatives} tentatives (préfixe {prefix}).")
 
 
             messages.success(request, f"✅ Bien immatriculé sous le code {immo.code_patrimoine}.")
@@ -195,9 +206,16 @@ def eclater_bien_sas(request):
 
     noms_composants = request.POST.getlist('noms_composants[]')
 
-    nombre = len(noms_composants) if noms_composants else int(request.POST.get('nombre', 2))
-
-    if nombre < 2: return JsonResponse({'success': False, 'error': "Le nombre doit être au moins 2."})
+    # Validation robuste + borne haute : éviter le crash sur une valeur non
+    # numérique et la création de milliers de clones en un seul POST.
+    try:
+        nombre = len(noms_composants) if noms_composants else int(request.POST.get('nombre', 2))
+    except (TypeError, ValueError):
+        return JsonResponse({'success': False, 'error': "Nombre invalide."})
+    if nombre < 2:
+        return JsonResponse({'success': False, 'error': "Le nombre doit être au moins 2."})
+    if nombre > 15:
+        return JsonResponse({'success': False, 'error': "Le nombre maximum de composants est 15."})
 
     immo = get_object_or_404(Immobilisation, id=immo_id, statut='EN_ATTENTE')
 
@@ -243,6 +261,11 @@ def eclater_bien_sas(request):
 @verifier_permission('accounts.menu_pat_sas')
 
 def creer_immatriculation_directe(request):
+
+    # Créer une immobilisation est une écriture : POST uniquement (un lien
+    # GET préchargé par le navigateur créait des biens fantômes dans le SAS).
+    if request.method != 'POST':
+        return redirect('patrimoine_sas')
 
     nouvelle_immo = Immobilisation.objects.create(nom_affichage="Nouveau Matériel (Saisie Directe)", statut='EN_ATTENTE', valeur_acquisition=0, cree_par=request.user)
 

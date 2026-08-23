@@ -62,16 +62,25 @@ def creer_immobilisations_depuis_bon(sender, instance, created, **kwargs):
         quantite = int(getattr(instance, 'quantite', 1) or 1)
 
         # Garde anti-doublon : si des immos existent déjà pour ce bon + article,
-        # ne pas en recréer (protection contre les re-sauvegardes de lignes)
+        # ne pas en recréer (protection contre les re-sauvegardes de lignes).
+        # La cible est le TOTAL des lignes du bon pour CET article (un bon
+        # peut légalement contenir 2 lignes du même article : l'ancien garde
+        # comparait la 2e ligne à la quantité de la 1re → sous-création).
+        from stock.models import LigneBon
+        total_voulu = sum(
+            LigneBon.objects.filter(bon=bon, article=article)
+            .values_list('quantite', flat=True)
+        ) or quantite
+
         existantes = Immobilisation.objects.filter(
             bon_sortie_origine=bon,
             article_stock=article,
         ).count()
-        if existantes >= quantite:
+        if existantes >= total_voulu:
             return
 
         with transaction.atomic():
-            for _ in range(quantite - existantes):
+            for _ in range(total_voulu - existantes):
                 Immobilisation.objects.create(
                     type_equipement     = type_eq,
                     article_stock       = article,

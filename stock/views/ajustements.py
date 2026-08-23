@@ -173,7 +173,10 @@ def valider_ajustement(request, ajustement_id):
     Protection double-clic : token de session.
     """
     # ═════ PROTECTION ANTI-DOUBLE-CLIC ═════
-    token = request.GET.get('token', '')
+    if request.method != 'POST':
+        messages.error(request, "❌ Cette action doit être effectuée en POST.")
+        return redirect('liste_ajustements')
+    token = request.POST.get('token', '')
     last_token = request.session.get('last_valider_token', '')
     if token and token == last_token:
         messages.warning(request, "⚠️ Cet ajustement a déjà été validé.")
@@ -237,6 +240,10 @@ def valider_ajustement(request, ajustement_id):
 @catch_errors(redirect_url='liste_ajustements')
 def rejeter_ajustement(request, ajustement_id):
     """Rejeter un ajustement en attente : passe le statut à REJETE, ne touche pas au stock."""
+    if request.method != 'POST':
+        messages.error(request, "❌ Cette action doit être effectuée en POST.")
+        return redirect('liste_ajustements')
+
     ajustement = get_object_or_404(Ajustement, id=ajustement_id)
 
     # Vérifier que l'utilisateur est valideur

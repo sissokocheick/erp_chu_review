@@ -1368,7 +1368,14 @@
                     allowOutsideClick: false,
                     didOpen: function(){ Swal.showLoading(); }
                 });
-                window.location.href = url;
+                // POST obligatoire (vue @require_POST) : window.location GET renvoyait 405
+                var csrfEl = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                form.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + (csrfEl ? csrfEl.value : '') + '">';
+                document.body.appendChild(form);
+                form.submit();
             }
         });
     };
@@ -1390,7 +1397,14 @@
                     allowOutsideClick: false,
                     didOpen: function() { Swal.showLoading(); }
                 });
-                window.location.href = url;
+                var csrfEl = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                var csrf = csrfEl ? csrfEl.value : '';
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                form.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + csrf + '">';
+                document.body.appendChild(form);
+                form.submit();
             }
         });
     };

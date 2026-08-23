@@ -242,25 +242,25 @@
 </div>
 
 <!-- PAGINATION FACTORISEE -->
-{% with page_obj=lots paginator_url="?onglet=suivi" %}
+{% with page_obj=lots paginator_url="?onglet=suivi" per_page=per_page %}
   {% if onglet == 'suivi' and lots and lots.has_other_pages %}
     {% include "stock/pagination_include.html" %}
   {% endif %}
 {% endwith %}
 
-{% with page_obj=destructions paginator_url="?onglet=destruction" %}
+{% with page_obj=destructions paginator_url="?onglet=destruction" per_page=per_page %}
   {% if onglet == 'destruction' and destructions and destructions.has_other_pages %}
     {% include "stock/pagination_include.html" %}
   {% endif %}
 {% endwith %}
 
-{% with page_obj=lots_inventaire paginator_url="?onglet=lots" extra_params=date_params %}
+{% with page_obj=lots_inventaire paginator_url="?onglet=lots" extra_params=date_params per_page=per_page %}
   {% if onglet == 'lots' and lots_inventaire and lots_inventaire.has_other_pages %}
     {% include "stock/pagination_include.html" %}
   {% endif %}
 {% endwith %}
 
-{% with page_obj=lots_a_expirer paginator_url="?onglet=a_expirer&seuil={{ seuil_expiration }}" %}
+{% with page_obj=lots_a_expirer paginator_url="?onglet=a_expirer&seuil={{ seuil_expiration }}" per_page=per_page %}
   {% if onglet == 'a_expirer' and lots_a_expirer and lots_a_expirer.has_other_pages %}
     {% include "stock/pagination_include.html" %}
   {% endif %}
@@ -343,6 +343,17 @@
     var dateFin   = form ? form.querySelector('input[name="date_fin"]')   : null;
     if (dateDebut) { dateDebut.addEventListener('change', doSearch); }
     if (dateFin)   { dateFin.addEventListener('change', doSearch); }
+
+    // Confirmation de destruction d'un lot périmé (utilisé par le partial
+    // peremptions_lignes.html, rendu aussi en AJAX).
+    window.confirmerDestruction = function(e, numeroLot, quantite) {
+        if (!window.confirm(
+            'Détruire le lot « ' + numeroLot + ' » (' + quantite + ' unités) ?\n' +
+            'Cette opération est définitive et sera tracée dans le journal.'
+        )) {
+            e.preventDefault();
+        }
+    };
 })();
 </script>
 {% endblock %}

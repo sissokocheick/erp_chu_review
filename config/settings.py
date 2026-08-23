@@ -34,7 +34,19 @@ if not SECRET_KEY:
 
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 2000
 
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
+# ✅ Fail-closed : en production, DJANGO_ALLOWED_HOSTS doit être défini
+# (pas de wildcard par défaut : anti host-header injection). En DEBUG,
+# localhost est autorisé par défaut.
+_hosts_env = os.environ.get('DJANGO_ALLOWED_HOSTS', '').strip()
+if _hosts_env:
+    ALLOWED_HOSTS = [h.strip() for h in _hosts_env.split(',') if h.strip()]
+elif DEBUG:
+    ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
+else:
+    raise ImproperlyConfigured(
+        "La variable d'environnement DJANGO_ALLOWED_HOSTS doit être définie "
+        "en production (ex: 'erp-chu.example.com')."
+    )
 
 
 # Application definition
@@ -189,13 +201,9 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SILENCED_SYSTEM_CHECKS = ['security.W019']
 CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', '').split(',') if os.environ.get('CSRF_TRUSTED_ORIGINS') else []
 
-# ── Dual IP : mode TRUSTED� correspond à des serveurs internes sans SSL ──
-# En mode interne (pas de proxy HTTPS), désactive la redirection SSL.
-if not DEBUG and os.environ.get('TRUSTED_INTERNAL', '0') == '1':
-    SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
-    SECURE_HSTS_SECONDS = 0
+# ── Dual IP : mode TRUSTED_INTERNAL ──
+# NB : la gestion complète de TRUSTED_INTERNAL (SSL, cookies, HSTS) est
+# centralisée dans le bloc « Durcissement production » plus bas.
 
 # --- CONFIGURATION DE LA CONNEXION (Module accounts) ---
 LOGIN_URL = '/auth/login/'
@@ -221,7 +229,16 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# Django ≥ 5.1 : STATICFILES_STORAGE est obsolète (silencieusement ignoré) —
+# WhiteNoise se configure via STORAGES.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 
 

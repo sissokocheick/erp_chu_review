@@ -14,9 +14,9 @@ from ...services.parametre_service import supprimer_entite, redirect_url_with_ta
 @catch_errors(redirect_url='/')
 def supprimer_parametre(request, type_entite, id_entite):
     perm_map = {
-        'famille': 'accounts.menu_fournisseurs',
+        'famille': 'accounts.menu_familles',
         'fournisseur': 'accounts.menu_fournisseurs',
-        'article': 'accounts.menu_fournisseurs',
+        'article': 'accounts.menu_articles',
         'magasin': 'accounts.menu_magasins',
         'service': 'accounts.menu_services',
         'specialite': 'accounts.menu_specialites',
@@ -26,7 +26,12 @@ def supprimer_parametre(request, type_entite, id_entite):
     }
 
     required_perm = perm_map.get(type_entite)
-    if required_perm and not request.user.has_perm(required_perm) and not request.user.is_superuser:
+    # Fail-closed : type d'entité inconnu → refus (pas de permission = pas
+    # d'upload de contrôle sauté).
+    if not required_perm:
+        messages.error(request, "⛔ Type d'entité inconnu — suppression refusée.")
+        return redirect(reverse('parametres_administratifs'))
+    if not request.user.has_perm(required_perm) and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect(reverse('parametres_administratifs'))
 

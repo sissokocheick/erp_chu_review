@@ -284,53 +284,61 @@ def controle_peremptions(request):
 
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_peremptions', 'accounts.menu_lots')
-@transaction.atomic
 @catch_errors(redirect_url='controle_peremptions')
 def retirer_lot_perime(request, mouvement_id):
     if request.method != 'POST':
         return redirect('controle_peremptions')
 
+    from stock.services.isolation_service import get_magasins_autorises
+
+    # Isolation : seuls les lots des magasins autorisés peuvent être détruits.
     entree = get_object_or_404(
-        Mouvement, id=mouvement_id, type_mouvement='ENTREE')
-
-    sorties = Mouvement.objects.filter(
-        type_mouvement='SORTIE', article=entree.article,
-        numero_lot=entree.numero_lot, magasin=entree.magasin
-    ).aggregate(total=Sum('quantite'))['total'] or 0
-    quantite_restante = entree.quantite - sorties
-
-    if quantite_restante <= 0:
-        messages.error(request, "❌ Ce lot a déjà été totalement retiré.")
-        return redirect('controle_peremptions')
-
-    stock_item, created = StockItem.objects.select_for_update().get_or_create(
-        article=entree.article,
-        magasin=entree.magasin,
-        batch_number=entree.numero_lot or None,
-        defaults={'quantite_physique': 0, 'valeur_cmup': Decimal('0')}
-    )
-
-    if stock_item.quantite_physique < 0:
-        logger.warning(
-            f"[Péremption] Stock négatif corrigé pour {entree.article.designation} "
-            f"dans {entree.magasin.nom}: {stock_item.quantite_physique} → 0"
-        )
-        stock_item.quantite_physique = 0
-        stock_item.save(update_fields=['quantite_physique'])
-
-    qte_a_detruire = min(quantite_restante, stock_item.quantite_physique)
-
-    if qte_a_detruire <= 0:
-        messages.warning(
-            request,
-            f"⚠️ Le stock physique de « {entree.article.designation} » est déjà à 0. "
-            "Aucune unité à détruire."
-        )
-        return redirect('controle_peremptions')
+        Mouvement, id=mouvement_id, type_mouvement='ENTREE',
+        magasin__in=get_magasins_autorises(request))
 
     try:
-        bon = LivraisonService.destruction_lot_perime(entree, qte_a_detruire, request.user)
+        with transaction.atomic():
+            # Verrouiller le stock AVANT de calculer la quantité restante :
+            # une sortie concurrente ne peut plus fausser le calcul.
+            stock_item, created = StockItem.objects.select_for_update().get_or_create(
+                article=entree.article,
+                magasin=entree.magasin,
+                batch_number=entree.numero_lot or None,
+                defaults={'quantite_physique': 0, 'valeur_cmup': Decimal('0')}
+            )
+
+            if stock_item.quantite_physique < 0:
+                logger.warning(
+                    f"[Péremption] Stock négatif corrigé pour {entree.article.designation} "
+                    f"dans {entree.magasin.nom}: {stock_item.quantite_physique} → 0"
+                )
+                stock_item.quantite_physique = 0
+                stock_item.save(update_fields=['quantite_physique'])
+
+            sorties = Mouvement.objects.filter(
+                type_mouvement='SORTIE', article=entree.article,
+                numero_lot=entree.numero_lot, magasin=entree.magasin
+            ).aggregate(total=Sum('quantite'))['total'] or 0
+            quantite_restante = entree.quantite - sorties
+
+            if quantite_restante <= 0:
+                messages.error(request, "❌ Ce lot a déjà été totalement retiré.")
+                return redirect('controle_peremptions')
+
+            qte_a_detruire = min(quantite_restante, stock_item.quantite_physique)
+
+            if qte_a_detruire <= 0:
+                messages.warning(
+                    request,
+                    f"⚠️ Le stock physique de « {entree.article.designation} » est déjà à 0. "
+                    "Aucune unité à détruire."
+                )
+                return redirect('controle_peremptions')
+
+            bon = LivraisonService.destruction_lot_perime(entree, qte_a_detruire, request.user)
     except Exception as e:
+        # Le with atomic garantit le rollback complet (y compris des
+        # écritures partielles du service) avant l'affichage de l'erreur.
         logger.exception("[Destruction lot] %s", e)
         messages.error(request, "❌ Erreur lors de la destruction. Veuillez réessayer.")
         return redirect('controle_peremptions')

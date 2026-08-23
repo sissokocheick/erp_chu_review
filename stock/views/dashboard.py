@@ -10,6 +10,12 @@ from itertools import chain
 from operator import attrgetter
 import json
 
+
+def _json_pour_script(obj):
+    """JSON sûr à injecter dans un <script> : échappe « </ » (anti-XSS)."""
+    return json.dumps(obj).replace('</', '<\\/')
+
+
 from accounts.permissions import verifier_permission
 from ..models import (
     Article, Mouvement, StockItem, Magasin,
@@ -317,17 +323,17 @@ def dashboard_directeur(request):
         'lots_en_alerte': lots_en_alerte,
         'lots_perimes': lots_perimes,
         'magasin_actif': magasin_actif,
-        'chart_articles_labels': json.dumps([i['article__designation'] for i in top_articles]),
-        'chart_articles_data': json.dumps([i['total_sorti'] for i in top_articles]),
-        'chart_entrees_labels': json.dumps([i['article__designation'] for i in top_entrees]),
-        'chart_entrees_data': json.dumps([i['total_entree'] for i in top_entrees]),
-        'chart_services_labels': json.dumps([i['service_demandeur__nom'] for i in top_services]),
-        'chart_services_data': json.dumps([i['total_sorti'] for i in top_services]),
-        'flux_labels': json.dumps(labels_flux),
-        'flux_entrees': json.dumps(entrees_flux),
-        'flux_sorties': json.dumps(sorties_flux),
-        'chart_familles_labels': json.dumps([i['article__famille__intitule'] or 'Général' for i in valeur_par_famille]),
-        'chart_familles_data': json.dumps([float(i['total']) for i in valeur_par_famille]),
+        'chart_articles_labels': _json_pour_script([i['article__designation'] for i in top_articles]),
+        'chart_articles_data': _json_pour_script([i['total_sorti'] for i in top_articles]),
+        'chart_entrees_labels': _json_pour_script([i['article__designation'] for i in top_entrees]),
+        'chart_entrees_data': _json_pour_script([i['total_entree'] for i in top_entrees]),
+        'chart_services_labels': _json_pour_script([i['service_demandeur__nom'] for i in top_services]),
+        'chart_services_data': _json_pour_script([i['total_sorti'] for i in top_services]),
+        'flux_labels': _json_pour_script(labels_flux),
+        'flux_entrees': _json_pour_script(entrees_flux),
+        'flux_sorties': _json_pour_script(sorties_flux),
+        'chart_familles_labels': _json_pour_script([i['article__famille__intitule'] or 'Général' for i in valeur_par_famille]),
+        'chart_familles_data': _json_pour_script([float(i['total']) for i in valeur_par_famille]),
         'valeur_par_famille': valeur_par_famille,
         'valeur_par_magasin': valeur_par_magasin,
         'rotation_globale_30j': rotation_globale_30j,

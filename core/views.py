@@ -21,9 +21,21 @@ def health_check(request):
     - database : canal critique → 503 si KO.
     - smtp / sms : canaux optionnels (disabled/test/error) → dégradent le
       statut mais ne font jamais tomber le service en 503.
-    Aucune donnée sensible n'est exposée (statut + détail tronqué).
+    Anonyme : les détails d'erreur (hôte/port/SQL) restent côté serveur —
+    seuls les statuts sont exposés publiquement.
     """
+    import logging
+
     status, checks = run_checks()
+
+    # Journaliser le détail côté serveur, ne PAS l'exposer anonymement
+    # (les exceptions DB contiennent hôte, port, base et utilisateur).
+    logger = logging.getLogger('core.health')
+    for nom, check in checks.items():
+        if check.get('status') == 'error' and check.get('detail'):
+            logger.error("[health] %s KO : %s", nom, check['detail'])
+            check['detail'] = 'unavailable'
+
     payload = {
         'status': status,
         'timestamp': datetime.now(timezone.utc).isoformat(),

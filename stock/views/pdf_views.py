@@ -33,9 +33,46 @@ BON_TYPE_TO_DOC_CODE = {
 # ═════════════════════════════════════════════════════════════════════════════
 
 @login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_sorties')
 def imprimer_bon_multi_lignes(request, bon_id):
-    """Génère le PDF d'un bon de mouvement (Entrée, Sortie, Retour)."""
+    """Génère le PDF d'un bon de mouvement (Entrée, Sortie, Retour, Transfert).
+
+    La permission est vérifiée SELON LE TYPE du bon demandé (un utilisateur
+    « sorties » ne doit pas pouvoir imprimer les bons d'entrée d'un magasin
+    auquel il n'a pas accès) + isolation par magasins autorisés.
+    """
+    from django.contrib import messages
+    from django.db.models import Q
+    from stock.models import BonMouvement
+    from stock.services.isolation_service import get_magasins_autorises
+
+    bon = get_object_or_404(BonMouvement, id=bon_id)
+
+    perm_par_type = {
+        'ENTREE': 'accounts.menu_entrees',
+        'SORTIE': 'accounts.menu_sorties',
+        'RETOUR_SERVICE': 'accounts.menu_retours_services',
+        'RETOUR_FOURNISSEUR': 'accounts.menu_retours_fournisseurs',
+        'SORTIE_HORS_STOCK': 'accounts.menu_sorties_hors_stock',
+        'TRANSFERT': 'accounts.menu_transferts',
+    }
+    perm_requise = perm_par_type.get(bon.type_bon)
+    if not perm_requise or (
+            not request.user.has_perm(perm_requise)
+            and not request.user.has_perm('accounts.menu_sorties')):
+        messages.error(
+            request,
+            "Accès refusé : vous n'avez pas la permission d'imprimer ce type de document."
+        )
+        return redirect('/')
+
+    magasins = get_magasins_autorises(request)
+    acces = Q(magasin__in=magasins)
+    if bon.type_bon == 'TRANSFERT':
+        acces |= Q(magasin_destination__in=magasins)
+    if not BonMouvement.objects.filter(Q(id=bon.id) & acces).exists():
+        messages.error(request, "⛔ Vous n'avez pas accès au magasin de ce document.")
+        return redirect('/')
+
     return _imprimer_bon_multi_lignes(request, bon_id)
 
 
@@ -445,14 +482,14 @@ def rapport_consommation_pdf(request):
 
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
-    if date_debut:
-        date_debut = datetime.strptime(date_debut, '%Y-%m-%d').date()
-    else:
-        date_debut = timezone.now().date() - timedelta(days=30)
-    if date_fin:
-        date_fin = datetime.strptime(date_fin, '%Y-%m-%d').date()
-    else:
-        date_fin = timezone.now().date()
+    try:
+        date_debut = datetime.strptime(date_debut, '%Y-%m-%d').date() if date_debut else (
+            timezone.now().date() - timedelta(days=30))
+        date_fin = datetime.strptime(date_fin, '%Y-%m-%d').date() if date_fin else timezone.now().date()
+    except ValueError:
+        from django.contrib import messages as _messages
+        _messages.error(request, "❌ Dates invalides (format attendu : AAAA-MM-JJ).")
+        return redirect('page_rapports')
 
     mouvements = Mouvement.objects.filter(
         type_mouvement='SORTIE',
@@ -499,11 +536,11 @@ def imprimer_bon_hors_stock(request, bon_id):
     from django.contrib import messages
     from stock.models import BonMouvement
 
-    # ── Vérification permission (menu_hors_stock OU menu_sorties) ──
-    if not request.user.has_perm('accounts.menu_hors_stock') and not request.user.has_perm('accounts.menu_sorties'):
+    # ── Vérification permission (menu_sorties_hors_stock OU menu_sorties) ──
+    if not request.user.has_perm('accounts.menu_sorties_hors_stock') and not request.user.has_perm('accounts.menu_sorties'):
         messages.error(
             request,
-            "Accès refusé : Permission 'menu_hors_stock' ou 'menu_sorties' requise. "
+            "Accès refusé : Permission 'menu_sorties_hors_stock' ou 'menu_sorties' requise. "
             "Contactez l'administrateur pour l'ajouter à votre rôle."
         )
         return redirect('liste_bons_hors_stock')

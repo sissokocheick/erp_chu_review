@@ -28,6 +28,11 @@ from .models import Immobilisation
 
 logger = logging.getLogger(__name__)
 
+
+def _json_pour_script(obj):
+    """JSON sûr à injecter dans un <script> : échappe « </ » (anti-XSS)."""
+    return json.dumps(obj).replace('</', '<\\/')
+
 STATUTS_SORTIS = ('REFORME', 'CEDE', 'DISPARU')
 
 
@@ -233,10 +238,10 @@ def rapport_valeur_services(request):
         'ordre': ordre,
         'tri_detail': tri_detail,
         'ordre_detail': ordre_detail,
-        'chart_labels': json.dumps(labels),
+        'chart_labels': _json_pour_script(labels),
         'chart_nb': json.dumps(nb_serie),
         'chart_valeur': json.dumps(val_serie),
-        'chart_services_labels': json.dumps(
+        'chart_services_labels': _json_pour_script(
             [r['service_demandeur__nom'] for r in par_service][:8]),
         'chart_services_data': json.dumps(
             [float(r['vnc']) for r in par_service][:8]),

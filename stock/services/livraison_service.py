@@ -72,13 +72,8 @@ class LivraisonService:
         au_moins_un = False
         est_livraison_partielle = False
 
-        # ✅ CORRECTION : précalculer les quantités déjà livrées pour éviter N+1
-        livraisons_par_article = dict(
-            LivraisonLigne.objects.filter(livraison__demande=demande)
-            .values('article_id')
-            .annotate(total=Sum('quantite_livree'))
-            .values_list('article_id', 'total')
-        )
+        # NB : les quantités déjà livrées sont recalculées sous le verrou de
+        # chaque ligne (voir boucle) — pas d'agrégat précalculé ici.
 
         for ligne in demande.lignes_demande.select_related('article').all():
             qte = lignes_qte_map.get(ligne.id, 0)
@@ -88,8 +83,13 @@ class LivraisonService:
             # ✅ CORRECTION : verrouiller la ligne de demande en concurrence
             ligne_verrouillee = LigneDemande.objects.select_for_update().get(id=ligne.id)
 
-            # ── Calculer le reste AVANT cette livraison (précalculé) ──
-            qte_livree_precedente = livraisons_par_article.get(ligne.article_id, 0)
+            # ── Quantité déjà livrée RECALCULÉE SOUS LE VERROU ──
+            # (l'agrégat précalculé était lu AVANT le verrou : deux
+            # livraisons concurrentes validaient toutes deux contre le même
+            # total périmé → sur-livraison possible au-delà de la demande).
+            qte_livree_precedente = LivraisonLigne.objects.filter(
+                livraison__demande=demande, article_id=ligne.article_id,
+            ).aggregate(total=Sum('quantite_livree'))['total'] or 0
             reste_avant = ligne_verrouillee.quantite_demandee - qte_livree_precedente
 
             if qte > reste_avant:

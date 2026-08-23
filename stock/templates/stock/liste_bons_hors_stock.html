@@ -259,7 +259,7 @@
       </button>
     </div>
 
-    <form method="POST" action="{% url 'liste_bons_hors_stock' %}" id="form-creation-bon" id="form-creation-bon">
+    <form method="POST" action="{% url 'liste_bons_hors_stock' %}" id="form-creation-bon">
       {% csrf_token %}
       <div style="padding: 20px; background: var(--bg-stripe);">
         {# ── Ligne 1 : Magasin + Service Destinataire + Fournisseur ── #}
@@ -686,34 +686,9 @@ function toggleDetail(rowId, iconId) {
     }
 }
 
-function ouvrirModalBenefRapide() { document.getElementById('modal-benef-rapide').style.display = 'flex'; }
-
-function creerBeneficiaireAjax(e) {
-    e.preventDefault();
-    let form = e.target;
-    let formData = new FormData(form);
-    formData.append('action', 'creer_beneficiaire');
-
-    fetch("{% url 'liste_bons_hors_stock' %}", {
-        method: "POST",
-        body: formData,
-        headers: { "X-Requested-With": "XMLHttpRequest" }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if(data.success) {
-            let texte = data.nom + (data.poste ? ` (${data.poste})` : '');
-            let nouvelleOption = new Option(texte, data.id, false, true);
-            nouvelleOption.setAttribute('data-service', data.service_id || '');
-            
-            $('#select-destinataire-bon').append(nouvelleOption).trigger('change');
-            
-            document.getElementById('modal-benef-rapide').style.display = 'none';
-            form.reset();
-            NxUX.toast('success', 'Bénéficiaire ajouté avec succès');
-        }
-    });
-}
+// NB : la modale « bénéficiaire rapide » (modal-benef-rapide) a été retirée
+// du DOM : ouvrirModalBenefRapide/creerBeneficiaireAjax (code mort qui
+// levait un TypeError sur l'élément absent) ont été supprimés.
 
 function confirmerCreationBon(e, form) {
     e.preventDefault();

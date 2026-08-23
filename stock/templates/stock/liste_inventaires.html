@@ -636,10 +636,20 @@
           <td>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               {% if plan.statut == 'ACTIF' %}
-              <a href="{% url 'generer_campagne_tournante' plan.id %}" class="pl-btn-gen" title="Générer la campagne d'inventaire maintenant"><i class="fas fa-magic"></i> Générer</a>
-              <a href="{% url 'basculer_statut_plan' plan.id %}" class="pl-btn-ghost" title="Mettre en pause"><i class="fas fa-pause"></i></a>
+              <form method="POST" action="{% url 'generer_campagne_tournante' plan.id %}" style="display:inline;margin:0;"
+                    onsubmit="return confirm('Générer la campagne d\'inventaire « {{ plan.titre|escapejs }} » maintenant ?');">
+                {% csrf_token %}
+                <button type="submit" class="pl-btn-gen" title="Générer la campagne d'inventaire maintenant"><i class="fas fa-magic"></i> Générer</button>
+              </form>
+              <form method="POST" action="{% url 'basculer_statut_plan' plan.id %}" style="display:inline;margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="pl-btn-ghost" title="Mettre en pause"><i class="fas fa-pause"></i></button>
+              </form>
               {% else %}
-              <a href="{% url 'basculer_statut_plan' plan.id %}" class="pl-btn-ghost" title="Réactiver"><i class="fas fa-play"></i> Réactiver</a>
+              <form method="POST" action="{% url 'basculer_statut_plan' plan.id %}" style="display:inline;margin:0;">
+                {% csrf_token %}
+                <button type="submit" class="pl-btn-ghost" title="Réactiver"><i class="fas fa-play"></i> Réactiver</button>
+              </form>
               {% endif %}
             </div>
           </td>

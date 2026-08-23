@@ -13,7 +13,7 @@ from django.utils import timezone
 from datetime import timedelta
 
 from accounts.models import (
-    Profil, Fonction, Specialite, ConfigDocument,
+    Profil, Fonction, Specialite,
     Notification, JournalAudit, AuditConnexion, MenuAccess,
 )
 from core.models import Service
@@ -140,35 +140,6 @@ class SpecialiteModelTest(TestCase):
     def test_with_description(self):
         s = Specialite.objects.create(nom="Pédiatrie", description="Enfants")
         self.assertEqual(s.description, "Enfants")
-
-
-# ==========================================================
-# CONFIG DOCUMENT
-# ==========================================================
-class ConfigDocumentModelTest(TestCase):
-    def test_creation(self):
-        cd = ConfigDocument.objects.create(
-            type_doc='BS',
-            code_document='ENR-001'
-        )
-        self.assertEqual(str(cd), "Bon de Sortie")
-        self.assertTrue(cd.afficher_logo)
-        self.assertTrue(cd.afficher_signatures)
-
-    def test_defaults_affichage(self):
-        cd = ConfigDocument.objects.create(type_doc='BE')
-        self.assertTrue(cd.afficher_logo)
-        self.assertTrue(cd.afficher_cachet)
-        self.assertTrue(cd.afficher_cc)
-        self.assertTrue(cd.afficher_ifu)
-        self.assertTrue(cd.afficher_rccm)
-        self.assertTrue(cd.afficher_telephone)
-        self.assertTrue(cd.afficher_signatures)
-
-    def test_type_doc_choices(self):
-        for code, label in ConfigDocument.TYPE_DOC_CHOICES:
-            cd = ConfigDocument.objects.create(type_doc=code)
-            self.assertEqual(cd.get_type_doc_display(), label)
 
 
 # ==========================================================

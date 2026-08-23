@@ -173,8 +173,11 @@ def liste_articles(request):
 @magasin_requis
 def historique_article(request, article_id):
     article = get_object_or_404(Article, id=article_id)
+    # Cohérence avec le PDF : isolation par magasins autorisés.
+    from stock.services.isolation_service import get_magasins_autorises
     mouvements = Mouvement.objects.filter(
-        article=article
+        article=article,
+        magasin__in=get_magasins_autorises(request),
     ).select_related('magasin', 'fournisseur', 'service_demandeur', 'utilisateur')
 
     mouvements, tri, ordre = appliquer_tri(

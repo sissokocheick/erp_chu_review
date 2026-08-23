@@ -174,7 +174,7 @@
           <i class="fas fa-check"></i> Valider
         </button>
         <button type="button" class="btn-rejeter" title="Rejeter l'ajustement" aria-label="Rejeter l'ajustement"
-                onclick="if(typeof confirmerRejet==='function'){confirmerRejet('{% url 'rejeter_ajustement' ajustement.id %}')}else{if(confirm('Rejeter cet ajustement ?')){window.location.href='{% url 'rejeter_ajustement' ajustement.id %}';}}">
+                onclick="if(typeof confirmerRejet==='function'){confirmerRejet('{% url 'rejeter_ajustement' ajustement.id %}')}else{console.error('confirmerRejet non defini')}">
           <i class="fas fa-times"></i> Rejeter
         </button>
       {% endif %}

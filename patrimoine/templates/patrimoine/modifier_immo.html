@@ -263,9 +263,10 @@ if (typeof $ !== 'undefined') {
         updateLocalisation();
     });
 
-    // Lancement initial des fonctions annexes (Specs, Modèles...)
-    var t = document.getElementById('sel-type'); if (t && t.value) chargerSpecs(t.value); 
-    var m = document.getElementById('sel-marque'); if (m && m.value) chargerModeles(m.value);
+    // NB : les chargements dynamiques « Specs » / « Modèles » ne sont pas
+    // implémentés sur cette page (aucune fonction ni conteneur associés) :
+    // les anciens appels chargerSpecs/chargerModeles levaient une
+    // ReferenceError qui cassait l'initialisation Select2.
   });
 }
 </script>

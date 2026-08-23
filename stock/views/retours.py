@@ -153,7 +153,11 @@ def _creer_retour(request):
 
     lignes = []
     for aid, qte, lot, peremp in zip(article_ids, quantites, lots, peremptions):
-        if aid and qte and int(qte) > 0:
+        try:
+            qte_val = int(qte) if qte and str(qte).strip() else 0
+        except (TypeError, ValueError):
+            qte_val = 0
+        if aid and qte_val > 0:
             if int(aid) not in articles_valides:
                 messages.error(
                     request,
@@ -162,7 +166,7 @@ def _creer_retour(request):
                 return redirect('liste_retours_services')
             lignes.append({
                 'article_id': aid,
-                'quantite': int(qte),
+                'quantite': qte_val,
                 'numero_lot': lot or None,
                 'date_peremption': peremp or None,
             })
@@ -206,6 +210,7 @@ def apercu_bon_retour(request, bon_id):
         BonMouvement,
         id=bon_id,
         type_bon='RETOUR_SERVICE',
+        magasin__in=get_magasins_autorises(request),
     )
 
     lignes_brutes = list(bon.lignes_bon.select_related('article').all())
@@ -293,9 +298,9 @@ def valider_bon_retour(request, bon_id):
     from ..services.stock_transaction_service import StockTransactionService
     from django.db import transaction as db_transaction
 
-    bon = get_object_or_404(
-        BonMouvement, id=bon_id, type_bon='RETOUR_SERVICE'
-    )
+    if request.method != 'POST':
+        messages.error(request, "❌ Cette action doit être effectuée en POST.")
+        return redirect('liste_retours_services')
 
     circuit = CircuitValidation.objects.filter(
         type_document='ENTREE', est_actif=True, is_deleted=False
@@ -309,12 +314,23 @@ def valider_bon_retour(request, bon_id):
         messages.error(request, "⛔ Vous n'êtes pas autorisé à valider ce bon de retour.")
         return redirect('liste_retours_services')
 
-    if bon.statut_validation != 'ATTENTE':
-        messages.warning(request, f"⚠️ Le bon {bon.numero_bon} n'est pas en attente de validation.")
-        return redirect('liste_retours_services')
-
     try:
         with db_transaction.atomic():
+            # Verrouiller la ligne : statut relu SOUS le verrou (anti double
+            # validation concurrente).
+            bon = get_object_or_404(
+                BonMouvement.objects.select_for_update(),
+                id=bon_id, type_bon='RETOUR_SERVICE'
+            )
+
+            if bon.est_annule:
+                messages.error(request, f"❌ Le bon {bon.numero_bon} est annulé et ne peut pas être validé.")
+                return redirect('liste_retours_services')
+
+            if bon.statut_validation != 'ATTENTE':
+                messages.warning(request, f"⚠️ Le bon {bon.numero_bon} n'est pas en attente de validation.")
+                return redirect('liste_retours_services')
+
             bon.statut_validation = 'VALIDE'
             bon.date_validation = timezone.now()
             bon.valide_par = request.user
@@ -335,7 +351,7 @@ def valider_bon_retour(request, bon_id):
                 )
                 StockTransactionService.executer(mouvement)
     except Exception as e:
-        logger.exception("[RETOUR] Validation bon %s : %s", bon.numero_bon, e)
+        logger.exception("[RETOUR] Validation bon %s : %s", getattr(bon, 'numero_bon', bon_id), e)
         messages.error(request, "❌ Une erreur est survenue lors de la validation.")
         return redirect('liste_retours_services')
 
@@ -529,7 +545,11 @@ def _creer_retour_fournisseur(request):
 
     lignes = []
     for aid, qte, lot, peremp in zip(article_ids, quantites, lots, peremptions):
-        if aid and qte and int(qte) > 0:
+        try:
+            qte_val = int(qte) if qte and str(qte).strip() else 0
+        except (TypeError, ValueError):
+            qte_val = 0
+        if aid and qte_val > 0:
             if int(aid) not in articles_valides:
                 messages.error(
                     request,
@@ -538,7 +558,7 @@ def _creer_retour_fournisseur(request):
                 return redirect('liste_retours_fournisseurs')
             lignes.append({
                 'article_id': aid,
-                'quantite': int(qte),
+                'quantite': qte_val,
                 'numero_lot': lot or None,
                 'date_peremption': peremp or None,
             })
@@ -601,9 +621,9 @@ def valider_bon_retour_fournisseur(request, bon_id):
     from ..services.stock_transaction_service import StockTransactionService
     from django.db import transaction as db_transaction
 
-    bon = get_object_or_404(
-        BonMouvement, id=bon_id, type_bon='RETOUR_FOURNISSEUR'
-    )
+    if request.method != 'POST':
+        messages.error(request, "❌ Cette action doit être effectuée en POST.")
+        return redirect('liste_retours_fournisseurs')
 
     circuit = CircuitValidation.objects.filter(
         type_document='SORTIE', est_actif=True, is_deleted=False
@@ -617,12 +637,23 @@ def valider_bon_retour_fournisseur(request, bon_id):
         messages.error(request, "⛔ Vous n'êtes pas autorisé à valider ce bon de retour fournisseur.")
         return redirect('liste_retours_fournisseurs')
 
-    if bon.statut_validation != 'ATTENTE':
-        messages.warning(request, f"⚠️ Le bon {bon.numero_bon} n'est pas en attente de validation.")
-        return redirect('liste_retours_fournisseurs')
-
     try:
         with db_transaction.atomic():
+            # Verrouiller la ligne : statut relu SOUS le verrou (anti double
+            # validation concurrente).
+            bon = get_object_or_404(
+                BonMouvement.objects.select_for_update(),
+                id=bon_id, type_bon='RETOUR_FOURNISSEUR'
+            )
+
+            if bon.est_annule:
+                messages.error(request, f"❌ Le bon {bon.numero_bon} est annulé et ne peut pas être validé.")
+                return redirect('liste_retours_fournisseurs')
+
+            if bon.statut_validation != 'ATTENTE':
+                messages.warning(request, f"⚠️ Le bon {bon.numero_bon} n'est pas en attente de validation.")
+                return redirect('liste_retours_fournisseurs')
+
             bon.statut_validation = 'VALIDE'
             bon.date_validation = timezone.now()
             bon.valide_par = request.user
@@ -644,7 +675,7 @@ def valider_bon_retour_fournisseur(request, bon_id):
                 )
                 StockTransactionService.executer(mouvement)
     except Exception as e:
-        logger.exception("[RETOUR FOURNISSEUR] Validation bon %s : %s", bon.numero_bon, e)
+        logger.exception("[RETOUR FOURNISSEUR] Validation bon %s : %s", getattr(bon, 'numero_bon', bon_id), e)
         messages.error(request, "❌ Une erreur est survenue lors de la validation.")
         return redirect('liste_retours_fournisseurs')
 

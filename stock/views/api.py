@@ -181,6 +181,7 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
                 'SORTIE_HORS_STOCK':  'accounts.menu_sorties_hors_stock',
                 'RETOUR_FOURNISSEUR': 'accounts.menu_retours_fournisseurs',
                 'AJUSTEMENT':         'accounts.menu_ajustements',
+                'TRANSFERT':          'accounts.menu_transferts',
             }
             required_perm = perm_by_type.get(type_bon)
         except BonMouvement.DoesNotExist:
@@ -190,14 +191,25 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
 
     # ── Vérification de la permission ──
     if model_name_lower == 'bonmouvement':
-        # Pour BonMouvement, required_perm peut être None si type inconnu
-        if required_perm:
-            if not (request.user.is_superuser or request.user.has_perm(required_perm)):
-                messages.error(
-                    request,
-                    f"⛔ Vous n'avez pas le droit de joindre un document à ce {model_name_lower}."
-                )
-                return _safe_referer_redirect(request)
+        # Fail-closed : type de bon inconnu (ou bon introuvable) → refus.
+        # Sans cela, required_perm=None sauterait entièrement le contrôle.
+        if not required_perm:
+            logger.warning(
+                "[UPLOAD SECURITY] Type de bon inconnu ou bon introuvable : "
+                "%s#%s (tentative de %s)",
+                model_name, obj_id, request.user,
+            )
+            messages.error(
+                request,
+                "⛔ Vous n'avez pas le droit de joindre un document à ce bon."
+            )
+            return _safe_referer_redirect(request)
+        if not (request.user.is_superuser or request.user.has_perm(required_perm)):
+            messages.error(
+                request,
+                f"⛔ Vous n'avez pas le droit de joindre un document à ce {model_name_lower}."
+            )
+            return _safe_referer_redirect(request)
     else:
         # Pour les autres modèles
         if model_name_lower not in perm_map:
@@ -249,7 +261,9 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
             obj = get_object_or_404(Model, id=obj_id)
                 # Mono-tenant : vérification supprimée
             setattr(obj, field_name, fichier)
-            obj.save()
+            # update_fields restreint : évite d'écraser les modifications
+            # concurrentes des autres champs de l'objet.
+            obj.save(update_fields=[field_name])
             messages.success(request, "Le document a été joint avec succès !")
         except Exception as e:
             logger.exception("[UPLOAD ERROR] %s", e)

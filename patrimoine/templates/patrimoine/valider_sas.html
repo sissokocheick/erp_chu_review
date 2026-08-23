@@ -66,13 +66,13 @@
     </div>
     <div class="fg">
       <label>Type d'équipement <span class="req">*</span></label>
-      <select name="type_equipement" id="sel-type" class="select2-init" required onchange="chargerSpecs(this.value); genererNomAutomatique();">
+      <select name="type_equipement" id="sel-type" class="select2-init" required>
         <option value="">-- Choisir un type --</option>
         {% regroup types by categorie as categories_list %}
         {% for categorie in categories_list %}
             <optgroup label="📦 {{ categorie.grouper.nom }}">
                 {% for t in categorie.list %}
-                    <option value="{{ t.id }}" data-schema="{{ t.specs_schema|safe }}" {% if immo.type_equipement_id == t.id %}selected{% endif %}>↳ {{ t.nom }}</option>
+                    <option value="{{ t.id }}" {% if immo.type_equipement_id == t.id %}selected{% endif %}>↳ {{ t.nom }}</option>
                 {% endfor %}
             </optgroup>
         {% endfor %}
@@ -293,9 +293,9 @@ if (typeof $ !== 'undefined') {
         updateLocalisation();
     });
 
-    // Lancement initial des fonctions annexes (Specs, Modèles...)
-    var t = document.getElementById('sel-type'); if (t && t.value) chargerSpecs(t.value); 
-    var m = document.getElementById('sel-marque'); if (m && m.value) chargerModeles(m.value);
+    // NB : chargerSpecs / chargerModeles / genererNomAutomatique ne sont pas
+    // implémentés sur cette page — les anciens appels levaient une
+    // ReferenceError qui cassait l'initialisation Select2.
   });
 }
 </script>

@@ -72,12 +72,24 @@ class ConfigurationNotificationForm(forms.ModelForm):
             'sms_mode_test',
         ]
         widgets = {
-            'smtp_password': forms.PasswordInput(render_value=True, attrs={'class': 'form-control'}),
-            'sms_api_key': forms.PasswordInput(render_value=True, attrs={'class': 'form-control'}),
+            # render_value=False : le secret n'est pas renvoyé au navigateur
+            # à chaque affichage du formulaire (anti-fuite via HTML/backup).
+            'smtp_password': forms.PasswordInput(render_value=False, attrs={'class': 'form-control', 'autocomplete': 'new-password'}),
+            'sms_api_key': forms.PasswordInput(render_value=False, attrs={'class': 'form-control', 'autocomplete': 'new-password'}),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        # Secrets non renvoyés au navigateur (render_value=False) : un champ
+        # laissé vide à la soumission signifie « conserver l'ancien secret ».
+        self._anciens_secrets = {
+            'smtp_password': getattr(self.instance, 'smtp_password', '') or '',
+            'sms_api_key': getattr(self.instance, 'sms_api_key', '') or '',
+        }
+        self.fields['smtp_password'].required = False
+        self.fields['sms_api_key'].required = False
+        self.fields['smtp_password'].help_text = "Laisser vide pour conserver le mot de passe actuel."
+        self.fields['sms_api_key'].help_text = "Laisser vide pour conserver la clé actuelle."
         for field in self.fields.values():
             if not isinstance(field.widget, forms.PasswordInput):
                 css = field.widget.attrs.get('class', '')
@@ -86,3 +98,9 @@ class ConfigurationNotificationForm(forms.ModelForm):
                 field.widget.attrs['class'] = 'form-check-input'
             if isinstance(field.widget, forms.Select):
                 field.widget.attrs['class'] = 'form-control'
+
+    def clean_smtp_password(self):
+        return self.cleaned_data.get('smtp_password') or self._anciens_secrets['smtp_password']
+
+    def clean_sms_api_key(self):
+        return self.cleaned_data.get('sms_api_key') or self._anciens_secrets['sms_api_key']

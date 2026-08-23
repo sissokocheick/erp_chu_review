@@ -167,6 +167,46 @@ class ConfigurationHopital(TraceabiliteMixin):
     prefixe_commande = models.CharField(max_length=10, default="BC", verbose_name="Préfixe Commande", blank=True)
 
     # ── Labels des 6 emplacements de signature (hérité de l'ancien modèle) ──
+    @property
+    def labels_signatures(self):
+        """Retourne les labels des 6 emplacements de signature.
+
+        Les champs label_signataire_1..6 ont été supprimés lors de la
+        migration vers ModeleDocumentMagasin (stock) : valeurs par défaut.
+        """
+        return [
+            "Le Demandeur",
+            "Le Magasinier",
+            "Le Responsable Service",
+            "Le Directeur",
+            "Le Contrôleur",
+            "Le Réceptionnaire",
+        ]
+
+    # Métadonnées documentaires par défaut (ex-ConfigDocument, supprimé) :
+    # la personnalisation par type de document vit désormais dans
+    # stock.ModeleDocumentMagasin (config JSON par magasin).
+    METADONNEES_DOCUMENTS_DEFAUT = {
+        'BS':   {'code_document': 'ENR-BSM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '002', 'ps2_label': 'PS2 : GERER LES PRESTATIONS EXTERNES'},
+        'BE':   {'code_document': 'ENR-BEM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},
+        'BR':   {'code_document': 'ENR-BRM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LE STOCK'},
+        'BSHS': {'code_document': 'ENR-BHSM/DAF-001', 'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES PRESTATIONS EXTERNES'},
+        'BC':   {'code_document': 'ENR-BCM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},
+        'BDM':  {'code_document': 'ENR-BDM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},
+    }
+
+    def _map_type_doc(self, type_doc):
+        """Mappe un type legacy / TextChoices vers le code court utilisé par ModeleDocumentMagasin."""
+        mapping = {
+            'BS': 'BS', 'BE': 'BE', 'BR': 'BR', 'BSHS': 'BSHS', 'BC': 'BC', 'BDM': 'BDM',
+            'BON_SORTIE': 'BS', 'BON_ENTREE': 'BE', 'BON_RETOUR': 'BR',
+            'BON_HS': 'BSHS', 'COMMANDE': 'BC', 'DEMANDE': 'BDM',
+        }
+        try:
+            type_doc = type_doc.value if hasattr(type_doc, 'value') else str(type_doc)
+        except Exception:
+            type_doc = str(type_doc)
+        return mapping.get(type_doc, 'BS')
 
     history = HistoricalRecords()
 
@@ -255,13 +295,38 @@ class ConfigurationHopital(TraceabiliteMixin):
     # ======================================================
 
     def get_pdf_config(self, type_doc=TypeDocument.BS):
-        """Retourne toute la config personnalisable pour les templates PDF."""
-        config_doc = ConfigDocument.objects.filter(type_doc=type_doc).first()
+        """Retourne toute la config personnalisable pour les templates PDF.
+
+        ConfigDocument a été supprimé : les métadonnées par type de document
+        sont désormais résolues via ModeleDocumentMagasin (par magasin) ou
+        les valeurs par défaut METADONNEES_DOCUMENTS_DEFAUT.
+        """
+        code = self._map_type_doc(type_doc)
+        config_doc = None
+        try:
+            from stock.models import ModeleDocumentMagasin
+            modele = ModeleDocumentMagasin.objects.filter(
+                type_document=code, est_actif=True
+            ).first()
+            if modele:
+                config_complete = modele.get_config_complete()
+                metas = config_complete.get('metadonnees', {}) if isinstance(config_complete, dict) else {}
+                if metas:
+                    config_doc = metas
+        except Exception:
+            config_doc = None
+
+        metas_defaut = self.METADONNEES_DOCUMENTS_DEFAUT.get(code, {})
+
+        def _meta(champ):
+            if config_doc and config_doc.get(champ):
+                return config_doc[champ]
+            return metas_defaut.get(champ, '')
 
         return {
             'afficher_logo': getattr(self, 'afficher_logo', True),
             'afficher_cachet': getattr(self, 'afficher_cachet', True),
-            'afficher_signatures': getattr(config_doc, 'afficher_signatures', True) if config_doc else True,
+            'afficher_signatures': True,
             'afficher_cc': getattr(self, 'afficher_cc', True),
             'afficher_ifu': getattr(self, 'afficher_ifu', True),
             'afficher_rccm': getattr(self, 'afficher_rccm', True),
@@ -279,11 +344,11 @@ class ConfigurationHopital(TraceabiliteMixin):
             'pied_page_pdf': self.pied_page_pdf,
             'couleur_principale': self.couleur_principale or "#1c5b96",
             'signataires': self._build_signataires_config(),
-            'code_document': getattr(config_doc, 'code_document', '') if config_doc else '',
-            'date_creation_doc': getattr(config_doc, 'date_creation_doc', '') if config_doc else '',
-            'date_revision_doc': getattr(config_doc, 'date_revision_doc', '') if config_doc else '',
-            'version_doc': getattr(config_doc, 'version_doc', '') if config_doc else '',
-            'ps2_label': getattr(config_doc, 'ps2_label', '') if config_doc else '',
+            'code_document': _meta('code_document'),
+            'date_creation_doc': _meta('date_creation_doc'),
+            'date_revision_doc': _meta('date_revision_doc'),
+            'version_doc': _meta('version_doc'),
+            'ps2_label': _meta('ps2_label'),
         }
 
     def _build_signataires_config(self):
@@ -295,20 +360,13 @@ class ConfigurationHopital(TraceabiliteMixin):
         ]
 
     def creer_configs_documents_par_defaut(self):
-        """Crée les 6 configurations documentaires par défaut si elles n'existent pas."""
-        defaults = {
-            'BS':   {'code_document': 'ENR-BSM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '002', 'ps2_label': 'PS2 : GERER LES PRESTATIONS EXTERNES'},
-            'BE':   {'code_document': 'ENR-BEM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},
-            'BR':   {'code_document': 'ENR-BRM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LE STOCK'},
-            'BSHS': {'code_document': 'ENR-BHSM/DAF-001', 'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES PRESTATIONS EXTERNES'},
-            'BC':   {'code_document': 'ENR-BCM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},
-            'BDM':  {'code_document': 'ENR-BDM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},
-        }
-        for code, vals in defaults.items():
-            ConfigDocument.objects.get_or_create(
-                type_doc=code,
-                defaults=vals
-            )
+        """Compatibilité : ConfigDocument a été supprimé.
+
+        Les configurations documentaires sont désormais portées par
+        stock.ModeleDocumentMagasin (config JSON par magasin). Cette méthode
+        ne crée plus rien et retourne simplement les valeurs par défaut.
+        """
+        return dict(self.METADONNEES_DOCUMENTS_DEFAUT)
 
 
 def get_config():

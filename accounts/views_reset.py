@@ -8,6 +8,7 @@ lui-même son nouveau mot de passe depuis la page de connexion.
 """
 import logging
 import secrets
+import time
 from datetime import timedelta
 
 from django.contrib import messages
@@ -26,6 +27,55 @@ from .views import get_client_ip, log_audit
 logger = logging.getLogger(__name__)
 
 DUREE_VALIDITE_MINUTES = MotDePasseResetToken.DUREE_VALIDITE_MINUTES
+
+# ── Protection anti-force-brute / anti-bombing ──
+MAX_TENTATIVES_CODE = 5          # échecs de code avant blocage
+DUREE_BLOCAGE_MINUTES = 15       # durée du blocage après échecs
+MIN_DELAI_DEMANDE_SECONDES = 60  # délai minimal entre deux demandes d'envoi
+MAX_DEMANDES_PAR_HEURE = 5       # nb max de demandes d'envoi par heure
+
+
+def _bloquage_actif(request):
+    """True si la session est bloquée suite à trop d'échecs de code."""
+    jusqu_a = request.session.get('reset_blocage_jusqua', 0)
+    return time.time() < jusqu_a
+
+
+def _enregistrer_echec_code(request):
+    """Compte un échec de saisie de code ; bloque la session au-delà du seuil."""
+    nb = request.session.get('reset_echecs_code', 0) + 1
+    if nb >= MAX_TENTATIVES_CODE:
+        request.session['reset_blocage_jusqua'] = (
+            time.time() + DUREE_BLOCAGE_MINUTES * 60)
+        request.session['reset_echecs_code'] = 0
+    else:
+        request.session['reset_echecs_code'] = nb
+
+
+def _reinitialiser_echecs(request):
+    request.session.pop('reset_echecs_code', None)
+    request.session.pop('reset_blocage_jusqua', None)
+
+
+def _verifier_cadence_demande(request):
+    """Anti-bombing SMS/email : 1 demande/minute et max 5/heure par session.
+
+    Retourne True si la demande est autorisée (et enregistre la cadence).
+    """
+    maintenant = time.time()
+    derniere = request.session.get('reset_derniere_demande', 0)
+    if maintenant - derniere < MIN_DELAI_DEMANDE_SECONDES:
+        return False
+    historique = [
+        t for t in request.session.get('reset_historique_demandes', [])
+        if maintenant - t < 3600
+    ]
+    if len(historique) >= MAX_DEMANDES_PAR_HEURE:
+        return False
+    historique.append(maintenant)
+    request.session['reset_derniere_demande'] = maintenant
+    request.session['reset_historique_demandes'] = historique
+    return True
 
 
 def _chiffres(texte):
@@ -80,6 +130,20 @@ def mot_de_passe_oublie(request):
         return redirect('accounts:custom_login')
 
     if request.method == 'POST':
+        if _bloquage_actif(request):
+            messages.error(
+                request,
+                "Trop de tentatives. Réessayez dans un quart d'heure.",
+            )
+            return redirect('accounts:mot_de_passe_oublie')
+        if not _verifier_cadence_demande(request):
+            messages.error(
+                request,
+                "Veuillez patienter avant de refaire une demande "
+                "(limite anti-abus).",
+            )
+            return redirect('accounts:mot_de_passe_oublie')
+
         canal = request.POST.get('canal', 'email').strip().lower()
         identifiant = request.POST.get('identifiant', '').strip()
         user = None
@@ -203,6 +267,11 @@ def reinitialiser_mot_de_passe(request, token=None):
 
     erreur = None
     if request.method == 'POST':
+        if _bloquage_actif(request):
+            erreur = ("Trop de tentatives. Réessayez dans un quart d'heure.")
+            return render(request, 'accounts/reinitialiser_mot_de_passe.html',
+                          {'erreur': erreur, 'token': token, 'duree': DUREE_VALIDITE_MINUTES})
+
         token_saisi = (request.POST.get('token') or token or '').strip()
         code_saisi = request.POST.get('code', '').strip()
         nouveau = request.POST.get('nouveau_mdp', '')
@@ -218,6 +287,7 @@ def reinitialiser_mot_de_passe(request, token=None):
             jeton = valides.filter(code=code_saisi).first()
 
         if jeton is None:
+            _enregistrer_echec_code(request)
             erreur = "Ce lien ou code est invalide ou a expiré. Veuillez refaire une demande."
         elif nouveau != confirmer:
             erreur = "Les mots de passe ne correspondent pas."
@@ -230,6 +300,7 @@ def reinitialiser_mot_de_passe(request, token=None):
                 user.set_password(nouveau)
                 user.save()
                 jeton.invalider()
+                _reinitialiser_echecs(request)
                 try:
                     profil = user.profil
                     profil.doit_changer_mdp = False

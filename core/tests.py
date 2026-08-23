@@ -1,5 +1,9 @@
-from core.models import ConfigDocument, TypeDocument
+from django.contrib.auth.models import Group, User
 from django.test import TestCase
+
+from accounts.models import (
+    AuditConnexion, JournalAudit, MenuAccess, Notification,
+)
 from core.pdf_pagination import paginer_bon_sortie
 
 
@@ -29,32 +33,6 @@ class PDFPaginationTest(TestCase):
         result = paginer_bon_sortie(lignes, config)
         last_page = result.pages[-1]
         self.assertGreaterEqual(len(last_page.lignes), 5)
-
-
-class ConfigDocumentModelTest(TestCase):
-    def test_creation(self):
-        cd = ConfigDocument.objects.create(
-            type_doc='BS',
-            code_document='ENR-001'
-        )
-        self.assertEqual(str(cd), "Bon de Sortie")
-        self.assertTrue(cd.afficher_logo)
-        self.assertTrue(cd.afficher_signatures)
-
-    def test_defaults_affichage(self):
-        cd = ConfigDocument.objects.create(type_doc='BE')
-        self.assertTrue(cd.afficher_logo)
-        self.assertTrue(cd.afficher_cachet)
-        self.assertTrue(cd.afficher_cc)
-        self.assertTrue(cd.afficher_ifu)
-        self.assertTrue(cd.afficher_rccm)
-        self.assertTrue(cd.afficher_telephone)
-        self.assertTrue(cd.afficher_signatures)
-
-    def test_type_doc_choices(self):
-        for code, label in ConfigDocument.TYPE_DOC_CHOICES:
-            cd = ConfigDocument.objects.create(type_doc=code)
-            self.assertEqual(cd.get_type_doc_display(), label)
 
 
 # ==========================================================

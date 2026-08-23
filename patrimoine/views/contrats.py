@@ -173,8 +173,14 @@ def assigner_equipements_contrat(request, contrat_id):
         Immobilisation.objects.filter(contrat_maintenance=contrat).update(contrat_maintenance=None)
 
         if equipements_coches:
-
-            Immobilisation.objects.filter(id__in=equipements_coches).update(contrat_maintenance=contrat)
+            # Serve-side : ne rattacher que les équipements réellement
+            # « disponibles » (sans contrat actif, ou déjà à ce contrat) —
+            # un POST forgé/obsolète ne doit pas voler les équipements
+            # d'un autre contrat ACTIF.
+            ids_valides = list(
+                equipements_disponibles.filter(
+                    id__in=equipements_coches).values_list('id', flat=True))
+            Immobilisation.objects.filter(id__in=ids_valides).update(contrat_maintenance=contrat)
 
         messages.success(request, "✅ La couverture du contrat a été mise à jour avec succès.")
 

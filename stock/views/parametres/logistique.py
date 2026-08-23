@@ -169,7 +169,7 @@ def _handle_post(request):
 
 
 def _post_famille(request):
-    if not request.user.has_perm('accounts.menu_fournisseurs') and not request.user.is_superuser:
+    if not request.user.has_perm('accounts.menu_familles') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
 
@@ -351,7 +351,7 @@ def _post_toggle_motif(request):
 
 
 def _post_supprimer_famille(request):
-    if not request.user.has_perm('accounts.menu_fournisseurs') and not request.user.is_superuser:
+    if not request.user.has_perm('accounts.menu_familles') and not request.user.is_superuser:
         messages.error(request, "⛔ Accès refusé.")
         return redirect('parametres_logistique')
 

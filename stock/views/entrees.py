@@ -155,8 +155,13 @@ def _creer_entree(request):
 
     lignes = []
     for aid, qte, lot, peremp, pu in zip(article_ids, quantites, lots, peremptions, prix_unitaires):
-        if aid and qte and int(qte) > 0:
-            if int(aid) not in articles_valides:
+        try:
+            qte_val = int(qte) if qte and str(qte).strip() else 0
+        except (TypeError, ValueError):
+            messages.error(request, "❌ Quantité invalide (nombre entier attendu).")
+            return redirect('liste_entrees')
+        if aid and qte_val > 0:
+            if not str(aid).isdigit() or int(aid) not in articles_valides:
                 messages.error(
                     request,
                     f"⛔ L'article sélectionné n'est pas valide."
@@ -188,12 +193,25 @@ def _creer_entree(request):
                     messages.error(request, erreur)
                     return redirect('liste_entrees')
 
+            # Prix au format français accepté (« 12,50 »)
+            try:
+                pu_val = (
+                    Decimal(str(pu).replace(' ', '').replace(',', '.').strip())
+                    if pu and str(pu).strip() else None
+                )
+            except Exception:
+                messages.error(
+                    request,
+                    f"❌ Prix unitaire invalide pour « {article.designation} »."
+                )
+                return redirect('liste_entrees')
+
             lignes.append({
                 'article_id': aid,
-                'quantite': int(qte),
-                'numero_lot': lot.strip() or None,
+                'quantite': qte_val,
+                'numero_lot': lot.strip() if lot else None,
                 'date_peremption': peremp or None,
-                'prix_unitaire': Decimal(pu) if pu and pu.strip() else None,
+                'prix_unitaire': pu_val,
             })
 
     try:
@@ -418,9 +436,9 @@ def valider_bon_entree(request, bon_id):
     from stock.services.stock_transaction_service import StockTransactionService
     from django.db import transaction as db_transaction
 
-    bon = get_object_or_404(
-        BonMouvement, id=bon_id, type_bon='ENTREE'
-    )
+    if request.method != 'POST':
+        messages.error(request, "❌ Cette action doit être effectuée en POST.")
+        return redirect('liste_entrees')
 
     circuit = CircuitValidation.objects.filter(
         type_document='ENTREE', est_actif=True, is_deleted=False
@@ -434,12 +452,19 @@ def valider_bon_entree(request, bon_id):
         messages.error(request, "⛔ Vous n'êtes pas autorisé à valider ce bon d'entrée.")
         return redirect('liste_entrees')
 
-    if bon.statut_validation != 'ATTENTE':
-        messages.warning(request, f"⚠️ Le bon {bon.numero_bon} n'est pas en attente de validation.")
-        return redirect('liste_entrees')
-
     try:
         with db_transaction.atomic():
+            # Verrouiller la ligne du bon : le statut est relu SOUS le
+            # verrou pour empêcher deux validations concurrentes.
+            bon = get_object_or_404(
+                BonMouvement.objects.select_for_update(),
+                id=bon_id, type_bon='ENTREE'
+            )
+
+            if bon.statut_validation != 'ATTENTE':
+                messages.warning(request, f"⚠️ Le bon {bon.numero_bon} n'est pas en attente de validation.")
+                return redirect('liste_entrees')
+
             bon.statut_validation = 'VALIDE'
             bon.date_validation = timezone.now()
             bon.valide_par = request.user
@@ -460,7 +485,8 @@ def valider_bon_entree(request, bon_id):
                 )
                 StockTransactionService.executer(mouvement)
     except Exception as e:
-        logger.exception("[ENTREE] Validation bon %s : %s", bon.numero_bon, e)
+        # bon peut ne pas être atteint si l'erreur survient avant son assignation
+        logger.exception("[ENTREE] Validation bon %s : %s", getattr(bon, 'numero_bon', bon_id), e)
         messages.error(request, "❌ Une erreur est survenue lors de la validation.")
         return redirect('liste_entrees')
 

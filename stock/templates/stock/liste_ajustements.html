@@ -593,9 +593,9 @@
       <button type="button" class="btn-confirm-cancel" data-close-modal="modal-confirm-valider">
         <i class="fas fa-times"></i> Annuler
       </button>
-      <a href="#" id="btn-confirm-valider-link" class="btn-confirm-ok btn-warn">
+      <button type="button" id="btn-confirm-valider-link" class="btn-confirm-ok btn-warn" onclick="_posterUrl(this.dataset.url)">
         <i class="fas fa-check"></i> Valider
-      </a>
+      </button>
     </div>
   </div>
 </div>
@@ -615,9 +615,9 @@
       <button type="button" class="btn-confirm-cancel" data-close-modal="modal-confirm-rejeter">
         <i class="fas fa-times"></i> Annuler
       </button>
-      <a href="#" id="btn-confirm-rejeter-link" class="btn-confirm-ok btn-danger">
+      <button type="button" id="btn-confirm-rejeter-link" class="btn-confirm-ok btn-danger" onclick="_posterUrl(this.dataset.url)">
         <i class="fas fa-check"></i> Rejeter
-      </a>
+      </button>
     </div>
   </div>
 </div>
@@ -800,16 +800,31 @@ function confirmerCreationAjustement() {
 }
 
 /* Confirmation Valider (ligne) */
+function _posterUrl(url) {
+    var csrfEl = document.querySelector('input[name="csrfmiddlewaretoken"]');
+    var csrf = csrfEl ? csrfEl.value : '';
+    var token = Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = url;
+    form.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + csrf + '">' +
+        '<input type="hidden" name="token" value="' + token + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
+
 function confirmerValidation(url) {
     var link = document.getElementById('btn-confirm-valider-link');
-    link.href = url;
+    link.dataset.url = url;
+    link.removeAttribute('href');
     ouvrirModalConfirm('modal-confirm-valider');
 }
 
 /* Confirmation Rejeter (ligne) */
 function confirmerRejet(url) {
     var link = document.getElementById('btn-confirm-rejeter-link');
-    link.href = url;
+    link.dataset.url = url;
+    link.removeAttribute('href');
     ouvrirModalConfirm('modal-confirm-rejeter');
 }
 

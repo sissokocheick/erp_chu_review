@@ -14,7 +14,7 @@ from django.core.exceptions import ValidationError
 
 from core.models import ConfigurationHopital, Service
 from core.forms import ConfigurationHopitalForm
-from core.models import ConfigDocument, TypeDocument
+from core.models import TypeDocument
 
 
 class ConfigurationHopitalTest(TestCase):
@@ -93,26 +93,21 @@ class ConfigurationHopitalTest(TestCase):
         self.assertEqual(cfg['direction_label'], obj.direction_label)
         self.assertEqual(cfg['couleur_principale'], obj.couleur_principale)
 
-    def test_get_pdf_config_utilise_config_document(self):
-        ConfigDocument.objects.get_or_create(
-            type_doc='BS', defaults={'code_document': 'ENR-BSM/DAF-001'})
-        cd = ConfigDocument.objects.get(type_doc='BS')
-        cd.code_document = 'CODE-CUSTOM'
-        cd.save()
+    def test_get_pdf_config_utilise_metadonnees_defaut(self):
         obj = ConfigurationHopital.get_instance()
         cfg = obj.get_pdf_config(TypeDocument.BS)
-        self.assertEqual(cfg['code_document'], 'CODE-CUSTOM')
+        self.assertEqual(cfg['code_document'], 'ENR-BSM/DAF-001')
 
     def test_creer_configs_documents_par_defaut(self):
         obj = ConfigurationHopital.get_instance()
-        obj.creer_configs_documents_par_defaut()
-        self.assertEqual(ConfigDocument.objects.count(), 6)
+        result = obj.creer_configs_documents_par_defaut()
+        self.assertEqual(len(result), 6)
 
     def test_creer_configs_idempotent(self):
         obj = ConfigurationHopital.get_instance()
         obj.creer_configs_documents_par_defaut()
-        obj.creer_configs_documents_par_defaut()
-        self.assertEqual(ConfigDocument.objects.count(), 6)
+        result = obj.creer_configs_documents_par_defaut()
+        self.assertEqual(len(result), 6)
 
     def test_signataires_config_six_roles(self):
         obj = ConfigurationHopital.get_instance()

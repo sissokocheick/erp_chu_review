@@ -249,10 +249,15 @@ dj "venv/bin/python manage.py init_roles" 2>/dev/null || true
 
 # Superutilisateur
 if [ -n "${DJANGO_ADMIN_USERNAME:-}" ]; then
+  if [ -z "${DJANGO_ADMIN_PASSWORD:-}" ]; then
+    warn "DJANGO_ADMIN_PASSWORD non défini : génération d'un mot de passe aléatoire."
+    DJANGO_ADMIN_PASSWORD="$(head -c 24 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 20)"
+    echo "Mot de passe superutilisateur ($DJANGO_ADMIN_USERNAME) : $DJANGO_ADMIN_PASSWORD"
+  fi
   dj "venv/bin/python manage.py shell -c \"
 from django.contrib.auth.models import User
 if not User.objects.filter(username='$DJANGO_ADMIN_USERNAME').exists():
-    User.objects.create_superuser('$DJANGO_ADMIN_USERNAME', '${DJANGO_ADMIN_EMAIL:-admin@$DOMAIN}', '${DJANGO_ADMIN_PASSWORD:-admin}')
+    User.objects.create_superuser('$DJANGO_ADMIN_USERNAME', '${DJANGO_ADMIN_EMAIL:-admin@$DOMAIN}', '${DJANGO_ADMIN_PASSWORD}')
     print('Superutilisateur créé : $DJANGO_ADMIN_USERNAME')
 else:
     print('Superutilisateur $DJANGO_ADMIN_USERNAME existe déjà')

@@ -36,7 +36,10 @@ logger = logging.getLogger(__name__)
 
 def parametres(request):
 
-    params = ParametresPatrimoine.objects.first()
+    # get_parametres() crée le singleton si absent : sur une installation
+    # vierge, objects.first() renvoyait None → AttributeError (la page de
+    # paramètres patrimoine était inutilisable).
+    params = ParametresPatrimoine.get_parametres()
 
     
     if request.method == 'POST':

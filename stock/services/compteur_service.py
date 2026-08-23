@@ -23,6 +23,7 @@ class CompteurDocumentService:
         'RETOUR_SERVICE':     ('BON_RETOUR', 'BR'),
         'SORTIE_HORS_STOCK':  ('BON_HS', 'BSHS'),
         'TRANSFERT':          ('BON_TRANSFERT', 'BT'),
+        'RETOUR_FOURNISSEUR': ('BON_RETOUR_FOURNISSEUR', 'BRF'),
     }
 
     @classmethod

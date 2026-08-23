@@ -166,12 +166,30 @@ def paginer_bon_sortie(lignes: List[Dict[str, Any]], config: Dict[str, Any]) -> 
 
     reste = lignes[LIGNES_PAGE_1:]
 
-    # ✅ CORRECTION P0 : condition avec capacite_derniere calculée dynamiquement
-    while len(reste) > capacite_derniere + LIGNES_MIN_DERNIERE:
+    # ✅ Découpe en pages intermédiaires tant que le reste dépasse la
+    # capacité d'une DERNIÈRE page (qui porte le bloc signatures/sondage).
+    # NB : l'ancienne condition (`> capacite_derniere + LIGNES_MIN_DERNIERE`)
+    # laissait passer 31-35 lignes (débordement du bloc bas) et, pour 36-40,
+    # consommait tout dans une page intermédiaire → aucune page finale,
+    # signatures perdues.
+    while len(reste) > capacite_derniere:
         lignes_inter = reste[:LIGNES_PAGE_INTERM]
         reste = reste[LIGNES_PAGE_INTERM:]
         pages.append(PageContent(numero=len(pages)+1, lignes=lignes_inter,
                                  est_derniere_page=False, bloc_bas_rentre=False))
+
+    # Le découpage peut avoir tout consommé (multiple exact de 40) : reprendre
+    # la dernière page intermédiaire et la scinder pour garantir une vraie
+    # page finale dans les limites de sa capacité.
+    if not reste and pages:
+        pool = pages.pop().lignes  # ≤ LIGNES_PAGE_INTERM lignes
+        if len(pool) > capacite_derniere:
+            k = max(LIGNES_MIN_DERNIERE, len(pool) - LIGNES_PAGE_INTERM)
+            pages.append(PageContent(numero=len(pages)+1, lignes=pool[:-k],
+                                     est_derniere_page=False, bloc_bas_rentre=False))
+            reste = pool[-k:]
+        else:
+            reste = pool
 
     # Protection anti-page-vide
     if len(reste) < LIGNES_MIN_DERNIERE and len(pages) >= 1:

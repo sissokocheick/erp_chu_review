@@ -101,16 +101,14 @@ def patrimoine_campagnes_inventaire(request):
         elif action == 'delete_campagne':
 
             item_id = request.POST.get('item_id')
-
-            try:
-
-                CampagneInventairePatrimoine.objects.filter(id=item_id).delete()
-
+            campagne_del = CampagneInventairePatrimoine.objects.filter(id=item_id).first()
+            if campagne_del and campagne_del.statut != 'BROUILLON':
+                # Une campagne démarrée contient des scans (lignes CASCADE) :
+                # leur suppression silencieuse détruisait la traçabilité.
+                messages.error(request, "⛔ Seule une campagne en brouillon peut être supprimée (annulez-la d'abord).")
+            elif campagne_del:
+                campagne_del.delete()
                 messages.success(request, "Campagne supprimée.")
-
-            except ProtectedError:
-
-                messages.error(request, "⛔ Impossible de supprimer cette campagne car des scans ont déjà été effectués.")
 
 
         return redirect('patrimoine_campagnes_inventaire')
@@ -189,6 +187,14 @@ def detail_campagne_inventaire(request, campagne_id):
 
             with transaction.atomic():
 
+                # Anti double-exécution : verrouiller la campagne et RELIRE
+                # son statut sous le verrou (deux POST concurrents passaient
+                # tous deux le test statut == 'EN_COURS').
+                campagne = CampagneInventairePatrimoine.objects.select_for_update().get(pk=campagne.pk)
+                if campagne.statut != 'EN_COURS':
+                    messages.error(request, "⛔ Cette campagne n'est plus en cours.")
+                    return redirect('patrimoine_detail_campagne', campagne_id=campagne.pk)
+
                 lignes_non_pointees = campagne.lignes.filter(etat_constate__isnull=True)
 
                 nb_manquants = lignes_non_pointees.count()
@@ -215,7 +221,14 @@ def detail_campagne_inventaire(request, campagne_id):
 
             if peut_valider:
 
-                appliquer_reconciliation_inventaire(request, campagne)
+                # Anti double-exécution : verrou + relecture du statut avant
+                # la réconciliation (sinon doublons MUTATION/REFORME/PERTE).
+                with transaction.atomic():
+                    campagne = CampagneInventairePatrimoine.objects.select_for_update().get(pk=campagne.pk)
+                    if campagne.statut != 'EN_ATTENTE_VALIDATION':
+                        messages.error(request, "⛔ Cette campagne a déjà été traitée.")
+                        return redirect('patrimoine_detail_campagne', campagne_id=campagne.pk)
+                    appliquer_reconciliation_inventaire(request, campagne)
 
                 messages.success(request, "✅ Inventaire validé avec succès !")
 
@@ -431,6 +444,11 @@ def audit_scan_inventaire(request, campagne_id):
             ligne = get_object_or_404(LigneInventairePatrimoine, id=ligne_id, campagne=campagne)
 
             etat = request.POST.get('etat_constate')
+
+            # Liste blanche : les radios HTML ne contraignent pas un POST forgé.
+            if etat not in [c[0] for c in LigneInventairePatrimoine.ETAT_CONSTATE_CHOICES]:
+                messages.error(request, "⛔ État constaté invalide.")
+                return redirect('patrimoine_audit_scan', campagne_id=campagne.id)
 
             ligne.etat_constate = etat
 

@@ -270,12 +270,15 @@ def telecharger_template(request, type_id):
 
     ws.row_dimensions[3].height = 20
 
+    # Ordre = COLONNES_FIXES (Batiment, Etage, Bureau, Service, Marque,
+    # Modele, Code, N° série, Nom, Date, Valeur, Garantie, Action, Notes,
+    # Fournisseur) : la colonne Service contient « DIRECTION INFORMATIQUE »
+    # pour que le garde anti-exemple de l'import la reconnaisse et l'ignore.
     exemple = [
-
-        'DIRECTION INFORMATIQUE', 'N', '1er Étage', 'BUREAU INFO', 'HP', 'HP DTP 300 G6 MT', 'SN123456789', 'CHU-INFO-2026-001',
-
-        'UC HP DIRECTION INFO', '2024-01-15', 'BUDGET CHU ANGRÉ', '450000', '2027-01-15', 'RAS', '',
-
+        'N', '1er Étage', 'BUREAU INFO', 'DIRECTION INFORMATIQUE', 'HP',
+        'HP DTP 300 G6 MT', 'CHU-INFO-2026-001', 'SN123456789',
+        'UC HP DIRECTION INFO', '2024-01-15', '450000', '2027-01-15',
+        'RAS', '', '',
     ]
 
     for col_idx, val in enumerate(exemple, start=1):
@@ -367,9 +370,18 @@ def import_excel(request):
             return render(request, 'patrimoine/import.html', {'types': types})
 
 
-        if not fichier.name.endswith(('.xlsx', '.xls')):
+        # NB : openpyxl ne lit PAS le format .xls hérité — n'accepter que
+        # .xlsx, et borner la taille (une archive zip renommée et gonflée
+        # pouvait épuiser la mémoire).
+        if not fichier.name.lower().endswith('.xlsx'):
 
-            messages.error(request, "Format accepté : .xlsx ou .xls uniquement.")
+            messages.error(request, "Format accepté : .xlsx uniquement (le format .xls hérité n'est pas lisible).")
+
+            return render(request, 'patrimoine/import.html', {'types': types})
+
+        if fichier.size > 5 * 1024 * 1024:
+
+            messages.error(request, "Fichier trop volumineux (5 Mo maximum).")
 
             return render(request, 'patrimoine/import.html', {'types': types})
 

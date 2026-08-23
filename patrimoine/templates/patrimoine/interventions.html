@@ -153,10 +153,14 @@
           </td>
           
           <td style="text-align:right;">
-            {% if i.statut == 'EN_ATTENTE_VALIDATION' and perms.accounts.menu_patrimoine %}
-            <a href="{% url 'patrimoine_valider_intervention' i.id %}" class="btn-action btn-validate">
-              <i class="fas fa-signature"></i> Valider
-            </a>
+            {% if i.statut == 'EN_ATTENTE_VALIDATION' and perms.accounts.menu_pat_tech %}
+            <form method="POST" action="{% url 'patrimoine_valider_intervention' i.id %}" style="display:inline;margin:0;"
+                  onsubmit="return confirm('Valider et clôturer l\'intervention {{ i.id }} ? L\'équipement sera remis en service.');">
+              {% csrf_token %}
+              <button type="submit" class="btn-action btn-validate">
+                <i class="fas fa-signature"></i> Valider
+              </button>
+            </form>
             {% else %}
             <a href="{% url 'detail_intervention' i.id %}" class="btn-action btn-view">
               <i class="fas fa-folder-open"></i> Dossier

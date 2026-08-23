@@ -83,8 +83,13 @@ def liste_livraisons(request):
         qs = qs.filter(accuse__est_signe=False)
 
     magasin_filter = request.GET.get('magasin', '').strip()
-    if magasin_filter:
-        qs = qs.filter(demande__magasin_cible_id=magasin_filter)
+    if magasin_filter and magasin_filter.isdigit():
+        # Le filtre GET ne doit pas contourner l'isolation : uniquement
+        # parmi les magasins déjà autorisés.
+        autorises_ids = set(
+            get_magasins_autorises(request).values_list('id', flat=True))
+        if int(magasin_filter) in autorises_ids:
+            qs = qs.filter(demande__magasin_cible_id=magasin_filter)
 
     total_livraisons = qs.count()
     total_signees = qs.filter(accuse__est_signe=True).count()

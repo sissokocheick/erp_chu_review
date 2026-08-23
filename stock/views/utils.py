@@ -40,7 +40,8 @@ def changer_magasin(request):
         ):
             return redirect(next_url)
 
-        # Fallback sur le referer
+        # Fallback sur le referer (validé : jamais rediriger vers un
+        # Referer incontrôlé — open redirect)
         referer = request.META.get('HTTP_REFERER')
         if referer and url_has_allowed_host_and_scheme(
             referer,
@@ -49,4 +50,12 @@ def changer_magasin(request):
         ):
             return redirect(referer)
 
-    return redirect(request.META.get('HTTP_REFERER', '/'))
+    # Dernier repli : referer validé ou page d'accueil (jamais un Referer brut)
+    referer = request.META.get('HTTP_REFERER')
+    if referer and url_has_allowed_host_and_scheme(
+        referer,
+        allowed_hosts={request.get_host()},
+        require_https=(not settings.DEBUG and request.is_secure())
+    ):
+        return redirect(referer)
+    return redirect('/')

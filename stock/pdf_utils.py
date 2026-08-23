@@ -16,6 +16,57 @@ logger = logging.getLogger(__name__)
 # CONFIGURATION PDF
 # ═════════════════════════════════════════════════════════════════════════════
 
+# Métadonnées documentaires par défaut (l'ancien modèle ConfigDocument a été
+# supprimé ; la personnalisation se fait désormais via ModeleDocumentMagasin).
+_META_DOCUMENTS_DEFAUT = {
+    'BS':   {'code_document': 'ENR-BSM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '002', 'ps2_label': 'PS2 : GERER LES PRESTATIONS EXTERNES'},
+    'BE':   {'code_document': 'ENR-BEM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},
+    'BR':   {'code_document': 'ENR-BRM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LE STOCK'},
+    'BSHS': {'code_document': 'ENR-BHSM/DAF-001', 'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES PRESTATIONS EXTERNES'},
+    'BC':   {'code_document': 'ENR-BCM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},
+    'BDM':  {'code_document': 'ENR-BDM/DAF-001',  'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LES APPROVISIONNEMENTS'},
+    'AJUSTEMENT': {'code_document': 'ENR-AJM/DAF-001', 'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LE STOCK'},
+    'ETAT_STOCK': {'code_document': 'ENR-ESM/DAF-001', 'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LE STOCK'},
+    'HISTORIQUE': {'code_document': 'ENR-HIM/DAF-001', 'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LE STOCK'},
+    'INVENTAIRE': {'code_document': 'ENR-IVM/DAF-001', 'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LE STOCK'},
+    'RAPPORT':    {'code_document': 'ENR-RPM/DAF-001', 'date_creation_doc': '10/06/2024', 'date_revision_doc': '19/05/2025', 'version_doc': '001', 'ps2_label': 'PS2 : GERER LE STOCK'},
+}
+
+
+def _config_document_flat(type_doc_code):
+    """Retourne la config « plate » d'un type de document (ex-ConfigDocument).
+
+    Les métadonnées (code ISO, version…) personnalisées vivent désormais dans
+    ModeleDocumentMagasin : on les reprend si un modèle actif existe pour ce
+    type. Sinon on ne fournit que les drapeaux d'affichage et on laisse
+    ModeleDocumentMagasin._default_config_structured appliquer ses codes
+    ISO par type.
+    """
+    base = {
+        'afficher_logo': True,
+        'afficher_cachet': True,
+        'afficher_signatures': True,
+        'afficher_cc': True,
+        'afficher_ifu': True,
+        'afficher_rccm': True,
+        'afficher_telephone': True,
+        'pied_page_pdf': '',
+    }
+    try:
+        from stock.models import ModeleDocumentMagasin
+        modele = ModeleDocumentMagasin.objects.filter(
+            type_document=type_doc_code, est_actif=True
+        ).first()
+        if modele and modele.config:
+            cfg = modele.config or {}
+            metas = cfg.get('metadonnees')
+            if isinstance(metas, dict):
+                base.update(metas)
+    except Exception:
+        pass
+    return base
+
+
 def get_pdf_config(magasin, type_doc_code, request):
     """
     Récupère la configuration PDF pour un magasin et un type de document.

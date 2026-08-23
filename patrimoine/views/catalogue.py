@@ -22,7 +22,7 @@ from core.models import Service
 
 from ..models import (
     Immobilisation, TypeEquipement, CategoriePatrimoine,
-    Batiment, Bureau, Marque,
+    Batiment, Bureau, Marque, MouvementPatrimoine,
 )
 from .common import patrimoine_required
 
@@ -108,7 +108,13 @@ def registre(request):
 
     per_page = request.GET.get('per_page', '20')
 
-    limite   = qs.count() if per_page == 'all' else int(per_page) if str(per_page).isdigit() else 20
+    if per_page == 'all':
+        limite = max(1, qs.count())
+    else:
+        try:
+            limite = max(1, min(int(per_page), 500))
+        except (TypeError, ValueError):
+            limite = 20
 
     page     = Paginator(qs, limite).get_page(request.GET.get('page'))
 
@@ -199,9 +205,14 @@ def modifier_immo(request, pk):
 
             immo.garantie_expiration    = request.POST.get('garantie_expiration') or None
 
-            immo.action_requise         = request.POST.get('action_requise', 'RAS')
+            # Liste blanche : le select HTML limite l'UI, pas un POST forgé.
+            statut_poste = request.POST.get('statut')
+            if statut_poste in [c[0] for c in Immobilisation.STATUT_CHOICES]:
+                immo.statut = statut_poste
 
-            immo.statut                 = request.POST.get('statut', immo.statut)
+            action_postee = request.POST.get('action_requise')
+            if action_postee and action_postee in [c[0] for c in Immobilisation.ACTION_CHOICES]:
+                immo.action_requise = action_postee
 
             immo.notes                  = request.POST.get('notes', '')
 
@@ -295,6 +306,10 @@ def quick_edit(request, pk):
 
     if request.method != 'POST': return JsonResponse({'error': 'POST only'}, status=405)
 
+    # Bouton « Forcer le statut (Admin) » : réservé au superuser
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Réservé au superutilisateur'}, status=403)
+
     immo = get_object_or_404(Immobilisation, pk=pk)
 
     champ = request.POST.get('champ')
@@ -303,11 +318,36 @@ def quick_edit(request, pk):
 
     if champ not in {'statut', 'action_requise'}: return JsonResponse({'error': 'Champ non autorisé'}, status=400)
 
+    # Listes blanches : un POST forgé ne doit pas écrire un statut arbitraire
+    # (les filtres/badges/rapports reposent sur STATUT_CHOICES).
+    if champ == 'statut' and val not in [c[0] for c in Immobilisation.STATUT_CHOICES]:
+        return JsonResponse({'error': 'Statut non autorisé'}, status=400)
+    if champ == 'action_requise' and val not in [c[0] for c in Immobilisation.ACTION_CHOICES]:
+        return JsonResponse({'error': 'Action non autorisée'}, status=400)
+
     setattr(immo, champ, val)
 
     immo.modifie_par = request.user
 
     immo.save(update_fields=[champ, 'modifie_par', 'date_modification'])
+
+    # Traçabilité : un statut REFORME/DISPARU/CEDE forcé doit apparaître
+    # dans les registres rebuts/pertes (mouvement équivalent à la
+    # réconciliation d'inventaire).
+    STATUT_VERS_MOUVEMENT = {
+        'REFORME': 'REFORME',
+        'DISPARU': 'PERTE',
+        'CEDE': 'CESSION',
+    }
+    type_mvt = STATUT_VERS_MOUVEMENT.get(val) if champ == 'statut' else None
+    if type_mvt and not immo.mouvements.filter(type_mouvement=type_mvt).exists():
+        MouvementPatrimoine.objects.create(
+            immobilisation=immo,
+            type_mouvement=type_mvt,
+            date_mouvement=timezone.now().date(),
+            motif=f"Forçage manuel du statut par {request.user.get_full_name() or request.user.username}",
+            effectue_par=request.user,
+        )
 
     return JsonResponse({'success': True, 'valeur': val, 'modifie_par': request.user.get_full_name() or request.user.username})
 

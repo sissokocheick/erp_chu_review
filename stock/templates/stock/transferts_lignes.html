@@ -16,14 +16,25 @@
     <td data-label="Statut">
         {% if t.est_annule %}
             <span class="badge badge-annule">Annulé</span>
+        {% elif t.statut_validation == 'ATTENTE' %}
+            <span class="badge" style="background:#ffc107; color:#212529;">En transit</span>
         {% else %}
-            <span class="badge badge-ok">Effectué</span>
+            <span class="badge badge-ok">Réceptionné</span>
         {% endif %}
     </td>
     <td data-label="Actions" style="text-align:right;white-space:nowrap;">
         <a href="{% url 'imprimer_bon_multi_lignes' t.id %}" target="_blank" class="btn-action btn-print" title="Imprimer le bon de transfert">
             <i class="fas fa-print"></i> Imprimer
         </a>
+        {% if t.statut_validation == 'ATTENTE' and not t.est_annule %}
+        <form method="POST" action="{% url 'receptionner_transfert' t.id %}" style="display:inline;"
+              onsubmit="return confirm('Confirmer la réception du transfert {{ t.numero_bon|escapejs }} dans le magasin {{ t.magasin_destination.nom|escapejs }} ?');">
+            {% csrf_token %}
+            <button type="submit" class="btn-action btn-print" title="Confirmer la réception du stock dans le magasin destination">
+                <i class="fas fa-check-double"></i> Réceptionner
+            </button>
+        </form>
+        {% endif %}
         {% if not t.est_annule %}
         <button class="btn-action btn-cancel" onclick="annulerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Annuler le transfert (le stock revient au magasin source)">
             <i class="fas fa-ban"></i> Annuler

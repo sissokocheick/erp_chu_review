@@ -236,7 +236,7 @@ def annuler_bon_hors_stock(request, bon_id):
         BonService.annuler_bon_hors_stock(bon, motif, request.user)
     except ValueError as e:
         logger.exception("[BSHS] %s", e)
-        messages.error(request, "⛔ Erreur lors de la création du bon. Veuillez réessayer.")
+        messages.error(request, "⛔ Erreur lors de l'annulation du bon. Veuillez réessayer.")
         return redirect('liste_bons_hors_stock')
 
     messages.success(request, f"✅ Bon {bon.numero_bon} annulé.")

@@ -184,8 +184,13 @@ def _creer_inventaire(request):
 @magasin_requis
 @catch_errors(redirect_url='liste_inventaires')
 def saisir_inventaire(request, campagne_id):
+    from stock.services.isolation_service import get_magasins_autorises
+
     campagne = get_object_or_404(
-        CampagneInventaire, id=campagne_id)
+        CampagneInventaire,
+        id=campagne_id,
+        magasin__in=get_magasins_autorises(request),
+    )
 
     circuit = CircuitValidation.objects.filter(
         type_document='INVENTAIRE'
@@ -326,8 +331,13 @@ def api_sauvegarder_ligne_inventaire(request, campagne_id):
     Sauvegarde la quantité physique d'une seule ligne.
     Appelée en AJAX à chaque blur/change d'input.
     """
+    from stock.services.isolation_service import get_magasins_autorises
+
     campagne = get_object_or_404(
-        CampagneInventaire, id=campagne_id)
+        CampagneInventaire,
+        id=campagne_id,
+        magasin__in=get_magasins_autorises(request),
+    )
 
     if campagne.statut != 'EN_COURS':
         return JsonResponse({'success': False, 'error': 'Inventaire non modifiable.'}, status=403)
@@ -350,6 +360,8 @@ def api_sauvegarder_ligne_inventaire(request, campagne_id):
             ligne.quantite_physique = int(val)
         except ValueError:
             return JsonResponse({'success': False, 'error': 'Quantité invalide.'}, status=400)
+        if ligne.quantite_physique < 0:
+            return JsonResponse({'success': False, 'error': 'Quantité négative refusée.'}, status=400)
 
     ligne.save(update_fields=['quantite_physique'])
     ecart = ligne.ecart()
@@ -425,7 +437,17 @@ def _creer_plan_tournant(request):
 @catch_errors(redirect_url='liste_plans_inventaire_tournant')
 def generer_campagne_tournante(request, plan_id):
     """Génère immédiatement la campagne d'inventaire d'un plan tournant."""
-    plan = get_object_or_404(PlanInventaireTournant, id=plan_id)
+    from stock.services.isolation_service import get_magasins_autorises
+
+    if request.method != 'POST':
+        messages.error(request, "❌ Cette action doit être effectuée en POST.")
+        return redirect(reverse('liste_inventaires') + '?tab=tournant')
+
+    plan = get_object_or_404(
+        PlanInventaireTournant,
+        id=plan_id,
+        magasin__in=get_magasins_autorises(request),
+    )
     url_tournant = reverse('liste_inventaires') + '?tab=tournant'
     try:
         campagne = InventaireService.generer_campagne_tournante(plan, request.user)
@@ -451,7 +473,17 @@ def generer_campagne_tournante(request, plan_id):
 @catch_errors(redirect_url='liste_plans_inventaire_tournant')
 def basculer_statut_plan(request, plan_id):
     """Active / met en pause un plan tournant."""
-    plan = get_object_or_404(PlanInventaireTournant, id=plan_id)
+    from stock.services.isolation_service import get_magasins_autorises
+
+    if request.method != 'POST':
+        messages.error(request, "❌ Cette action doit être effectuée en POST.")
+        return redirect(reverse('liste_inventaires') + '?tab=tournant')
+
+    plan = get_object_or_404(
+        PlanInventaireTournant,
+        id=plan_id,
+        magasin__in=get_magasins_autorises(request),
+    )
     if plan.statut == 'ACTIF':
         plan.statut = 'INACTIF'
         messages.info(request, f"⏸️ Plan '{plan.titre}' mis en pause.")

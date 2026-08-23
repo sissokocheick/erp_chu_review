@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.exceptions import ValidationError
 from django.core.files.storage import default_storage
 from django.db import IntegrityError
 from django.http import HttpResponse
@@ -290,9 +291,9 @@ def annuler_sortie(request, bon_id):
 @magasin_requis
 @catch_errors(redirect_url='liste_sorties')
 def valider_bon_sortie(request, bon_id):
-    bon = get_object_or_404(
-        BonMouvement, id=bon_id, type_bon='SORTIE'
-    )
+    if request.method != 'POST':
+        messages.error(request, "❌ Cette action doit être effectuée en POST.")
+        return redirect('liste_sorties')
 
     circuit = CircuitValidation.objects.filter(
         type_document='SORTIE', est_actif=True
@@ -306,11 +307,29 @@ def valider_bon_sortie(request, bon_id):
         messages.error(request, "⛔ Vous n'êtes pas autorisé à valider ce bon.")
         return redirect('liste_sorties')
 
+    # Verrouiller la ligne du bon : le statut est relu SOUS le verrou pour
+    # empêcher deux validations concurrentes (double décompte de stock).
+    from django.db import transaction as db_transaction
     try:
-        stock_decompte = BonService.valider_bon_sortie(bon, request.user)
+        with db_transaction.atomic():
+            bon = get_object_or_404(
+                BonMouvement.objects.select_for_update(),
+                id=bon_id, type_bon='SORTIE'
+            )
+
+            if bon.est_annule:
+                messages.error(request, f"❌ Le bon {bon.numero_bon} est annulé et ne peut pas être validé.")
+                return redirect('liste_sorties')
+
+            stock_decompte = BonService.valider_bon_sortie(bon, request.user)
+    except ValidationError as e:
+        # Message métier (stock insuffisant, bon annulé…) directement affiché
+        logger.info("[SORTIE] Validation refusée : %s", e)
+        messages.error(request, f"❌ {e}")
+        return redirect('liste_sorties')
     except ValueError as e:
         logger.exception("[SORTIE] %s", e)
-        messages.error(request, "❌ Une erreur est survenue lors de la validation.")
+        messages.error(request, f"❌ {e}")
         return redirect('liste_sorties')
 
     # Invalidation cache PDF pour forcer régénération avec signature
@@ -340,7 +359,8 @@ def valider_bon_sortie(request, bon_id):
 def remplacer_scan_sortie(request, bon_id):
     """Permet de remplacer le fichier scanné d'un bon de sortie."""
     bon = get_object_or_404(
-        BonMouvement, id=bon_id, type_bon='SORTIE'
+        BonMouvement, id=bon_id, type_bon='SORTIE',
+        magasin__in=get_magasins_autorises(request),
     )
 
     if request.method == 'POST':

@@ -136,6 +136,12 @@ def _handle_post(request):
 
 def _post_config(request):
     """Enregistre la configuration de l'établissement."""
+    # La config de l'établissement est sensible : permission dédiée requise
+    # (les autres permissions du dispatcher ne doivent pas y donner accès).
+    if not request.user.has_perm('accounts.menu_param_admin') and not request.user.is_superuser:
+        messages.error(request, "⛔ Accès refusé.")
+        return redirect('parametres_administratifs')
+
     config = ConfigurationHopital.get_instance()
     form = ConfigurationHopitalForm(request.POST, request.FILES, instance=config)
     if form.is_valid():
@@ -273,16 +279,6 @@ def _post_supprimer_specialite(request):
         safe_delete_entity(spe, request.user)
         messages.success(request, "🗑️ Spécialité supprimée.")
     return redirect(redirect_url_with_tab('parametres_administratifs', 'specialites'))
-
-
-    magasin = get_object_or_404(Magasin, id=pk)
-    deps = get_dependances(magasin)
-    if deps:
-        messages.error(request, f"⛔ Impossible de supprimer : utilisé par {', '.join(deps)}.")
-    else:
-        safe_delete_entity(magasin, request.user)
-        messages.success(request, "🗑️ Magasin supprimé.")
-    return redirect(redirect_url_with_tab('parametres_administratifs', 'magasins'))
 
 
 def _post_supprimer_service(request):

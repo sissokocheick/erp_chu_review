@@ -29,6 +29,46 @@ from .common import patrimoine_required
 logger = logging.getLogger(__name__)
 
 
+def _valider_fichier_scane(fichier, extensions=('.pdf', '.jpg', '.jpeg', '.png'), taille_max=2 * 1024 * 1024):
+    """Valide un upload de scan/justificatif : extension + taille.
+
+    Retourne (ok, message_erreur).
+    """
+    if not fichier:
+        return True, None
+    if not fichier.name.lower().endswith(extensions):
+        return False, "Format invalide ! Seuls PDF, JPG et PNG sont autorisés."
+    if fichier.size > taille_max:
+        return False, f"Fichier trop lourd ({fichier.size // 1024} Ko > {taille_max // 1024} Ko)."
+    return True, None
+
+
+def _valider_image(fichier, taille_max=2 * 1024 * 1024):
+    """Valide une image uploadée par magic bytes (Pillow) + taille.
+
+    Retourne (ok, message_erreur) ; force une extension saine si besoin.
+    """
+    if not fichier:
+        return True, None
+    if fichier.size > taille_max:
+        return False, "L'image ne doit pas dépasser 2 Mo."
+    try:
+        from PIL import Image as PILImage
+        from io import BytesIO
+        fichier.seek(0)
+        img = PILImage.open(BytesIO(fichier.read()))
+        img.verify()
+        fichier.seek(0)
+        if (img.format or '').upper() not in ('JPEG', 'PNG'):
+            return False, "Seuls les formats JPG et PNG sont acceptés."
+    except Exception:
+        return False, "Fichier image invalide ou corrompu."
+    import os as _os
+    if _os.splitext(fichier.name)[1].lower() not in ('.jpg', '.jpeg', '.png'):
+        fichier.name = f"photo_intervention{'.jpg'}"
+    return True, None
+
+
 @login_required(login_url='/auth/login/')
 
 @patrimoine_required
@@ -108,6 +148,24 @@ def detail_intervention(request, intervention_id):
 
         action = request.POST.get('action')
 
+        # ── Autorisation par action ──
+        # 'prendre_en_charge' reste ouvert (c'est l'affectation elle-même),
+        # 'valider_devis' / 'refuser_devis' / 'valider' sont déjà réservés au
+        # superuser. Les autres actions ne concernent que l'intervenant
+        # affecté (ou un superuser) : elles modifient pièces/statut/ticket.
+        actions_reservees_intervenant = {
+            'demander_pieces', 'receptionner_demande', 'deleguer_prestataire',
+            'retour_prestataire', 'soumettre_devis', 'resoudre',
+        }
+        if action in actions_reservees_intervenant:
+            if not request.user.is_superuser and intervention.intervenant_id != request.user.id:
+                messages.error(
+                    request,
+                    "⛔ Seul l'intervenant affecté (ou un administrateur) "
+                    "peut effectuer cette action."
+                )
+                return redirect('detail_intervention', intervention_id=intervention.id)
+
 
         if action == 'prendre_en_charge':
 
@@ -159,9 +217,17 @@ def detail_intervention(request, intervention_id):
 
                 for aid, qte in zip(article_ids, quantites):
 
-                    if aid and qte and int(qte) > 0:
+                    try:
 
-                        LigneDemande.objects.create(demande=nouvelle_demande, article_id=aid, quantite_demandee=int(qte))
+                        qte_val = int(qte) if qte and str(qte).strip() else 0
+
+                    except (TypeError, ValueError):
+
+                        qte_val = 0
+
+                    if aid and qte_val > 0:
+
+                        LigneDemande.objects.create(demande=nouvelle_demande, article_id=aid, quantite_demandee=qte_val)
 
                 intervention.demandes_pieces.add(nouvelle_demande)
 
@@ -175,6 +241,11 @@ def detail_intervention(request, intervention_id):
             demande_id = request.POST.get('demande_id')
 
             demande = get_object_or_404(DemandeMateriel, id=demande_id)
+
+            # La demande doit être liée à CETTE intervention.
+            if not intervention.demandes_pieces.filter(id=demande.id).exists():
+                messages.error(request, "⛔ Cette demande de pièces n'est pas liée à cette intervention.")
+                return redirect('detail_intervention', intervention_id=intervention.id)
 
             demande.statut = 'LIVREE'
 
@@ -248,10 +319,20 @@ def detail_intervention(request, intervention_id):
             
             if 'rapport_scan' in request.FILES:
 
+                ok_scan, err_scan = _valider_fichier_scane(request.FILES['rapport_scan'])
+
+                if not ok_scan:
+                    messages.error(request, f"Rapport scanné : {err_scan}")
+                    return redirect('detail_intervention', intervention_id=intervention.id)
+
                 intervention.rapport_prestataire_scan = request.FILES['rapport_scan']
 
             if 'bon_signe' in request.FILES:
 
+                ok_bon, err_bon = _valider_fichier_scane(request.FILES['bon_signe'])
+                if not ok_bon:
+                    messages.error(request, f"Bon signé : {err_bon}")
+                    return redirect('detail_intervention', intervention_id=intervention.id)
                 intervention.bon_sortie_signe_scan = request.FILES['bon_signe']
 
             
@@ -283,7 +364,21 @@ def detail_intervention(request, intervention_id):
 
         elif action == 'soumettre_devis':
 
-            intervention.frais_hors_contrat = Decimal(request.POST.get('montant_devis', 0))
+            try:
+
+                intervention.frais_hors_contrat = Decimal(
+
+                    str(request.POST.get('montant_devis', 0) or 0)
+
+                    .replace(' ', '').replace(',', '.')
+
+                )
+
+            except Exception:
+
+                messages.error(request, "❌ Montant du devis invalide.")
+
+                return redirect('detail_intervention', intervention_id=intervention.id)
 
             intervention.motif_frais_hors_contrat = request.POST.get('motif_devis', '')
 
@@ -387,12 +482,24 @@ def signaler_panne(request, immo_id):
         description = request.POST.get('description', '')
 
         photo = request.FILES.get('photo')
+        ok_photo, err_photo = _valider_image(photo)
+        if not ok_photo:
+            messages.error(request, err_photo)
+            return redirect('signaler_panne', immo_id=immo_id)
+
+        # degre_urgence : liste blanche (FAIBLE/MOYENNE/HAUTE/CRITIQUE)
+        degre = request.POST.get('degre_urgence', 'MOYENNE')
+        degres_valides = [c[0] for c in Intervention.URGENCE_CHOICES]             if hasattr(Intervention, 'URGENCE_CHOICES') else None
+        if degres_valides and degre not in degres_valides:
+            degre = 'MOYENNE'
 
         intervention = Intervention.objects.create(
 
             immobilisation=equipement, type_intervention='CURATIVE', statut='NOUVELLE',
 
-            description_probleme=description, photo=photo
+            description_probleme=description, photo=photo, degre_urgence=degre,
+
+            cree_par=request.user,
 
         )
 
@@ -445,7 +552,7 @@ def creer_intervention(request, immo_pk):
 
             messages.success(request, "✅ Problème signalé avec succès.")
 
-            if 'mobile' in request.GET:
+            if 'mobile' in request.GET and immo.code_patrimoine:
 
                 return redirect('patrimoine_scan', code=immo.code_patrimoine)
 
@@ -475,6 +582,14 @@ def valider_intervention(request, pk):
 
         statut = request.POST.get('statut')
 
+        # Liste blanche : sans elle, n'importe quelle chaîne POST pouvait
+        # être écrite dans statut (et forcer la remise en service machine).
+        statuts_valides = [c[0] for c in Intervention.STATUT_CHOICES]
+
+        if statut not in statuts_valides:
+            messages.error(request, f"⛔ Statut invalide : {statut}")
+            return redirect('patrimoine_detail', pk=inter.immobilisation_id)
+
         inter.statut = statut
 
         inter.valide_par = request.user
@@ -487,7 +602,7 @@ def valider_intervention(request, pk):
 
         inter.save()
 
-        if statut in ['TERMINEE', 'CLOTUREE', 'VALIDEE', 'RESOLUE']:
+        if statut in ['RESOLUE']:
 
             machine = inter.immobilisation
 
@@ -821,8 +936,14 @@ def declarer_panne_pc(request):
         description = request.POST.get('description', '')
 
         urgence = request.POST.get('degre_urgence', 'MOYENNE')
+        if urgence not in [c[0] for c in Intervention.URGENCE_CHOICES]:
+            urgence = 'MOYENNE'
 
         photo = request.FILES.get('photo')
+        ok_photo, err_photo = _valider_image(photo)
+        if not ok_photo:
+            messages.error(request, err_photo)
+            return redirect('patrimoine_declarer_panne_pc')
 
         equipement = get_object_or_404(Immobilisation, id=immo_id)
 

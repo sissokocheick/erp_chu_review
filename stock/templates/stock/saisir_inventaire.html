@@ -603,9 +603,10 @@
       var timer = null;
 
       function updateClearBtn() {
+          if (!clearBtn) return;
           if (input && input.value.trim().length > 0) {
               clearBtn.classList.add('visible');
-          } else if (clearBtn) {
+          } else {
               clearBtn.classList.remove('visible');
           }
       }

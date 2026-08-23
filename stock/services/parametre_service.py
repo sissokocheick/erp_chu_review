@@ -329,15 +329,28 @@ def supprimer_entite(type_entite, pk, user):
     """
     Supprime une entité selon son type.
     Retourne (success, message, redirect_view_name, redirect_tab).
+
+    NB : le mapping couvre les 9 types acceptés par la vue
+    parametres/suppression.py (perm_map) — sinon un type autorisé côté
+    permission échouait systématiquement côté service.
     """
-    from ..models import FamilleArticle, Fournisseur, Article
+    from ..models import (
+        FamilleArticle, Fournisseur, Article, Magasin,
+        MotifAnnulation, Beneficiaire,
+    )
     from core.models import Service
+    from accounts.models import Specialite, Fonction
 
     mapping = {
         'famille': (FamilleArticle, 'liste_familles', None, True),
         'fournisseur': (Fournisseur, 'parametres_logistique', 'fournisseurs', True),
         'service': (Service, 'parametres_administratifs', 'services', False),
         'article': (Article, 'liste_articles', None, True),
+        'magasin': (Magasin, 'parametres_logistique', 'magasins', True),
+        'specialite': (Specialite, 'parametres_administratifs', 'specialites', True),
+        'fonction': (Fonction, 'parametres_administratifs', 'fonctions', True),
+        'beneficiaire': (Beneficiaire, 'parametres_logistique', 'beneficiaires', True),
+        'motif': (MotifAnnulation, 'parametres_logistique', 'motifs', True),
     }
 
     if type_entite not in mapping:
@@ -362,6 +375,11 @@ def supprimer_entite(type_entite, pk, user):
         'fournisseur': "Fournisseur supprimé",
         'service': "Service supprimé",
         'article': "Article supprimé du catalogue",
+        'magasin': "Magasin supprimé",
+        'specialite': "Spécialité supprimée",
+        'fonction': "Fonction supprimée",
+        'beneficiaire': "Bénéficiaire supprimé",
+        'motif': "Motif d'annulation supprimé",
     }
     return True, f"🗑️ {labels[type_entite]} avec succès.", url_name, tab
 
