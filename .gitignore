@@ -105,3 +105,4 @@ logs/
 .gunicorn.pid
 backups/
 cookies.txt
+deploy_temp.tar

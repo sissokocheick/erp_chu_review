@@ -6,7 +6,10 @@ from django.http import HttpResponse, JsonResponse
 from django.utils import timezone
 from django.template.loader import render_to_string
 from django.urls import reverse
-from weasyprint import HTML
+try:
+    from weasyprint import HTML
+except OSError:
+    HTML = None
 
 import csv
 import json

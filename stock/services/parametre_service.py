@@ -60,6 +60,69 @@ def get_dependances(instance):
     return dependances
 
 
+# Cache des dépendances batch (rempli par get_dependances_batch)
+_deps_cache = {}
+
+
+def get_dependances_batch(instances):
+    """Pré-calcul les dépendances pour une liste d'instances en N requêtes
+    (une par modèle relationnel) au lieu de N×M (objets × relations).
+    
+    Met à jour `instance._deps` et `instance.is_deletable` sur chaque
+    instance passée, puis retourne le même dict {id: [deps_strs]}.
+    """
+    from django.db.models import Count
+    if not instances:
+        return {}
+
+    model = instances[0].__class__
+    ids = [inst.pk for inst in instances]
+    result = {pk: [] for pk in ids}
+
+    for rel in model._meta.related_objects:
+        if rel.related_model.__name__.startswith('Historical'):
+            continue
+        if rel.related_model._meta.app_label in ('admin', 'sessions', 'contenttypes'):
+            continue
+
+        field_name = rel.field.name
+        related_name = rel.field.related_query_name()
+        nom = getattr(
+            rel.related_model._meta,
+            'verbose_name_plural',
+            rel.related_model.__name__
+        )
+
+        # Si c'est une OneToOne, on vérifie juste l'existence
+        if rel.one_to_one:
+            for inst in instances:
+                try:
+                    if getattr(inst, related_name, None) is not None:
+                        result[inst.pk].append(f"{nom} (1)")
+                except Exception:
+                    pass
+        else:
+            # UNE SEULE requête pour toutes les instances du batch
+            counts = (
+                rel.related_model.objects
+                .filter(**{f'{field_name}__in': ids})
+                .values(field_name)
+                .annotate(nb=Count('id'))
+                .order_by()
+            )
+            for row in counts:
+                pk_val = row[field_name]
+                if pk_val in result and row['nb'] > 0:
+                    result[pk_val].append(f"{nom} ({row['nb']})")
+
+    # Appliquer sur chaque instance
+    for inst in instances:
+        inst._deps = result[inst.pk]
+        inst.is_deletable = not bool(inst._deps)
+
+    return result
+
+
 def redirect_url_with_tab(url_name, tab, base_url=None):
     """Build a redirect URL with an 'open' query param."""
     url = base_url or reverse(url_name)

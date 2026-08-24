@@ -1,5 +1,5 @@
 {% extends "base_ui.html" %}
-
+{% block title %}Entrées en Stock — NexusERP{% endblock %}
 {% block contenu %}
 <style>
   table:not(.vd-table) th:not(.c):not([style*='text-align']) { text-align: left; }
@@ -299,7 +299,7 @@
 
                 <div class="vd-section" style="background: rgba(245,158,11,0.08); border-left: 5px solid #f59e0b;">
                     <label class="vd-label" style="color: #f59e0b;"><i class="fas fa-paperclip"></i> Fichier scanné (PDF, JPG, PNG)</label>
-                    <input type="file" name="document_scan" accept=".pdf,.jpg,.jpeg,.png" required
+                    <input type="file" name="document_scan" accept=".pdf,.jpg,.jpeg,.png"
                            class="vd-input" style="padding: 8px; font-size: 13px; border-color: #f59e0b;"
                            onchange="if(this.files[0] && this.files[0].size > 1048576){ alert('Fichier trop lourd > 1 Mo'); this.value=''; }">
                     <small style="color: var(--text-light); font-size: 11px;">Taille maximale : 1 Mo</small>

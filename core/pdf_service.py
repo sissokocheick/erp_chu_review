@@ -10,7 +10,10 @@ from decimal import Decimal
 from django.template.loader import render_to_string
 from django.utils import timezone
 
-from weasyprint import HTML
+try:
+    from weasyprint import HTML
+except OSError:
+    HTML = None
 
 try:
     from core.pdf_pagination import paginer_bon_sortie, pt_to_mm

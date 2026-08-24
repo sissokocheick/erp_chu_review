@@ -7,7 +7,10 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 from django.http import HttpResponse
 from django.template.loader import render_to_string
-from weasyprint import HTML
+try:
+    from weasyprint import HTML
+except OSError:
+    HTML = None
 
 logger = logging.getLogger(__name__)
 
@@ -291,18 +294,42 @@ def _static_logo_data_uri():
 # RENDU PDF
 # ═════════════════════════════════════════════════════════════════════════════
 
+def _weasyprint_disponible():
+    """Vérifie si WeasyPrint est correctement installé et importable."""
+    return HTML is not None
+
+
 def render_pdf_response(request, template, context, filename, inline=True):
     """
     Rend un template HTML en PDF et retourne une HttpResponse.
+    Si WeasyPrint n'est pas disponible, retourne le HTML brut avec
+    un message d'avertissement (fallback gracieux).
     """
     html_string = render_to_string(template, context, request=request)
     base_url = request.build_absolute_uri('/')
+
+    if not _weasyprint_disponible():
+        logger.warning(
+            "[PDF] WeasyPrint indisponible — rendu HTML brut pour %s", template)
+        response = HttpResponse(
+            f"<html><body><h2>PDF temporairement indisponible</h2>"
+            f"<p>WeasyPrint n'est pas installé sur ce serveur. «{filename}»</p>"
+            f"<hr><pre>{html_string[:5000]}</pre></body></html>",
+            content_type='text/html; charset=utf-8',
+        )
+        return response
 
     try:
         pdf_bytes = HTML(string=html_string, base_url=base_url).write_pdf()
     except Exception as e:
         logger.exception("[PDF] Erreur génération %s : %s", template, e)
-        return HttpResponse("Erreur lors de la génération du PDF.", status=500)
+        return HttpResponse(
+            f"<html><body><h2>Erreur de génération PDF</h2>"
+            f"<p>Template : {template}</p>"
+            f"<p>Erreur : {e}</p></body></html>",
+            content_type='text/html; charset=utf-8',
+            status=500,
+        )
 
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     disposition = 'inline' if inline else 'attachment'
@@ -311,9 +338,14 @@ def render_pdf_response(request, template, context, filename, inline=True):
 
 
 def render_pdf_to_bytes(request, template, context):
-    """Génère un PDF et retourne les bytes (pour sauvegarde en cache)."""
+    """Génère un PDF et retourne les bytes (pour sauvegarde en cache).
+    Retourne None si WeasyPrint n'est pas disponible."""
     html_string = render_to_string(template, context, request=request)
     base_url = request.build_absolute_uri('/')
+    if not _weasyprint_disponible():
+        logger.warning(
+            "[PDF] WeasyPrint indisponible — render_pdf_to_bytes retourne None (%s)", template)
+        return None
     return HTML(string=html_string, base_url=base_url).write_pdf()
 
 
@@ -584,6 +616,9 @@ def sauver_pdf_cache(bon, filename, pdf_bytes):
     Sauvegarde les bytes PDF dans le FileField du bon.
     Supprime l'ancien fichier s'il existe pour éviter les conflits.
     """
+    if not pdf_bytes:
+        logger.debug("[PDF] Sauvegarde cache ignorée (pdf_bytes est None) pour %s", filename)
+        return
     try:
         if bon.fichier_pdf and bon.fichier_pdf.name and default_storage.exists(bon.fichier_pdf.name):
             default_storage.delete(bon.fichier_pdf.name)

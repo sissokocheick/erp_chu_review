@@ -20,7 +20,9 @@ from django.conf import settings
 from django.contrib.staticfiles.finders import find
 
 try:
-    import weasyprint
+    from weasyprint import HTML
+except OSError:
+    HTML = None
 except ImportError:
     weasyprint = None
 

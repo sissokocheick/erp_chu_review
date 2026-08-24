@@ -10,6 +10,7 @@ from ...services.parametre_service import (
     get_or_create_logistique_config,
     
     get_dependances,
+    get_dependances_batch,
     redirect_url_with_tab,
     save_delai_remplacement,
     save_confidentialite_demandes,
@@ -78,10 +79,12 @@ def _handle_get(request):
     magasins_pagines, per_page_magasin = paginer(magasins, request, per_page_key='magasin')
     beneficiaires_pagines, per_page_beneficiaire = paginer(beneficiaires, request, per_page_key='beneficiaire')
 
-    for page in (magasins_pagines, fournisseurs_pagines, beneficiaires_pagines, motifs_pagines, familles_paginees):
-        for obj in page:
-            obj._deps = get_dependances(obj)
-            obj.is_deletable = not bool(obj._deps)
+    # Batch : 1 requête par modèle relationnel au lieu de N×M requêtes individuelles
+    get_dependances_batch(list(magasins_pagines))
+    get_dependances_batch(list(fournisseurs_pagines))
+    get_dependances_batch(list(beneficiaires_pagines))
+    get_dependances_batch(list(motifs_pagines))
+    get_dependances_batch(list(familles_paginees))
 
     edit_famille_id = request.GET.get('edit_famille', '').strip()
     instance_famille = get_object_or_404(FamilleArticle, id=edit_famille_id) if edit_famille_id else None

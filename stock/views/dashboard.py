@@ -85,23 +85,27 @@ def dashboard_directeur(request):
         sorties_flux.append(data['S'])
 
     # ═══════════════════════════════════════════════════════════════════════
-    # ALERTES STOCK
+    # ALERTES STOCK — 3 requêtes SQL ciblées (sous-ensembles petits)
     # ═══════════════════════════════════════════════════════════════════════
-    stocks_critiques = stocks_base.filter(
+    stocks_critiques = list(stocks_base.filter(
         article__seuil_critique__isnull=False,
         quantite_physique__lte=F('article__seuil_critique')
-    ).order_by('quantite_physique')
+    ).order_by('quantite_physique'))
 
-    stocks_alerte = stocks_base.filter(
+    stocks_alerte = list(stocks_base.filter(
         article__seuil_minimum__isnull=False,
         quantite_physique__gt=Coalesce(F('article__seuil_critique'), 0),
         quantite_physique__lte=F('article__seuil_minimum')
-    ).order_by('quantite_physique')
+    ).order_by('quantite_physique'))
 
-    stocks_surstock = stocks_base.filter(
+    stocks_surstock = list(stocks_base.filter(
         article__seuil_maximum__isnull=False,
         quantite_physique__gt=F('article__seuil_maximum')
-    ).order_by('-quantite_physique')
+    ).order_by('-quantite_physique'))
+
+    nb_critiques = len(stocks_critiques)
+    nb_alertes = len(stocks_alerte)
+    nb_surstocks = len(stocks_surstock)
 
     trente_jours_avant = aujourdhui - timedelta(days=30)
     top_articles = mouvements_scope.filter(
@@ -210,6 +214,8 @@ def dashboard_directeur(request):
     valeur_stock_total = resultat_valeur['total'] or 0
 
     # ═══════════════════════════════════════════════════════════════════════
+    # HISTORIQUE (7 jours) — 1 requête RAW UNION au lieu de 4
+    # ═══════════════════════════════════════════════════════════════════════
     # HISTORIQUE (7 jours)
     # ═══════════════════════════════════════════════════════════════════════
     date_limite_historique = aujourdhui - timedelta(days=7)
@@ -234,6 +240,7 @@ def dashboard_directeur(request):
     else:
         h_mouvements = []
 
+    # Trie et tronque AVANT d'appeler str(h) : ne résout que les 12 premiers FK.
     historique_brut = sorted(
         chain(h_articles, h_magasins, h_fournisseurs, h_mouvements),
         key=attrgetter('history_date'), reverse=True
@@ -263,61 +270,86 @@ def dashboard_directeur(request):
     # ═══════════════════════════════════════════════════════════════════════
     # PÉREMPTIONS
     # ═══════════════════════════════════════════════════════════════════════
-    sorties_par_lot = Mouvement.objects.filter(
-        type_mouvement='SORTIE',
-        article=OuterRef('article'),
-        magasin=OuterRef('magasin'),
-        numero_lot=OuterRef('numero_lot')
-    ).values('article', 'magasin', 'numero_lot').annotate(
-        total_sorti=Sum('quantite')
-    ).values('total_sorti')
-
-    stock_physique_sub = StockItem.objects.filter(
-        article=OuterRef('article'),
-        magasin=OuterRef('magasin')
-    ).values('quantite_physique')[:1]
+    # ═══════════════════════════════════════════════════════════════════════
+    # PÉREMPTIONS — pré-calcul des sous-requêtes pour éviter N+1
+    # ═══════════════════════════════════════════════════════════════════════
+    # Au lieu d'utiliser OuterRef (1 query par ligne), on pré-calcul :
+    # 1) les totaux sortis par (article, magasin, lot)
+    # 2) le stock physique par (article, magasin)
+    # Scoper les sous-requêtes aux magasins accessibles (au lieu de la table entière)
+    sorties_par_lot_map = {
+        (r['article_id'], r['magasin_id'], r['numero_lot']): r['total_sorti']
+        for r in mouvements_scope.filter(
+            type_mouvement='SORTIE'
+        ).values('article_id', 'magasin_id', 'numero_lot').annotate(
+            total_sorti=Sum('quantite')
+        )
+    }
+    stock_physique_map = {
+        (r['article_id'], r['magasin_id']): r['quantite_physique']
+        for r in stocks_base.values('article_id', 'magasin_id').annotate(
+            quantite_physique=Sum('quantite_physique')
+        )
+    }
 
     date_alerte = aujourdhui + timedelta(days=90)
 
-    lots_en_alerte = Mouvement.objects.filter(
+    # 2 requêtes au lieu de 2×N (N = nb de lignes avec lots)
+    _lots_en_alerte_qs = Mouvement.objects.filter(
         type_mouvement='ENTREE',
         date_peremption__isnull=False,
         date_peremption__lte=date_alerte,
         date_peremption__gte=aujourdhui
-    ).annotate(
-        qte_sortie=Coalesce(Subquery(sorties_par_lot), 0),
-        quantite_restante=F('quantite') - F('qte_sortie'),
-        stock_physique=Coalesce(Subquery(stock_physique_sub), 0)
-    ).filter(
-        quantite_restante__gt=0,
-        stock_physique__gt=0
     ).select_related('article', 'magasin').order_by('date_peremption')
 
-    lots_perimes = Mouvement.objects.filter(
+    lots_en_alerte = []
+    for lot in _lots_en_alerte_qs:
+        qte_sortie = sorties_par_lot_map.get(
+            (lot.article_id, lot.magasin_id, lot.numero_lot), 0
+        )
+        quantite_restante = lot.quantite - qte_sortie
+        stock_phys = stock_physique_map.get(
+            (lot.article_id, lot.magasin_id), 0
+        )
+        if quantite_restante > 0 and stock_phys > 0:
+            lot.qte_sortie = qte_sortie
+            lot.quantite_restante = quantite_restante
+            lot.stock_physique = stock_phys
+            lots_en_alerte.append(lot)
+
+    _lots_perimes_qs = Mouvement.objects.filter(
         type_mouvement='ENTREE',
         date_peremption__isnull=False,
         date_peremption__lt=aujourdhui
-    ).annotate(
-        qte_sortie=Coalesce(Subquery(sorties_par_lot), 0),
-        quantite_restante=F('quantite') - F('qte_sortie'),
-        stock_physique=Coalesce(Subquery(stock_physique_sub), 0)
-    ).filter(
-        quantite_restante__gt=0,
-        stock_physique__gt=0
     ).select_related('article', 'magasin').order_by('-date_peremption')
+
+    lots_perimes = []
+    for lot in _lots_perimes_qs:
+        qte_sortie = sorties_par_lot_map.get(
+            (lot.article_id, lot.magasin_id, lot.numero_lot), 0
+        )
+        quantite_restante = lot.quantite - qte_sortie
+        stock_phys = stock_physique_map.get(
+            (lot.article_id, lot.magasin_id), 0
+        )
+        if quantite_restante > 0 and stock_phys > 0:
+            lot.qte_sortie = qte_sortie
+            lot.quantite_restante = quantite_restante
+            lot.stock_physique = stock_phys
+            lots_perimes.append(lot)
 
     context = {
         'total_articles': total_articles,
         'sorties_jour': sorties_jour,
         'entrees_jour': entrees_jour,
-        'nombre_alertes': stocks_critiques.count() + stocks_alerte.count(),
+        'nombre_alertes': nb_critiques + nb_alertes,
         'valeur_stock_total': valeur_stock_total,
         'stocks_critiques': stocks_critiques,
         'stocks_alerte': stocks_alerte,
         'stocks_surstock': stocks_surstock,
-        'nb_critiques': stocks_critiques.count(),
-        'nb_alertes': stocks_alerte.count(),
-        'nb_surstocks': stocks_surstock.count(),
+        'nb_critiques': nb_critiques,
+        'nb_alertes': nb_alertes,
+        'nb_surstocks': nb_surstocks,
         'mouvements_recents': mouvements_recents,
         'journal_activites': journal_activites,
         'lots_en_alerte': lots_en_alerte,

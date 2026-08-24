@@ -45,13 +45,18 @@ def filtrer_texte(qs, q, champs):
     """
     Filtre un queryset/une liste en ignorant les accents.
     champs : chemins de champs, ex : ['designation', 'reference', 'article__designation'].
-    Retourne une liste (compatible Paginator).
+    Retourne un QuerySet (si l'entrée était un QuerySet) ou une liste.
+
+    IMPORTANT : conserve toujours un QuerySet si l'entrée est un QuerySet,
+    pour que les appels .filter()/.order_by() en aval fonctionnent.
     """
     if not q:
         return qs
     q_norm = normaliser_texte(q)
     if not q_norm:
         return qs
+    # Sauvegarder la référence QuerySet AVANT conversion en liste.
+    qs_model = getattr(qs, 'model', None)
     if hasattr(qs, 'all'):
         qs = list(qs)
     resultats = []
@@ -60,6 +65,11 @@ def filtrer_texte(qs, q, champs):
             if any(q_norm in normaliser_texte(v) for v in _get_valeurs(obj, champ)):
                 resultats.append(obj)
                 break
+    # Si l'entrée était un QuerySet, retourner un QuerySet filtré
+    # (compatible .filter()/.order_by() en aval).
+    if resultats and qs_model is not None:
+        ids = [obj.pk for obj in resultats]
+        return qs_model._default_manager.filter(pk__in=ids)
     return resultats
 
 def get_magasin_actif(request):

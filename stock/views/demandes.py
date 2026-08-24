@@ -282,7 +282,7 @@ def _creer_ma_demande(request):
         pdf_bytes = render_pdf_to_bytes(request, 'stock/pdf/bon_demande.html', context)
         sauver_pdf_cache(demande, f"BD_{demande.numero_demande}.pdf", pdf_bytes)
     except Exception as e:
-        logging.getLogger(__name__).warning(
+        logger.warning(
             f"[PDF Demande] Génération échouée pour {demande.numero_demande} : {e}"
         )
 

@@ -135,12 +135,19 @@
 
             <div class="form-group">
                 <label>Type de Contrat *</label>
+                {% if types_contrat %}
                 <select name="type_contrat" class="form-control" required>
                     <option value="">-- Sélectionner un type --</option>
                     {% for tc in types_contrat %}
                     <option value="{{ tc.id }}">{{ tc.nom }}</option>
                     {% endfor %}
                 </select>
+                {% else %}
+                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #856404;">
+                    <i class="fas fa-exclamation-triangle"></i> Aucun type de contrat configuré.
+                    <a href="{% url 'patrimoine_parametres' %}" style="color: #856404; font-weight: 700; text-decoration: underline;">Créez-en dans les Paramètres → Sous-traitance</a>
+                </div>
+                {% endif %}
             </div>
             
             <div style="display: flex; gap: 15px;">

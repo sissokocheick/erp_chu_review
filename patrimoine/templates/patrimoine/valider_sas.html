@@ -114,12 +114,19 @@
         <div class="grid3">
             <div class="fg">
                 <label>Bâtiment</label>
+                {% if batiments %}
                 <select id="select-batiment" class="select2-init">
                     <option value="">-- Sélectionner --</option>
                     {% for b in batiments %}
                     <option value="{{ b.id }}" {% if immo.bureau and immo.bureau.etage.batiment.id == b.id %}selected{% endif %}>🏢 {{ b.nom }}</option>
                     {% endfor %}
                 </select>
+                {% else %}
+                <div style="background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; padding: 8px 12px; font-size: 12px; color: #856404;">
+                    <i class="fas fa-info-circle"></i> Aucun bâtiment configuré.
+                    <a href="{% url 'patrimoine_parametres' %}" style="color: #856404; font-weight: 700; text-decoration: underline;">Paramètres → Bâtiments</a>
+                </div>
+                {% endif %}
             </div>
             <div class="fg">
                 <label>Étage</label>

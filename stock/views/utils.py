@@ -5,11 +5,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_POST
 from stock.services.isolation_service import get_magasins_autorises
 
 logger = logging.getLogger(__name__)
 
 
+@require_POST
 @login_required(login_url='/auth/login/')
 def changer_magasin(request):
     """

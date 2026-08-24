@@ -126,11 +126,8 @@ def _creer_entree(request):
         messages.error(request, "❌ Vous devez ajouter au moins un article.")
         return redirect('liste_entrees')
 
-    # ═══ Document scanné obligatoire ═══
-    fichier_scan = request.FILES.get('document_scan')
-    if not fichier_scan:
-        messages.error(request, "❌ Le fichier scanné est obligatoire. Veuillez joindre un document (PDF, JPG ou PNG).")
-        return redirect('liste_entrees')
+    # ═══ Document scanné optionnel ═══
+    fichier_scan = request.FILES.get('document_scan')  # Traité par _traiter_upload_scan plus bas
 
     if ref_ext and BonMouvement.objects.filter(
         type_bon='ENTREE', fournisseur_id=fournisseur_id,

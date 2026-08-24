@@ -936,7 +936,7 @@ class BonService:
                                     f"Motif : {motif_libelle}"
                                 ),
                                 url=f"/stock/bons/{bon.id}/",
-                                type_notif="ALERTE_STOCK",
+                                type_notif="WARNING",
                                 est_importante=True
                             )
                     except Exception:
@@ -977,11 +977,59 @@ class BonService:
         mouvements = cls._qs_mouvements_du_bon(bon, 'SORTIE')
 
         for mouvement_original in mouvements:
-            StockTransactionService.annuler_par_contre_mouvement(
-                mouvement_original=mouvement_original,
-                utilisateur=utilisateur,
-                commentaire=f"Annulation du bon {bon.numero_bon}. Motif : {motif_libelle}"
-            )
+            try:
+                StockTransactionService.annuler_par_contre_mouvement(
+                    mouvement_original=mouvement_original,
+                    utilisateur=utilisateur,
+                    commentaire=f"Annulation du bon {bon.numero_bon}. Motif : {motif_libelle}"
+                )
+            except ValidationError as e:
+                code_erreur = getattr(e, 'code', None)
+                message_erreur = str(e)
+                if code_erreur == 'stock_insuffisant' or "Stock insuffisant" in message_erreur:
+                    # Forcer un ajustement négatif comme pour les entrées
+                    prix_unitaire = mouvement_original.prix_unitaire
+                    mouvement = Mouvement(
+                        type_mouvement='AJUSTEMENT_NEG_FORCE',
+                        article=mouvement_original.article,
+                        magasin=mouvement_original.magasin,
+                        quantite=mouvement_original.quantite,
+                        prix_unitaire=prix_unitaire,
+                        utilisateur=utilisateur,
+                        reference_document=f"ANNUL-FORCE-{bon.numero_bon}",
+                        commentaire=f"Annulation forcée bon {bon.numero_bon} (stock déjà consommé). Motif : {motif_libelle}",
+                    )
+                    StockTransactionService.executer(mouvement)
+                    logger.warning(
+                        f"AJUSTEMENT FORCÉ négatif (sortie) : bon={bon.numero_bon}, "
+                        f"article={mouvement_original.article}, qte={mouvement_original.quantite}, "
+                        f"user={utilisateur}, motif={motif_libelle}"
+                    )
+                    # Notification aux responsables
+                    try:
+                        from accounts.models import Notification
+                        from django.contrib.auth.models import User
+                        responsables = User.objects.filter(
+                            profil__est_chef_service=True,
+                            is_active=True
+                        )
+                        for resp in responsables:
+                            Notification.objects.create(
+                                utilisateur=resp,
+                                titre="⚠️ Ajustement forcé lors d'annulation (sortie)",
+                                message=(
+                                    f"Un ajustement négatif a été forcé lors de l'annulation "
+                                    f"du bon de sortie {bon.numero_bon}. Stock déjà consommé. "
+                                    f"Motif : {motif_libelle}"
+                                ),
+                                url=f"/stock/bons/{bon.id}/",
+                                type_notif="WARNING",
+                                est_importante=True
+                            )
+                    except Exception:
+                        logger.exception("Échec notification ajustement forcé (sortie)")
+                else:
+                    raise
 
         bon.est_annule = True
         if hasattr(motif, 'pk'):

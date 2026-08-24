@@ -13,7 +13,10 @@ from django.db.models import Count
 from django.template.loader import render_to_string
 from django.db.models import ProtectedError
 from accounts.permissions import verifier_permission
-from weasyprint import HTML
+try:
+    from weasyprint import HTML
+except OSError:
+    HTML = None
 
 from ..models import (
     Immobilisation, CampagneInventairePatrimoine,
@@ -488,22 +491,23 @@ def imprimer_fiche_comptage(request, campagne_id):
     context = {'campagne': campagne, 'lignes': lignes}
 
 
+    html_string = render_to_string('patrimoine/imprimer_fiche_comptage.html', context, request=request)
+
+    if HTML is None:
+        logger.warning("[PDF] WeasyPrint indisponible — fiche comptage %s", campagne.reference)
+        return HttpResponse(
+            f"<html><body><h2>PDF temporairement indisponible</h2>"
+            f"<p>WeasyPrint n'est pas installé. «Fiche_Comptage_{campagne.reference}.pdf»</p>"
+            f"<hr><pre>{html_string[:5000]}</pre></body></html>",
+            content_type='text/html; charset=utf-8')
+
     try:
-
-        html_string = render_to_string('patrimoine/imprimer_fiche_comptage.html', context, request=request)
-
         pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri('/')).write_pdf()
-
     except Exception as e:
-
         logger.exception(f"[PDF] Erreur génération fiche de comptage {campagne.reference} : {e}")
-
         from django.conf import settings
-
         if settings.DEBUG:
-
             return HttpResponse(f"<h2>Erreur de génération PDF</h2><p style='color:red;'>{str(e)}</p>", content_type='text/html')
-
         raise
 
 

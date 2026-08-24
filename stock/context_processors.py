@@ -69,14 +69,12 @@ def validation_menu_context(request):
     """
     Compteurs de documents en attente de validation, par circuit, pour le menu.
 
-    Chaque compteur n'est calculé que si l'utilisateur est désigné validateur
-    du circuit correspondant (ou superuser) : les badges d'attente n'apparaissent
-    donc que chez les validateurs, jamais pour un simple magasinier. Les comptes
-    sont limités aux magasins auxquels l'utilisateur a accès.
+    Optimisé : une seule requête COUNT agrégée au lieu de 6 COUNT séparés.
     """
     if not request.user.is_authenticated:
         return {}
 
+    from django.db.models import Q
     from .models import BonMouvement, Ajustement, CampagneInventaire, Commande
     from stock.services.isolation_service import get_magasins_autorises
 
@@ -108,33 +106,53 @@ def validation_menu_context(request):
             or (circuit and circuit.valideurs.filter(id=user.id).exists())
         )
 
+    # Déterminer quels types on doit compter (évite les COUNT inutiles)
+    types_a_compter = set()
     if est_valideur('SORTIE'):
-        # Un retour fournisseur RETIRE du stock (mouvement décrémentant) : il
-        # est gouverné par le circuit SORTIE et compte donc dans ce badge.
-        ctx['nb_bons_sortie_a_valider'] = BonMouvement.objects.filter(
-            type_bon__in=['SORTIE', 'RETOUR_FOURNISSEUR'],
-            statut_validation='ATTENTE',
-            magasin_id__in=magasin_ids, is_deleted=False).count()
-
+        types_a_compter.add('SORTIE')
     if est_valideur('ENTREE'):
-        ctx['nb_bons_entree_a_valider'] = BonMouvement.objects.filter(
-            type_bon='ENTREE', statut_validation='ATTENTE',
-            magasin_id__in=magasin_ids, is_deleted=False).count()
-        ctx['nb_retours_a_valider'] = BonMouvement.objects.filter(
-            type_bon='RETOUR_SERVICE', statut_validation='ATTENTE',
-            magasin_id__in=magasin_ids, is_deleted=False).count()
-
+        types_a_compter.add('ENTREE')
+        types_a_compter.add('RETOUR_SERVICE')
     if est_valideur('COMMANDE'):
+        types_a_compter.add('COMMANDE')
+    if est_valideur('AJUSTEMENT'):
+        types_a_compter.add('AJUSTEMENT')
+    if est_valideur('INVENTAIRE'):
+        types_a_compter.add('INVENTAIRE')
+
+    if not types_a_compter:
+        return ctx
+
+    # UNE SEULE requête pour tous les compteurs BonMouvement
+    if types_a_compter & {'SORTIE', 'ENTREE', 'RETOUR_SERVICE'}:
+        bm_q = BonMouvement.objects.filter(
+            statut_validation='ATTENTE',
+            magasin_id__in=magasin_ids, is_deleted=False,
+        )
+        counts_bm = bm_q.values('type_bon').annotate(
+            nb=Count('id')
+        ).order_by()
+        bm_map = {row['type_bon']: row['nb'] for row in counts_bm}
+        ctx['nb_bons_sortie_a_valider'] = (
+            bm_map.get('SORTIE', 0) + bm_map.get('RETOUR_FOURNISSEUR', 0)
+        )
+        ctx['nb_bons_entree_a_valider'] = bm_map.get('ENTREE', 0)
+        ctx['nb_retours_a_valider'] = bm_map.get('RETOUR_SERVICE', 0)
+
+    # Commandes
+    if 'COMMANDE' in types_a_compter:
         ctx['nb_commandes_a_valider'] = Commande.objects.filter(
             statut_validation='BROUILLON', magasin_id__in=magasin_ids,
             is_deleted=False).count()
 
-    if est_valideur('AJUSTEMENT'):
+    # Ajustements
+    if 'AJUSTEMENT' in types_a_compter:
         ctx['nb_ajustements_a_valider'] = Ajustement.objects.filter(
             statut_validation='ATTENTE', magasin_id__in=magasin_ids,
             is_deleted=False).count()
 
-    if est_valideur('INVENTAIRE'):
+    # Inventaires
+    if 'INVENTAIRE' in types_a_compter:
         ctx['nb_inventaires_a_valider'] = CampagneInventaire.objects.filter(
             statut='A_VALIDER', magasin_id__in=magasin_ids,
             is_deleted=False).count()
