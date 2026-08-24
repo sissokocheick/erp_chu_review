@@ -23,6 +23,22 @@ from ..models import (
 from ..decorators import catch_errors
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# CACHE KEYS & TTL
+# ═══════════════════════════════════════════════════════════════════════════════
+_TTL_KPIS       = 30
+_TTL_ALERTES    = 60
+_TTL_CHARTS     = 120
+_TTL_PEREMPTION = 120
+_TTL_HISTORIQUE = 60
+
+
+def _cache_key(magasin_id, bloc):
+    """Clé de cache par magasin et par bloc de données."""
+    scope = f"m{magasin_id}" if magasin_id else "all"
+    return f"dash:{scope}:{bloc}"
+
+
 def _magasin_actif(request):
     """Magasin sélectionné en session (ou None si aucun choix)."""
     magasin_id = request.session.get('magasin_actif_id')
@@ -31,137 +47,148 @@ def _magasin_actif(request):
     return None
 
 
-@login_required(login_url='/auth/login/')
-@verifier_permission('accounts.menu_dashboard')
-@catch_errors(redirect_url='/auth/accueil/')
-def dashboard_directeur(request):
-    aujourdhui = timezone.now().date()
+# ═══════════════════════════════════════════════════════════════════════════════
+# BLOCS DE DONNÉES CACHEABLES
+# ═══════════════════════════════════════════════════════════════════════════════
 
-    # ── Isolation par magasin actif (cohérent avec les autres pages) ──
-    magasin_actif = _magasin_actif(request)
-    magasins_ids = ([magasin_actif.id] if magasin_actif
-                    else list(Magasin.objects.values_list('id', flat=True)))
-
-    total_articles = Article.objects.all().count()
+def _get_kpis(magasins_ids, aujourdhui):
+    """KPIs du jour : 3 requêtes. Cache 30s."""
+    key = _cache_key(magasins_ids[0] if len(magasins_ids) == 1 else None, 'kpis')
+    data = cache.get(key)
+    if data is not None:
+        return data
     mouvements_scope = Mouvement.objects.filter(magasin_id__in=magasins_ids)
+    total_articles = Article.objects.count()
     sorties_jour = mouvements_scope.filter(
-        type_mouvement='SORTIE',
-        date_mouvement__date=aujourdhui
+        type_mouvement='SORTIE', date_mouvement__date=aujourdhui
     ).count()
     entrees_jour = mouvements_scope.filter(
-        type_mouvement='ENTREE',
-        date_mouvement__date=aujourdhui
+        type_mouvement='ENTREE', date_mouvement__date=aujourdhui
     ).count()
+    data = {
+        'total_articles': total_articles,
+        'sorties_jour': sorties_jour,
+        'entrees_jour': entrees_jour,
+    }
+    cache.set(key, data, _TTL_KPIS)
+    return data
 
-    stocks_base = StockItem.objects.select_related('article', 'article__famille', 'magasin').filter(
-        magasin_id__in=magasins_ids
-    )
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # FLUX 14 JOURS (entrées vs sorties) pour le graphique
-    # ═══════════════════════════════════════════════════════════════════════
+def _get_alertes(magasin_id, magasins_ids):
+    """Alertes stock : 3 requêtes. Cache 60s."""
+    key = _cache_key(magasin_id, 'alertes')
+    data = cache.get(key)
+    if data is not None:
+        return data
+    stocks_base = StockItem.objects.select_related(
+        'article', 'article__famille', 'magasin'
+    ).filter(magasin_id__in=magasins_ids)
+    stocks_critiques = list(stocks_base.filter(
+        article__seuil_critique__isnull=False,
+        quantite_physique__lte=F('article__seuil_critique')
+    ).order_by('quantite_physique'))
+    stocks_alerte = list(stocks_base.filter(
+        article__seuil_minimum__isnull=False,
+        quantite_physique__gt=Coalesce(F('article__seuil_critique'), 0),
+        quantite_physique__lte=F('article__seuil_minimum')
+    ).order_by('quantite_physique'))
+    stocks_surstock = list(stocks_base.filter(
+        article__seuil_maximum__isnull=False,
+        quantite_physique__gt=F('article__seuil_maximum')
+    ).order_by('-quantite_physique'))
+
+    def _ser(s):
+        return {
+            'article__designation': s.article.designation,
+            'article__famille__intitule': getattr(s.article.famille, 'intitule', '') if s.article.famille else '',
+            'magasin__nom': s.magasin.nom if s.magasin else '',
+            'quantite_physique': float(s.quantite_physique),
+            'article_id': s.article_id,
+            'magasin_id': s.magasin_id,
+        }
+
+    data = {
+        'stocks_critiques': [_ser(s) for s in stocks_critiques],
+        'stocks_alerte': [_ser(s) for s in stocks_alerte],
+        'stocks_surstock': [_ser(s) for s in stocks_surstock],
+        'nb_critiques': len(stocks_critiques),
+        'nb_alertes': len(stocks_alerte),
+        'nb_surstocks': len(stocks_surstock),
+    }
+    cache.set(key, data, _TTL_ALERTES)
+    return data
+
+
+def _get_charts(magasin_id, magasins_ids, aujourdhui):
+    """Charts et agrégats 30j : ~8 requêtes. Cache 120s."""
+    key = _cache_key(magasin_id, 'charts')
+    data = cache.get(key)
+    if data is not None:
+        return data
+    mouvements_scope = Mouvement.objects.filter(magasin_id__in=magasins_ids)
+    stocks_base = StockItem.objects.select_related(
+        'article', 'article__famille', 'magasin'
+    ).filter(magasin_id__in=magasins_ids)
+    trente_jours_avant = aujourdhui - timedelta(days=30)
+
+    # Flux 14 jours
     flux_par_jour = {}
     date_debut_flux = aujourdhui - timedelta(days=13)
     for m in mouvements_scope.filter(
         date_mouvement__date__gte=date_debut_flux
-    ).values('date_mouvement__date', 'type_mouvement').annotate(
-        total=Sum('quantite')
-    ):
+    ).values('date_mouvement__date', 'type_mouvement').annotate(total=Sum('quantite')):
         jour = m['date_mouvement__date']
         flux_par_jour.setdefault(jour, {'E': 0, 'S': 0})
         if m['type_mouvement'] == 'ENTREE':
             flux_par_jour[jour]['E'] += m['total']
         elif m['type_mouvement'] == 'SORTIE':
             flux_par_jour[jour]['S'] += m['total']
-
-    labels_flux = []
-    entrees_flux = []
-    sorties_flux = []
+    labels_flux, entrees_flux, sorties_flux = [], [], []
     for i in range(13, -1, -1):
-        jour = (aujourdhui - timedelta(days=i))
+        jour = aujourdhui - timedelta(days=i)
         labels_flux.append(jour.strftime('%d/%m'))
-        data = flux_par_jour.get(jour, {'E': 0, 'S': 0})
-        entrees_flux.append(data['E'])
-        sorties_flux.append(data['S'])
+        d = flux_par_jour.get(jour, {'E': 0, 'S': 0})
+        entrees_flux.append(d['E'])
+        sorties_flux.append(d['S'])
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # ALERTES STOCK — 3 requêtes SQL ciblées (sous-ensembles petits)
-    # ═══════════════════════════════════════════════════════════════════════
-    stocks_critiques = list(stocks_base.filter(
-        article__seuil_critique__isnull=False,
-        quantite_physique__lte=F('article__seuil_critique')
-    ).order_by('quantite_physique'))
-
-    stocks_alerte = list(stocks_base.filter(
-        article__seuil_minimum__isnull=False,
-        quantite_physique__gt=Coalesce(F('article__seuil_critique'), 0),
-        quantite_physique__lte=F('article__seuil_minimum')
-    ).order_by('quantite_physique'))
-
-    stocks_surstock = list(stocks_base.filter(
-        article__seuil_maximum__isnull=False,
-        quantite_physique__gt=F('article__seuil_maximum')
-    ).order_by('-quantite_physique'))
-
-    nb_critiques = len(stocks_critiques)
-    nb_alertes = len(stocks_alerte)
-    nb_surstocks = len(stocks_surstock)
-
-    trente_jours_avant = aujourdhui - timedelta(days=30)
-    top_articles = mouvements_scope.filter(
-        type_mouvement='SORTIE',
-        date_mouvement__date__gte=trente_jours_avant
+    top_articles = list(mouvements_scope.filter(
+        type_mouvement='SORTIE', date_mouvement__date__gte=trente_jours_avant
     ).values('article__designation').annotate(
         total_sorti=Sum('quantite')
-    ).order_by('-total_sorti')[:5]
-
-    top_entrees = mouvements_scope.filter(
-        type_mouvement='ENTREE',
-        date_mouvement__date__gte=trente_jours_avant
+    ).order_by('-total_sorti')[:5])
+    top_entrees = list(mouvements_scope.filter(
+        type_mouvement='ENTREE', date_mouvement__date__gte=trente_jours_avant
     ).values('article__designation').annotate(
         total_entree=Sum('quantite')
-    ).order_by('-total_entree')[:5]
-
-    top_services = mouvements_scope.filter(
-        type_mouvement='SORTIE',
-        date_mouvement__date__gte=trente_jours_avant,
+    ).order_by('-total_entree')[:5])
+    top_services = list(mouvements_scope.filter(
+        type_mouvement='SORTIE', date_mouvement__date__gte=trente_jours_avant,
         service_demandeur__isnull=False
     ).values('service_demandeur__nom').annotate(
         total_sorti=Sum('quantite')
-    ).order_by('-total_sorti')[:5]
+    ).order_by('-total_sorti')[:5])
 
-    mouvements_recents = mouvements_scope.select_related(
-        'article', 'utilisateur'
-    ).order_by('-date_mouvement')[:8]
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # VALEUR DU STOCK PAR FAMILLE / PAR MAGASIN
-    # ═══════════════════════════════════════════════════════════════════════
     valeur_case = Case(
         When(valeur_cmup__gt=0, then=F('valeur_cmup')),
         default=Coalesce(F('article__prix_reference'), Value(0, output_field=DecimalField())),
         output_field=DecimalField()
     )
-    valeur_par_famille = stocks_base.values('article__famille__intitule').annotate(
+    valeur_par_famille = list(stocks_base.values('article__famille__intitule').annotate(
         total=Sum(F('quantite_physique') * valeur_case, output_field=DecimalField())
-    ).order_by('-total')[:8]
-
-    valeur_par_magasin = stocks_base.values('magasin__nom').annotate(
+    ).order_by('-total')[:8])
+    valeur_par_magasin = list(stocks_base.values('magasin__nom').annotate(
         total=Sum(F('quantite_physique') * valeur_case, output_field=DecimalField())
-    ).order_by('-total')
+    ).order_by('-total'))
+    resultat_valeur = stocks_base.aggregate(
+        total=Sum(F('quantite_physique') * valeur_case, output_field=DecimalField())
+    )
+    valeur_stock_total = float(resultat_valeur['total'] or 0)
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # TAUX DE ROTATION 30 JOURS PAR FAMILLE
-    # Rotation = sorties 30j ÷ stock actuel ; couverture = 30 ÷ rotation
-    # ═══════════════════════════════════════════════════════════════════════
     sorties_familles_30j = {
         row['article__famille__intitule']: row['total_sorti']
         for row in mouvements_scope.filter(
-            type_mouvement='SORTIE',
-            date_mouvement__date__gte=trente_jours_avant
-        ).values('article__famille__intitule').annotate(
-            total_sorti=Sum('quantite')
-        )
+            type_mouvement='SORTIE', date_mouvement__date__gte=trente_jours_avant
+        ).values('article__famille__intitule').annotate(total_sorti=Sum('quantite'))
     }
     stock_par_famille = {
         row['article__famille__intitule']: row['stock_actuel']
@@ -169,7 +196,6 @@ def dashboard_directeur(request):
             stock_actuel=Sum('quantite_physique')
         )
     }
-
     rotation_par_famille = []
     for fam in set(sorties_familles_30j) | set(stock_par_famille):
         sorties = sorties_familles_30j.get(fam, 0) or 0
@@ -181,109 +207,49 @@ def dashboard_directeur(request):
             taux = None
             couverture = 0 if sorties > 0 else None
         rotation_par_famille.append({
-            'famille': fam or 'Général',
-            'sorties': sorties,
-            'stock': stock,
-            'taux': taux,
-            'couverture': couverture,
+            'famille': fam or 'Général', 'sorties': sorties,
+            'stock': stock, 'taux': taux, 'couverture': couverture,
         })
-
-    # Tri : rotation décroissante (les familles les plus rapides d'abord)
-    rotation_par_famille.sort(
-        key=lambda x: (x['taux'] is None, -(x['taux'] or 0)))
-    # Tri couverture : la plus courte (la plus urgente) d'abord
+    rotation_par_famille.sort(key=lambda x: (x['taux'] is None, -(x['taux'] or 0)))
     rotation_par_couverture = sorted(
         rotation_par_famille,
-        key=lambda x: (x['couverture'] is None,
-                       x['couverture'] if x['couverture'] is not None else float('inf')))
-
+        key=lambda x: (x['couverture'] is None, x['couverture'] if x['couverture'] is not None else float('inf'))
+    )
     total_sorties_30j = sum(sorties_familles_30j.values())
     stock_moyen_total = sum(stock_par_famille.values())
-    if stock_moyen_total > 0:
-        rotation_globale_30j = round(
-            float(total_sorties_30j) / float(stock_moyen_total), 2)
-    else:
-        rotation_globale_30j = None
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # VALORISATION CMUP (scopée au magasin actif)
-    # ═══════════════════════════════════════════════════════════════════════
-    resultat_valeur = stocks_base.aggregate(
-        total=Sum(F('quantite_physique') * valeur_case, output_field=DecimalField())
+    rotation_globale_30j = (
+        round(float(total_sorties_30j) / float(stock_moyen_total), 2)
+        if stock_moyen_total > 0 else None
     )
-    valeur_stock_total = resultat_valeur['total'] or 0
 
-    # ═══════════════════════════════════════════════════════════════════════
-    # HISTORIQUE (7 jours) — 1 requête RAW UNION au lieu de 4
-    # ═══════════════════════════════════════════════════════════════════════
-    # HISTORIQUE (7 jours)
-    # ═══════════════════════════════════════════════════════════════════════
-    date_limite_historique = aujourdhui - timedelta(days=7)
+    data = {
+        'labels_flux': labels_flux, 'entrees_flux': entrees_flux, 'sorties_flux': sorties_flux,
+        'top_articles': top_articles, 'top_entrees': top_entrees, 'top_services': top_services,
+        'valeur_par_famille': valeur_par_famille, 'valeur_par_magasin': valeur_par_magasin,
+        'valeur_stock_total': valeur_stock_total,
+        'rotation_globale_30j': rotation_globale_30j,
+        'rotation_par_famille': rotation_par_famille,
+        'rotation_par_couverture': rotation_par_couverture,
+    }
+    cache.set(key, data, _TTL_CHARTS)
+    return data
 
-    h_articles = Article.history.filter(
-        history_date__date__gte=date_limite_historique
-    ).order_by('-history_date')[:12]
 
-    h_magasins = Magasin.history.filter(
-        history_date__date__gte=date_limite_historique
-    ).order_by('-history_date')[:12]
-
-    h_fournisseurs = Fournisseur.history.filter(
-        history_date__date__gte=date_limite_historique
-    ).order_by('-history_date')[:12]
-
-    if magasins_ids:
-        h_mouvements = Mouvement.history.filter(
-            magasin_id__in=magasins_ids,
-            history_date__date__gte=date_limite_historique
-        ).order_by('-history_date')[:50]
-    else:
-        h_mouvements = []
-
-    # Trie et tronque AVANT d'appeler str(h) : ne résout que les 12 premiers FK.
-    historique_brut = sorted(
-        chain(h_articles, h_magasins, h_fournisseurs, h_mouvements),
-        key=attrgetter('history_date'), reverse=True
-    )[:12]
-
-    journal_activites = []
-    for h in historique_brut:
-        action_text = "Création" if h.history_type == '+' else "Modification" if h.history_type == '~' else "Suppression"
-        action_html = (
-            f'<span style="background:#{"d4edda" if h.history_type=="+" else "cce5ff" if h.history_type=="~" else "f8d7da"};'
-            f'color:#{"155724" if h.history_type=="+" else "004085" if h.history_type=="~" else "721c24"};'
-            f'padding:3px 8px;border-radius:12px;font-size:11px;font-weight:bold;">{action_text}</span>'
-        )
-        try:
-            element_str = str(h)
-        except Exception:
-            element_str = "Élément (lié à une donnée supprimée)"
-            
-        journal_activites.append({
-            'date': h.history_date,
-            'utilisateur': h.history_user.username.capitalize() if h.history_user else "Système",
-            'action': action_html,
-            'modele': h.__class__.__name__.replace('Historical', ''),
-            'element': element_str,
-        })
-
-    # ═══════════════════════════════════════════════════════════════════════
-    # PÉREMPTIONS
-    # ═══════════════════════════════════════════════════════════════════════
-    # ═══════════════════════════════════════════════════════════════════════
-    # PÉREMPTIONS — pré-calcul des sous-requêtes pour éviter N+1
-    # ═══════════════════════════════════════════════════════════════════════
-    # Au lieu d'utiliser OuterRef (1 query par ligne), on pré-calcul :
-    # 1) les totaux sortis par (article, magasin, lot)
-    # 2) le stock physique par (article, magasin)
-    # Scoper les sous-requêtes aux magasins accessibles (au lieu de la table entière)
+def _get_peremptions(magasin_id, magasins_ids, aujourdhui):
+    """Péremptions : 4 requêtes. Cache 120s."""
+    key = _cache_key(magasin_id, 'peremption')
+    data = cache.get(key)
+    if data is not None:
+        return data
+    mouvements_scope = Mouvement.objects.filter(magasin_id__in=magasins_ids)
+    stocks_base = StockItem.objects.select_related(
+        'article', 'article__famille', 'magasin'
+    ).filter(magasin_id__in=magasins_ids)
     sorties_par_lot_map = {
         (r['article_id'], r['magasin_id'], r['numero_lot']): r['total_sorti']
         for r in mouvements_scope.filter(
             type_mouvement='SORTIE'
-        ).values('article_id', 'magasin_id', 'numero_lot').annotate(
-            total_sorti=Sum('quantite')
-        )
+        ).values('article_id', 'magasin_id', 'numero_lot').annotate(total_sorti=Sum('quantite'))
     }
     stock_physique_map = {
         (r['article_id'], r['magasin_id']): r['quantite_physique']
@@ -291,85 +257,156 @@ def dashboard_directeur(request):
             quantite_physique=Sum('quantite_physique')
         )
     }
-
     date_alerte = aujourdhui + timedelta(days=90)
-
-    # 2 requêtes au lieu de 2×N (N = nb de lignes avec lots)
-    _lots_en_alerte_qs = Mouvement.objects.filter(
-        type_mouvement='ENTREE',
-        date_peremption__isnull=False,
-        date_peremption__lte=date_alerte,
-        date_peremption__gte=aujourdhui
-    ).select_related('article', 'magasin').order_by('date_peremption')
-
-    lots_en_alerte = []
-    for lot in _lots_en_alerte_qs:
-        qte_sortie = sorties_par_lot_map.get(
-            (lot.article_id, lot.magasin_id, lot.numero_lot), 0
-        )
-        quantite_restante = lot.quantite - qte_sortie
-        stock_phys = stock_physique_map.get(
-            (lot.article_id, lot.magasin_id), 0
-        )
-        if quantite_restante > 0 and stock_phys > 0:
-            lot.qte_sortie = qte_sortie
-            lot.quantite_restante = quantite_restante
-            lot.stock_physique = stock_phys
-            lots_en_alerte.append(lot)
-
-    _lots_perimes_qs = Mouvement.objects.filter(
-        type_mouvement='ENTREE',
-        date_peremption__isnull=False,
+    lots_en_alerte_list = []
+    for lot in Mouvement.objects.filter(
+        type_mouvement='ENTREE', date_peremption__isnull=False,
+        date_peremption__lte=date_alerte, date_peremption__gte=aujourdhui
+    ).select_related('article', 'magasin').order_by('date_peremption'):
+        qte = sorties_par_lot_map.get((lot.article_id, lot.magasin_id, lot.numero_lot), 0)
+        restante = lot.quantite - qte
+        phys = stock_physique_map.get((lot.article_id, lot.magasin_id), 0)
+        if restante > 0 and phys > 0:
+            lots_en_alerte_list.append({
+                'article__designation': lot.article.designation,
+                'magasin__nom': lot.magasin.nom if lot.magasin else '',
+                'numero_lot': lot.numero_lot,
+                'date_peremption': lot.date_peremption.isoformat(),
+                'qte_sortie': qte, 'quantite_restante': restante, 'stock_physique': phys,
+            })
+    lots_perimes_list = []
+    for lot in Mouvement.objects.filter(
+        type_mouvement='ENTREE', date_peremption__isnull=False,
         date_peremption__lt=aujourdhui
-    ).select_related('article', 'magasin').order_by('-date_peremption')
+    ).select_related('article', 'magasin').order_by('-date_peremption'):
+        qte = sorties_par_lot_map.get((lot.article_id, lot.magasin_id, lot.numero_lot), 0)
+        restante = lot.quantite - qte
+        phys = stock_physique_map.get((lot.article_id, lot.magasin_id), 0)
+        if restante > 0 and phys > 0:
+            lots_perimes_list.append({
+                'article__designation': lot.article.designation,
+                'magasin__nom': lot.magasin.nom if lot.magasin else '',
+                'numero_lot': lot.numero_lot,
+                'date_peremption': lot.date_peremption.isoformat(),
+                'qte_sortie': qte, 'quantite_restante': restante, 'stock_physique': phys,
+            })
+    data = {'lots_en_alerte': lots_en_alerte_list, 'lots_perimes': lots_perimes_list}
+    cache.set(key, data, _TTL_PEREMPTION)
+    return data
 
-    lots_perimes = []
-    for lot in _lots_perimes_qs:
-        qte_sortie = sorties_par_lot_map.get(
-            (lot.article_id, lot.magasin_id, lot.numero_lot), 0
+
+def _get_historique(magasin_id, magasins_ids, aujourdhui):
+    """Historique 7 jours : 4 requêtes. Cache 60s."""
+    key = _cache_key(magasin_id, 'historique')
+    data = cache.get(key)
+    if data is not None:
+        return data
+    date_limite = aujourdhui - timedelta(days=7)
+    h_articles = Article.history.filter(history_date__date__gte=date_limite).order_by('-history_date')[:12]
+    h_magasins = Magasin.history.filter(history_date__date__gte=date_limite).order_by('-history_date')[:12]
+    h_fournisseurs = Fournisseur.history.filter(history_date__date__gte=date_limite).order_by('-history_date')[:12]
+    h_mouvements = Mouvement.history.filter(
+        magasin_id__in=magasins_ids, history_date__date__gte=date_limite
+    ).order_by('-history_date')[:50] if magasins_ids else []
+    historique_brut = sorted(
+        chain(h_articles, h_magasins, h_fournisseurs, h_mouvements),
+        key=attrgetter('history_date'), reverse=True
+    )[:12]
+    journal = []
+    for h in historique_brut:
+        ht = h.history_type
+        action_text = "Création" if ht == '+' else "Modification" if ht == '~' else "Suppression"
+        d_color = "d4edda" if ht == '+' else "cce5ff" if ht == '~' else "f8d7da"
+        c_color = "155724" if ht == '+' else "004085" if ht == '~' else "721c24"
+        action_html = (
+            f'<span style="background:#{d_color};'
+            f'color:#{c_color};'
+            f'padding:3px 8px;border-radius:12px;font-size:11px;font-weight:bold;">{action_text}</span>'
         )
-        quantite_restante = lot.quantite - qte_sortie
-        stock_phys = stock_physique_map.get(
-            (lot.article_id, lot.magasin_id), 0
-        )
-        if quantite_restante > 0 and stock_phys > 0:
-            lot.qte_sortie = qte_sortie
-            lot.quantite_restante = quantite_restante
-            lot.stock_physique = stock_phys
-            lots_perimes.append(lot)
+        try:
+            element_str = str(h)
+        except Exception:
+            element_str = "Élément (lié à une donnée supprimée)"
+        journal.append({
+            'date': h.history_date.isoformat(),
+            'utilisateur': h.history_user.username.capitalize() if h.history_user else "Système",
+            'action': action_html,
+            'modele': h.__class__.__name__.replace('Historical', ''),
+            'element': element_str,
+        })
+    data = {'journal_activites': journal}
+    cache.set(key, data, _TTL_HISTORIQUE)
+    return data
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# INVALIDATION DU CACHE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def invalidate_dashboard_cache(magasin_id=None):
+    """Invalide le cache du dashboard. Appeler après création/modification
+    de mouvements, articles, stocks, ou péremptions."""
+    cache.clear()
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# VUE PRINCIPALE
+# ═══════════════════════════════════════════════════════════════════════════════
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_dashboard')
+@catch_errors(redirect_url='/auth/accueil/')
+def dashboard_directeur(request):
+    aujourdhui = timezone.now().date()
+    magasin_actif = _magasin_actif(request)
+    magasins_ids = ([magasin_actif.id] if magasin_actif
+                    else list(Magasin.objects.values_list('id', flat=True)))
+    magasin_id = magasin_actif.id if magasin_actif else None
+
+    # ── Charger chaque bloc (cache hit ou miss) ──
+    kpis = _get_kpis(magasins_ids, aujourdhui)
+    alertes = _get_alertes(magasin_id, magasins_ids)
+    charts = _get_charts(magasin_id, magasins_ids, aujourdhui)
+    peremptions = _get_peremptions(magasin_id, magasins_ids, aujourdhui)
+    historique = _get_historique(magasin_id, magasins_ids, aujourdhui)
+
+    # Mouvements récents (1 requête, non caché — petit résultat)
+    mouvements_recents = Mouvement.objects.filter(
+        magasin_id__in=magasins_ids
+    ).select_related('article', 'utilisateur').order_by('-date_mouvement')[:8]
 
     context = {
-        'total_articles': total_articles,
-        'sorties_jour': sorties_jour,
-        'entrees_jour': entrees_jour,
-        'nombre_alertes': nb_critiques + nb_alertes,
-        'valeur_stock_total': valeur_stock_total,
-        'stocks_critiques': stocks_critiques,
-        'stocks_alerte': stocks_alerte,
-        'stocks_surstock': stocks_surstock,
-        'nb_critiques': nb_critiques,
-        'nb_alertes': nb_alertes,
-        'nb_surstocks': nb_surstocks,
+        'total_articles': kpis['total_articles'],
+        'sorties_jour': kpis['sorties_jour'],
+        'entrees_jour': kpis['entrees_jour'],
+        'stocks_critiques': alertes['stocks_critiques'],
+        'stocks_alerte': alertes['stocks_alerte'],
+        'stocks_surstock': alertes['stocks_surstock'],
+        'nb_critiques': alertes['nb_critiques'],
+        'nb_alertes': alertes['nb_alertes'],
+        'nb_surstocks': alertes['nb_surstocks'],
+        'nombre_alertes': alertes['nb_critiques'] + alertes['nb_alertes'],
+        'valeur_stock_total': charts['valeur_stock_total'],
+        'valeur_par_famille': charts['valeur_par_famille'],
+        'valeur_par_magasin': charts['valeur_par_magasin'],
+        'rotation_globale_30j': charts['rotation_globale_30j'],
+        'rotation_par_famille': charts['rotation_par_famille'],
+        'rotation_par_couverture': charts['rotation_par_couverture'],
+        'chart_articles_labels': _json_pour_script([i['article__designation'] for i in charts['top_articles']]),
+        'chart_articles_data': _json_pour_script([i['total_sorti'] for i in charts['top_articles']]),
+        'chart_entrees_labels': _json_pour_script([i['article__designation'] for i in charts['top_entrees']]),
+        'chart_entrees_data': _json_pour_script([i['total_entree'] for i in charts['top_entrees']]),
+        'chart_services_labels': _json_pour_script([i['service_demandeur__nom'] for i in charts['top_services']]),
+        'chart_services_data': _json_pour_script([i['total_sorti'] for i in charts['top_services']]),
+        'flux_labels': _json_pour_script(charts['labels_flux']),
+        'flux_entrees': _json_pour_script(charts['entrees_flux']),
+        'flux_sorties': _json_pour_script(charts['sorties_flux']),
+        'chart_familles_labels': _json_pour_script([i['article__famille__intitule'] or 'Général' for i in charts['valeur_par_famille']]),
+        'chart_familles_data': _json_pour_script([float(i['total']) for i in charts['valeur_par_famille']]),
+        'lots_en_alerte': peremptions['lots_en_alerte'],
+        'lots_perimes': peremptions['lots_perimes'],
+        'journal_activites': historique['journal_activites'],
         'mouvements_recents': mouvements_recents,
-        'journal_activites': journal_activites,
-        'lots_en_alerte': lots_en_alerte,
-        'lots_perimes': lots_perimes,
         'magasin_actif': magasin_actif,
-        'chart_articles_labels': _json_pour_script([i['article__designation'] for i in top_articles]),
-        'chart_articles_data': _json_pour_script([i['total_sorti'] for i in top_articles]),
-        'chart_entrees_labels': _json_pour_script([i['article__designation'] for i in top_entrees]),
-        'chart_entrees_data': _json_pour_script([i['total_entree'] for i in top_entrees]),
-        'chart_services_labels': _json_pour_script([i['service_demandeur__nom'] for i in top_services]),
-        'chart_services_data': _json_pour_script([i['total_sorti'] for i in top_services]),
-        'flux_labels': _json_pour_script(labels_flux),
-        'flux_entrees': _json_pour_script(entrees_flux),
-        'flux_sorties': _json_pour_script(sorties_flux),
-        'chart_familles_labels': _json_pour_script([i['article__famille__intitule'] or 'Général' for i in valeur_par_famille]),
-        'chart_familles_data': _json_pour_script([float(i['total']) for i in valeur_par_famille]),
-        'valeur_par_famille': valeur_par_famille,
-        'valeur_par_magasin': valeur_par_magasin,
-        'rotation_globale_30j': rotation_globale_30j,
-        'rotation_par_famille': rotation_par_famille,
-        'rotation_par_couverture': rotation_par_couverture,
     }
     return render(request, 'stock/dashboard.html', context)
