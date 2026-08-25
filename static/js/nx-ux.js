@@ -162,13 +162,10 @@ window.NxUX = (function () {
     }
 
     if (formatType === 'phone') {
-      // Format téléphone : +33 6 12 34 56 78
+      // Format telephone CI : 01 02 03 04 05 (10 chiffres, groupes de 2)
       value = value.replace(/\D/g, '').substring(0, 10);
       if (value.length > 2) {
         value = value.match(/.{1,2}/g).join(' ');
-      }
-      if (value.startsWith('0') && !value.startsWith('00')) {
-        value = '+33 ' + value.substring(1);
       }
       input.value = value;
     } 
