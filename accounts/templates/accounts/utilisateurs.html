@@ -901,6 +901,12 @@ document.addEventListener('DOMContentLoaded', function() {
         {% endif %}
     }
 
+    // Formater le telephone si pre-rempli (erreur de validation)
+    var contactPreRempli = document.getElementById('inp_contact');
+    if (contactPreRempli && contactPreRempli.value) {
+        formatPhone(contactPreRempli);
+    }
+
     document.getElementById('modalUser').addEventListener('click', function(e) {
         if (e.target === this) fermerModal();
     });
