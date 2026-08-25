@@ -72,27 +72,39 @@ else:
     print('Superuser admin existe deja')
 "
 
-# 7. Lancer le serveur
+# 7. Lancer Gunicorn (production)
 echo ""
-echo "=== 7/7 Lancement du serveur ==="
-pkill -f "runserver.*8000" 2>/dev/null || true
+echo "=== 7/7 Lancement Gunicorn ==="
+pkill -9 -f 'gunicorn.*config.wsgi' 2>/dev/null || true
+pkill -9 -f 'manage.py runserver' 2>/dev/null || true
 sleep 1
-nohup python manage.py runserver 0.0.0.0:8000 > server.log 2>&1 &
-echo "Serveur lance (PID: $!)"
+nohup gunicorn config.wsgi:application \
+    --bind 0.0.0.0:8000 \
+    --workers 3 \
+    --threads 2 \
+    --timeout 120 \
+    --max-requests 1000 \
+    --max-requests-jitter 50 \
+    --access-logfile server-access.log \
+    --error-logfile server-error.log \
+    --log-level info \
+    --pid gunicorn.pid > /dev/null 2>&1 &
+echo "Gunicorn lance (PID: $!)"
 
 sleep 3
 HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/ 2>/dev/null)
 if [ "$HTTP_CODE" = "302" ] || [ "$HTTP_CODE" = "200" ]; then
     echo ""
     echo "╔══════════════════════════════════════════════════╗"
-    echo "║  ✅ DEPLOIEMENT REUSSI !                         ║"
+    echo "║  ✅ DEPLOIEMENT REUSSI ! (Gunicorn)              ║"
     echo "║                                                  ║"
     echo "║  URL:    http://192.168.0.29:8000/              ║"
     echo "║  Login:  admin / admin123                        ║"
+    echo "║  Workers: 3 | Threads: 2                        ║"
     echo "║                                                  ║"
-    echo "║  Logs:   tail -f /home/chuangre/erp_chu_review/server.log ║"
+    echo "║  Logs:   tail -f server-error.log               ║"
     echo "╚══════════════════════════════════════════════════╝"
 else
-    echo "❌ Erreur HTTP $HTTP_CODE - verifiez server.log"
-    tail -20 server.log
+    echo "❌ Erreur HTTP $HTTP_CODE - verifiez server-error.log"
+    tail -20 server-error.log
 fi
