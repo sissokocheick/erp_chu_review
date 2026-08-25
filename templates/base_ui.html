@@ -1488,11 +1488,11 @@
             </div>
             <div style="padding: 30px 25px;">
                 <p style="font-size: 13px; color: var(--text-medium); margin-bottom: 20px; text-align: center;">Vous avez accès à plusieurs magasins. Veuillez sélectionner celui dans lequel vous souhaitez travailler aujourd'hui.</p>
-                <form method="POST" action="{% url 'changer_magasin' %}">
+                <form method="POST" action="{% url 'changer_magasin' %}" novalidate>
                     {% csrf_token %}
                     <input type="hidden" name="next" value="{{ request.path }}">
                     <label style="font-weight: bold; font-size: 12px; color: #dc3545; display: block; margin-bottom: 8px;">Sélectionnez votre magasin : *</label>
-                    <select name="magasin_id" required class="nx-select" style="margin-bottom: 20px;">
+                    <select name="magasin_id" class="nx-select" style="margin-bottom: 20px;" onchange="if(this.value) this.form.submit();">
                         <option value="">-- Choisir un magasin --</option>
                         {% for m in mes_magasins %}
                             <option value="{{ m.id }}">{{ m.nom }}</option>
