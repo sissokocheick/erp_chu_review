@@ -78,12 +78,24 @@ else
     echo "WARN : Aucun backup local a copier"
 fi
 
+# 7. Activer le cron automatique
+CRON_LINE="0 2 * * * cd /home/chuangre/erp_chu_review && source venv/bin/activate && python scripts/backup_db.py --dir backups --quiet >> logs/backup.log 2>&1"
+
+# Verifier si le cron est deja active
+crontab -l 2>/dev/null | grep -q "backup_db.py"
+if [ $? -eq 0 ]; then
+    echo ">> Cron deja actif"
+else
+    echo ">> Activation du backup automatique (cron a 2h du matin) ..."
+    (crontab -l 2>/dev/null; echo "${CRON_LINE}") | crontab -
+    echo "OK : Cron active"
+fi
+
 echo ""
 echo "=== Configuration terminee ==="
 echo "  Serveur: ${REMOTE_HOST}"
 echo "  Backup:  $(ls -t backups/*.backup 2>/dev/null | head -1)"
+echo "  Cron:    0 2 * * * (quotidien a 2h du matin)"
 echo ""
-echo "Pour activer le backup automatique (cron) :"
-echo "  crontab -e"
-echo "  Puis ajouter :"
-echo "  0 2 * * * cd /home/chuangre/erp_chu_review && source venv/bin/activate && python scripts/backup_db.py --dir backups --quiet >> logs/backup.log 2>&1"
+echo "Pour modifier : crontab -e"
+echo "Pour desactiver : crontab -e puis supprimer la ligne backup_db.py"
