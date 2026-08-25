@@ -34,6 +34,34 @@ DUREE_BLOCAGE_MINUTES = 15       # durée du blocage après échecs
 MIN_DELAI_DEMANDE_SECONDES = 60  # délai minimal entre deux demandes d'envoi
 MAX_DEMANDES_PAR_HEURE = 5       # nb max de demandes d'envoi par heure
 
+# ✅ CORRECTION anti brute-force : garde serveur (indépendante des cookies)
+# sur les échecs de code par IP — une session peut être contournée en
+# supprimant les cookies, pas le journal en base.
+MAX_ECHECS_CODE_PAR_IP = 10      # échecs de code / 15 min / IP avant blocage
+
+
+def _bloquage_ip_actif(request):
+    """True si cette IP a trop d'échecs de code récents (garde en base)."""
+    return AuditConnexion.objects.filter(
+        type_action='ECHEC',
+        description="[ResetMDP] Code invalide",
+        adresse_ip=get_client_ip(request),
+        date_creation__gte=timezone.now() - timedelta(minutes=DUREE_BLOCAGE_MINUTES),
+    ).count() >= MAX_ECHECS_CODE_PAR_IP
+
+
+def _enregistrer_echec_code_ip(request):
+    """Journalise un échec de code côté serveur (throttle par IP)."""
+    try:
+        AuditConnexion.objects.create(
+            type_action='ECHEC',
+            description="[ResetMDP] Code invalide",
+            adresse_ip=get_client_ip(request),
+            user_agent=request.META.get('HTTP_USER_AGENT', '')[:500],
+        )
+    except Exception:
+        logger.exception("[ResetMDP] Journalisation échec code impossible")
+
 
 def _bloquage_actif(request):
     """True si la session est bloquée suite à trop d'échecs de code."""
@@ -133,7 +161,7 @@ def mot_de_passe_oublie(request):
         if _bloquage_actif(request):
             messages.error(
                 request,
-                "Trop de tentatives. Réessayez dans un quart d'heure.",
+                "Trop de tentatives. Réessayez dans 2 minutes.",
             )
             return redirect('accounts:mot_de_passe_oublie')
         if not _verifier_cadence_demande(request):
@@ -156,6 +184,11 @@ def mot_de_passe_oublie(request):
                     or User.objects.filter(email__iexact=identifiant, is_active=True).first()
                 )
         if user is not None:
+            # ✅ CORRECTION : mémoriser le compte demandé en session pour que
+            # le code SMS ne puisse valider QUE ce compte à l'étape 2 (sinon
+            # un code deviné pouvait matcher le jeton de n'importe quel
+            # utilisateur ayant un jeton actif).
+            request.session['reset_user_id'] = user.id
             try:
                 # Ménage : purge des jetons expirés de plus d'un jour
                 MotDePasseResetToken.objects.filter(
@@ -267,8 +300,8 @@ def reinitialiser_mot_de_passe(request, token=None):
 
     erreur = None
     if request.method == 'POST':
-        if _bloquage_actif(request):
-            erreur = ("Trop de tentatives. Réessayez dans un quart d'heure.")
+        if _bloquage_actif(request) or _bloquage_ip_actif(request):
+            erreur = ("Trop de tentatives. Réessayez dans 2 minutes.")
             return render(request, 'accounts/reinitialiser_mot_de_passe.html',
                           {'erreur': erreur, 'token': token, 'duree': DUREE_VALIDITE_MINUTES})
 
@@ -284,10 +317,18 @@ def reinitialiser_mot_de_passe(request, token=None):
         if token_saisi:
             jeton = valides.filter(token=token_saisi).first()
         if jeton is None and code_saisi:
-            jeton = valides.filter(code=code_saisi).first()
+            jetons_code = valides.filter(code=code_saisi)
+            # ✅ CORRECTION : si le compte demandé est connu en session
+            # (parcours standard), le code ne peut valider QUE ce compte.
+            reset_user_id = request.session.get('reset_user_id')
+            jeton = (
+                jetons_code.filter(user_id=reset_user_id).first()
+                if reset_user_id else jetons_code.first()  # parcours multi-appareils
+            )
 
         if jeton is None:
             _enregistrer_echec_code(request)
+            _enregistrer_echec_code_ip(request)
             erreur = "Ce lien ou code est invalide ou a expiré. Veuillez refaire une demande."
         elif nouveau != confirmer:
             erreur = "Les mots de passe ne correspondent pas."
@@ -300,7 +341,13 @@ def reinitialiser_mot_de_passe(request, token=None):
                 user.set_password(nouveau)
                 user.save()
                 jeton.invalider()
+                # ✅ CORRECTION : invalider TOUS les jetons restants du compte
+                # (un lien email encore actif ne doit pas survivre au reset).
+                MotDePasseResetToken.objects.filter(
+                    user=user, utilise=False
+                ).update(utilise=True)
                 _reinitialiser_echecs(request)
+                request.session.pop('reset_user_id', None)
                 try:
                     profil = user.profil
                     profil.doit_changer_mdp = False

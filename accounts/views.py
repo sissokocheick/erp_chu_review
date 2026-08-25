@@ -29,7 +29,7 @@ from django.contrib.auth import login, logout, update_session_auth_hash
 
 # ── Anti brute-force login ──────────────────────────────────────────────
 LOGIN_MAX_ECHECS = 5
-LOGIN_FENETRE_ECHECS = 900  # 15 minutes
+LOGIN_FENETRE_ECHECS = 120  # 2 minutes
 # Hash factice pour neutraliser le timing oracle (existence des usernames)
 LOGIN_DUMMY_HASH = 'pbkdf2_sha256$1200000$xdDS6X68UY4iCXOi0MGJzc$mQSKndcmo+OVhY7lI+83K03w6ZxDTVEjxVLuMWL96Hs='
 
@@ -359,7 +359,7 @@ def custom_login(request):
         if nb_echecs >= LOGIN_MAX_ECHECS or nb_echecs_compte >= LOGIN_MAX_ECHECS:
             messages.error(
                 request,
-                '⛔ Trop de tentatives échouées. Connexion temporairement bloquée — réessayez dans 15 minutes.',
+                '⛔ Trop de tentatives échouées. Connexion temporairement bloquée — réessayez dans 2 minutes.',
             )
             return render(request, 'accounts/login.html', _login_ctx)
 
