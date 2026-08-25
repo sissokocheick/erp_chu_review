@@ -24,12 +24,11 @@ python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt --quiet
 
-# 3. Fichier .env
+# 3. Fichier .env + export variables
 echo ""
 echo "=== 3/7 Configuration .env ==="
-if [ ! -f ".env" ]; then
-    SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))")
-    cat > .env << EOF
+SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(50))" 2>/dev/null || echo 'production-secret-change-me')
+cat > .env << EOF
 DJANGO_DEBUG=False
 DJANGO_SECRET_KEY=${SECRET}
 DJANGO_ALLOWED_HOSTS=192.168.0.29,localhost,127.0.0.1
@@ -40,10 +39,12 @@ DB_PASSWORD=Chu@angre2026
 DB_HOST=localhost
 DB_PORT=5432
 EOF
-    echo "Fichier .env cree"
-else
-    echo "Fichier .env existe deja"
-fi
+
+# Exporter les variables dans l'environnement actuel
+set -a
+source .env
+set +a
+echo "Fichier .env cree et variables exportees"
 
 # 4. Base PostgreSQL
 echo ""

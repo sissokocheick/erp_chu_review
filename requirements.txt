@@ -40,3 +40,4 @@ playwright>=1.62.0
 pymupdf>=1.28.2
 
 redis>=5.0.0
+dotenv>=1.0.0
