@@ -89,6 +89,8 @@ def _afficher_mes_demandes(request):
     qs = qs.select_related(
         'service_demandeur', 'magasin_cible', 'valide_par',
         'valide_par_chef', 'cloture_par', 'bon_sortie_lie'
+    ).prefetch_related(
+        Prefetch('lignes_demande', queryset=LigneDemande.objects.select_related('article'))
     ).annotate(
         nb_lignes=Count('lignes_demande', distinct=True),
         nb_livraisons=Count('livraisons', distinct=True)
@@ -149,7 +151,7 @@ def _afficher_mes_demandes(request):
         'a_un_service': service_user is not None,
         'magasins': magasins,
         'magasin_actif': magasin_actif,
-        'articles': Article.objects.all().order_by('designation'),
+        'articles': [],  # Chargé via AJAX (api_articles_json) pour éviter le chargement de 100K articles
         'date_range': date_range,
         'circuit_actif': bool(circuit),
         # Passer l'info de confidentialité au template pour affichage éventuel
@@ -404,7 +406,7 @@ def _afficher_gestion_demandes(request):
         'motifs_annulation': MotifAnnulation.objects.filter(actif=True).order_by('libelle'),
         'services': Service.objects.all().order_by('nom'),
         'a_un_service': _get_service_user(request) is not None or request.user.has_perm('accounts.menu_guichet'),
-        'articles': Article.objects.all().order_by('designation'),
+        'articles': [],  # Chargé via AJAX (api_articles_json) pour éviter le chargement de 100K articles
         'date_range': request.GET.get('date_range', ''),
     }
     return render(request, 'stock/gestion_demandes.html', context)

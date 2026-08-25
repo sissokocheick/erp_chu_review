@@ -883,13 +883,17 @@ def export_sondages_csv(request):
 @magasin_requis
 @catch_errors(redirect_url='page_rapports')
 def stats_satisfaction_services(request):
-    """Statistiques de satisfaction par service — FILTRÉ par magasin actif."""
+    """Statistiques de satisfaction par service — FILTRÉ par magasin actif.
+    OPTIMISÉ : 3 requêtes agrégées au lieu de N×6.
+    """
+    from collections import defaultdict
+
     date_range = request.GET.get('date_range', '')
     service_id = request.GET.get('service', '')
 
     date_debut, date_fin = parse_date_range(date_range, default_days=365)
 
-    services = Service.objects.all().order_by('nom')
+    services_qs = Service.objects.all().order_by('nom')
 
     qs_demandes = DemandeMateriel.objects.filter(
         date_demande__date__gte=date_debut,
@@ -902,39 +906,73 @@ def stats_satisfaction_services(request):
 
     if service_id and service_id.isdigit():
         qs_demandes = qs_demandes.filter(service_demandeur_id=int(service_id))
-        services = services.filter(id=int(service_id))
+        services_qs = services_qs.filter(id=int(service_id))
 
+    # ── 1 requête : demandes par service ──
+    demandes_map = dict(
+        qs_demandes.values('service_demandeur_id')
+        .annotate(total=Count('id'))
+        .values_list('service_demandeur_id', 'total')
+    )
+
+    # ── 1 requête : livraisons par service (via FK demande→service_demandeur) ──
+    livraison_map = dict(
+        LivraisonPartielle.objects.filter(demande__in=qs_demandes)
+        .values('demande__service_demandeur_id')
+        .annotate(total=Count('id'))
+        .values_list('demande__service_demandeur_id', 'total')
+    )
+
+    # ── 1 requête : accuses par service + satisfaction ──
+    accuses_rows = (
+        AccuseReception.objects.filter(
+            livraison__demande__in=qs_demandes,
+            est_signe=True,
+            date_reception__date__gte=date_debut,
+            date_reception__date__lte=date_fin,
+        )
+        .values('livraison__demande__service_demandeur_id', 'satisfait')
+        .annotate(total=Count('id'))
+    )
+
+    # Agréger en mémoire : {svc_id: {total, sat, insat, neut}}
+    accuse_map = defaultdict(lambda: {'total': 0, 'sat': 0, 'insat': 0, 'neut': 0})
+    for row in accuses_rows:
+        sid = row['livraison__demande__service_demandeur_id']
+        acc = accuse_map[sid]
+        acc['total'] += row['total']
+        if row['satisfait'] is True:
+            acc['sat'] += row['total']
+        elif row['satisfait'] is False:
+            acc['insat'] += row['total']
+        else:
+            acc['neut'] += row['total']
+
+    # ── Construire les stats par service (tout en Python, 0 query) ──
+    services_list = list(services_qs)
     stats_services = []
     g_total_demandes = g_total_livraisons = g_total_accuses = 0
     g_sat = g_insat = g_neut = 0
 
-    for service in services:
-        demandes_svc = qs_demandes.filter(service_demandeur=service)
-        total_demandes = demandes_svc.count()
+    for service in services_list:
+        sid = service.id
+        td = demandes_map.get(sid, 0)
+        tl = livraison_map.get(sid, 0)
+        acc = accuse_map[sid]
+        ta = acc['total']
+        sat = acc['sat']
+        insat = acc['insat']
+        neut = acc['neut']
 
-        livraisons = LivraisonPartielle.objects.filter(demande__in=demandes_svc)
-        total_livraisons = livraisons.count()
-
-        accuses = AccuseReception.objects.filter(
-            livraison__in=livraisons,
-            est_signe=True,
-            date_reception__date__gte=date_debut,
-            date_reception__date__lte=date_fin)
-        total_accuses = accuses.count()
-
-        sat = accuses.filter(satisfait=True).count()
-        insat = accuses.filter(satisfait=False).count()
-        neut = accuses.filter(satisfait__isnull=True).count()
-
-        taux_sat = round((sat / total_accuses) * 100, 1) if total_accuses else 0
-        taux_rep = round((total_accuses / total_livraisons) * 100, 1) if total_livraisons else 0
-        note_moy = ((sat * 4.5) + (neut * 3) + (insat * 1.5)) / total_accuses if total_accuses else 0
+        taux_sat = round((sat / ta) * 100, 1) if ta else 0
+        taux_rep = round((ta / tl) * 100, 1) if tl else 0
+        note_moy = ((sat * 4.5) + (neut * 3) + (insat * 1.5)) / ta if ta else 0
 
         stats_services.append({
             'service': service,
-            'total_demandes': total_demandes,
-            'total_livraisons': total_livraisons,
-            'total_accuses': total_accuses,
+            'total_demandes': td,
+            'total_livraisons': tl,
+            'total_accuses': ta,
             'satisfaits': sat,
             'insatisfaits': insat,
             'neutres': neut,
@@ -943,9 +981,9 @@ def stats_satisfaction_services(request):
             'note_moyenne': round(note_moy, 1),
         })
 
-        g_total_demandes += total_demandes
-        g_total_livraisons += total_livraisons
-        g_total_accuses += total_accuses
+        g_total_demandes += td
+        g_total_livraisons += tl
+        g_total_accuses += ta
         g_sat += sat
         g_insat += insat
         g_neut += neut
@@ -968,7 +1006,7 @@ def stats_satisfaction_services(request):
     context = {
         'date_range': date_range,
         'service_id': service_id,
-        'services': Service.objects.all().order_by('nom'),
+        'services': services_qs,
         'stats_services': stats_services,
         'global': {
             'total_demandes': g_total_demandes,
@@ -981,12 +1019,12 @@ def stats_satisfaction_services(request):
             'taux_reponse': g_taux_rep,
             'note_moyenne': round(g_note, 1),
         },
-        'chart_labels': _json_pour_script(labels),
-        'chart_sat': json.dumps(data_sat),
-        'chart_rep': json.dumps(data_rep),
-        'chart_notes': json.dumps(data_notes),
-        'chart_repartition_labels': json.dumps(['Satisfaits', 'Neutres', 'Insatisfaits']),
-        'chart_repartition_data': json.dumps([g_sat, g_neut, g_insat]),
+        'chart_labels': labels,
+        'chart_sat': data_sat,
+        'chart_rep': data_rep,
+        'chart_notes': data_notes,
+        'chart_repartition_labels': ['Satisfaits', 'Neutres', 'Insatisfaits'],
+        'chart_repartition_data': [g_sat, g_neut, g_insat],
         'magasin_actif': magasin_actif,
     }
     return render(request, 'stock/stats_satisfaction_services.html', context)

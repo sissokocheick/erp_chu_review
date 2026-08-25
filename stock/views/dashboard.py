@@ -21,6 +21,7 @@ from ..models import (
     Article, Mouvement, StockItem, Magasin,
     Fournisseur, Service)
 from ..decorators import catch_errors
+from ..services.isolation_service import get_magasins_autorises
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -33,10 +34,20 @@ _TTL_PEREMPTION = 120
 _TTL_HISTORIQUE = 60
 
 
-def _cache_key(magasin_id, bloc):
-    """Clé de cache par magasin et par bloc de données."""
-    scope = f"m{magasin_id}" if magasin_id else "all"
-    return f"dash:{scope}:{bloc}"
+def _cache_key(magasins_ids, bloc):
+    """Clé de cache déterministe pour un ensemble de magasins.
+
+    ✅ CORRECTION : l'ancienne clé « all » pour tout périmètre multi-magasins
+    faisait partager la même entrée de cache à des utilisateurs avec des
+    périmètres différents (fuite inter-magasins). L'empreinte de la liste
+    triée garantit un scope par périmètre réel.
+    """
+    import hashlib
+    ids = sorted(set(magasins_ids or []))
+    if len(ids) == 1:
+        return f"dash:m{ids[0]}:{bloc}"
+    empreinte = hashlib.md5(','.join(str(i) for i in ids).encode()).hexdigest()[:10]
+    return f"dash:set{empreinte}:{bloc}"
 
 
 def _magasin_actif(request):
@@ -53,7 +64,7 @@ def _magasin_actif(request):
 
 def _get_kpis(magasins_ids, aujourdhui):
     """KPIs du jour : 3 requêtes. Cache 30s."""
-    key = _cache_key(magasins_ids[0] if len(magasins_ids) == 1 else None, 'kpis')
+    key = _cache_key(magasins_ids, 'kpis')
     data = cache.get(key)
     if data is not None:
         return data
@@ -76,7 +87,7 @@ def _get_kpis(magasins_ids, aujourdhui):
 
 def _get_alertes(magasin_id, magasins_ids):
     """Alertes stock : 3 requêtes. Cache 60s."""
-    key = _cache_key(magasin_id, 'alertes')
+    key = _cache_key(magasins_ids, 'alertes')
     data = cache.get(key)
     if data is not None:
         return data
@@ -121,7 +132,7 @@ def _get_alertes(magasin_id, magasins_ids):
 
 def _get_charts(magasin_id, magasins_ids, aujourdhui):
     """Charts et agrégats 30j : ~8 requêtes. Cache 120s."""
-    key = _cache_key(magasin_id, 'charts')
+    key = _cache_key(magasins_ids, 'charts')
     data = cache.get(key)
     if data is not None:
         return data
@@ -237,7 +248,7 @@ def _get_charts(magasin_id, magasins_ids, aujourdhui):
 
 def _get_peremptions(magasin_id, magasins_ids, aujourdhui):
     """Péremptions : 4 requêtes. Cache 120s."""
-    key = _cache_key(magasin_id, 'peremption')
+    key = _cache_key(magasins_ids, 'peremption')
     data = cache.get(key)
     if data is not None:
         return data
@@ -297,7 +308,7 @@ def _get_peremptions(magasin_id, magasins_ids, aujourdhui):
 
 def _get_historique(magasin_id, magasins_ids, aujourdhui):
     """Historique 7 jours : 4 requêtes. Cache 60s."""
-    key = _cache_key(magasin_id, 'historique')
+    key = _cache_key(magasins_ids, 'historique')
     data = cache.get(key)
     if data is not None:
         return data
@@ -359,8 +370,14 @@ def invalidate_dashboard_cache(magasin_id=None):
 def dashboard_directeur(request):
     aujourdhui = timezone.now().date()
     magasin_actif = _magasin_actif(request)
-    magasins_ids = ([magasin_actif.id] if magasin_actif
-                    else list(Magasin.objects.values_list('id', flat=True)))
+    # ✅ CORRECTION : sans magasin actif, ne plus agréger TOUS les magasins
+    # mais uniquement le périmètre autorisé de l'utilisateur (anti-fuite).
+    if magasin_actif:
+        magasins_ids = [magasin_actif.id]
+    else:
+        magasins_ids = list(
+            get_magasins_autorises(request).values_list('id', flat=True)
+        )
     magasin_id = magasin_actif.id if magasin_actif else None
 
     # ── Charger chaque bloc (cache hit ou miss) ──

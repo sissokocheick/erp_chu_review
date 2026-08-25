@@ -66,7 +66,7 @@ def _afficher_retours(request):
     extra = {
         'services': Service.objects.all().order_by('nom'),
         'magasins': Magasin.objects.all().order_by('nom'),
-        'articles': Article.objects.all().order_by('designation'),
+        'articles': Article.objects.filter(is_deleted=False).order_by('designation').select_related('famille').prefetch_related('stocks__magasin')[:200],
         'magasin_actif': get_magasin_actif(request),
         'peut_creer': _has_perm_bon(request.user, 'add', 'RETOUR_SERVICE'),
         'peut_annuler': _has_perm_bon(request.user, 'cancel', 'RETOUR_SERVICE'),
@@ -411,7 +411,7 @@ def _afficher_retours_fournisseurs(request):
     extra = {
         'fournisseurs': Fournisseur.objects.all().order_by('raison_sociale'),
         'magasins': Magasin.objects.all().order_by('nom'),
-        'articles': Article.objects.all().order_by('designation'),
+        'articles': Article.objects.filter(is_deleted=False).order_by('designation').select_related('famille').prefetch_related('stocks__magasin')[:200],
         'magasin_actif': get_magasin_actif(request),
         'peut_creer': _has_perm_bon(request.user, 'add', 'RETOUR_FOURNISSEUR'),
         'peut_annuler': _has_perm_bon(request.user, 'cancel', 'RETOUR_FOURNISSEUR'),

@@ -819,27 +819,9 @@
               <i class="fas fa-box"></i> Resultats
             </div>
             <div id="dropdown-body">
-              {% for a in articles %}
-              <div class="article-option" data-id="{{ a.id }}" data-nom="{{ a.designation|escapejs }}" data-ref="{{ a.reference|default:''|escapejs }}" data-unite="{{ a.unite_distribution|default:'unite'|escapejs }}" data-famille="{{ a.famille.intitule|default:''|escapejs }}" onclick="ajouterArticle(this)" style="cursor:pointer;border-bottom:1px solid var(--border-light);">
-                <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;">
-                  <div style="flex:1;min-width:0;">
-                    <strong style="color:var(--primary);word-break:break-word;">{{ a.designation }}</strong>
-                    <div style="display:flex;gap:15px;margin-top:4px;flex-wrap:wrap;">
-                      {% if a.reference %}<small style="color:var(--text-muted);"><i class="fas fa-barcode"></i> {{ a.reference }}</small>{% endif %}
-                      {% if a.famille %}<small style="color:var(--text-muted);"><i class="fas fa-folder"></i> {{ a.famille.intitule }}</small>{% endif %}
-                      <small style="color:var(--text-muted);"><i class="fas fa-cube"></i> {{ a.unite_distribution|default:'unite' }}</small>
-                    </div>
-                  </div>
-                  <span style="background:var(--light-bg);padding:5px 12px;border-radius:20px;font-size:11px;color:var(--success);white-space:nowrap;">
-                    <i class="fas fa-plus-circle"></i> Ajouter
-                  </span>
-                </div>
-              </div>
-              {% empty %}
               <div style="padding:30px;text-align:center;color:var(--text-muted);">
-                <i class="fas fa-database" style="font-size:32px;margin-bottom:10px;display:block;"></i>Aucun article dans le catalogue
+                <i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;"></i>Tapez pour rechercher un article
               </div>
-              {% endfor %}
             </div>
           </div>
         </div>
@@ -1017,39 +999,48 @@
   let selectedIndex = -1;
   let visibleRows = [];
 
+  let searchAjaxTimer = null;
   function searchArticles(searchTerm) {
     if (!dropdownBody) return;
-    const rows = dropdownBody.querySelectorAll('.article-option');
-    const term = searchTerm.toLowerCase().trim();
-    let hasResults = false;
-    visibleRows = [];
+    const term = searchTerm.trim();
     selectedIndex = -1;
-    if (term.length < 1) { dropdown.style.display = 'none'; return; }
-    rows.forEach(row => {
-      const nom = row.getAttribute('data-nom')?.toLowerCase() || '';
-      const ref = row.getAttribute('data-ref')?.toLowerCase() || '';
-      const famille = row.getAttribute('data-famille')?.toLowerCase() || '';
-      if (nom.includes(term) || ref.includes(term) || famille.includes(term)) {
-        row.style.display = ''; hasResults = true; visibleRows.push(row);
-      } else {
-        row.style.display = 'none';
-      }
-    });
-    if (hasResults) {
-      dropdown.style.display = 'block';
-      const noResultDiv = dropdownBody.querySelector('.no-result');
-      if (noResultDiv) noResultDiv.remove();
-    } else {
-      dropdown.style.display = 'block';
-      let noResultDiv = dropdownBody.querySelector('.no-result');
-      if (!noResultDiv) {
-        const div = document.createElement('div');
-        div.className = 'no-result';
-        div.style.cssText = 'padding:30px;text-align:center;color:var(--text-muted);';
-        div.innerHTML = '<i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;"></i>Aucun article trouve<br><small>Verifiez l orthographe</small>';
-        dropdownBody.appendChild(div);
-      }
-    }
+    visibleRows = [];
+    if (term.length < 2) { dropdown.style.display = 'none'; return; }
+    // Show loading
+    dropdownBody.innerHTML = '<div style="padding:15px;text-align:center;color:var(--text-muted);"><i class="fas fa-spinner fa-spin"></i> Recherche...</div>';
+    dropdown.style.display = 'block';
+    // AJAX search
+    clearTimeout(searchAjaxTimer);
+    searchAjaxTimer = setTimeout(function() {
+      fetch('/api/articles/?q=' + encodeURIComponent(term) + '&limit=30', {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      })
+      .then(r => r.json())
+      .then(data => {
+        dropdownBody.innerHTML = '';
+        visibleRows = [];
+        if (data.articles && data.articles.length > 0) {
+          data.articles.forEach(a => {
+            const div = document.createElement('div');
+            div.className = 'article-option';
+            div.setAttribute('data-id', a.id);
+            div.setAttribute('data-nom', a.designation || '');
+            div.setAttribute('data-ref', a.reference || '');
+            div.setAttribute('data-unite', a.unite_distribution || 'unite');
+            div.setAttribute('onclick', 'ajouterArticle(this)');
+            div.style.cssText = 'cursor:pointer;border-bottom:1px solid var(--border-light);';
+            div.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;"><div style="flex:1;min-width:0;"><strong style="color:var(--primary);word-break:break-word;">' + escapeHtml(a.designation) + '</strong><div style="display:flex;gap:15px;margin-top:4px;flex-wrap:wrap;">' + (a.reference ? '<small style="color:var(--text-muted);"><i class="fas fa-barcode"></i> ' + escapeHtml(a.reference) + '</small>' : '') + '<small style="color:var(--text-muted);"><i class="fas fa-cube"></i> ' + escapeHtml(a.unite_distribution || 'unite') + '</small></div></div><span style="background:var(--light-bg);padding:5px 12px;border-radius:20px;font-size:11px;color:var(--success);white-space:nowrap;"><i class="fas fa-plus-circle"></i> Ajouter</span></div>';
+            dropdownBody.appendChild(div);
+            visibleRows.push(div);
+          });
+        } else {
+          dropdownBody.innerHTML = '<div style="padding:30px;text-align:center;color:var(--text-muted);"><i class="fas fa-search" style="font-size:32px;margin-bottom:10px;display:block;"></i>Aucun article trouvé<br><small>Vérifiez l\'orthographe</small></div>';
+        }
+      })
+      .catch(() => {
+        dropdownBody.innerHTML = '<div style="padding:15px;text-align:center;color:var(--danger);"><i class="fas fa-exclamation-triangle"></i> Erreur de recherche</div>';
+      });
+    }, 300);
   }
 
   function updateSelection() {

@@ -227,17 +227,10 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
 
     if request.method == 'POST' and request.FILES.get('document'):
         fichier = request.FILES['document']
-        if not fichier.name.lower().endswith(('.jpg', '.jpeg', '.png', '.pdf')):
-            messages.error(
-                request,
-                "Format invalide ! Seuls JPG, PNG et PDF sont autorisés."
-            )
-            return _safe_referer_redirect(request)
-        if fichier.size > MAX_FILE_SIZE:
-            messages.error(
-                request,
-                "Fichier trop lourd ! Maximum 1 Mo."
-            )
+        from core.file_validation import valider_scan_document
+        ok, erreur = valider_scan_document(fichier, taille_max=MAX_FILE_SIZE)
+        if not ok:
+            messages.error(request, f"⛔ {erreur}")
             return _safe_referer_redirect(request)
 
         # ═══════════════════════════════════════════════════════════════════
@@ -281,8 +274,19 @@ def upload_fichier_generique(request, app_label, model_name, obj_id, field_name)
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_articles')
 def api_articles_json(request):
-    """Retourne la liste des articles en JSON (pour sélection inventaire personnalisé)."""
-    articles = Article.objects.filter(
-        is_deleted=False
-    ).values('id', 'reference', 'designation').order_by('designation')
+    """Retourne la liste des articles en JSON avec recherche et limite.
+    ?q=terme → filtre par designation ou reference (insensible à la casse)
+    ?limit=50 → limite le nombre de résultats (défaut 50)
+    """
+    qs = Article.objects.filter(is_deleted=False).order_by('designation')
+    q = request.GET.get('q', '').strip()
+    if q:
+        from stock.views.common_views import normaliser_texte
+        q_norm = normaliser_texte(q)
+        if q_norm:
+            qs = qs.filter(
+                Q(designation__icontains=q) | Q(reference__icontains=q)
+            )
+    limit = min(int(request.GET.get('limit', 50)), 200)
+    articles = qs.values('id', 'reference', 'designation', 'unite_distribution').order_by('designation')[:limit]
     return JsonResponse({'articles': list(articles)})

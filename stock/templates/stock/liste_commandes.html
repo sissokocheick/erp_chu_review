@@ -787,22 +787,7 @@
           <div class="cmd-dd" id="cmd-dd">
             <table style="width:100%;border-collapse:collapse;margin:0;">
               <tbody id="cmd-dd-body">
-                {% for a in articles %}
-                <tr class="cmd-dd-item"
-                    data-id="{{ a.id }}" 
-                    data-ref="{{ a.reference|default:'-' }}"
-                    data-nom="{{ a.designation }}" 
-                    data-unite="{{ a.unite_distribution }}"
-                    data-famille-id="{{ a.famille.id|default:'' }}"
-                    style="display:none;">
-                  <td class="dd-ref" style="width:18%;">{{ a.reference|default:'—' }}</td>
-                  <td>
-                    <strong>{{ a.designation }}</strong>
-                    {% if a.famille %}<div class="dd-famille">{{ a.famille.intitule }}</div>{% endif %}
-                  </td>
-                  <td class="dd-unite" style="width:12%;">{{ a.unite_distribution }}</td>
-                </tr>
-                {% endfor %}
+                {% comment %}Articles chargés via AJAX (api_articles_json){% endcomment %}
               </tbody>
             </table>
           </div>

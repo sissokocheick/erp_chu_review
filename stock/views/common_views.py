@@ -4,13 +4,22 @@ Helpers pour standardiser les vues fonctionnelles (FBV) du module stock.
 """
 from datetime import datetime
 import unicodedata
-from django.db.models import Q
+from django.core.exceptions import FieldError
+from django.db import connection
+from django.db.models import CharField, F, Func, Q
 from django.core.paginator import Paginator
 from core.utils import paginer
 from django.shortcuts import render
 from ..models import Magasin
 from django.urls import reverse
 from urllib.parse import urlencode
+
+# Constantes de normalisation SQL : chaque caractère accentué de FROM est
+# remplacé par son équivalent de TO ; les apostrophes (en fin de FROM,
+# au-delà de la longueur de TO) sont supprimées. Mêmes règles que
+# normaliser_texte(), appliquées côté base de données.
+_ACCENTS_SQL_FROM = "àáâãäåçèéêëìíîïñòóôõöùúûüýÿ'’‘"
+_ACCENTS_SQL_TO = "aaaaaaceeeeiiiinooooouuuuyy"
 
 
 def normaliser_texte(texte):
@@ -21,6 +30,75 @@ def normaliser_texte(texte):
         if unicodedata.category(c) != 'Mn'
     ).lower()
     return normalise.replace("'", '').replace('\u2019', '').replace('\u2018', '')
+
+
+def _expr_sans_accents(champ):
+    """Expression PostgreSQL : LOWER(champ) privé d'accents et d'apostrophes.
+
+    TRANSLATE/LOWER sont natifs PostgreSQL (aucune extension requise).
+    Les constantes _ACCENTS_SQL_* sont du code, pas des entrées utilisateur :
+    la requête utilisateur ne transite jamais dans le texte SQL. L'apostrophe
+    droite est doublée pour rester un littéral SQL valide.
+    """
+    from_sql = _ACCENTS_SQL_FROM.replace("'", "''")
+    return Func(
+        F(champ),
+        function='TRANSLATE',
+        template=(
+            "TRANSLATE(LOWER(%(expressions)s), "
+            f"'{from_sql}', '{_ACCENTS_SQL_TO}')"
+        ),
+        output_field=CharField(),
+    )
+
+
+def _chemin_multi_valeurs(model, chemin):
+    """True si un chemin 'a__b__c' traverse une relation multiple (M2M ou
+    reverse FK) — auquel cas la jointure peut dupliquer des lignes."""
+    m = model
+    for partie in chemin.split('__')[:-1]:
+        try:
+            f = m._meta.get_field(partie)
+        except Exception:
+            return True  # champ inconnu → prudence
+        if getattr(f, 'one_to_many', False) or getattr(f, 'many_to_many', False):
+            return True
+        if not f.is_relation:
+            return False
+        m = f.related_model
+    return False
+
+
+def _filtrer_texte_sql(qs, q_norm, champs):
+    """Filtre accent-insensible exécuté par la base (jamais de chargement
+    mémoire de la table). Lève une exception si un chemin est invalide →
+    repli Python assuré par l'appelant."""
+    from django.core.exceptions import FieldDoesNotExist
+
+    annotations = {}
+    q_obj = Q()
+    distinct = False
+    for i, chemin in enumerate(champs):
+        # Valide le chemin via model Meta (lève FieldDoesNotExist sinon)
+        m = qs.model
+        parties = chemin.split('__')
+        for j, partie in enumerate(parties):
+            try:
+                f = m._meta.get_field(partie)
+            except FieldDoesNotExist:
+                raise FieldError(f"Chemin de recherche invalide : {chemin}")
+            if j < len(parties) - 1:
+                if not f.is_relation:
+                    raise FieldError(f"Chemin de recherche invalide : {chemin}")
+                m = f.related_model
+        annotations[f'_nx{i}'] = _expr_sans_accents(chemin)
+        # icontains : %, _ et \ sont échappés automatiquement par Django
+        # (PatternLookup / connection.ops.pattern_escape).
+        q_obj |= Q(**{f'_nx{i}__icontains': q_norm})
+        if _chemin_multi_valeurs(qs.model, chemin):
+            distinct = True
+    qs = qs.annotate(**annotations).filter(q_obj)
+    return qs.distinct() if distinct else qs
 
 
 def _get_valeurs(obj, chemin):
@@ -47,6 +125,11 @@ def filtrer_texte(qs, q, champs):
     champs : chemins de champs, ex : ['designation', 'reference', 'article__designation'].
     Retourne un QuerySet (si l'entrée était un QuerySet) ou une liste.
 
+    ✅ CORRECTION PERF : sur QuerySet + PostgreSQL, le filtre est exécuté par
+    la base (LOWER + TRANSLATE natifs, aucune extension requise) — plus aucun
+    chargement de table entière en mémoire ni re-requête par pk__in.
+    Repli Python conservé pour les listes déjà matérialisées.
+
     IMPORTANT : conserve toujours un QuerySet si l'entrée est un QuerySet,
     pour que les appels .filter()/.order_by() en aval fonctionnent.
     """
@@ -55,7 +138,16 @@ def filtrer_texte(qs, q, champs):
     q_norm = normaliser_texte(q)
     if not q_norm:
         return qs
-    # Sauvegarder la référence QuerySet AVANT conversion en liste.
+
+    # Voie SQL : QuerySet sur PostgreSQL → filtre côté base de données.
+    if hasattr(qs, 'all') and getattr(qs, 'model', None) is not None \
+            and connection.vendor == 'postgresql':
+        try:
+            return _filtrer_texte_sql(qs, q_norm, champs)
+        except FieldError:
+            pass  # chemin inattendu → repli Python (comportement historique)
+
+    # Voie Python : listes matérialisées (ou SGBD sans TRANSLATE).
     qs_model = getattr(qs, 'model', None)
     if hasattr(qs, 'all'):
         qs = list(qs)

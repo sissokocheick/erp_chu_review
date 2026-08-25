@@ -181,9 +181,14 @@ def liste_sorties(request):
 
     magasins = magasins_autorises.order_by('nom')
     services = Service.objects.all().order_by('nom')
-    articles = Article.objects.all().prefetch_related(
+    # ✅ CORRECTION PERF : conserver prefetch_related('stocks__magasin') —
+    # sans lui, chaque ligne de la modale interroge la base (N+1 mesuré :
+    # 115 requêtes / page). Le filtre is_deleted + plafond 200 sont conservés.
+    articles = Article.objects.filter(is_deleted=False).order_by(
+        'designation'
+    ).select_related('famille').prefetch_related(
         'stocks__magasin'
-    ).order_by('designation')
+    )[:200]
     motifs_annulation = MotifAnnulation.objects.filter(
         actif=True
     ).order_by('libelle')
@@ -364,32 +369,27 @@ def remplacer_scan_sortie(request, bon_id):
     )
 
     if request.method == 'POST':
+        from core.file_validation import valider_scan_document
         nouveau_scan = request.FILES.get('nouveau_scan')
         if not nouveau_scan:
             messages.error(request, "❌ Aucun fichier sélectionné.")
-        elif nouveau_scan.size > MAX_FILE_SIZE:
-            messages.warning(
-                request,
-                f"⚠️ Fichier trop lourd ({nouveau_scan.size // 1024} Ko > 1 Mo)."
-            )
-        elif not nouveau_scan.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png')):
-            messages.warning(
-                request,
-                "⚠️ Format invalide. Seuls PDF, JPG et PNG sont acceptés."
-            )
         else:
-            if bon.document_scan and bon.document_scan.name and default_storage.exists(bon.document_scan.name):
-                default_storage.delete(bon.document_scan.name)
+            ok, erreur = valider_scan_document(nouveau_scan, taille_max=MAX_FILE_SIZE)
+            if not ok:
+                messages.warning(request, f"⚠️ Scan refusé : {erreur}")
+            else:
+                if bon.document_scan and bon.document_scan.name and default_storage.exists(bon.document_scan.name):
+                    default_storage.delete(bon.document_scan.name)
 
-            bon.document_scan = nouveau_scan
-            bon.date_upload_scan = timezone.now()
-            bon.upload_scan_par = request.user
-            bon.save(update_fields=[
-                'document_scan', 'date_upload_scan', 'upload_scan_par'
-            ])
-            messages.success(
-                request,
-                f"✅ Fichier scanné remplacé pour le bon {bon.numero_bon}."
-            )
+                bon.document_scan = nouveau_scan
+                bon.date_upload_scan = timezone.now()
+                bon.upload_scan_par = request.user
+                bon.save(update_fields=[
+                    'document_scan', 'date_upload_scan', 'upload_scan_par'
+                ])
+                messages.success(
+                    request,
+                    f"✅ Fichier scanné remplacé pour le bon {bon.numero_bon}."
+                )
 
     return redirect('liste_sorties')

@@ -40,7 +40,7 @@ class SortieStockForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.fields['article'].queryset = Article.objects.filter(
             stocks__quantite_physique__gt=0
-        ).distinct()
+        ).distinct()[:200]
         self.fields['magasin'].queryset = Magasin.objects.all()
         self.fields['service_demandeur'].queryset = Service.objects.all()
         self.fields['service_demandeur'].label = "Service Demandeur"
@@ -110,7 +110,7 @@ class EntreeStockForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.utilisateur = kwargs.pop('utilisateur', None)
         super().__init__(*args, **kwargs)
-        self.fields['article'].queryset = Article.objects.all()
+        self.fields['article'].queryset = Article.objects.filter(is_deleted=False).order_by('designation')[:200]
         self.fields['magasin'].queryset = Magasin.objects.all()
         self.fields['fournisseur'].queryset = Fournisseur.objects.all()
 
@@ -360,7 +360,7 @@ class AjustementForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.utilisateur = kwargs.pop('utilisateur', None)
         super().__init__(*args, **kwargs)
-        self.fields['article'].queryset = Article.objects.all()
+        self.fields['article'].queryset = Article.objects.filter(is_deleted=False).order_by('designation')[:200]
         self.fields['magasin'].queryset = Magasin.objects.all()
         for champ in ['magasin', 'commentaire', 'motif']:
             if champ in self.fields:

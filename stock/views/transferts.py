@@ -149,7 +149,7 @@ def liste_transferts(request):
         'magasins_sources': magasins_autorises.order_by('nom'),
         'magasins_destinations': Magasin.objects.exclude(
             is_deleted=True).order_by('nom'),
-        'articles': Article.objects.filter(is_deleted=False).order_by('designation'),
+        'articles': Article.objects.filter(is_deleted=False).order_by('designation').select_related('famille').prefetch_related('stocks__magasin')[:200],
         'q_transfert': q,
         'onglet': onglet,
         'per_page': per_page,

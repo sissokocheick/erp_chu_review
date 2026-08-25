@@ -3,6 +3,7 @@ brotli>=1.2.0
 cffi>=1.17.1
 charset-normalizer>=3.4.5
 colorama>=0.4.6
+cryptography>=42.0  # chiffrement des secrets SMTP/SMS en base (core/crypto.py)
 cssselect2>=0.9.0
 dj-database-url>=3.1.2
 Django>=6.0.8,<7.0

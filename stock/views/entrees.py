@@ -72,9 +72,7 @@ def _afficher_entrees(request):
     extra = {
         'magasins': get_magasins_autorises(request).order_by('nom'),
         'fournisseurs': Fournisseur.objects.all().order_by('raison_sociale'),
-        'articles': Article.objects.all().prefetch_related(
-            'stocks__magasin'
-        ).order_by('designation'),
+        'articles': Article.objects.filter(is_deleted=False).order_by('designation').select_related('famille').prefetch_related('stocks__magasin')[:200],
         'motifs_annulation': MotifAnnulation.objects.filter(actif=True).order_by('libelle'),
         'peut_creer': _has_perm_bon(request.user, 'add', 'ENTREE'),
         'peut_annuler': _has_perm_bon(request.user, 'cancel', 'ENTREE'),
@@ -247,14 +245,13 @@ def _creer_entree(request):
 
 def _traiter_upload_scan(request, bon):
     """Helper isolé pour la gestion du fichier scanné."""
+    from core.file_validation import valider_scan_document
     fichier_scan = request.FILES.get('document_scan')
     if not fichier_scan:
         return
-    if fichier_scan.size > MAX_FILE_SIZE:
-        messages.warning(request, f"⚠️ Fichier scanné trop lourd ({fichier_scan.size // 1024} Ko > 1 Mo). Bon créé sans scan.")
-        return
-    if not fichier_scan.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png')):
-        messages.warning(request, "⚠️ Format scanné invalide. Bon créé sans scan.")
+    ok, erreur = valider_scan_document(fichier_scan, taille_max=MAX_FILE_SIZE)
+    if not ok:
+        messages.warning(request, f"⚠️ Scan non joint : {erreur}")
         return
     bon.document_scan = fichier_scan
     bon.date_upload_scan = timezone.now()

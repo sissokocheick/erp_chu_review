@@ -8,8 +8,8 @@ from django.http import JsonResponse
 from accounts.permissions import verifier_permission
 from ...decorators import catch_errors
 from ...services.parametre_service import (
-    
     get_dependances,
+    get_dependances_batch,
     redirect_url_with_tab,
     parse_optional_id,
     safe_delete_entity,
@@ -56,8 +56,9 @@ def _handle_get(request):
     fonctions_paginees, per_page_fonction = paginer(fonctions, request, per_page_key='fonction')
 
     for page in (services_pagines, specialites_pagines, fonctions_paginees):
+        deps_map = get_dependances_batch(list(page))
         for obj in page:
-            obj._deps = get_dependances(obj)
+            obj._deps = deps_map.get(obj.pk, {})
             obj.is_deletable = not bool(obj._deps)
 
     # --- Forms d'édition ---

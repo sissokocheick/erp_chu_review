@@ -103,7 +103,7 @@ def _afficher_bons_hors_stock(request):
         'magasin_actif': magasin_actif,
         'fournisseurs': Fournisseur.objects.filter(est_agree=True),
         'services': Service.objects.all(),
-        'articles': Article.objects.all().order_by('designation'),
+        'articles': Article.objects.filter(is_deleted=False).order_by('designation').select_related('famille').prefetch_related('stocks__magasin')[:200],
         'beneficiaires': Beneficiaire.objects.all().order_by('nom_complet'),
         'motifs_annulation': MotifAnnulation.objects.filter(actif=True),
         'peut_creer': _has_perm_bon(request.user, 'add', 'SORTIE_HORS_STOCK'),
