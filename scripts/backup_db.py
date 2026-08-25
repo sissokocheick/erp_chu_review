@@ -215,6 +215,28 @@ def run_backup(pg_dump, params, dest, quiet, dry_run):
     return True, ''
 
 
+def copy_to_remote(local_path, host, user, remote_dir, quiet, dry_run):
+    """Copie le backup local vers un serveur distant via SSH/SCP."""
+    remote_path = f'{user}@{host}:{remote_dir}/'
+    cmd = ['scp', '-o', 'StrictHostKeyChecking=no', str(local_path), remote_path]
+    if dry_run:
+        if not quiet:
+            print(f"(dry-run) copierait {local_path.name} vers {remote_path}")
+        return True
+    try:
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode == 0:
+            if not quiet:
+                print(f"OK  : copie vers {remote_path}{local_path.name}")
+            return True
+        else:
+            print(f"ERR : SCP echoue : {(proc.stderr or proc.stdout).strip()}", file=sys.stderr)
+            return False
+    except OSError as exc:
+        print(f"ERR : SCP introuvable ({exc})", file=sys.stderr)
+        return False
+
+
 def main():
     # Console Windows (cp1252) : force UTF-8 avec remplacement pour ne jamais
     # planter à l'affichage (accents, em-dash, …).
@@ -231,6 +253,13 @@ def main():
     ap.add_argument('--keep-months', type=int, default=12)
     ap.add_argument('--quiet', action='store_true')
     ap.add_argument('--dry-run', action='store_true')
+    # Options de copie distante
+    ap.add_argument('--remote-host', default=os.environ.get('BACKUP_REMOTE_HOST'),
+                     help='IP ou hostname du serveur distant (ou BACKUP_REMOTE_HOST)')
+    ap.add_argument('--remote-user', default=os.environ.get('BACKUP_REMOTE_USER', 'backup'),
+                     help='User SSH du serveur distant (defaut: backup)')
+    ap.add_argument('--remote-dir', default=os.environ.get('BACKUP_REMOTE_DIR', '/home/backup/backups'),
+                     help='Dossier distant pour les backups')
     args = ap.parse_args()
 
     load_env()
@@ -284,6 +313,11 @@ def main():
     size = dest.stat().st_size
     if not args.quiet:
         print(f"OK  : {dest.name} ({size / 1024:.0f} Ko)")
+
+    # ── Copie vers serveur distant (si configuré) ──
+    if args.remote_host:
+        copy_to_remote(dest, args.remote_host, args.remote_user, args.remote_dir,
+                       args.quiet, args.dry_run)
 
     # ── Rétention (uniquement après une sauvegarde réussie) ──
     files = list_backups(backup_dir)
