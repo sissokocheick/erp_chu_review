@@ -383,8 +383,13 @@ class Immobilisation(TracabiliteModel):
             vnc = self.valeur_acquisition - self.amortissement_annuel * self.annees_ecoulees
             return max(self.valeur_residuelle, vnc)
         # Degressif (taux = 1/duree × coeff 1.5 si duree <= 5 ans, sinon 2)
-        coeff = Decimal('1.5') if self.duree_amortissement_ans <= 5 else Decimal('2.0')
-        taux  = coeff / Decimal(str(self.duree_amortissement_ans))
+        # CORRECTION : garde anti-DivisionByZero - duree absente, nulle ou negative
+        duree = self.duree_amortissement_ans
+        if not duree or Decimal(str(duree)) <= 0:
+            return max(self.valeur_residuelle, self.valeur_acquisition)
+
+        coeff = Decimal('1.5') if duree <= 5 else Decimal('2.0')
+        taux  = coeff / Decimal(str(duree))
         vnc   = self.valeur_acquisition * (1 - taux) ** int(self.annees_ecoulees)
         return max(self.valeur_residuelle, vnc)
 

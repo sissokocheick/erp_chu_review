@@ -330,6 +330,9 @@ class Article(TracabiliteModel, SoftDeleteModel):
                 name='unique_article_actif'
             ),
         ]
+        indexes = [
+            models.Index(fields=['famille'], name='idx_article_famille'),
+        ]
 
 # ==========================================================
 # 3. LE STOCK PHYSIQUE
@@ -385,7 +388,7 @@ class StockItem(models.Model):
         validators=[MinValueValidator(Decimal('0.00'))]
     )
     batch_number      = models.CharField(max_length=100, blank=True, null=True, db_index=True)
-    expiry_date       = models.DateField(blank=True, null=True)
+    expiry_date       = models.DateField(blank=True, null=True, db_index=True)
     history           = HistoricalRecords()
 
     @property
@@ -420,6 +423,10 @@ class StockItem(models.Model):
                 condition=models.Q(batch_number__isnull=True),
                 name='unique_stockitem_sans_lot'
             ),
+        ]
+        indexes = [
+            models.Index(fields=['article'], name='idx_stockitem_article'),
+            models.Index(fields=['magasin'], name='idx_stockitem_magasin'),
         ]
 
 # ==========================================================
@@ -464,7 +471,7 @@ class Mouvement(models.Model):
     hash_preuve        = models.CharField(max_length=256, blank=True, help_text="SHA-256 de l'horodatage + user + article + quantité (auto-généré)")
     est_annule         = models.BooleanField(default=False, verbose_name="Annulé", help_text="Mouvement annulé (soft-delete)")
     commentaire        = models.TextField(blank=True, null=True)
-    numero_lot         = models.CharField(max_length=50, blank=True, null=True)
+    numero_lot         = models.CharField(max_length=50, blank=True, null=True, db_index=True)
     date_peremption    = models.DateField(blank=True, null=True, db_index=True)
     history            = HistoricalRecords()
 
@@ -637,6 +644,12 @@ class Mouvement(models.Model):
 
     def __str__(self):
         return f"{self.type_mouvement} — {self.article.designation} x{self.quantite}"
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['type_mouvement', 'date_mouvement'], name='idx_mouv_type_date'),
+            models.Index(fields=['magasin'], name='idx_mouv_magasin'),
+        ]
 
 class Ajustement(TracabiliteModel, SoftDeleteModel):
     MOTIFS = (
@@ -1014,6 +1027,16 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
                 name='unique_bon_actif'
             ),
         ]
+        indexes = [
+            models.Index(fields=['type_bon', 'date_bon'], name='idx_bon_type_date'),
+            models.Index(fields=['magasin'], name='idx_bon_magasin'),
+            models.Index(fields=['statut_validation'], name='idx_bon_statut'),
+            models.Index(
+                fields=['type_bon'],
+                condition=models.Q(is_deleted=False),
+                name='idx_bon_type_active',
+            ),
+        ]
         permissions = [
             ('can_add_bon_entree',      "Peut créer des bons d'entrée"),
             ('can_add_bon_sortie',      'Peut créer des bons de sortie'),
@@ -1112,6 +1135,10 @@ class LigneBon(models.Model):
                 condition=models.Q(quantite_servie__lte=models.F('quantite')) | models.Q(quantite_servie__isnull=True),
                 name='lignebon_servie_lte_demandee'
             ),
+        ]
+        indexes = [
+            models.Index(fields=['bon'], name='idx_ligne_bon'),
+            models.Index(fields=['article'], name='idx_ligne_article'),
         ]
 
 # ==========================================================
@@ -1250,6 +1277,9 @@ class Commande(SoftDeleteModel):
         verbose_name        = "Commande"
         verbose_name_plural = "Commandes"
         ordering            = ['-date_commande']
+        indexes = [
+            models.Index(fields=['statut_validation'], name='idx_cmd_statut'),
+        ]
 
 
 class LigneCommande(models.Model):
@@ -1442,6 +1472,10 @@ class DemandeMateriel(SoftDeleteModel):
         verbose_name        = "Demande de matériel"
         verbose_name_plural = "Demandes de matériel"
         ordering            = ['-date_demande']
+        indexes = [
+            models.Index(fields=['statut'], name='idx_demande_statut'),
+            models.Index(fields=['date_demande'], name='idx_demande_date'),
+        ]
 
 class LigneDemande(models.Model):
     demande           = models.ForeignKey(DemandeMateriel, on_delete=models.CASCADE, related_name='lignes_demande')

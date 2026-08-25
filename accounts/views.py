@@ -1193,8 +1193,6 @@ def page_utilisateurs(request):
 
 
             # Telephone : exactement 10 chiffres (format 01 02 03 04 05)
-
-
             if contact and len(contact) != 10:
 
 

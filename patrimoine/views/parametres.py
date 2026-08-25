@@ -461,6 +461,8 @@ def editer_schema(request, pk):
 
 @login_required(login_url="/auth/login/")
 
+@patrimoine_required
+
 def ajax_modeles(request):
 
     marque_id = request.GET.get('marque')
@@ -469,6 +471,8 @@ def ajax_modeles(request):
 
 
 @login_required(login_url="/auth/login/")
+
+@patrimoine_required
 
 def ajax_batiments(request):
 
@@ -484,6 +488,8 @@ def ajax_batiments(request):
 
 
 @login_required(login_url="/auth/login/")
+
+@patrimoine_required
 
 def ajax_localisation(request):
 
@@ -556,6 +562,8 @@ def ajax_localisation(request):
 
 @login_required(login_url="/auth/login/")
 
+@patrimoine_required
+
 def ajax_specs_schema(request):
 
     try:
@@ -570,6 +578,8 @@ def ajax_specs_schema(request):
 
 
 @login_required(login_url="/auth/login/")
+
+@patrimoine_required
 
 def ajax_vnc(request, pk):
 

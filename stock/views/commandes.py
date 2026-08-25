@@ -80,7 +80,7 @@ def liste_commandes(request):
         ).order_by('-date_commande')
 
     fournisseurs = Fournisseur.objects.all().order_by('raison_sociale')
-    articles = Article.objects.all().select_related('famille').order_by('designation')
+    articles = Article.objects.filter(is_deleted=False).select_related('famille').order_by('designation')[:200]
     familles = FamilleArticle.objects.all().order_by('intitule')
 
     statut_filtre = request.GET.get('statut', '')
@@ -608,7 +608,7 @@ def modifier_commande(request, commande_id):
         return redirect('liste_commandes')
 
     fournisseurs = Fournisseur.objects.all()
-    articles = Article.objects.all().select_related('famille')
+    articles = Article.objects.filter(is_deleted=False).order_by('designation')[:200].select_related('famille')
     
     # Si la commande a déjà une famille, on pré-filtre les articles
     if commande.famille_id:
@@ -778,12 +778,10 @@ def joindre_bon_livraison(request, commande_id):
         messages.error(request, "⛔ Aucun fichier sélectionné.")
         return redirect('liste_receptions')
 
-    if fichier.size > MAX_FILE_SIZE:
-        messages.error(request, f"⛔ Fichier trop lourd ({fichier.size // 1024} Ko). Maximum 1 Mo.")
-        return redirect('liste_receptions')
-
-    if not fichier.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png')):
-        messages.error(request, "⛔ Format invalide. Seuls PDF, JPG et PNG sont acceptés.")
+    from core.file_validation import valider_scan_document
+    ok, erreur = valider_scan_document(fichier, taille_max=MAX_FILE_SIZE)
+    if not ok:
+        messages.error(request, f"⛔ {erreur}")
         return redirect('liste_receptions')
 
     # ── Récupération du bon d'entrée lié (optionnel mais recommandé) ──
@@ -840,12 +838,10 @@ def remplacer_bon_livraison(request, bon_id):
         messages.error(request, "⛔ Aucun fichier sélectionné.")
         return redirect('liste_receptions')
 
-    if fichier.size > MAX_FILE_SIZE:
-        messages.error(request, f"⛔ Fichier trop lourd ({fichier.size // 1024} Ko). Maximum 1 Mo.")
-        return redirect('liste_receptions')
-
-    if not fichier.name.lower().endswith(('.pdf', '.jpg', '.jpeg', '.png')):
-        messages.error(request, "⛔ Format invalide. Seuls PDF, JPG et PNG sont acceptés.")
+    from core.file_validation import valider_scan_document
+    ok, erreur = valider_scan_document(fichier, taille_max=MAX_FILE_SIZE)
+    if not ok:
+        messages.error(request, f"⛔ {erreur}")
         return redirect('liste_receptions')
 
     try:

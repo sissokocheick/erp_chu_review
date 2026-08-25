@@ -30,17 +30,15 @@ logger = logging.getLogger(__name__)
 
 
 def _valider_fichier_scane(fichier, extensions=('.pdf', '.jpg', '.jpeg', '.png'), taille_max=2 * 1024 * 1024):
-    """Valide un upload de scan/justificatif : extension + taille.
+    """Valide un upload de scan/justificatif : extension + magic bytes + taille.
 
     Retourne (ok, message_erreur).
     """
     if not fichier:
         return True, None
-    if not fichier.name.lower().endswith(extensions):
-        return False, "Format invalide ! Seuls PDF, JPG et PNG sont autorisés."
-    if fichier.size > taille_max:
-        return False, f"Fichier trop lourd ({fichier.size // 1024} Ko > {taille_max // 1024} Ko)."
-    return True, None
+    from core.file_validation import valider_fichier_upload
+    exts = tuple(e.lstrip('.') for e in extensions)
+    return valider_fichier_upload(fichier, exts, taille_max)
 
 
 def _valider_image(fichier, taille_max=2 * 1024 * 1024):

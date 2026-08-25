@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 # stock/services/stock_transaction_service.py
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.db.models import Case, Value, When
 from django.core.exceptions import ValidationError
 from django.utils import timezone
@@ -24,6 +24,11 @@ class StockTransactionService:
         'TRANSFERT_SORTIE': 'TRANSFERT_ENTREE',
         'TRANSFERT_ENTREE': 'TRANSFERT_SORTIE',
     }
+
+    # Types de mouvement qui AUGMENTENT le stock (utilisés pour le recalcul CMUP)
+    TYPES_ENTREE = (
+        'ENTREE', 'RETOUR_SERVICE', 'AJUSTEMENT_POS', 'INVENTAIRE_POS', 'TRANSFERT_ENTREE'
+    )
 
     @staticmethod
     def resoudre_lots_fefo(article, magasin, quantite):
@@ -151,13 +156,23 @@ class StockTransactionService:
                 batch_number=batch,
             )
         except StockItem.DoesNotExist:
-            stock_item = StockItem.objects.create(
-                article=mouvement.article,
-                magasin=mouvement.magasin,
-                batch_number=batch,
-                quantite_physique=0,
-                valeur_cmup=mouvement.prix_unitaire or 0,
-            )
+            try:
+                with transaction.atomic():
+                    stock_item = StockItem.objects.create(
+                        article=mouvement.article,
+                        magasin=mouvement.magasin,
+                        batch_number=batch,
+                        quantite_physique=0,
+                        valeur_cmup=mouvement.prix_unitaire or 0,
+                    )
+            except IntegrityError:
+                # ✅ CORRECTION : deux requêtes concurrentes peuvent créer le
+                # même StockItem (contrainte unique) — reprendre sous verrou.
+                stock_item = StockItem.objects.select_for_update().get(
+                    article=mouvement.article,
+                    magasin=mouvement.magasin,
+                    batch_number=batch,
+                )
 
         # Propager la date de péremption si présente
         if mouvement.date_peremption:
@@ -273,8 +288,48 @@ class StockTransactionService:
         contre_mouvement.save(update_stock=False)
         cls._maj_stock(contre_mouvement)
 
+        # ✅ CORRECTION : quand on annule une ENTRÉE, son prix ne doit plus
+        # compter dans le CMUP — recalcul depuis l'historique des entrées
+        # restantes (aligné sur Mouvement._reverse_stock_effect).
+        if mouvement_original.type_mouvement in cls.TYPES_ENTREE:
+            cls._recalculer_cmup_apres_annulation(mouvement_original)
+
         # ✅ CORRECTION : marquer le mouvement original comme annulé
         mouvement_original.est_annule = True
         mouvement_original.save(update_fields=['est_annule'], update_stock=False)
 
         return contre_mouvement
+
+    @classmethod
+    def _recalculer_cmup_apres_annulation(cls, mouvement_annule):
+        """Recalcule le CMUP du StockItem après l'annulation d'une entrée,
+        en excluant le mouvement annulé et les entrées déjà annulées."""
+        filtre = {
+            'article': mouvement_annule.article,
+            'magasin': mouvement_annule.magasin,
+            'batch_number': mouvement_annule.numero_lot,
+        }
+        stock_item = StockItem.objects.select_for_update().filter(**filtre).first()
+        if stock_item is None:
+            return
+
+        entrees_restantes = Mouvement.objects.filter(
+            article=mouvement_annule.article,
+            magasin=mouvement_annule.magasin,
+            numero_lot=mouvement_annule.numero_lot,
+            type_mouvement__in=cls.TYPES_ENTREE,
+            prix_unitaire__isnull=False,
+            est_annule=False,
+        ).exclude(pk=mouvement_annule.pk)
+
+        total_qte = 0
+        total_val = Decimal('0.00')
+        for mvt in entrees_restantes:
+            total_qte += mvt.quantite
+            total_val += Decimal(str(mvt.prix_unitaire)) * mvt.quantite
+
+        if total_qte > 0:
+            stock_item.valeur_cmup = (total_val / total_qte).quantize(Decimal('0.01'))
+        else:
+            stock_item.valeur_cmup = Decimal('0.00')
+        stock_item.save(update_fields=['valeur_cmup'])

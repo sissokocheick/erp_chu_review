@@ -10,6 +10,13 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from simple_history.models import HistoricalRecords
 
+from .crypto import SecretCharFieldMixin
+
+
+class SecretCharField(SecretCharFieldMixin, models.CharField):
+    """CharField chiffré en base (secrets SMTP/SMS) — voir core/crypto.py."""
+    pass
+
 
 class TraceabiliteMixin(models.Model):
     """
@@ -442,8 +449,9 @@ class ConfigurationNotification(models.Model):
     smtp_user = models.CharField(
         max_length=200, blank=True, default="", verbose_name="Utilisateur SMTP"
     )
-    smtp_password = models.CharField(
-        max_length=200, blank=True, default="", verbose_name="Mot de passe SMTP"
+    smtp_password = SecretCharField(
+        max_length=512, blank=True, default="", verbose_name="Mot de passe SMTP",
+        help_text="Stocké chiffré en base."
     )
     email_expediteur = models.EmailField(
         max_length=254, blank=True, default="",
@@ -472,10 +480,10 @@ class ConfigurationNotification(models.Model):
         verbose_name="URL de l'API SMS",
         help_text="Endpoint HTTP appelé pour envoyer un SMS (méthode POST)."
     )
-    sms_api_key = models.CharField(
-        max_length=200, blank=True, default="",
+    sms_api_key = SecretCharField(
+        max_length=512, blank=True, default="",
         verbose_name="Clé API / Token",
-        help_text="Envoyée dans l'en-tête 'Authorization: Bearer <clé>'."
+        help_text="Envoyée dans l'en-tête 'Authorization: Bearer <clé>'. Stockée chiffrée en base."
     )
     sms_expediteur = models.CharField(
         max_length=20, blank=True, default="",

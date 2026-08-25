@@ -373,16 +373,12 @@ def import_excel(request):
         # NB : openpyxl ne lit PAS le format .xls hérité — n'accepter que
         # .xlsx, et borner la taille (une archive zip renommée et gonflée
         # pouvait épuiser la mémoire).
-        if not fichier.name.lower().endswith('.xlsx'):
-
-            messages.error(request, "Format accepté : .xlsx uniquement (le format .xls hérité n'est pas lisible).")
-
-            return render(request, 'patrimoine/import.html', {'types': types})
-
-        if fichier.size > 5 * 1024 * 1024:
-
-            messages.error(request, "Fichier trop volumineux (5 Mo maximum).")
-
+        # ✅ CORRECTION : vérification magic bytes (archive ZIP) en plus de
+        # l'extension — un fichier renommé .xlsx est refusé.
+        from core.file_validation import valider_classeur_xlsx
+        ok_fichier, erreur_fichier = valider_classeur_xlsx(fichier, taille_max=5 * 1024 * 1024)
+        if not ok_fichier:
+            messages.error(request, erreur_fichier)
             return render(request, 'patrimoine/import.html', {'types': types})
 
 

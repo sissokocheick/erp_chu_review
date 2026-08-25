@@ -199,6 +199,17 @@ class DocumentGenerator:
             from core.pdf_chromium import html_to_pdf
             return html_to_pdf(html_string)
         except Exception as e:
+            # ✅ CORRECTION : garde si WeasyPrint n'a pas pu être importé
+            # (dépendances système manquantes) — erreur explicite au lieu
+            # d'un crash TypeError sur HTML=None.
+            if HTML is None:
+                logger.error(
+                    "[PDF] Chromium ET WeasyPrint indisponibles — PDF impossible"
+                )
+                raise RuntimeError(
+                    "Génération PDF indisponible : Chromium et WeasyPrint "
+                    "sont tous deux indisponibles sur ce serveur."
+                )
             logger.debug(f"[PDF] Chromium indisponible ({e}), fallback WeasyPrint")
             return HTML(string=html_string).write_pdf()
 

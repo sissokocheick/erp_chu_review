@@ -113,7 +113,11 @@ def journal_historique(request):
         history_date__date__lte=date_fin
     ).order_by('-history_date')[:50]
 
-    magasins_ids = list(Magasin.objects.all().values_list('id', flat=True))
+    # ✅ CORRECTION : restreindre le journal au périmètre autorisé de
+    # l'utilisateur (et non à TOUS les magasins) quand aucun magasin actif.
+    magasins_ids = list(
+        get_magasins_autorises(request).values_list('id', flat=True)
+    )
     if magasins_ids:
         h_mouvements = Mouvement.history.select_related(
             'history_user', 'article', 'magasin', 'service_demandeur'

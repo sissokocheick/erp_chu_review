@@ -59,3 +59,17 @@ PASSWORD_HASHERS = [
 STATIC_ROOT = BASE_DIR / 'static'
 STATICFILES_DIRS = []
 
+# ✅ CORRECTION : en test, utiliser un stockage SANS manifest — le
+# CompressedManifestStaticFilesStorage lève « Missing staticfiles manifest
+# entry » si staticfiles.json est absent (pas de collectstatic préalable),
+# et l'exception, avalée par les décorateurs catch_errors des vues,
+# transformait chaque page rendue en redirection 302.
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
