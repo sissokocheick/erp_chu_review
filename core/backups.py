@@ -834,14 +834,21 @@ def analyser_backup(nom):
 
     # pg_restore --list pour analyser le contenu du dump
     r = subprocess.run(
-        [str(pg_restore_candidates[0]), '--list', '--verbose', str(chemin)],
+        [str(pg_restore_candidates[0]), '--list', str(chemin)],
         capture_output=True, text=True, env=env, timeout=120)
     if r.returncode not in (0, 1):  # 1 = warnings mineurs
         return None, f"Fichier dump invalide : {r.stderr.strip()[:300]}"
 
     # Parser la sortie pg_restore --list
-    # Format : "OID; DUMP_ID DB_ID TYPE SCHEMA NAME OWNER"
+    # Format : "OID; DUMP_ID DB_ID TYPE SCHEMA NAME [OWNER]"
     # Ex : "374; 1259 18555 TABLE public accounts_auditconnexion nexuserp_db"
+    # Types connus : TABLE, SEQUENCE, INDEX, FUNCTION, TRIGGER, etc.
+    _TYPES_TABLE = {'TABLE'}
+    _TYPES_INDEX = {'INDEX'}
+    _TYPES_IGNORE = {'SEQUENCE', 'SEQUENCE SET', 'ACL', 'COMMENT',
+                     'FUNCTION', 'TRIGGER', 'CONSTRAINT', 'RULE',
+                     'TYPE', 'DOMAIN', 'AGGREGATE', 'OPERATOR',
+                     'CAST', 'EXTENSION', 'COLLATION', 'STATISTICS'}
     tables_dump = []
     nb_total_entrees = 0
     for line in r.stdout.splitlines():
@@ -854,22 +861,38 @@ def analyser_backup(nom):
             # Séparer avant et après le premier ';' (OID; reste)
             _, rest = line.split(';', 1)
             rest = rest.strip()
-            # rest = "DUMP_ID DB_ID TYPE SCHEMA NAME OWNER"
             parts = rest.split()
-            if len(parts) >= 5:
-                dump_id = parts[0]  # inutile
-                db_id = parts[1]    # inutile
-                obj_type = parts[2]  # TABLE, SEQUENCE, INDEX, etc.
-                schema = parts[3]   # public, etc.
-                obj_name = parts[4] # nom de l'objet
-                # Ignorer les séquences et les séquences de séquences
-                if obj_type == 'TABLE':
-                    tables_dump.append({'nom': obj_name, 'type': 'TABLE'})
-                elif obj_type == 'INDEX':
-                    tables_dump.append({'nom': obj_name, 'type': 'INDEX'})
+            if len(parts) < 5:
                 nb_total_entrees += 1
+                continue
+            # DUMP_ID DB_ID TYPE ...
+            obj_type = parts[2]
+            # Gérer les types multi-mots (ex: "SEQUENCE SET")
+            if obj_type == 'SEQUENCE' and len(parts) > 3 and parts[3] == 'SET':
+                obj_type = 'SEQUENCE SET'
+                schema_idx = 4
             else:
+                schema_idx = 3
+            if schema_idx >= len(parts):
                 nb_total_entrees += 1
+                continue
+            schema = parts[schema_idx]
+            # Le nom est le dernier élément significatif (avant OWNER éventuel)
+            # Pour TABLE : "TABLE public nom_table owner" -> nom = parts[-2] ou parts[-1]
+            # On prend le premier après le schéma qui n'est pas un mot-clé connu
+            obj_name = None
+            for i in range(schema_idx + 1, len(parts)):
+                candidate = parts[i]
+                # Ignorer les noms qui sont clairement des schémas ou des mots-clés
+                if candidate in ('public', '-', 'pg_database'):
+                    continue
+                obj_name = candidate
+                break
+            if obj_name and obj_type in _TYPES_TABLE:
+                tables_dump.append({'nom': obj_name, 'type': 'TABLE'})
+            elif obj_name and obj_type in _TYPES_INDEX:
+                tables_dump.append({'nom': obj_name, 'type': 'INDEX'})
+            nb_total_entrees += 1
         except (ValueError, IndexError):
             nb_total_entrees += 1
 
