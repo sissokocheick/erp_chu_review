@@ -215,25 +215,44 @@ def run_backup(pg_dump, params, dest, quiet, dry_run):
     return True, ''
 
 
-def copy_to_remote(local_path, host, user, remote_dir, quiet, dry_run):
-    """Copie le backup local vers un serveur distant via SSH/SCP."""
+def copy_to_remote(local_path, host, user, remote_dir, quiet, dry_run, password=''):
+    """Copie le backup local vers un serveur distant via SSH/SCP ou SMB."""
+    # 1. Essayer SCP d'abord (Linux)
     remote_path = f'{user}@{host}:{remote_dir}/'
-    cmd = ['scp', '-o', 'StrictHostKeyChecking=no', str(local_path), remote_path]
-    if dry_run:
-        if not quiet:
-            print(f"(dry-run) copierait {local_path.name} vers {remote_path}")
-        return True
+    cmd = ['scp', '-o', 'StrictHostKeyChecking=no', '-o', 'ConnectTimeout=5',
+            str(local_path), remote_path]
     try:
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         if proc.returncode == 0:
             if not quiet:
-                print(f"OK  : copie vers {remote_path}{local_path.name}")
+                print(f"OK  : copie SCP vers {remote_path}{local_path.name}")
             return True
-        else:
-            print(f"ERR : SCP echoue : {(proc.stderr or proc.stdout).strip()}", file=sys.stderr)
-            return False
-    except OSError as exc:
-        print(f"ERR : SCP introuvable ({exc})", file=sys.stderr)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+    # 2. Fallback : copie locale via montage SMB/UNC (Windows ou Linux)
+    # Stocker les identifiants via cmdkey si mot de passe fourni (Windows)
+    if password and sys.platform.startswith('win'):
+        try:
+            subprocess.run(['cmdkey', f'/generic:{host}', f'/user:{user}', f'/pass:{password}'],
+                           capture_output=True, timeout=10)
+        except Exception:
+            pass
+    # Construire le chemin UNC pour Windows : //HOST/SHARE/path
+    unc_base = remote_dir.replace('\\', '/')
+    if unc_base.startswith('/'):
+        unc_base = unc_base[1:]
+    unc_path = Path(f'//{host}/{unc_base}')
+    try:
+        unc_path.mkdir(parents=True, exist_ok=True)
+        dest_unc = unc_path / local_path.name
+        import shutil as _shutil
+        _shutil.copy2(str(local_path), str(dest_unc))
+        if not quiet:
+            print(f"OK  : copie vers {dest_unc}")
+        return True
+    except Exception as exc:
+        print(f"ERR : copie distante echouee (SCP et SMB) : {exc}", file=sys.stderr)
         return False
 
 
@@ -260,6 +279,8 @@ def main():
                      help='User SSH du serveur distant (defaut: backup)')
     ap.add_argument('--remote-dir', default=os.environ.get('BACKUP_REMOTE_DIR', '/home/backup/backups'),
                      help='Dossier distant pour les backups')
+    ap.add_argument('--remote-password', default=os.environ.get('BACKUP_REMOTE_PASSWORD', ''),
+                     help='Mot de passe du compte distant (pour cmdkey/SMB)')
     args = ap.parse_args()
 
     load_env()
@@ -317,7 +338,7 @@ def main():
     # ── Copie vers serveur distant (si configuré) ──
     if args.remote_host:
         copy_to_remote(dest, args.remote_host, args.remote_user, args.remote_dir,
-                       args.quiet, args.dry_run)
+                       args.quiet, args.dry_run, password=args.remote_password)
 
     # ── Rétention (uniquement après une sauvegarde réussie) ──
     files = list_backups(backup_dir)

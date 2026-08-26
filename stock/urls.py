@@ -41,6 +41,10 @@ from .views.stock import etat_stock
 from .views.historique import journal_historique
 from .views.lots import api_lots_disponibles
 from .views.utils import changer_magasin
+from core.views import (
+    parametres_sauvegardes,
+    telecharger_backup,
+)
 from .views.transferts import (
     liste_transferts, annuler_transfert, receptionner_transfert,
 )
@@ -224,6 +228,9 @@ urlpatterns = [
     path('parametres/logistique/', parametres.parametres_logistique, name='parametres_logistique'),
     path('parametres/administratifs/', parametres.parametres_administratifs, name='parametres_administratifs'),
     path('parametres/notifications/', parametres.parametres_notifications, name='parametres_notifications'),
+    # 💾 Sauvegardes PostgreSQL (superutilisateur) — vues dans core/views.py
+    path('parametres/sauvegardes/', parametres_sauvegardes, name='parametres_sauvegardes'),
+    path('parametres/sauvegardes/<str:nom>/telecharger/', telecharger_backup, name='telecharger_backup'),
     path('parametres/supprimer/<str:type_entite>/<int:id_entite>/', parametres.supprimer_parametre, name='supprimer_parametre'),
     # NB: motifs d'annulation, circuits de validation et journal d'audit sont gérés
     # respectivement dans parametres_logistique et dans accounts (menu Sécurité & Accès).

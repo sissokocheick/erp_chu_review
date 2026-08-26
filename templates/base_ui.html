@@ -911,6 +911,7 @@
             {% endif %}
             {% if user.is_superuser %}
             <a href="{% url 'supervision' %}" class="menu-item" data-title="Supervision"><i class="fas fa-heartbeat nav-icon" style="color:#28a745;"></i><span class="nav-text">Supervision</span></a>
+            <a href="{% url 'parametres_sauvegardes' %}" class="menu-item" data-title="Sauvegardes"><i class="fas fa-database nav-icon" style="color:#fd7e14;"></i><span class="nav-text">Sauvegardes</span></a>
             {% endif %}
         </div>
         {% endif %}

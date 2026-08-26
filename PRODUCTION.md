@@ -204,6 +204,32 @@ automatique après 5 s, logs dans `logs/`). Désinstallation :
   ⚠️ DESTRUCTIF : le contenu actuel de la base cible est remplacé
   (`--clean --if-exists`).
 
+- **Interface web — page « Paramètres › Sauvegardes »** (`/parametres/sauvegardes/`,
+  menu Sécurité & Accès › Sauvegardes, réservé au **superutilisateur**) :
+  pilote les sauvegardes sans ligne de commande.
+
+  - **Sauvegarde manuelle** : bouton « Lancer une sauvegarde maintenant » →
+    exécute `scripts/backup_db.py` (pg_dump + rétention + copie distante) et
+    affiche le journal d'exécution sur la page.
+  - **Configuration de la destination** : type SMB (partage réseau Windows /
+    NAS), SSH/SCP (serveur Linux ou QNAP avec SSH) ou local seulement ; hôte,
+    utilisateur, dossier distant/partage, rétention graduée (jours / semaines /
+    mois). La config est stockée dans `backups/config.json` (**pas en base** :
+    disponible même si PostgreSQL est hors service) et reste héritée du `.env`
+    (`BACKUP_REMOTE_HOST`…) tant qu'elle n'a pas été modifiée via l'interface.
+  - **Liste des sauvegardes locales** : téléchargement et suppression
+    individuelle (nom validé côté serveur : pas de traversal de dossier).
+  - **Alerte « sauvegarde manquante »** : si aucun `.backup` local de moins de
+    24 h n'existe, un bandeau s'affiche sur la page ET sur le dashboard des
+    superutilisateurs (« Sauvegarde manquante »), accompagné d'une notification
+    DANGER/Système dans la cloche 🔔 avec lien direct vers la page
+    (anti-spam : max 1 notification/jour/admin). Détection dans
+    `core/backups.py` (`etat_sauvegardes()` / `notifier_retard_backup()`).
+  - Le cron quotidien (ci-dessus) reste la source des sauvegardes automatiques ;
+    la page complète le cron pour la configuration, l'exécution à la demande et
+    le contrôle visuel. Si le cron de nuit échoue, l'admin le voit dès sa
+    première connexion.
+
 - **Inventaire tournant** : `python manage.py generer_inventaires_tournants`
   (rotation du comptage par famille/zone à l'échéance ; déjà déclenché à la
   connexion, le cron le rend indépendant des connexions).

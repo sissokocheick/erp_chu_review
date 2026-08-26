@@ -71,6 +71,8 @@ VALEURS_INTERFACE = {
     "actif", "inactif", "tous", "ALL",
     "text", "number", "date", "select",
     "manuel",
+    # Paramètres › Sauvegardes : type de destination (core/backups.py)
+    "ssh", "smb", "aucun",
 }
 
 RE_CREATION = re.compile(

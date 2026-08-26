@@ -1,0 +1,458 @@
+{% extends "base_ui.html" %}
+{% block title %}Sauvegardes{% endblock %}
+
+{% block contenu %}
+<style>
+  .bk-container { padding: 20px; }
+  .bk-header {
+    background: linear-gradient(135deg, #0d47a1 0%, #1c5b96 100%);
+    color: white; border-radius: 10px; padding: 18px 25px; margin-bottom: 22px;
+    display: flex; align-items: center; gap: 14px;
+    box-shadow: 0 4px 15px rgba(13,71,161,0.3);
+  }
+  .bk-header i { font-size: 28px; opacity: .9; }
+  .bk-header h4 { margin: 0; font-size: 20px; font-weight: 700; }
+  .bk-header small { opacity: .85; font-size: 12px; }
+
+  .bk-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 22px; }
+  .bk-kpi {
+    background: var(--bg-card); border-radius: 12px; padding: 18px 20px;
+    box-shadow: 0 2px 10px var(--shadow); border-left: 4px solid var(--primary-blue);
+  }
+  .bk-kpi .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; color: var(--text-light); }
+  .bk-kpi .val { font-size: 24px; font-weight: 800; margin-top: 4px; word-break: break-word; }
+  .bk-kpi .sub { font-size: 12px; color: var(--text-medium); margin-top: 4px; }
+  .bk-kpi.green { border-left-color: #27ae60; } .bk-kpi.green .val { color: #27ae60; }
+
+  .bk-card { background: var(--bg-card); border-radius: 12px; box-shadow: 0 2px 10px var(--shadow); margin-bottom: 20px; border: 1px solid var(--border-light); overflow: hidden; }
+  .bk-card-header { padding: 15px 22px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; }
+  .bk-card-header i { color: var(--primary-blue); }
+  .bk-card-body { padding: 20px 22px; }
+
+  .bk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .bk-table thead th { background: var(--bg-hover); padding: 10px 22px; font-size: 11px; text-transform: uppercase; letter-spacing: .3px; font-weight: 700; color: var(--text-light); border-bottom: 2px solid var(--border-color); text-align: left; white-space: nowrap; }
+  .bk-table tbody tr { border-bottom: 1px solid var(--border-light); }
+  .bk-table tbody td { padding: 10px 22px; color: var(--text-dark); vertical-align: middle; }
+  .bk-empty { padding: 30px; text-align: center; color: var(--text-light); font-size: 13px; }
+
+  .bk-form-row { display: flex; flex-wrap: wrap; gap: 14px; margin-bottom: 12px; }
+  .bk-field { display: flex; flex-direction: column; gap: 5px; min-width: 180px; flex: 1; }
+  .bk-field label { font-size: 12px; font-weight: 700; color: var(--text-medium); text-transform: uppercase; letter-spacing: .3px; }
+  .bk-field input, .bk-field select {
+    padding: 9px 12px; border: 1.5px solid var(--border-color); border-radius: 8px;
+    background: var(--bg-input, transparent); color: var(--text-dark); font-size: 13px;
+  }
+  .bk-hint { font-size: 11.5px; color: var(--text-light); }
+
+  .btn-sauvegarder {
+    background: linear-gradient(135deg, #27ae60, #2ecc71); color: white; border: none;
+    padding: 10px 22px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px;
+    box-shadow: 0 3px 10px rgba(39,174,96,.35);
+  }
+  .btn-sauvegarder:hover { filter: brightness(1.08); }
+  .btn-lancer {
+    background: linear-gradient(135deg, #0d47a1, #1c5b96); color: white; border: none;
+    padding: 10px 22px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px;
+  }
+  .btn-mini { padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; text-decoration: none; border: none; cursor: pointer; }
+  .btn-dl { background: #e8f4fd; color: #0d47a1; }
+  .btn-del { background: #fdecea; color: #c0392b; }
+
+  .bk-log {
+    background: #10151c; color: #b7f5c4; font-family: Consolas, monospace; font-size: 12px;
+    padding: 16px; border-radius: 8px; max-height: 260px; overflow: auto; white-space: pre-wrap;
+    word-break: break-word;
+  }
+  body.dark-mode .btn-dl { background: #16324a; }
+  body.dark-mode .btn-del { background: #4a1f1c; }
+</style>
+
+<div class="bk-container">
+  <div class="bk-header">
+    <i class="fas fa-database"></i>
+    <div>
+      <h4>Sauvegardes de la base de données</h4>
+      <small>Configuration de la destination, sauvegarde manuelle et gestion des fichiers — réservé à l'administrateur</small>
+    </div>
+  </div>
+
+  {% if messages %}
+    {% for message in messages %}
+    <div class="alert {% if message.tags == 'success' %}alert-success{% elif message.tags == 'error' %}alert-danger{% else %}alert-info{% endif %}" style="margin-bottom:16px;">{{ message }}</div>
+    {% endfor %}
+  {% endif %}
+
+  <!-- ── Alerte fraîcheur (> 24h sans backup) ── -->
+  {% if etat_backup.statut != 'ok' %}
+  <div style="background:{% if etat_backup.statut == 'critique' %}#fdecea{% else %}#fff4e5{% endif %};border-left:5px solid {% if etat_backup.statut == 'critique' %}#e74c3c{% else %}#fd7e14{% endif %};color:#7b241c;padding:12px 16px;border-radius:8px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <i class="fas {% if etat_backup.statut == 'critique' %}fa-exclamation-circle{% else %}fa-exclamation-triangle{% endif %}" style="font-size:20px;color:{% if etat_backup.statut == 'critique' %}#e74c3c{% else %}#fd7e14{% endif %};"></i>
+    <div style="flex:1;font-size:13px;min-width:220px;">
+      {% if etat_backup.statut == 'critique' %}
+        <strong>Aucune sauvegarde</strong> — aucun fichier .backup n'existe dans backups/. Lancez une sauvegarde dès maintenant pour protéger la base.
+      {% else %}
+        <strong>Sauvegarde ancienne</strong> — la dernière date du {{ etat_backup.dernier_date }} (il y a {{ etat_backup.age_libelle }}), au-delà du seuil de {{ etat_backup.seuil_heures }} h.
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Alerte copie distante (> 24h / inaccessible) ── -->
+  {% if etat_backup.distant.statut == 'critique' or etat_backup.distant.statut == 'alerte' or etat_backup.distant.statut == 'indisponible' %}
+  <div style="background:{% if etat_backup.distant.statut == 'alerte' %}#fff4e5{% else %}#fdecea{% endif %};border-left:5px solid {% if etat_backup.distant.statut == 'alerte' %}#fd7e14{% else %}#e74c3c{% endif %};color:#7b241c;padding:12px 16px;border-radius:8px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <i class="fas {% if etat_backup.distant.statut == 'alerte' %}fa-exclamation-triangle{% else %}fa-unlink{% endif %}" style="font-size:20px;color:{% if etat_backup.distant.statut == 'alerte' %}#fd7e14{% else %}#e74c3c{% endif %};"></i>
+    <div style="flex:1;font-size:13px;min-width:220px;">
+      {% if etat_backup.distant.statut == 'critique' %}
+        <strong>Copie distante absente</strong> — aucun fichier .backup sur //{{ config.host }}/{{ config.remote_dir }}. La copie hors site n'est pas assurée.
+      {% elif etat_backup.distant.statut == 'alerte' %}
+        <strong>Copie distante ancienne</strong> — la dernière copie sur //{{ config.host }}/{{ config.remote_dir }} date du {{ etat_backup.distant.dernier_date }} (il y a {{ etat_backup.distant.age_libelle }}), au-delà du seuil de {{ etat_backup.seuil_heures }} h.
+      {% else %}
+        <strong>Serveur de backup distant inaccessible</strong> — //{{ config.host }}/{{ config.remote_dir }} est injoignable (réseau, machine éteinte ou identifiants expirés). La copie hors site échoue.
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- ── Indicateurs ── -->
+  <div class="bk-grid">
+    <div class="bk-kpi {% if etat_backup.statut == 'ok' %}green{% elif etat_backup.statut == 'alerte' %}orange{% else %}grey{% endif %}">
+      <div class="lbl">Dernière sauvegarde</div>
+      <div class="val" style="font-size:20px;">
+        {% if etat_backup.dernier_nom %}il y a {{ etat_backup.age_libelle }}{% else %}—{% endif %}
+      </div>
+      <div class="sub">{% if etat_backup.dernier_date %}{{ etat_backup.dernier_date }} — {{ sauvegardes|length }} fichier(s){% else %}aucun backup local{% endif %}</div>
+    </div>
+    <div class="bk-kpi green">
+      <div class="lbl">Taille de la base</div>
+      <div class="val" style="font-size:20px;">{{ taille_base_lisible }}</div>
+      <div class="sub">PostgreSQL</div>
+    </div>
+    <div class="bk-kpi {% if etat_backup.distant.statut == 'ok' %}green{% elif etat_backup.distant.statut == 'non_configure' %}grey{% else %}orange{% endif %}">
+      <div class="lbl">Copie distante</div>
+      <div class="val" style="font-size:18px;">
+        {% if config.type_distant == 'aucun' or not config.host %}Local seulement
+        {% else %}<i class="fas {% if config.type_distant == 'ssh' %}fa-server{% else %}fa-network-wired{% endif %}"></i> {{ config.host }}{% endif %}
+      </div>
+      <div class="sub">
+        {% if etat_backup.distant.statut == 'ok' %}✅ copie il y a {{ etat_backup.distant.age_libelle }}
+        {% elif etat_backup.distant.statut == 'alerte' %}⚠️ dernière copie il y a {{ etat_backup.distant.age_libelle }}
+        {% elif etat_backup.distant.statut == 'critique' %}❌ aucun .backup distant
+        {% elif etat_backup.distant.statut == 'indisponible' %}❌ partage inaccessible
+        {% elif config.host %}{{ config.user }}@{{ config.host }} — {{ config.remote_dir }}
+        {% endif %}
+      </div>
+    </div>
+    {% if derniere_execution %}
+    <div class="bk-kpi {{ derniere_execution.ok|yesno:'green,grey' }}">
+      <div class="lbl">Dernière sauvegarde (interface)</div>
+      <div class="val" style="font-size:18px;color:{% if derniere_execution.ok %}#27ae60{% else %}#e74c3c{% endif %};">{{ derniere_execution.date }}</div>
+      <div class="sub">{{ derniere_execution.ok|yesno:'Succès,Échec' }}</div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- ── Planning automatique ── -->
+  <div class="bk-card">
+    <div class="bk-card-header"><i class="fas fa-clock" style="color:#fd7e14;"></i> Planning automatique
+      {% if etat_planning.actif %}<span style="margin-left:auto;font-size:11px;color:#27ae60;font-weight:700;">🟢 Actif — {{ etat_planning.label }}</span>
+      {% else %}<span style="margin-left:auto;font-size:11px;color:#e74c3c;font-weight:700;">🔴 Désactivé</span>{% endif %}
+    </div>
+    <div class="bk-card-body">
+      <form method="post" action="{% url 'parametres_sauvegardes' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="appliquer_planning">
+
+        <div class="bk-form-row">
+          <div class="bk-field">
+            <label>Mode</label>
+            <select name="cron_mode" id="cron_mode" onchange="togglePlanningFields()">
+              <option value="daily" {% if config.cron_mode == 'daily' %}selected{% endif %}>Quotidien</option>
+              <option value="interval" {% if config.cron_mode == 'interval' %}selected{% endif %}>Intervalle (toutes les X minutes)</option>
+              <option value="weekly" {% if config.cron_mode == 'weekly' %}selected{% endif %}>Hebdomadaire</option>
+              <option value="desactive" {% if config.cron_mode == 'desactive' %}selected{% endif %}>Désactivé</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Quotidien / Hebdomadaire : heure + minute -->
+        <div class="bk-form-row" id="fields-time" style="display:{% if config.cron_mode == 'interval' %}none{% else %}flex{% endif %};">
+          <div class="bk-field" style="max-width:120px;">
+            <label>Heure</label>
+            <input type="number" name="cron_hour" min="0" max="23" value="{{ config.cron_hour|default:'02' }}" style="text-align:center;">
+          </div>
+          <div class="bk-field" style="max-width:120px;">
+            <label>Minute</label>
+            <input type="number" name="cron_minute" min="0" max="59" value="{{ config.cron_minute|default:'00' }}" style="text-align:center;">
+          </div>
+        </div>
+
+        <!-- Intervalle : nombre de minutes -->
+        <div class="bk-form-row" id="fields-interval" style="display:{% if config.cron_mode == 'interval' %}flex{% else %}none{% endif %};">
+          <div class="bk-field" style="max-width:200px;">
+            <label>Intervalles (minutes)</label>
+            <input type="number" name="cron_interval" min="5" max="1440" value="{{ config.cron_interval|default:'60' }}" style="text-align:center;">
+            <span class="bk-hint">5 min à 24h (1440 min). Ex : 30 = toutes les 30 min, 120 = toutes les 2h.</span>
+          </div>
+        </div>
+
+        <!-- Hebdomadaire : jours -->
+        <div id="fields-weekly" style="display:{% if config.cron_mode == 'weekly' %}block{% else %}none{% endif %};margin-bottom:14px;">
+          <label style="font-size:12px;font-weight:700;color:var(--text-medium);text-transform:uppercase;letter-spacing:.3px;display:block;margin-bottom:6px;">Jours de la semaine</label>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;">
+            {% for code, label in jours_choices %}
+            <label style="display:flex;align-items:center;gap:4px;padding:6px 12px;border:1.5px solid var(--border-color);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600;{% if code in config.cron_days %}border-color:#0d47a1;background:#e8f0fe;color:#0d47a1;{% endif %}">
+              <input type="checkbox" name="cron_days" value="{{ code }}" {% if code in config.cron_days %}checked{% endif %} style="display:none;">
+              {{ label|truncatechars:3 }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <button type="submit" class="btn-lancer" style="background:linear-gradient(135deg,#fd7e14,#f39c12);margin-top:10px;">
+          <i class="fas fa-clock"></i> Appliquer
+        </button>
+        <span class="bk-hint" style="margin-left:12px;">Crée / met à jour la tâche planifiée sur le serveur (Windows Task Scheduler / crontab Linux).</span>
+      </form>
+    </div>
+  </div>
+
+  <script>
+  function togglePlanningFields() {
+    var mode = document.getElementById('cron_mode').value;
+    document.getElementById('fields-time').style.display = (mode === 'interval') ? 'none' : 'flex';
+    document.getElementById('fields-interval').style.display = (mode === 'interval') ? 'flex' : 'none';
+    document.getElementById('fields-weekly').style.display = (mode === 'weekly') ? 'block' : 'none';
+  }
+  document.querySelectorAll('#fields-weekly label').forEach(function(lbl) {
+    lbl.addEventListener('click', function() {
+      var cb = this.querySelector('input[type=checkbox]');
+      cb.checked = !cb.checked;
+      this.style.borderColor = cb.checked ? '#0d47a1' : '';
+      this.style.background = cb.checked ? '#e8f0fe' : '';
+      this.style.color = cb.checked ? '#0d47a1' : '';
+    });
+  });
+  </script>
+
+  <!-- ── Lancement manuel ── -->
+  <div class="bk-card">
+    <div class="bk-card-header"><i class="fas fa-play-circle"></i> Sauvegarde manuelle</div>
+    <div class="bk-card-body">
+      <form method="post" action="{% url 'parametres_sauvegardes' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="lancer">
+        <button type="submit" class="btn-lancer" onclick="this.disabled=true; this.innerHTML='⏳ Sauvegarde en cours…'; this.form.submit();">
+          <i class="fas fa-database"></i> Lancer une sauvegarde maintenant
+        </button>
+        <span class="bk-hint" style="margin-left:12px;">
+          Exécute <code>pg_dump</code> (format compressé), applique la rétention puis copie vers la destination configurée.
+          Durée indicative : quelques secondes à quelques minutes.
+        </span>
+      </form>
+      {% if derniere_execution and derniere_execution.sortie %}
+      <details style="margin-top:14px;" {% if not derniere_execution.ok %}open{% endif %}>
+        <summary style="cursor:pointer;font-weight:700;font-size:13px;">Journal de la dernière exécution</summary>
+        <pre class="bk-log" style="margin-top:10px;">{{ derniere_execution.sortie }}</pre>
+      </details>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- ── Upload depuis support externe ── -->
+  <div class="bk-card">
+    <div class="bk-card-header"><i class="fas fa-upload" style="color:#6f42c1;"></i> Importer un backup externe</div>
+    <div class="bk-card-body">
+      <form method="post" action="{% url 'parametres_sauvegardes' %}" enctype="multipart/form-data" id="form-upload">
+        {% csrf_token %}
+        <input type="file" name="fichier" id="input-file" accept=".backup" style="display:none;" onchange="handleUpload()">
+        <div id="drop-zone" style="border:2px dashed var(--border-color);border-radius:12px;padding:30px 20px;text-align:center;cursor:pointer;transition:all .2s;" onclick="document.getElementById('input-file').click()" ondragover="event.preventDefault();this.style.borderColor='#6f42c1';this.style.background='#f0ecf7'" ondragleave="this.style.borderColor='';this.style.background='';" ondrop="event.preventDefault();this.style.borderColor='';this.style.background='';document.getElementById('input-file').files=event.dataTransfer.files;handleUpload()">
+          <i class="fas fa-cloud-upload-alt" style="font-size:32px;color:#6f42c1;display:block;margin-bottom:8px;"></i>
+          <strong style="font-size:14px;color:var(--text-dark);">Glissez un fichier .backup ici</strong><br>
+          <span class="bk-hint">ou cliquez pour sélectionner — formats : pg_dump custom (.backup) — max 500 Mo</span>
+        </div>
+        <div id="upload-info" style="display:none;margin-top:12px;padding:10px 14px;border-radius:8px;background:#f0ecf7;font-size:13px;">
+          <i class="fas fa-file-archive" style="color:#6f42c1;"></i>
+          <span id="upload-filename"></span>
+          <span id="upload-size" style="color:var(--text-light);"></span>
+          <button type="submit" style="margin-left:12px;padding:6px 16px;background:#6f42c1;color:white;border:none;border-radius:6px;font-weight:700;cursor:pointer;">
+            <i class="fas fa-upload"></i> Importer
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Configuration ── -->
+  <div class="bk-card">
+    <div class="bk-card-header"><i class="fas fa-cog"></i> Configuration</div>
+    <div class="bk-card-body">
+      <form method="post" action="{% url 'parametres_sauvegardes' %}">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="enregistrer_config">
+
+        <div class="bk-form-row">
+          <div class="bk-field">
+            <label>Type de destination</label>
+            <select name="type_distant">
+              <option value="smb" {% if config.type_distant == 'smb' %}selected{% endif %}>Partage réseau Windows / NAS (SMB)</option>
+              <option value="ssh" {% if config.type_distant == 'ssh' %}selected{% endif %}>Serveur SSH / QNAP (SCP)</option>
+              <option value="aucun" {% if config.type_distant == 'aucun' %}selected{% endif %}>Aucune (local seulement)</option>
+            </select>
+            <span class="bk-hint">Windows/QNAP : SMB recommandé. Serveur Linux : SSH.</span>
+          </div>
+          <div class="bk-field">
+            <label>Hôte (IP ou nom)</label>
+            <input type="text" name="host" value="{{ config.host }}" placeholder="ex : 192.168.0.31 ou NAS-01">
+          </div>
+          <div class="bk-field">
+            <label>Utilisateur distant</label>
+            <input type="text" name="user" value="{{ config.user }}" placeholder="backup">
+          </div>
+          <div class="bk-field">
+            <label>Mot de passe distant</label>
+            <input type="password" name="password" value="{{ config.password }}" placeholder="Mot de passe du compte" autocomplete="off">
+            <span class="bk-hint">Nécessaire pour la copie automatique (cron). Stocké localement dans config.json.</span>
+          </div>
+        </div>
+
+        <div class="bk-form-row">
+          <div class="bk-field" style="flex:2;">
+            <label>Dossier distant / partage</label>
+            <input type="text" name="remote_dir" value="{{ config.remote_dir }}" placeholder="/backups ou partage/repertoire">
+            <span class="bk-hint">SMB : chemin relatif au partage monté (//HOTE/partage/…). SSH : dossier home de l'utilisateur.</span>
+          </div>
+        </div>
+
+        <div class="bk-form-row">
+          <div class="bk-field">
+            <label>Rétention — jours</label>
+            <input type="number" name="keep_days" min="0" value="{{ config.keep_days }}">
+          </div>
+          <div class="bk-field">
+            <label>Rétention — semaines</label>
+            <input type="number" name="keep_weeks" min="0" value="{{ config.keep_weeks }}">
+          </div>
+          <div class="bk-field">
+            <label>Rétention — mois</label>
+            <input type="number" name="keep_months" min="0" value="{{ config.keep_months }}">
+          </div>
+        </div>
+        <p class="bk-hint" style="margin-bottom:14px;">
+          Rétention graduée : tous les backups des N derniers jours sont conservés, puis le plus ancien
+          de chaque semaine, puis le plus ancien de chaque mois. Le reste est supprimé automatiquement.
+        </p>
+
+        <button type="submit" class="btn-sauvegarder"><i class="fas fa-save"></i> Enregistrer la configuration</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Liste des sauvegardes ── -->
+  <div class="bk-card">
+    <div class="bk-card-header"><i class="fas fa-folder-open"></i> Sauvegardes locales ({{ sauvegardes|length }})</div>
+    <div class="bk-card-body" style="padding:6px 0;overflow-x:auto;">
+      {% if sauvegardes %}
+      <table class="bk-table">
+        <thead><tr><th>Fichier</th><th>Taille</th><th>Date</th><th style="text-align:right;">Actions</th></tr></thead>
+        <tbody>
+          {% for b in sauvegardes %}
+          <tr>
+            <td style="font-family:Consolas,monospace;font-size:12px;">{{ b.nom }}</td>
+            <td>{{ b.taille_lisible }}</td>
+            <td>{{ b.date }}</td>
+            <td style="text-align:right;white-space:nowrap;">
+              <a class="btn-mini btn-dl" href="{% url 'telecharger_backup' b.nom %}"><i class="fas fa-download"></i> Télécharger</a>
+              <button type="button" class="btn-mini" style="background:#e8f4fd;color:#0d47a1;" onclick="ouvrirRestauration('{{ b.nom }}')"><i class="fas fa-undo"></i> Restaurer</button>
+              <form method="post" action="{% url 'parametres_sauvegardes' %}" style="display:inline;" onsubmit="return confirm('Supprimer définitivement « {{ b.nom }} » ?');">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="supprimer">
+                <input type="hidden" name="nom" value="{{ b.nom }}">
+                <button type="submit" class="btn-mini btn-del"><i class="fas fa-trash"></i> Supprimer</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="bk-empty"><i class="fas fa-info-circle"></i> Aucune sauvegarde locale — cliquez sur « Lancer une sauvegarde maintenant ».</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal Restauration ── -->
+<div id="modal-restore" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
+  <div style="background:var(--bg-card,#fff);border-radius:14px;padding:28px;max-width:520px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+    <h4 style="margin:0 0 14px;color:#e74c3c;"><i class="fas fa-exclamation-triangle"></i> Restaurer cette sauvegarde</h4>
+    <p style="font-size:13px;color:var(--text-dark);margin:0 0 14px;">
+      ⚠️ <strong>ATTENTION — OPÉRATION DÉSTRUCTIVE</strong><br>
+      La base de données <strong>actuelle sera remplacée</strong> par le contenu de la sauvegarde sélectionnée.<br>
+      Fichier : <code id="restore-filename" style="color:#e74c3c;"></code>
+    </p>
+    <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;">
+      Tous les utilisateurs devront se reconnecter. Le contenu créé après la date de la sauvegarde sera <strong>perdu</strong>.
+    </p>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <label style="font-weight:700;font-size:12px;color:var(--text-medium);white-space:nowrap;">Tapez RESTAURER :</label>
+      <input type="text" id="restore-confirm-input" style="flex:1;padding:8px 12px;border:2px solid #e74c3c;border-radius:8px;font-family:Consolas,monospace;font-size:14px;font-weight:700;letter-spacing:1px;" placeholder="RESTAURER" autocomplete="off">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button onclick="fermerRestauration()" style="padding:8px 18px;border:1px solid var(--border-color);border-radius:8px;background:none;cursor:pointer;font-weight:700;">Annuler</button>
+      <button id="btn-restore-confirm" onclick="confirmerRestauration()" disabled style="padding:8px 18px;border:none;border-radius:8px;background:#e74c3c;color:white;cursor:not-allowed;font-weight:700;opacity:0.5;">⚠️ Restaurer maintenant</button>
+    </div>
+  </div>
+</div>
+<script>
+function handleUpload() {
+  var input = document.getElementById('input-file');
+  var info = document.getElementById('upload-info');
+  if (input.files.length > 0) {
+    var f = input.files[0];
+    var sizeMo = (f.size / 1024 / 1024).toFixed(1);
+    document.getElementById('upload-filename').textContent = f.name;
+    document.getElementById('upload-size').textContent = ' — ' + sizeMo + ' Mo';
+    info.style.display = 'flex';
+  } else {
+    info.style.display = 'none';
+  }
+}
+function ouvrirRestauration(nom) {
+  document.getElementById('restore-filename').textContent = nom;
+  document.getElementById('restore-confirm-input').value = '';
+  document.getElementById('btn-restore-confirm').disabled = true;
+  document.getElementById('btn-restore-confirm').style.opacity = '0.5';
+  document.getElementById('btn-restore-confirm').style.cursor = 'not-allowed';
+  document.getElementById('modal-restore').style.display = 'flex';
+  document.getElementById('restore-confirm-input').focus();
+}
+function fermerRestauration() {
+  document.getElementById('modal-restore').style.display = 'none';
+}
+document.getElementById('restore-confirm-input').addEventListener('input', function() {
+  var btn = document.getElementById('btn-restore-confirm');
+  var val = this.value.trim();
+  if (val === 'RESTAURER') {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+  } else {
+    btn.disabled = true;
+    btn.style.opacity = '0.5';
+    btn.style.cursor = 'not-allowed';
+  }
+});
+function confirmerRestauration() {
+  var nom = document.getElementById('restore-filename').textContent;
+  var form = document.createElement('form');
+  form.method = 'POST';
+  form.action = '{% url "parametres_sauvegardes" %}';
+  var csrf = document.querySelector('input[name="csrfmiddlewaretoken"]');
+  if (csrf) { var c = csrf.cloneNode(); form.appendChild(c); }
+  var a1 = document.createElement('input'); a1.type='hidden'; a1.name='action'; a1.value='restaurer'; form.appendChild(a1);
+  var a2 = document.createElement('input'); a2.type='hidden'; a2.name='nom'; a2.value=nom; form.appendChild(a2);
+  var a3 = document.createElement('input'); a3.type='hidden'; a3.name='confirmation'; a3.value='RESTAURER'; form.appendChild(a3);
+  document.body.appendChild(form);
+  form.submit();
+}
+</script>
+{% endblock %}

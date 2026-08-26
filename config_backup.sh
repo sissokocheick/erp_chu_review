@@ -16,6 +16,14 @@ REMOTE_HOST="$1"
 REMOTE_USER="${2:-backup}"
 REMOTE_DIR="/home/${REMOTE_USER}/backups"
 
+# Detection QNAP (SSHD sur port 22, dossier /home/${REMOTE_USER})
+if ssh -i ~/.ssh/id_rsa_backup -o StrictHostKeyChecking=no -o ConnectTimeout=3 "${REMOTE_USER}@${REMOTE_HOST}" "uname -a" 2>/dev/null | grep -qi "qnap\|QNAP"; then
+    QNAP=true
+    echo ">> QNAP detecte"
+else
+    QNAP=false
+fi
+
 echo "=== Configuration du backup distant ==="
 echo "  Serveur: ${REMOTE_HOST}"
 echo "  User:    ${REMOTE_USER}"
