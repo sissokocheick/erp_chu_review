@@ -510,6 +510,7 @@ function ouvrirRestauration(nom) {
 }
 
 function afficherAnalyse(d) {
+  document.getElementById('restore-info').style.display = 'block';
   document.getElementById('analyse-taille').textContent = d.taille_lisible;
   document.getElementById('analyse-nb-tables').textContent = d.nb_tables;
   // Tables affectées
