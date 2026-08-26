@@ -163,6 +163,24 @@ def _sauvegardes_upload(request):
     return redirect(reverse('parametres_sauvegardes'))
 
 
+from django.http import JsonResponse
+
+
+def analyser_backup_ajax(request):
+    """Endpoint AJAX : analyse un backup et retourne le preview en JSON."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST requis'}, status=405)
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Accès interdit'}, status=403)
+    nom = request.POST.get('nom', '').strip()
+    if not nom:
+        return JsonResponse({'error': 'Nom manquant'}, status=400)
+    analyse, err = backups_service.analyser_backup(nom)
+    if err:
+        return JsonResponse({'error': err}, status=400)
+    return JsonResponse(analyse)
+
+
 def _fichier_derniere_execution():
     return backups_service._dossier_backups() / 'derniere_execution.txt'
 

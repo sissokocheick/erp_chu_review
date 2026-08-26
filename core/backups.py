@@ -795,6 +795,156 @@ def valider_backup_fichier(chemin):
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# ANALYSE DE SAUVEGARDE (PREVIEW AVANT RESTAURATION)
+# ═════════════════════════════════════════════════════════════════════════════
+
+def analyser_backup(nom):
+    """Analyse un fichier .backup et retourne un preview détaillé.
+
+    Retourne un dict avec :
+    - taille_fichier: taille en octets
+    - nb_tables: nombre de tables dans le dump
+    - tables: liste de dicts {nom, nb_entrees, type}
+    - stats_actuelles: dict {table: nb_lignes} de la base actuelle
+    - resume: texte résumé
+    """
+    chemin = chemin_backup(nom)
+    if not chemin or not chemin.is_file():
+        return None, "Fichier introuvable."
+
+    # Taille du fichier
+    taille_octets = chemin.stat().st_size
+    taille_mo = taille_octets / (1024 * 1024)
+
+    sys.path.insert(0, str(BASE_DIR / 'scripts'))
+    try:
+        from backup_db import db_params, find_pg_tool, load_env
+        load_env()
+    except Exception:
+        return None, "Erreur de configuration de la base."
+
+    params = db_params()
+    pg_restore_candidates = find_pg_tool('pg_restore')
+    if not pg_restore_candidates:
+        return None, "pg_restore introuvable."
+
+    env = dict(__import__('os').environ)
+    if params.get('password'):
+        env['PGPASSWORD'] = params['password']
+
+    # pg_restore --list pour analyser le contenu du dump
+    r = subprocess.run(
+        [str(pg_restore_candidates[0]), '--list', '--verbose', str(chemin)],
+        capture_output=True, text=True, env=env, timeout=120)
+    if r.returncode not in (0, 1):  # 1 = warnings mineurs
+        return None, f"Fichier dump invalide : {r.stderr.strip()[:300]}"
+
+    # Parser la sortie pg_restore --list
+    # Format : "OID; DUMP_ID DB_ID TYPE SCHEMA NAME OWNER"
+    # Ex : "374; 1259 18555 TABLE public accounts_auditconnexion nexuserp_db"
+    tables_dump = []
+    nb_total_entrees = 0
+    for line in r.stdout.splitlines():
+        line = line.strip()
+        if not line or line.startswith(';'):
+            continue
+        if ';' not in line:
+            continue
+        try:
+            # Séparer avant et après le premier ';' (OID; reste)
+            _, rest = line.split(';', 1)
+            rest = rest.strip()
+            # rest = "DUMP_ID DB_ID TYPE SCHEMA NAME OWNER"
+            parts = rest.split()
+            if len(parts) >= 5:
+                dump_id = parts[0]  # inutile
+                db_id = parts[1]    # inutile
+                obj_type = parts[2]  # TABLE, SEQUENCE, INDEX, etc.
+                schema = parts[3]   # public, etc.
+                obj_name = parts[4] # nom de l'objet
+                # Ignorer les séquences et les séquences de séquences
+                if obj_type == 'TABLE':
+                    tables_dump.append({'nom': obj_name, 'type': 'TABLE'})
+                elif obj_type == 'INDEX':
+                    tables_dump.append({'nom': obj_name, 'type': 'INDEX'})
+                nb_total_entrees += 1
+            else:
+                nb_total_entrees += 1
+        except (ValueError, IndexError):
+            nb_total_entrees += 1
+
+    # Stats de la base actuelle
+    stats_actuelles = {}
+    try:
+        import psycopg2
+        conn = psycopg2.connect(
+            dbname=params['name'], user=params['user'],
+            password=params.get('password', ''),
+            host=params['host'], port=params['port'])
+        cur = conn.cursor()
+        # Tables dans la base actuelle
+        cur.execute("""
+            SELECT tablename FROM pg_tables
+            WHERE schemaname = 'public'
+            ORDER BY tablename
+        """)
+        tables_actuelles = {row[0]: 0 for row in cur.fetchall()}
+        # Compter les lignes de chaque table
+        for tbl in tables_actuelles:
+            try:
+                cur.execute(f'SELECT COUNT(*) FROM "{tbl}"')
+                tables_actuelles[tbl] = cur.fetchone()[0]
+            except Exception:
+                pass
+        stats_actuelles = tables_actuelles
+        cur.close()
+        conn.close()
+    except Exception:
+        pass  # Si pas possible, on continue sans stats
+
+    # Identifier les tables affectées
+    tables_affectees = []
+    tables_nouvelles = []
+    tables_perdues = []
+
+    noms_dump = {t['nom'] for t in tables_dump if t['type'] == 'TABLE'}
+    noms_actuels = set(stats_actuelles.keys())
+
+    for t in tables_dump:
+        if t['type'] != 'TABLE':
+            continue
+        nom_t = t['nom']
+        if nom_t in noms_actuels:
+            tables_affectees.append({
+                'nom': nom_t,
+                'lignes_actuelles': stats_actuelles.get(nom_t, 0),
+            })
+        else:
+            tables_nouvelles.append(nom_t)
+
+    tables_perdues = list(noms_actuels - noms_dump)
+
+    resume = (
+        f"Taille : {taille_mo:.1f} Mo — "
+        f"{len(tables_affectees)} tables seront remplacées, "
+        f"{len(tables_nouvelles)} nouvelles tables seront créées, "
+        f"{len(tables_perdues)} tables existantes seront supprimées."
+    )
+
+    return {
+        'taille_fichier': taille_octets,
+        'taille_lisible': f"{taille_mo:.1f} Mo",
+        'nb_tables': len(tables_affectees) + len(tables_nouvelles),
+        'nb_entrees_dump': nb_total_entrees,
+        'tables_affectees': tables_affectees,
+        'tables_nouvelles': tables_nouvelles,
+        'tables_perdues': tables_perdues,
+        'stats_actuelles': stats_actuelles,
+        'resume': resume,
+    }, None
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # RESTAURATION DEPUIS L'INTERFACE
 # ═════════════════════════════════════════════════════════════════════════════
 

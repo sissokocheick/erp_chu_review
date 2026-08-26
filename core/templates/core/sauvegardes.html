@@ -380,29 +380,80 @@
   </div>
 </div>
 
-<!-- ── Modal Restauration ── -->
+<!-- ── Modal Restauration (avec Analyse Preview) ── -->
 <div id="modal-restore" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:9999;align-items:center;justify-content:center;">
-  <div style="background:var(--bg-card,#fff);border-radius:14px;padding:28px;max-width:520px;width:90%;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
-    <h4 style="margin:0 0 14px;color:#e74c3c;"><i class="fas fa-exclamation-triangle"></i> Restaurer cette sauvegarde</h4>
-    <p style="font-size:13px;color:var(--text-dark);margin:0 0 14px;">
-      ⚠️ <strong>ATTENTION — OPÉRATION DÉSTRUCTIVE</strong><br>
-      La base de données <strong>actuelle sera remplacée</strong> par le contenu de la sauvegarde sélectionnée.<br>
-      Fichier : <code id="restore-filename" style="color:#e74c3c;"></code>
-    </p>
-    <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;">
-      Tous les utilisateurs devront se reconnecter. Le contenu créé après la date de la sauvegarde sera <strong>perdu</strong>.
-    </p>
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
-      <label style="font-weight:700;font-size:12px;color:var(--text-medium);white-space:nowrap;">Tapez RESTAURER :</label>
-      <input type="text" id="restore-confirm-input" style="flex:1;padding:8px 12px;border:2px solid #e74c3c;border-radius:8px;font-family:Consolas,monospace;font-size:14px;font-weight:700;letter-spacing:1px;" placeholder="RESTAURER" autocomplete="off">
+  <div style="background:var(--bg-card,#fff);border-radius:14px;padding:28px;max-width:600px;width:92%;max-height:85vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,0.3);">
+    <!-- Phase 1 : Chargement -->
+    <div id="restore-loading" style="display:none;text-align:center;padding:24px 0;">
+      <div style="width:36px;height:36px;border:3px solid #e74c3c;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div>
+      <p style="font-size:13px;color:var(--text-dark);margin:0;">Analyse de la sauvegarde en cours...</p>
+      <p style="font-size:11px;color:var(--text-light);margin:4px 0 0;">Vérification de l'intégrité du dump et comparaison avec la base actuelle</p>
     </div>
-    <div style="display:flex;gap:10px;justify-content:flex-end;">
+    <!-- Phase 2 : Résultat de l'analyse -->
+    <div id="restore-analysis" style="display:none;">
+      <h4 style="margin:0 0 14px;color:#e67e22;"><i class="fas fa-magnifying-glass-chart"></i> Analyse du backup</h4>
+      <div id="restore-error" style="display:none;background:#fef2f2;border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px 14px;margin-bottom:14px;">
+        <p style="color:#e74c3c;font-size:13px;margin:0;"></p>
+      </div>
+      <div id="restore-info" style="display:none;">
+        <!-- Résumé -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">
+          <div style="background:var(--bg-alt,#f8fafc);border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-light);margin-bottom:2px;">Taille</div>
+            <div id="analyse-taille" style="font-size:18px;font-weight:800;color:var(--accent);"></div>
+          </div>
+          <div style="background:var(--bg-alt,#f8fafc);border-radius:10px;padding:12px;text-align:center;">
+            <div style="font-size:11px;color:var(--text-light);margin-bottom:2px;">Tables</div>
+            <div id="analyse-nb-tables" style="font-size:18px;font-weight:800;color:var(--accent);"></div>
+          </div>
+        </div>
+        <!-- Tables affectées -->
+        <div id="section-affectees" style="display:none;margin-bottom:14px;">
+          <h5 style="font-size:12px;font-weight:700;color:#e74c3c;margin:0 0 8px;"><i class="fas fa-exclamation-circle"></i> Tables qui seront remplies</h5>
+          <div id="liste-affectees" style="max-height:160px;overflow-y:auto;border:1px solid rgba(239,68,68,0.2);border-radius:8px;"></div>
+        </div>
+        <!-- Tables nouvelles -->
+        <div id="section-nouvelles" style="display:none;margin-bottom:14px;">
+          <h5 style="font-size:12px;font-weight:700;color:#27ae60;margin:0 0 8px;"><i class="fas fa-plus-circle"></i> Nouvelles tables (créées)</h5>
+          <div id="liste-nouvelles" style="max-height:80px;overflow-y:auto;border:1px solid rgba(39,174,96,0.2);border-radius:8px;"></div>
+        </div>
+        <!-- Tables supprimées -->
+        <div id="section-perdues" style="display:none;margin-bottom:14px;">
+          <h5 style="font-size:12px;font-weight:700;color:#e67e22;margin:0 0 8px;"><i class="fas fa-trash-alt"></i> Tables qui seront supprimées</h5>
+          <div id="liste-perdues" style="max-height:80px;overflow-y:auto;border:1px solid rgba(230,126,34,0.2);border-radius:8px;"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Phase 3 : Confirmation -->
+    <div id="restore-confirm" style="display:none;">
+      <h4 style="margin:0 0 14px;color:#e74c3c;"><i class="fas fa-exclamation-triangle"></i> Confirmer la restauration</h4>
+      <p style="font-size:13px;color:var(--text-dark);margin:0 0 14px;">
+        ⚠️ <strong>ATTENTION — OPÉRATION DÉSTRUCTIVE</strong><br>
+        La base de données <strong>actuelle sera remplacée</strong> par le contenu du backup.<br>
+        Fichier : <code id="restore-filename" style="color:#e74c3c;"></code>
+      </p>
+      <p style="font-size:12px;color:var(--text-light);margin:0 0 16px;">
+        Tous les utilisateurs devront se reconnecter. Le contenu créé après la date de la sauvegarde sera <strong>perdu</strong>.
+      </p>
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+        <label style="font-weight:700;font-size:12px;color:var(--text-medium);white-space:nowrap;">Tapez RESTAURER :</label>
+        <input type="text" id="restore-confirm-input" style="flex:1;padding:8px 12px;border:2px solid #e74c3c;border-radius:8px;font-family:Consolas,monospace;font-size:14px;font-weight:700;letter-spacing:1px;" placeholder="RESTAURER" autocomplete="off">
+      </div>
+    </div>
+    <!-- Boutons (toujours visibles) -->
+    <div id="restore-buttons" style="display:flex;gap:10px;justify-content:flex-end;margin-top:8px;">
       <button onclick="fermerRestauration()" style="padding:8px 18px;border:1px solid var(--border-color);border-radius:8px;background:none;cursor:pointer;font-weight:700;">Annuler</button>
       <button id="btn-restore-confirm" onclick="confirmerRestauration()" disabled style="padding:8px 18px;border:none;border-radius:8px;background:#e74c3c;color:white;cursor:not-allowed;font-weight:700;opacity:0.5;">⚠️ Restaurer maintenant</button>
     </div>
   </div>
 </div>
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
 <script>
+var _restoreNom = '';
+var _csrfToken = '{{ csrf_token }}';
+
 function handleUpload() {
   var input = document.getElementById('input-file');
   var info = document.getElementById('upload-info');
@@ -416,18 +467,101 @@ function handleUpload() {
     info.style.display = 'none';
   }
 }
+
 function ouvrirRestauration(nom) {
+  _restoreNom = nom;
+  // Reset modal
+  document.getElementById('restore-loading').style.display = 'block';
+  document.getElementById('restore-analysis').style.display = 'none';
+  document.getElementById('restore-confirm').style.display = 'none';
+  document.getElementById('restore-buttons').style.display = 'none';
   document.getElementById('restore-filename').textContent = nom;
   document.getElementById('restore-confirm-input').value = '';
   document.getElementById('btn-restore-confirm').disabled = true;
   document.getElementById('btn-restore-confirm').style.opacity = '0.5';
   document.getElementById('btn-restore-confirm').style.cursor = 'not-allowed';
   document.getElementById('modal-restore').style.display = 'flex';
-  document.getElementById('restore-confirm-input').focus();
+  // Lancer l'analyse AJAX
+  var fd = new FormData();
+  fd.append('nom', nom);
+  fd.append('csrfmiddlewaretoken', _csrfToken);
+  fetch('{% url "analyser_backup_ajax" %}', { method: 'POST', body: fd })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      document.getElementById('restore-loading').style.display = 'none';
+      if (data.error) {
+        document.getElementById('restore-error').querySelector('p').textContent = data.error;
+        document.getElementById('restore-error').style.display = 'block';
+        document.getElementById('restore-buttons').style.display = 'flex';
+        return;
+      }
+      afficherAnalyse(data);
+      document.getElementById('restore-analysis').style.display = 'block';
+      document.getElementById('restore-confirm').style.display = 'block';
+      document.getElementById('restore-buttons').style.display = 'flex';
+      document.getElementById('restore-confirm-input').focus();
+    })
+    .catch(function(e) {
+      document.getElementById('restore-loading').style.display = 'none';
+      document.getElementById('restore-error').querySelector('p').textContent = 'Erreur réseau : ' + e.message;
+      document.getElementById('restore-error').style.display = 'block';
+      document.getElementById('restore-buttons').style.display = 'flex';
+    });
 }
+
+function afficherAnalyse(d) {
+  document.getElementById('analyse-taille').textContent = d.taille_lisible;
+  document.getElementById('analyse-nb-tables').textContent = d.nb_tables;
+  // Tables affectées
+  var aff = document.getElementById('section-affectees');
+  var lst = document.getElementById('liste-affectees');
+  if (d.tables_affectees && d.tables_affectees.length > 0) {
+    aff.style.display = 'block';
+    var html = '<table style="width:100%;font-size:12px;border-collapse:collapse;">';
+    html += '<tr style="background:var(--bg-alt,#f8fafc);"><th style="padding:6px 10px;text-align:left;">Table</th><th style="padding:6px 10px;text-align:right;">Lignes actuelles</th></tr>';
+    for (var i = 0; i < d.tables_affectees.length; i++) {
+      var t = d.tables_affectees[i];
+      html += '<tr style="border-bottom:1px solid var(--border-color);"><td style="padding:5px 10px;">' + t.nom + '</td><td style="padding:5px 10px;text-align:right;color:#e74c3c;font-weight:700;">' + (t.lignes_actuelles || 0).toLocaleString() + '</td></tr>';
+    }
+    html += '</table>';
+    lst.innerHTML = html;
+  } else {
+    aff.style.display = 'none';
+  }
+  // Nouvelles tables
+  var nouv = document.getElementById('section-nouvelles');
+  var lstN = document.getElementById('liste-nouvelles');
+  if (d.tables_nouvelles && d.tables_nouvelles.length > 0) {
+    nouv.style.display = 'block';
+    var h2 = '<div style="padding:6px 10px;font-size:12px;">';
+    for (var j = 0; j < d.tables_nouvelles.length; j++) {
+      h2 += '<span style="display:inline-block;background:rgba(39,174,96,0.1);color:#27ae60;border-radius:4px;padding:2px 8px;margin:2px;font-size:11px;">' + d.tables_nouvelles[j] + '</span>';
+    }
+    h2 += '</div>';
+    lstN.innerHTML = h2;
+  } else {
+    nouv.style.display = 'none';
+  }
+  // Tables supprimées
+  var perd = document.getElementById('section-perdues');
+  var lstP = document.getElementById('liste-perdues');
+  if (d.tables_perdues && d.tables_perdues.length > 0) {
+    perd.style.display = 'block';
+    var h3 = '<div style="padding:6px 10px;font-size:12px;">';
+    for (var k = 0; k < d.tables_perdues.length; k++) {
+      h3 += '<span style="display:inline-block;background:rgba(230,126,34,0.1);color:#e67e22;border-radius:4px;padding:2px 8px;margin:2px;font-size:11px;">' + d.tables_perdues[k] + '</span>';
+    }
+    h3 += '</div>';
+    lstP.innerHTML = h3;
+  } else {
+    perd.style.display = 'none';
+  }
+}
+
 function fermerRestauration() {
   document.getElementById('modal-restore').style.display = 'none';
 }
+
 document.getElementById('restore-confirm-input').addEventListener('input', function() {
   var btn = document.getElementById('btn-restore-confirm');
   var val = this.value.trim();
@@ -441,15 +575,15 @@ document.getElementById('restore-confirm-input').addEventListener('input', funct
     btn.style.cursor = 'not-allowed';
   }
 });
+
 function confirmerRestauration() {
-  var nom = document.getElementById('restore-filename').textContent;
   var form = document.createElement('form');
   form.method = 'POST';
   form.action = '{% url "parametres_sauvegardes" %}';
   var csrf = document.querySelector('input[name="csrfmiddlewaretoken"]');
   if (csrf) { var c = csrf.cloneNode(); form.appendChild(c); }
   var a1 = document.createElement('input'); a1.type='hidden'; a1.name='action'; a1.value='restaurer'; form.appendChild(a1);
-  var a2 = document.createElement('input'); a2.type='hidden'; a2.name='nom'; a2.value=nom; form.appendChild(a2);
+  var a2 = document.createElement('input'); a2.type='hidden'; a2.name='nom'; a2.value=_restoreNom; form.appendChild(a2);
   var a3 = document.createElement('input'); a3.type='hidden'; a3.name='confirmation'; a3.value='RESTAURER'; form.appendChild(a3);
   document.body.appendChild(form);
   form.submit();
