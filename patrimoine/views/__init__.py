@@ -48,3 +48,24 @@ from .inventaire import (
     appliquer_reconciliation_inventaire, audit_scan_inventaire,
     imprimer_fiche_comptage,
 )
+
+from .vehicules import (
+    liste_vehicules, detail_vehicule, creer_vehicule, modifier_vehicule, supprimer_vehicule,
+    liste_interventions_vehicule, creer_intervention_vehicule,
+    liste_missions_vehicule, creer_mission_vehicule,
+    ajax_modeles_vehicule,
+)
+
+from .salles import (
+    liste_salles, detail_salle, creer_salle, modifier_salle, supprimer_salle,
+    calendrier_reservations, liste_reservations, creer_reservation,
+    detail_reservation, valider_reservation, annuler_reservation,
+    ajax_disponibilite_salle, ajax_reservations_salle, ajax_etages_salle, ajax_bureaux_salle,
+)
+
+from .demandes import (
+    mes_demandes_vehicule, creer_demande_vehicule, detail_demande_vehicule, annuler_demande_vehicule,
+    demandes_vehicule_a_valider, valider_demande_vehicule,
+    mes_demandes_salle, creer_demande_salle, detail_demande_salle, annuler_demande_salle,
+    demandes_salle_a_valider, valider_demande_salle,
+)

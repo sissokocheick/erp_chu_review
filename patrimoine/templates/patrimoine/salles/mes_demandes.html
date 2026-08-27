@@ -1,0 +1,207 @@
+{% extends "base_ui.html" %}
+{% load static %}
+{% block title %}Espace Salles{% endblock %}
+{% block contenu %}
+
+<!-- ═══════════ HEADER ═══════════ -->
+<div style="background:linear-gradient(135deg,#0891b2,#22d3ee,#67e8f9);border-radius:12px;padding:24px 28px;margin-bottom:20px;color:white;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-40%;right:-8%;width:260px;height:260px;background:rgba(255,255,255,0.06);border-radius:50%;"></div>
+  <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:1;">
+    <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid rgba(255,255,255,0.3);flex-shrink:0;">
+      <i class="fas fa-door-open"></i>
+    </div>
+    <div>
+      <div style="font-size:20px;font-weight:800;">Espace Salles de Réunion</div>
+      <div style="font-size:13px;opacity:0.85;">{{ request.user.get_full_name|default:request.user.username }} — Réservation d'espaces</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ KPIs ═══════════ -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px;">
+  <div class="nx-kpi" style="border-color:#0891b2;">
+    <div class="nx-kpi-icon" style="background:rgba(8,145,178,0.12);color:#0891b2;"><i class="fas fa-clipboard-list"></i></div>
+    <div><div class="nx-kpi-val" style="color:#0891b2;">{{ stats.total }}</div><div class="nx-kpi-lbl">Total</div></div>
+  </div>
+  <div class="nx-kpi nx-kpi-orange">
+    <div class="nx-kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+    <div><div class="nx-kpi-val">{{ stats.en_attente }}</div><div class="nx-kpi-lbl">En attente</div></div>
+  </div>
+  <div class="nx-kpi nx-kpi-green">
+    <div class="nx-kpi-icon"><i class="fas fa-check-circle"></i></div>
+    <div><div class="nx-kpi-val">{{ stats.validees }}</div><div class="nx-kpi-lbl">Validées</div></div>
+  </div>
+  <div class="nx-kpi nx-kpi-blue">
+    <div class="nx-kpi-icon"><i class="fas fa-door-open"></i></div>
+    <div><div class="nx-kpi-val">{{ stats.salles_disponibles|default:"0" }}</div><div class="nx-kpi-lbl">Salles libres</div></div>
+  </div>
+</div>
+
+<!-- ═══════════ ONGLETS ═══════════ -->
+<div class="nx-tabs">
+  <a href="#tab-liste" class="nx-tab active" onclick="switchTab('tab-liste', this)">
+    <i class="fas fa-clipboard-list"></i> Mes demandes
+    {% if stats.en_attente %}<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800;">{{ stats.en_attente }}</span>{% endif %}
+  </a>
+  <a href="#tab-form" class="nx-tab" onclick="switchTab('tab-form', this)">
+    <i class="fas fa-plus-circle"></i> Nouvelle demande
+  </a>
+</div>
+
+<!-- ═══════════ ONGLET 1 : MES DEMANDES ═══════════ -->
+<div id="tab-liste" class="nx-tab-content" style="display:block;">
+  <div class="nx-card">
+    <!-- Toolbar filtres -->
+    <div class="nx-toolbar">
+      <a href="{% url 'patrimoine_mes_demandes_salle' %}" class="nx-btn nx-btn-sm {% if not statut_filter %}nx-btn-primary{% else %}nx-btn-light{% endif %}">Toutes</a>
+      <a href="{% url 'patrimoine_mes_demandes_salle' %}?statut=EN_ATTENTE" class="nx-btn nx-btn-sm {% if statut_filter == 'EN_ATTENTE' %}nx-btn-primary{% else %}nx-btn-light{% endif %}"><i class="fas fa-hourglass-half"></i> En attente</a>
+      <a href="{% url 'patrimoine_mes_demandes_salle' %}?statut=VALIDEE" class="nx-btn nx-btn-sm {% if statut_filter == 'VALIDEE' %}nx-btn-primary{% else %}nx-btn-light{% endif %}"><i class="fas fa-check"></i> Validées</a>
+      <div class="nx-toolbar-right">
+        <span><i class="fas fa-list"></i> {{ demandes|length }} résultat(s)</span>
+      </div>
+    </div>
+
+    <!-- Tableau -->
+    <div style="overflow-x:auto;">
+      <table class="nx-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Réunion</th>
+            <th>Statut</th>
+            <th style="width:50px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in demandes %}
+          <tr>
+            <td style="white-space:nowrap;font-size:12px;color:var(--text-medium);">
+              <div style="font-weight:700;">{{ d.date_demande|date:"d/m H:i" }}</div>
+            </td>
+            <td>
+              <div style="font-weight:700;font-size:13px;">{{ d.objet }}</div>
+              <div style="font-size:11px;color:var(--text-light);margin-top:2px;">
+                <i class="fas fa-users"></i> {{ d.nb_participants }} pers.
+                {% if d.salle_attribuee %}
+                  <span style="background:#cffafe;padding:1px 6px;border-radius:4px;font-weight:700;font-size:10px;color:#0891b2;margin-left:4px;">{{ d.salle_attribuee.nom }}</span>
+                {% elif d.salle_preferee %}
+                  <span style="font-style:italic;margin-left:4px;">{{ d.salle_preferee.nom }}</span>
+                {% endif %}
+                <span style="margin-left:6px;color:#94a3b8;">{{ d.date_debut|date:"d/m H:i" }} → {{ d.date_fin|date:"H:i" }} ({{ d.duree_heures }}h)</span>
+              </div>
+            </td>
+            <td>
+              {% if d.statut == 'EN_ATTENTE' %}<span class="nx-badge nx-badge-orange"><i class="fas fa-clock"></i></span>{% endif %}
+              {% if d.statut == 'VALIDEE' %}<span class="nx-badge nx-badge-green"><i class="fas fa-check"></i></span>{% endif %}
+              {% if d.statut == 'REFUSEE' %}<span class="nx-badge nx-badge-red"><i class="fas fa-times"></i></span>{% endif %}
+              {% if d.statut == 'ANNULEE' %}<span class="nx-badge nx-badge-grey">—</span>{% endif %}
+            </td>
+            <td>
+              <a href="{% url 'patrimoine_detail_demande_salle' d.pk %}" class="nx-btn nx-btn-sm nx-btn-info" style="padding:4px 8px;"><i class="fas fa-eye"></i></a>
+              {% if d.statut == 'EN_ATTENTE' %}
+              <a href="#" class="nx-btn nx-btn-sm nx-btn-danger" style="padding:4px 8px;margin-left:2px;" onclick="confirmerAnnulation('{% url 'patrimoine_annuler_demande_salle' d.pk %}', 'salle'); return false;"><i class="fas fa-times"></i></a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="4">
+              <div class="nx-empty">
+                <i class="fas fa-door-open" style="font-size:42px;opacity:0.3;"></i>
+                <div style="font-size:15px;font-weight:700;color:var(--text-medium);margin-bottom:4px;">Aucune demande</div>
+                <div style="font-size:13px;color:var(--text-light);margin-bottom:16px;">Réservez votre première salle</div>
+                <button onclick="switchTab('tab-form', document.querySelector('[href=&quot;#tab-form&quot;]'))" class="nx-btn nx-btn-primary nx-btn-lg"><i class="fas fa-plus"></i> Nouvelle demande</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if demandes.has_other_pages %}
+    <div style="padding:14px 18px;display:flex;justify-content:center;">
+      <div class="nx-pag">
+        {% if demandes.has_previous %}<a href="?page={{ demandes.previous_page_number }}">&laquo;</a>{% endif %}
+        {% for num in demandes.paginator.page_range %}
+          <a href="?page={{ num }}" class="{% if demandes.number == num %}active{% endif %}">{{ num }}</a>
+        {% endfor %}
+        {% if demandes.has_next %}<a href="?page={{ demandes.next_page_number }}">&raquo;</a>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ═══════════ ONGLET 2 : NOUVELLE DEMANDE ═══════════ -->
+<div id="tab-form" class="nx-tab-content" style="display:none;">
+  <div class="nx-card">
+      <div class="nx-card-header">
+        <h4><i class="fas fa-calendar-plus" style="color:#0891b2;margin-right:8px;"></i> Nouvelle réservation de salle</h4>
+      </div>
+      <div class="nx-card-body">          <form method="POST" action="{% url 'patrimoine_demande_salle_creer' %}" novalidate onsubmit="confirmerSoumission(this, 'salle'); return false;">
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div style="grid-column:1/-1;" class="nx-form-group">
+              <label class="nx-label">Objet de la réunion *</label>
+              <input type="text" name="objet" class="nx-input" required placeholder="Ex: Réunion de direction, Comité technique...">
+            </div>
+            <div style="grid-column:1/-1;" class="nx-form-group">
+              <label class="nx-label">Description</label>
+              <textarea name="description" class="nx-textarea" rows="2" placeholder="Ordre du jour, notes..."></textarea>
+            </div>
+            <div class="nx-form-group">
+              <label class="nx-label">Début souhaité *</label>
+              <input type="datetime-local" name="date_debut" class="nx-input" required>
+            </div>
+            <div class="nx-form-group">
+              <label class="nx-label">Fin souhaitée *</label>
+              <input type="datetime-local" name="date_fin" class="nx-input" required>
+            </div>
+            <div class="nx-form-group">
+              <label class="nx-label">Nombre de participants</label>
+              <input type="number" name="nb_participants" class="nx-input" value="1" min="1">
+            </div>
+            <div class="nx-form-group">
+              <label class="nx-label">Salle préférée</label>
+              <select name="salle_preferee" class="nx-select">
+                <option value="">-- Aucune préférence --</option>
+              </select>
+            </div>
+          </div>
+          <div class="nx-form-group">
+            <label class="nx-label">Équipements nécessaires</label>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;">
+              <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;transition:0.2s;">
+                <input type="checkbox" name="besoin_videoconf" style="width:16px;height:16px;accent-color:#0891b2;">
+                <i class="fas fa-video" style="color:#0891b2;"></i> Vidéoconférence
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;transition:0.2s;">
+                <input type="checkbox" name="besoin_video" style="width:16px;height:16px;accent-color:#0891b2;">
+                <i class="fas fa-tv" style="color:#0891b2;"></i> Vidéoprojecteur
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;transition:0.2s;">
+                <input type="checkbox" name="besoin_son" style="width:16px;height:16px;accent-color:#0891b2;">
+                <i class="fas fa-volume-up" style="color:#0891b2;"></i> Sonorisation
+              </label>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;padding-top:14px;border-top:1px solid var(--border-light);">
+            <button type="button" onclick="switchTab('tab-liste', document.querySelector('[href=&quot;#tab-liste&quot;]'))" class="nx-btn nx-btn-light">Annuler</button>
+            <button type="submit" class="nx-btn nx-btn-success nx-btn-lg" style="box-shadow:0 4px 12px rgba(8,145,178,0.3);"><i class="fas fa-paper-plane"></i> Envoyer la demande</button>
+          </div>
+        </form>
+      </div>
+    </div>
+</div>
+
+<script>
+function switchTab(id, el) {
+  document.querySelectorAll('.nx-tab-content').forEach(t => t.style.display = 'none');
+  document.querySelectorAll('.nx-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).style.display = 'block';
+  if (el) el.classList.add('active');
+  return false;
+}
+</script>
+{% endblock %}

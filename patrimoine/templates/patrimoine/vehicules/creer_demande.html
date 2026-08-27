@@ -1,0 +1,76 @@
+{% extends "base_ui.html" %}
+{% load static %}
+{% block title %}Nouvelle demande de véhicule{% endblock %}
+{% block contenu %}
+<style>
+  :root { --rad: 12px; --rad-sm: 8px; --pb: #9333ea; --pb2: #a855f7; }
+  .ph { background: linear-gradient(135deg, var(--pb), var(--pb2)); border-radius: var(--rad); padding: 22px 26px; margin-bottom: 20px; display: flex; align-items: center; gap: 18px; box-shadow: 0 6px 20px rgba(147,51,234,0.25); }
+  .ph-left-icon { background: rgba(255,255,255,0.15); width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
+  .ph h4 { margin: 0; font-size: 22px; font-weight: 800; color: white; }
+  .ph small { opacity: 0.85; font-size: 13px; color: white; display: block; margin-top: 2px; }
+  .btn-h { background: white; color: var(--pb); border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; text-decoration: none; }
+  .btn-h:hover { background: #faf5ff; transform: translateY(-2px); }
+  .form-card { background: white; border-radius: var(--rad); box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eef0f3; }
+  .form-card .card-head { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 14px; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+  .form-card .card-body { padding: 24px; }
+  .form-group { margin-bottom: 18px; }
+  .form-group label { display: block; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 11px 14px; border: 1px solid #cbd5e0; border-radius: var(--rad-sm); font-size: 14px; color: #1e293b; outline: none; transition: 0.2s; background: #f8fafc; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--pb2); background: white; box-shadow: 0 0 0 3px rgba(147,51,234,0.12); }
+  .help-card { background: linear-gradient(135deg, #faf5ff, #f3e8ff); border-radius: var(--rad); border: 1px solid #e9d5ff; padding: 20px; }
+  .help-card h6 { color: var(--pb); font-weight: 800; margin-bottom: 10px; }
+  .help-card ol { font-size: 13px; color: #6b21a8; margin: 0; padding-left: 18px; }
+  .help-card ol li { margin-bottom: 6px; }
+</style>
+
+<div class="ph">
+  <div class="ph-left-icon"><i class="fas fa-car"></i></div>
+  <div><h4>Nouvelle demande de véhicule</h4><small>Remplissez le formulaire pour demander un véhicule</small></div>
+</div>
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="form-card">
+      <div class="card-head"><i class="fas fa-clipboard-list" style="color:var(--pb);"></i> Détails de la demande</div>
+      <div class="card-body">
+        <form method="POST" novalidate onsubmit="confirmerSoumission(this, 'vehicule'); return false;">
+          {% csrf_token %}
+          <div class="form-group">
+            <label>Objet de la mission *</label>
+            <input type="text" name="objet" required placeholder="Ex: Transport de matériel médical, visite site...">
+          </div>
+          <div class="form-group">
+            <label>Destination *</label>
+            <input type="text" name="destination" required placeholder="Ex: CHU de Cocody, Aéroport FHB...">
+          </div>
+          <div class="row">
+            <div class="col-md-6"><div class="form-group"><label>Date/heure de départ *</label><input type="datetime-local" name="date_depart" required></div></div>
+            <div class="col-md-6"><div class="form-group"><label>Date/heure de retour prévue *</label><input type="datetime-local" name="date_retour_prevue" required></div></div>
+          </div>
+          <div class="row">
+            <div class="col-md-4"><div class="form-group"><label>Passagers</label><input type="number" name="nb_passagers" value="1" min="1"></div></div>
+            <div class="col-md-4"><div class="form-group"><label>Urgence</label><select name="urgency"><option value="NORMALE">🟢 Normale</option><option value="URGENTE">🟡 Urgente</option><option value="CRITIQUE">🔴 Critique</option></select></div></div>
+            <div class="col-md-4"><div class="form-group"><label>Service</label><select name="service_demandeur"><option value="">-- Mon service --</option></select></div></div>
+          </div>
+          <div class="form-group"><label>Motif détaillé</label><textarea name="motif" rows="3" placeholder="Décrivez le besoin..."></textarea></div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;">
+            <a href="{% url 'patrimoine_mes_demandes_vehicule' %}" class="btn-h" style="background:#f1f5f9;color:#475569;">Annuler</a>
+            <button type="submit" class="btn-h" style="background:var(--pb);color:white;box-shadow:0 4px 12px rgba(147,51,234,0.3);"><i class="fas fa-paper-plane"></i> Envoyer la demande</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="help-card">
+      <h6><i class="fas fa-info-circle me-1"></i> Comment ça marche ?</h6>
+      <ol>
+        <li>Remplissez le formulaire</li>
+        <li>Le responsable valide et affecte un véhicule</li>
+        <li>Vous récupérez le véhicule</li>
+        <li>À votre retour, vous le rendez avec le kilométrage</li>
+      </ol>
+    </div>
+  </div>
+</div>
+{% endblock %}

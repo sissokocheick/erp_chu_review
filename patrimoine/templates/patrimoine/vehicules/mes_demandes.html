@@ -1,0 +1,202 @@
+{% extends "base_ui.html" %}
+{% load static %}
+{% block title %}Espace Véhicules{% endblock %}
+{% block contenu %}
+
+<!-- ═══════════ HEADER ═══════════ -->
+<div style="background:linear-gradient(135deg,#7c3aed,#a855f7,#c084fc);border-radius:12px;padding:24px 28px;margin-bottom:20px;color:white;position:relative;overflow:hidden;">
+  <div style="position:absolute;top:-40%;right:-8%;width:260px;height:260px;background:rgba(255,255,255,0.06);border-radius:50%;"></div>
+  <div style="display:flex;align-items:center;gap:16px;position:relative;z-index:1;">
+    <div style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:22px;border:2px solid rgba(255,255,255,0.3);flex-shrink:0;">
+      <i class="fas fa-car"></i>
+    </div>
+    <div>
+      <div style="font-size:20px;font-weight:800;">Espace Véhicules</div>
+      <div style="font-size:13px;opacity:0.85;">{{ request.user.get_full_name|default:request.user.username }} — Demandes d'affectation</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ KPIs ═══════════ -->
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:20px;">
+  <div class="nx-kpi nx-kpi-purple">
+    <div class="nx-kpi-icon" style="background:rgba(124,58,237,0.12);color:#7c3aed;"><i class="fas fa-clipboard-list"></i></div>
+    <div><div class="nx-kpi-val">{{ stats.total }}</div><div class="nx-kpi-lbl">Total</div></div>
+  </div>
+  <div class="nx-kpi nx-kpi-orange">
+    <div class="nx-kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+    <div><div class="nx-kpi-val">{{ stats.en_attente }}</div><div class="nx-kpi-lbl">En attente</div></div>
+  </div>
+  <div class="nx-kpi nx-kpi-green">
+    <div class="nx-kpi-icon"><i class="fas fa-check-circle"></i></div>
+    <div><div class="nx-kpi-val">{{ stats.validees }}</div><div class="nx-kpi-lbl">Validées</div></div>
+  </div>
+  <div class="nx-kpi" style="border-color:#64748b;">
+    <div class="nx-kpi-icon" style="background:rgba(100,116,139,0.12);color:#64748b;"><i class="fas fa-flag-checkered"></i></div>
+    <div><div class="nx-kpi-val" style="color:#64748b;">{{ stats.terminees|default:"0" }}</div><div class="nx-kpi-lbl">Terminées</div></div>
+  </div>
+</div>
+
+<!-- ═══════════ ONGLETS ═══════════ -->
+<div class="nx-tabs">
+  <a href="#tab-liste" class="nx-tab active" onclick="switchTab('tab-liste', this)">
+    <i class="fas fa-clipboard-list"></i> Mes demandes
+    {% if stats.en_attente %}<span style="background:#fef3c7;color:#92400e;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:800;">{{ stats.en_attente }}</span>{% endif %}
+  </a>
+  <a href="#tab-form" class="nx-tab" onclick="switchTab('tab-form', this)">
+    <i class="fas fa-plus-circle"></i> Nouvelle demande
+  </a>
+</div>
+
+<!-- ═══════════ ONGLET 1 : MES DEMANDES ═══════════ -->
+<div id="tab-liste" class="nx-tab-content" style="display:block;">
+  <div class="nx-card">
+    <!-- Toolbar filtres -->
+    <div class="nx-toolbar">
+      <a href="{% url 'patrimoine_mes_demandes_vehicule' %}" class="nx-btn nx-btn-sm {% if not statut_filter %}nx-btn-primary{% else %}nx-btn-light{% endif %}">Toutes</a>
+      <a href="{% url 'patrimoine_mes_demandes_vehicule' %}?statut=EN_ATTENTE" class="nx-btn nx-btn-sm {% if statut_filter == 'EN_ATTENTE' %}nx-btn-primary{% else %}nx-btn-light{% endif %}"><i class="fas fa-hourglass-half"></i> En attente</a>
+      <a href="{% url 'patrimoine_mes_demandes_vehicule' %}?statut=VALIDEE" class="nx-btn nx-btn-sm {% if statut_filter == 'VALIDEE' %}nx-btn-primary{% else %}nx-btn-light{% endif %}"><i class="fas fa-check"></i> Validées</a>
+      <a href="{% url 'patrimoine_mes_demandes_vehicule' %}?statut=TERMINEE" class="nx-btn nx-btn-sm {% if statut_filter == 'TERMINEE' %}nx-btn-primary{% else %}nx-btn-light{% endif %}"><i class="fas fa-flag-checkered"></i> Terminées</a>
+      <div class="nx-toolbar-right">
+        <span><i class="fas fa-list"></i> {{ demandes|length }} résultat(s)</span>
+      </div>
+    </div>
+
+    <!-- Tableau -->
+    <div style="overflow-x:auto;">
+      <table class="nx-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Mission</th>
+            <th>Statut</th>
+            <th style="width:50px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in demandes %}
+          <tr>
+            <td style="white-space:nowrap;font-size:12px;color:var(--text-medium);">
+              <div style="font-weight:700;">{{ d.date_demande|date:"d/m H:i" }}</div>
+            </td>
+            <td>
+              <div style="font-weight:700;font-size:13px;">{{ d.objet }}</div>
+              <div style="font-size:11px;color:var(--text-light);margin-top:2px;">
+                <i class="fas fa-map-marker-alt"></i> {{ d.destination }}
+                {% if d.vehicule %}
+                  <span style="background:#f3e8ff;padding:1px 6px;border-radius:4px;font-weight:700;font-size:10px;color:#7c3aed;font-family:monospace;margin-left:4px;">{{ d.vehicule.immatriculation }}</span>
+                {% endif %}
+                <span style="margin-left:6px;color:#94a3b8;">{{ d.date_depart|date:"d/m H:i" }} → {{ d.date_retour_prevue|date:"d/m H:i" }}</span>
+              </div>
+            </td>
+            <td>
+              <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+                {% if d.statut == 'EN_ATTENTE' %}<span class="nx-badge nx-badge-orange"><i class="fas fa-clock"></i></span>{% endif %}
+                {% if d.statut == 'VALIDEE' %}<span class="nx-badge nx-badge-green"><i class="fas fa-check"></i></span>{% endif %}
+                {% if d.statut == 'REFUSEE' %}<span class="nx-badge nx-badge-red"><i class="fas fa-times"></i></span>{% endif %}
+                {% if d.statut == 'TERMINEE' %}<span class="nx-badge nx-badge-blue"><i class="fas fa-flag-checkered"></i></span>{% endif %}
+                {% if d.statut == 'ANNULEE' %}<span class="nx-badge nx-badge-grey">—</span>{% endif %}
+                {% if d.urgency == 'CRITIQUE' %}
+                  <span class="nx-badge nx-badge-red" style="font-size:10px;padding:2px 6px;"><i class="fas fa-exclamation"></i></span>
+                {% elif d.urgency == 'URGENTE' %}
+                  <span class="nx-badge nx-badge-orange" style="font-size:10px;padding:2px 6px;"><i class="fas fa-bolt"></i></span>
+                {% endif %}
+              </div>
+            </td>
+            <td>
+              <a href="{% url 'patrimoine_detail_demande_vehicule' d.pk %}" class="nx-btn nx-btn-sm nx-btn-primary" style="padding:4px 8px;"><i class="fas fa-eye"></i></a>
+              {% if d.statut == 'EN_ATTENTE' %}
+              <a href="#" class="nx-btn nx-btn-sm nx-btn-danger" style="padding:4px 8px;margin-left:2px;" onclick="confirmerAnnulation('{% url 'patrimoine_annuler_demande_vehicule' d.pk %}', 'vehicule'); return false;"><i class="fas fa-times"></i></a>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5">
+              <div class="nx-empty">
+                <i class="fas fa-car" style="font-size:42px;opacity:0.3;"></i>
+                <div style="font-size:15px;font-weight:700;color:var(--text-medium);margin-bottom:4px;">Aucune demande</div>
+                <div style="font-size:13px;color:var(--text-light);margin-bottom:16px;">Passez votre première demande de véhicule</div>
+                <button onclick="switchTab('tab-form', document.querySelector('[href=&quot;#tab-form&quot;]'))" class="nx-btn nx-btn-primary nx-btn-lg"><i class="fas fa-plus"></i> Nouvelle demande</button>
+              </div>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if demandes.has_other_pages %}
+    <div style="padding:14px 18px;display:flex;justify-content:center;">
+      <div class="nx-pag">
+        {% if demandes.has_previous %}<a href="?page={{ demandes.previous_page_number }}">&laquo;</a>{% endif %}
+        {% for num in demandes.paginator.page_range %}
+          <a href="?page={{ num }}" class="{% if demandes.number == num %}active{% endif %}">{{ num }}</a>
+        {% endfor %}
+        {% if demandes.has_next %}<a href="?page={{ demandes.next_page_number }}">&raquo;</a>{% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- ═══════════ ONGLET 2 : NOUVELLE DEMANDE ═══════════ -->
+<div id="tab-form" class="nx-tab-content" style="display:none;">
+    <div class="nx-card">
+      <div class="nx-card-header">
+        <h4><i class="fas fa-clipboard-list" style="color:#7c3aed;margin-right:8px;"></i> Nouvelle demande de véhicule</h4>
+      </div>
+      <div class="nx-card-body">          <form method="POST" action="{% url 'patrimoine_demande_vehicule_creer' %}" novalidate onsubmit="confirmerSoumission(this, 'vehicule'); return false;">
+          {% csrf_token %}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div style="grid-column:1/-1;" class="nx-form-group">
+              <label class="nx-label">Objet de la mission *</label>
+              <input type="text" name="objet" class="nx-input" required placeholder="Ex: Transport de matériel médical...">
+            </div>
+            <div style="grid-column:1/-1;" class="nx-form-group">
+              <label class="nx-label">Destination *</label>
+              <input type="text" name="destination" class="nx-input" required placeholder="Ex: CHU de Cocody, Aéroport...">
+            </div>
+            <div class="nx-form-group">
+              <label class="nx-label">Départ prévu *</label>
+              <input type="datetime-local" name="date_depart" class="nx-input" required>
+            </div>
+            <div class="nx-form-group">
+              <label class="nx-label">Retour prévu *</label>
+              <input type="datetime-local" name="date_retour_prevue" class="nx-input" required>
+            </div>
+            <div class="nx-form-group">
+              <label class="nx-label">Passagers</label>
+              <input type="number" name="nb_passagers" class="nx-input" value="1" min="1">
+            </div>
+            <div class="nx-form-group">
+              <label class="nx-label">Urgence</label>
+              <select name="urgency" class="nx-select">
+                <option value="NORMALE">🟢 Normale</option>
+                <option value="URGENTE">🟡 Urgente</option>
+                <option value="CRITIQUE">🔴 Critique</option>
+              </select>
+            </div>
+            <div style="grid-column:1/-1;" class="nx-form-group">
+              <label class="nx-label">Motif détaillé</label>
+              <textarea name="motif" class="nx-textarea" rows="3" placeholder="Décrivez le besoin..."></textarea>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:8px;padding-top:14px;border-top:1px solid var(--border-light);">
+            <button type="button" onclick="switchTab('tab-liste', document.querySelector('[href=&quot;#tab-liste&quot;]'))" class="nx-btn nx-btn-light">Annuler</button>
+            <button type="submit" class="nx-btn nx-btn-primary nx-btn-lg" style="box-shadow:0 4px 12px rgba(124,58,237,0.3);"><i class="fas fa-paper-plane"></i> Envoyer la demande</button>
+          </div>
+        </form>
+      </div>
+</div>
+
+<script>
+function switchTab(id, el) {
+  document.querySelectorAll('.nx-tab-content').forEach(t => t.style.display = 'none');
+  document.querySelectorAll('.nx-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).style.display = 'block';
+  if (el) el.classList.add('active');
+  return false;
+}
+</script>
+{% endblock %}

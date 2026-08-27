@@ -1,0 +1,78 @@
+{% extends "base_ui.html" %}
+{% load static %}
+
+{% block title %}Missions — {{ vehicule.immatriculation }}{% endblock %}
+
+{% block contenu %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour au véhicule</a>
+            <h4 class="mb-0 mt-1"><i class="fas fa-route me-2"></i>Missions — {{ vehicule.immatriculation }}</h4>
+        </div>
+        <a href="{% url 'patrimoine_vehicule_mission_creer' vehicule.pk %}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i>Nouvelle mission
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date départ</th>
+                            <th>Objet</th>
+                            <th>Destination</th>
+                            <th>Chauffeur</th>
+                            <th>KM parcourus</th>
+                            <th>Durée</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in missions %}
+                        <tr>
+                            <td>{{ m.date_depart|date:"d/m/Y H:i" }}</td>
+                            <td>{{ m.objet }}</td>
+                            <td>{{ m.destination }}</td>
+                            <td>{{ m.chauffeur.get_full_name|default:"—" }}</td>
+                            <td>
+                                {% if m.km_parcourus %}
+                                    {{ m.km_parcourus }} km
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if m.duree_heures %}
+                                    {{ m.duree_heures }}h
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if m.statut == 'EN_COURS' %}
+                                    <span class="badge bg-primary">En cours</span>
+                                {% elif m.statut == 'TERMINEE' %}
+                                    <span class="badge bg-success">Terminée</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Annulée</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center text-muted py-4">
+                                <i class="fas fa-route fa-2x mb-2 d-block"></i>
+                                Aucune mission enregistrée.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

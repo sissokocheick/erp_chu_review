@@ -1,0 +1,187 @@
+{% extends "base_ui.html" %}
+{% load static %}
+{% block title %}Réservation — {{ reservation.objet }}{% endblock %}
+{% block contenu %}
+<style>
+  :root { --rad: 12px; --rad-sm: 8px; }
+  .det-ph { background: linear-gradient(135deg, #0e7490, #06b6d4, #22d3ee); border-radius: var(--rad); padding: 22px 26px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 6px 20px rgba(6,182,212,0.25); flex-wrap: wrap; gap: 14px; }
+  .det-ph-left { display: flex; align-items: center; gap: 18px; }
+  .det-ph-icon { background: rgba(255,255,255,0.15); width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
+  .det-ph h4 { margin: 0; font-size: 22px; font-weight: 800; color: white; }
+  .det-ph small { opacity: 0.85; font-size: 13px; color: white; }
+  .det-chip { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; color: white; border: none; }
+  .det-card { background: white; border-radius: var(--rad); box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; overflow: hidden; }
+  .det-card-head { padding: 16px 22px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
+  .det-card-head-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .det-card-head h5 { margin: 0; font-size: 15px; font-weight: 700; color: #1e293b; }
+  .det-card-body { padding: 22px; }
+  .det-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f8fafc; }
+  .det-row:last-child { border-bottom: none; }
+  .det-label { font-size: 12px; color: #94a3b8; font-weight: 600; }
+  .det-value { font-size: 14px; color: #1e293b; font-weight: 600; }
+  .det-eq { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+  .btn-action { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px 18px; border-radius: var(--rad-sm); font-weight: 700; font-size: 13px; cursor: pointer; width: 100%; transition: 0.2s; border: none; }
+  .btn-action:hover { transform: translateY(-2px); }
+  .btn-success-nx { background: linear-gradient(135deg, #22c55e, #16a34a); color: white; box-shadow: 0 4px 12px rgba(34,197,94,0.3); }
+  .btn-danger-nx { background: linear-gradient(135deg, #ef4444, #dc2626); color: white; box-shadow: 0 4px 12px rgba(239,68,68,0.3); }
+  .btn-outline-nx { background: white; color: #475569; border: 1.5px solid #e2e8f0; }
+  .btn-outline-nx:hover { background: #f1f5f9; }
+  .btn-back { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-back:hover { color: white; }
+  .print-btn { background: white; color: #0e7490; border: 1px solid #a5f3fc; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; text-decoration: none; }
+  .print-btn:hover { background: #ecfeff; }
+  @media print {
+    body * { visibility: hidden !important; }
+    .det-ph, .det-ph * { visibility: visible !important; }
+    .det-ph { position: absolute; left: 0; top: 0; width: 100%; }
+    .btn-action, .print-btn, .det-card:last-of-type { display: none !important; }
+    .det-card { break-inside: avoid; border: 1px solid #ddd !important; margin-bottom: 12px; }
+    @page { margin: 1.5cm; size: A4; }
+  }
+</style>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;max-width:1200px;margin:0 auto;">
+
+  <!-- Colonne principale -->
+  <div>
+    <!-- Header -->
+    <div class="det-ph">
+      <div class="det-ph-left">
+        <a href="{% url 'patrimoine_reservations' %}" class="btn-back"><i class="fas fa-arrow-left"></i></a>
+        <div class="det-ph-icon"><i class="fas fa-calendar-check"></i></div>
+        <div>
+          <h4>{{ reservation.objet }}</h4>
+          <small>{{ reservation.salle.nom }} · {{ reservation.date_debut|date:"d/m/Y H:i" }}</small>
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        {% if reservation.statut == 'CONFIRMEE' %}
+          <span class="det-chip" style="background:rgba(34,197,94,0.25);color:#4ade80;border:1px solid rgba(34,197,94,0.4);"><i class="fas fa-check"></i> Confirmée</span>
+        {% elif reservation.statut == 'EN_ATTENTE' %}
+          <span class="det-chip" style="background:rgba(251,191,36,0.25);color:#fbbf24;border:1px solid rgba(251,191,36,0.4);"><i class="fas fa-clock"></i> En attente</span>
+        {% elif reservation.statut == 'ANNULEE' %}
+          <span class="det-chip" style="background:rgba(239,68,68,0.25);color:#f87171;border:1px solid rgba(239,68,68,0.4);"><i class="fas fa-times"></i> Annulée</span>
+        {% else %}
+          <span class="det-chip" style="background:rgba(148,163,184,0.25);color:#94a3b8;border:1px solid rgba(148,163,184,0.4);"><i class="fas fa-flag-checkered"></i> Terminée</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+      <div class="det-card" style="text-align:center;padding:16px;border-radius:var(--rad);">
+        <div style="font-size:22px;font-weight:800;color:#0891b2;">{{ reservation.nb_participants }}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Participants</div>
+      </div>
+      <div class="det-card" style="text-align:center;padding:16px;border-radius:var(--rad);">
+        <div style="font-size:22px;font-weight:800;color:#2563eb;">{{ reservation.duree_heures }}h</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Durée</div>
+      </div>
+      <div class="det-card" style="text-align:center;padding:16px;border-radius:var(--rad);">
+        <div style="font-size:13px;font-weight:700;color:#1e293b;">{{ reservation.date_debut|date:"d/m H:i" }}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Début</div>
+      </div>
+      <div class="det-card" style="text-align:center;padding:16px;border-radius:var(--rad);">
+        <div style="font-size:13px;font-weight:700;color:#1e293b;">{{ reservation.date_fin|date:"d/m H:i" }}</div>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Fin</div>
+      </div>
+    </div>
+
+    <!-- Détails -->
+    <div class="det-card" style="margin-bottom:20px;">
+      <div class="det-card-head">
+        <div class="det-card-head-icon" style="background:linear-gradient(135deg,#ecfeff,#cffafe);"><i class="fas fa-clipboard-list" style="color:#0891b2;font-size:14px;"></i></div>
+        <h5>Détails de la réservation</h5>
+      </div>
+      <div class="det-card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <div class="det-row"><span class="det-label">Salle</span><span class="det-value" style="color:#0891b2;">{{ reservation.salle.nom }}</span></div>
+            <div class="det-row"><span class="det-label">Demandeur</span><span class="det-value">{{ reservation.demandeur.get_full_name|default:"—" }}</span></div>
+            <div class="det-row"><span class="det-label">Service</span><span class="det-value">{{ reservation.service_demandeur|default:"—" }}</span></div>
+          </div>
+          <div>
+            <div class="det-row"><span class="det-label">Récurrence</span><span class="det-value">{{ reservation.frequence|default:"Ponctuelle" }}</span></div>
+            {% if reservation.description %}
+            <div style="margin-top:12px;padding:12px;background:#f8fafc;border-radius:8px;border-left:3px solid #0891b2;">
+              <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Description</div>
+              <div style="font-size:13px;color:#334155;">{{ reservation.description }}</div>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Équipements -->
+        <div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap;">
+          {% if reservation.besoin_videoconf %}<span class="det-eq" style="background:#ecfeff;color:#0891b2;"><i class="fas fa-video"></i> Vidéoconférence</span>{% endif %}
+          {% if reservation.besoin_video %}<span class="det-eq" style="background:#eff6ff;color:#2563eb;"><i class="fas fa-tv"></i> Vidéoprojecteur</span>{% endif %}
+          {% if reservation.besoin_son %}<span class="det-eq" style="background:#f5f3ff;color:#7c3aed;"><i class="fas fa-volume-up"></i> Sonorisation</span>{% endif %}
+        </div>
+
+        {% if reservation.notes_equipement %}
+        <div style="margin-top:12px;padding:10px 14px;background:#f8fafc;border-radius:8px;font-size:12px;color:#64748b;">
+          <i class="fas fa-sticky-note me-1"></i> {{ reservation.notes_equipement }}
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Validation -->
+    {% if reservation.valide_par %}
+    <div class="det-card" style="margin-bottom:20px;">
+      <div class="det-card-head">
+        <div class="det-card-head-icon" style="background:linear-gradient(135deg,#dcfce7,#bbf7d0);"><i class="fas fa-check-double" style="color:#16a34a;font-size:14px;"></i></div>
+        <h5>Validation</h5>
+      </div>
+      <div class="det-card-body">
+        <div class="det-row"><span class="det-label">Validé par</span><span class="det-value">{{ reservation.valide_par.get_full_name }}</span></div>
+        <div class="det-row"><span class="det-label">Date validation</span><span class="det-value">{{ reservation.date_validation|date:"d/m/Y H:i" }}</span></div>
+        {% if reservation.motif_refus %}
+        <div style="margin-top:12px;padding:12px;background:#fef2f2;border-radius:8px;border-left:3px solid #ef4444;">
+          <div style="font-size:11px;color:#ef4444;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Motif du refus</div>
+          <div style="font-size:13px;color:#991b1b;">{{ reservation.motif_refus }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Colonne actions -->
+  <div style="position:sticky;top:80px;display:flex;flex-direction:column;gap:16px;">
+    <div class="det-card">
+      <div class="det-card-head" style="background:linear-gradient(135deg,#ecfeff,#cffafe);">
+        <div class="det-card-head-icon" style="background:white;"><i class="fas fa-bolt" style="color:#0e7490;font-size:14px;"></i></div>
+        <h5>Actions</h5>
+      </div>
+      <div class="det-card-body" style="display:flex;flex-direction:column;gap:10px;">
+        {% if reservation.statut == 'EN_ATTENTE' %}
+        <form method="POST" action="{% url 'patrimoine_reservation_valider' reservation.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="valider">
+          <button type="submit" class="btn-action btn-success-nx"><i class="fas fa-check"></i> Valider</button>
+        </form>
+        <form method="POST" action="{% url 'patrimoine_reservation_valider' reservation.pk %}">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="refuser">
+          <textarea name="motif_refus" class="res-input" rows="2" placeholder="Motif du refus..." style="width:100%;padding:10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;margin-bottom:10px;"></textarea>
+          <button type="submit" class="btn-action btn-danger-nx"><i class="fas fa-times"></i> Refuser</button>
+        </form>
+        {% endif %}
+        {% if reservation.statut == 'CONFIRMEE' %}
+        <form method="POST" action="{% url 'patrimoine_reservation_annuler' reservation.pk %}">
+          {% csrf_token %}
+          <button type="submit" class="btn-action btn-danger-nx" onclick="return confirm('Annuler cette réservation ?')"><i class="fas fa-ban"></i> Annuler</button>
+        </form>
+        {% endif %}
+        <button onclick="window.print()" class="print-btn" style="width:100%;justify-content:center;">
+          <i class="fas fa-print"></i> Imprimer / PDF
+        </button>
+        <a href="{% url 'patrimoine_salle_detail' reservation.salle.pk %}" class="btn-action btn-outline-nx" style="text-decoration:none;">
+          <i class="fas fa-door-open"></i> Voir la salle
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

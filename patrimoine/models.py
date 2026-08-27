@@ -945,9 +945,489 @@ class LigneInventairePatrimoine(TracabiliteModel): # 🟢 ON A RENOMMÉ ICI AUSS
     commentaire = models.TextField(blank=True)
 
     def __str__(self):
-        return f"{self.immobilisation.code_patrimoine} - {self.get_etat_constate_display()}"
-
-    class Meta:
-        verbose_name = "Ligne d'Inventaire Patrimoine"
-        verbose_name_plural = "Lignes d'Inventaire Patrimoine"
+        return f"{self.immobilisation.code_patrimoine} - {self.get_etat_constate_display()}"
+
+    class Meta:
+        verbose_name = "Ligne d'Inventaire Patrimoine"
+        verbose_name_plural = "Lignes d'Inventaire Patrimoine"
         unique_together = ('campagne', 'immobilisation')
+
+
+
+# ═══════════════════════════════════════════════════════════
+# 10. GESTION DES VEHICULES
+# ═══════════════════════════════════════════════════════════
+
+
+class Vehicule(TracabiliteModel):
+    """
+    Gestion des vehicules du CHU : immatriculation, assurance, maintenance, etc.
+    """
+    STATUT_CHOICES = [
+        ('DISPONIBLE',  'Disponible'),
+        ('EN_SERVICE',  'En service / En mission'),
+        ('EN_MAINTENANCE', 'En maintenance'),
+        ('HORS_SERVICE', 'Hors service'),
+    ]
+
+    TYPE_VEHICULE_CHOICES = [
+        ('BERLINE',    'Berline'),
+        ('SUV',        'SUV'),
+        ('PICKUP',     'Pick-up'),
+        ('VAN',        'Van / Utilitaire'),
+        ('CAMION',     'Camion'),
+        ('MOTO',       'Moto'),
+        ('AMBULANCE',  'Ambulance'),
+        ('AUTRE',      'Autre'),
+    ]
+
+    # Identification
+    immatriculation = models.CharField(max_length=30, unique=True, verbose_name="Immatriculation")
+    marque          = models.ForeignKey(Marque, on_delete=models.SET_NULL, null=True, blank=True)
+    modele          = models.ForeignKey(Modele, on_delete=models.SET_NULL, null=True, blank=True)
+    type_vehicule   = models.CharField(max_length=20, choices=TYPE_VEHICULE_CHOICES, default='BERLINE')
+    couleur         = models.CharField(max_length=30, blank=True)
+    numero_chassis  = models.CharField(max_length=50, blank=True, verbose_name="N° de châssis")
+    kilometrage     = models.PositiveIntegerField(default=0, verbose_name="Kilométrage actuel (km)")
+
+    # Caractéristiques
+    carburant       = models.CharField(max_length=20, choices=[('ESSENCE', 'Essence'), ('DIESEL', 'Diesel'), ('ELECTRIQUE', 'Électrique'), ('HYBRIDE', 'Hybride')], default='DIESEL')
+    puissance_cv    = models.PositiveSmallIntegerField(null=True, blank=True, verbose_name="Puissance (CV)")
+    date_premiere_circulation = models.DateField(null=True, blank=True, verbose_name="1ère mise en circulation")
+
+    # Acquisition
+    date_acquisition    = models.DateField(null=True, blank=True)
+    valeur_acquisition  = models.DecimalField(max_digits=14, decimal_places=2, default=Decimal('0.00'), verbose_name="Valeur d'acquisition (FCFA)")
+    fournisseur         = models.ForeignKey('stock.Fournisseur', on_delete=models.SET_NULL, null=True, blank=True)
+
+    # Assurance
+    assurance_compagnie  = models.CharField(max_length=150, blank=True, verbose_name="Compagnie d'assurance")
+    assurance_numero     = models.CharField(max_length=100, blank=True, verbose_name="N° de police")
+    assurance_debut      = models.DateField(null=True, blank=True, verbose_name="Début assurance")
+    assurance_fin        = models.DateField(null=True, blank=True, verbose_name="Fin assurance")
+    assurance_premium    = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), verbose_name="Prime annuelle (FCFA)")
+
+    # Contrôle technique
+    ct_dernier_date      = models.DateField(null=True, blank=True, verbose_name="Date dernier CT")
+    ct_prochaine_date    = models.DateField(null=True, blank=True, verbose_name="Prochain CT")
+
+    # Affectation
+    service_affectation  = models.ForeignKey('core.Service', on_delete=models.SET_NULL, null=True, blank=True)
+    conducteur_titulaire = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicules_conduits')
+    garage               = models.CharField(max_length=200, blank=True, verbose_name="Garage / Stationnement")
+
+    # Statut
+    statut               = models.CharField(max_length=20, choices=STATUT_CHOICES, default='DISPONIBLE')
+    notes                = models.TextField(blank=True)
+    photo                = models.ImageField(upload_to='vehicules/', null=True, blank=True)
+
+    # Immobilisation liée (optionnel)
+    immobilisation       = models.ForeignKey(Immobilisation, on_delete=models.SET_NULL, null=True, blank=True, related_name='vehicules')
+
+    @property
+    def assurance_valide(self):
+        if not self.assurance_fin:
+            return None
+        return self.assurance_fin >= timezone.now().date()
+
+    @property
+    def jours_avant_assurance(self):
+        if not self.assurance_fin:
+            return None
+        return (self.assurance_fin - timezone.now().date()).days
+
+    @property
+    def ct_a_jour(self):
+        if not self.ct_prochaine_date:
+            return None
+        return self.ct_prochaine_date >= timezone.now().date()
+
+    @property
+    def age_annees(self):
+        if not self.date_premiere_circulation:
+            return None
+        delta = (timezone.now().date() - self.date_premiere_circulation).days
+        return round(delta / 365, 1)
+
+    def __str__(self):
+        return f"{self.immatriculation} ({self.marque or ''} {self.modele or ''})".strip()
+
+    class Meta:
+        verbose_name = "Véhicule"
+        verbose_name_plural = "Véhicules"
+        ordering = ['immatriculation']
+
+
+class InterventionVehicule(TracabiliteModel):
+    """
+    Interventions / maintenances sur un véhicule.
+    """
+    TYPE_CHOICES = [
+        ('ENTRETIEN',     'Entretien courant'),
+        ('REPARATION',    'Réparation'),
+        ('VIDANGE',       'Vidange'),
+        ('PNEU',          'Changement pneus'),
+        ('ASSURANCE',     'Renouvellement assurance'),
+        ('CT',            'Contrôle technique'),
+        ('CARROSSERIE',   'Carrosserie / Peinture'),
+        ('ELECTRIQUE',    'Électronique / Électrique'),
+        ('AUTRE',         'Autre'),
+    ]
+    STATUT_CHOICES = [
+        ('PLANIFIEE',  'Planifiée'),
+        ('EN_COURS',   'En cours'),
+        ('TERMINEE',   'Terminée'),
+        ('ANNULEE',    'Annulée'),
+    ]
+
+    vehicule         = models.ForeignKey(Vehicule, on_delete=models.CASCADE, related_name='interventions_vehicule')
+    type_intervention = models.CharField(max_length=20, choices=TYPE_CHOICES)
+    statut            = models.CharField(max_length=15, choices=STATUT_CHOICES, default='PLANIFIEE')
+    date_prevue       = models.DateField(null=True, blank=True)
+    date_realisation  = models.DateField(null=True, blank=True)
+    garage_prestataire = models.CharField(max_length=200, blank=True, verbose_name="Garage / Prestataire")
+    description       = models.TextField(blank=True)
+    cout              = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal('0.00'), verbose_name="Coût (FCFA)")
+    kilometrage       = models.PositiveIntegerField(null=True, blank=True, verbose_name="Kilométrage au moment de l'intervention")
+    kilometre_prochaine_vidange = models.PositiveIntegerField(null=True, blank=True, verbose_name="Prochaine vidange à (km)")
+
+    @property
+    def duree_jours(self):
+        if self.date_prevue and self.date_realisation:
+            return (self.date_realisation - self.date_prevue).days
+        return None
+
+    def __str__(self):
+        return f"{self.get_type_intervention_display()} — {self.vehicule.immatriculation}"
+
+    class Meta:
+        verbose_name = "Intervention véhicule"
+        verbose_name_plural = "Interventions véhicules"
+        ordering = ['-date_prevue']
+
+
+class MissionVehicule(TracabiliteModel):
+    """
+    Enregistrement des missions / déplacements effectués avec un véhicule.
+    """
+    STATUT_CHOICES = [
+        ('EN_COURS',  'En cours'),
+        ('TERMINEE',  'Terminée'),
+        ('ANNULEE',   'Annulée'),
+    ]
+
+    vehicule        = models.ForeignKey(Vehicule, on_delete=models.CASCADE, related_name='missions')
+    chauffeur        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    objet            = models.CharField(max_length=255, verbose_name="Objet de la mission")
+    destination      = models.CharField(max_length=255, verbose_name="Destination")
+    date_depart      = models.DateTimeField()
+    date_retour      = models.DateTimeField(null=True, blank=True)
+    km_depart        = models.PositiveIntegerField(null=True, blank=True, verbose_name="KM au départ")
+    km_retour        = models.PositiveIntegerField(null=True, blank=True, verbose_name="KM au retour")
+    statut           = models.CharField(max_length=15, choices=STATUT_CHOICES, default='EN_COURS')
+    demandeur        = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='missions_demandees')
+    service_demandeur = models.ForeignKey('core.Service', on_delete=models.SET_NULL, null=True, blank=True)
+    observation      = models.TextField(blank=True)
+
+    @property
+    def km_parcourus(self):
+        if self.km_depart and self.km_retour:
+            return self.km_retour - self.km_depart
+        return None
+
+    @property
+    def duree_heures(self):
+        if self.date_depart and self.date_retour:
+            delta = self.date_retour - self.date_depart
+            return round(delta.total_seconds() / 3600, 1)
+        return None
+
+    def __str__(self):
+        return f"{self.vehicule.immatriculation} — {self.objet} ({self.date_depart.date()})"
+
+    class Meta:
+        verbose_name = "Mission véhicule"
+        verbose_name_plural = "Missions véhicules"
+        ordering = ['-date_depart']
+
+
+
+# ═══════════════════════════════════════════════════════════
+# 11. GESTION DES SALLES DE CONFÉRENCE
+# ═══════════════════════════════════════════════════════════
+
+
+class SalleConference(TracabiliteModel):
+    """
+    Salle de conférence / réunion avec réservation.
+    """
+    STATUT_CHOICES = [
+        ('DISPONIBLE',   'Disponible'),
+        ('INDISPONIBLE', 'Indisponible'),
+        ('EN_MAINTENANCE', 'En maintenance'),
+    ]
+
+    nom             = models.CharField(max_length=150, verbose_name="Nom de la salle")
+    code            = models.CharField(max_length=20, unique=True, verbose_name="Code salle")
+    batiment        = models.ForeignKey(Batiment, on_delete=models.SET_NULL, null=True, blank=True)
+    etage           = models.ForeignKey(Etage, on_delete=models.SET_NULL, null=True, blank=True)
+    bureau          = models.ForeignKey(Bureau, on_delete=models.SET_NULL, null=True, blank=True)
+    capacite        = models.PositiveSmallIntegerField(default=10, verbose_name="Capacité (personnes)")
+    superficie_m2   = models.PositiveSmallIntegerField(null=True, blank=True)
+    description     = models.TextField(blank=True)
+
+    # Équipements
+    videoconf       = models.BooleanField(default=False, verbose_name="Vidéoconférence")
+    ecran_projecteur = models.BooleanField(default=False, verbose_name="Écran / Vidéoprojecteur")
+    tableau_blanc   = models.BooleanField(default=False, verbose_name="Tableau blanc")
+    wifi            = models.BooleanField(default=True, verbose_name="WiFi")
+    climatisation   = models.BooleanField(default=False, verbose_name="Climatisation")
+    sonorisation    = models.BooleanField(default=False, verbose_name="Système son")
+    micro           = models.BooleanField(default=False, verbose_name="Micro")
+    equipements_supplementaires = models.JSONField(default=list, blank=True, help_text='["Rétroprojecteur", "Podium"]')
+
+    # Statut
+    statut          = models.CharField(max_length=20, choices=STATUT_CHOICES, default='DISPONIBLE')
+    image           = models.ImageField(upload_to='salles/', null=True, blank=True)
+    notes           = models.TextField(blank=True)
+
+    # Service responsable
+    service_gestionnaire = models.ForeignKey('core.Service', on_delete=models.SET_NULL, null=True, blank=True, related_name='salles_gerees')
+
+    @property
+    def equipements_liste(self):
+        """Liste des équipements disponibles dans la salle."""
+        eq = []
+        if self.videoconf: eq.append('Vidéoconférence')
+        if self.ecran_projecteur: eq.append('Écran/Vidéoprojecteur')
+        if self.tableau_blanc: eq.append('Tableau blanc')
+        if self.wifi: eq.append('WiFi')
+        if self.climatisation: eq.append('Climatisation')
+        if self.sonorisation: eq.append('Sonorisation')
+        if self.micro: eq.append('Micro')
+        if self.equipements_supplementaires:
+            eq.extend(self.equipements_supplementaires)
+        return eq
+
+    def __str__(self):
+        return f"{self.nom} ({self.capacite} places)"
+
+    class Meta:
+        verbose_name = "Salle de conférence"
+        verbose_name_plural = "Salles de conférence"
+        ordering = ['nom']
+
+
+class ReservationSalle(TracabiliteModel):
+    """
+    Réservation d'une salle de conférence.
+    """
+    STATUT_CHOICES = [
+        ('EN_ATTENTE', 'En attente de validation'),
+        ('CONFIRMEE',  'Confirmée'),
+        ('ANNULEE',    'Annulée'),
+        ('TERMINEE',   'Terminée'),
+    ]
+
+    salle           = models.ForeignKey(SalleConference, on_delete=models.CASCADE, related_name='reservations')
+    demandeur       = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reservations_salle')
+    service_demandeur = models.ForeignKey('core.Service', on_delete=models.SET_NULL, null=True, blank=True)
+
+    objet           = models.CharField(max_length=255, verbose_name="Objet de la réunion")
+    description     = models.TextField(blank=True)
+    nb_participants  = models.PositiveSmallIntegerField(default=1, verbose_name="Nombre de participants")
+
+    date_debut      = models.DateTimeField(verbose_name="Date/heure début")
+    date_fin        = models.DateTimeField(verbose_name="Date/heure fin")
+
+    recurrente      = models.BooleanField(default=False, verbose_name="Réservation récurrente")
+    frequence       = models.CharField(
+        max_length=20, blank=True,
+        choices=[('HEBDOMADAIRE', 'Hebdomadaire'), ('BIMENSUEL', 'Bimensuel'), ('MENSUEL', 'Mensuel')],
+        help_text="Fréquence si récurrente"
+    )
+
+    statut          = models.CharField(max_length=15, choices=STATUT_CHOICES, default='EN_ATTENTE')
+    valide_par      = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='reservations_validees')
+    date_validation = models.DateTimeField(null=True, blank=True)
+    motif_refus     = models.TextField(blank=True)
+
+    # Équipements demandés
+    besoin_videoconf  = models.BooleanField(default=False)
+    besoin_video      = models.BooleanField(default=False)
+    besoin_son        = models.BooleanField(default=False)
+    notes_equipement  = models.TextField(blank=True, verbose_name="Notes équipements")
+
+    @property
+    def duree_heures(self):
+        if self.date_debut and self.date_fin:
+            delta = self.date_fin - self.date_debut
+            return round(delta.total_seconds() / 3600, 1)
+        return None
+
+    @property
+    def est_active(self):
+        now = timezone.now()
+        return self.date_debut <= now <= self.date_fin and self.statut == 'CONFIRMEE'
+
+    @property
+    def conflits(self):
+        """Vérifie les conflits de réservation pour cette salle."""
+        return ReservationSalle.objects.filter(
+            salle=self.salle,
+            statut__in=['EN_ATTENTE', 'CONFIRMEE'],
+            date_debut__lt=self.date_fin,
+            date_fin__gt=self.date_debut
+        ).exclude(pk=self.pk)
+
+    def clean(self):
+        if self.date_debut and self.date_fin and self.date_fin <= self.date_debut:
+            raise ValidationError('La date de fin doit être postérieure à la date de début.')
+        if self.nb_participants and self.salle and self.nb_participants > self.salle.capacite:
+            raise ValidationError(f'Le nombre de participants ({self.nb_participants}) dépasse la capacité de la salle ({self.salle.capacite}).')
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.salle.nom} — {self.objet} ({self.date_debut})"
+
+    class Meta:
+        verbose_name = "Réservation salle"
+        verbose_name_plural = "Réservations salles"
+        ordering = ['-date_debut']
+
+
+
+# ═══════════════════════════════════════════════════════════
+# 12. DEMANDES DE VÉHICULES
+# ═══════════════════════════════════════════════════════════
+
+
+class DemandeVehicule(TracabiliteModel):
+    """
+    Demande d'affectation temporaire d'un véhicule par un utilisateur.
+    """
+    STATUT_CHOICES = [
+        ('EN_ATTENTE',  'En attente de validation'),
+        ('VALIDEE',     'Validée — véhicule affecté'),
+        ('REFUSEE',     'Refusée'),
+        ('ANNULEE',     'Annulée par le demandeur'),
+        ('TERMINEE',    'Terminée — véhicule rendu'),
+    ]
+
+    URGENCY_CHOICES = [
+        ('NORMALE',  'Normale'),
+        ('URGENTE',  'Urgente'),
+        ('CRITIQUE', 'Critique'),
+    ]
+
+    # Demande
+    demandeur          = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='demandes_vehicule')
+    service_demandeur  = models.ForeignKey('core.Service', on_delete=models.SET_NULL, null=True, blank=True)
+    date_demande       = models.DateTimeField(auto_now_add=True)
+    
+    # Mission
+    objet              = models.CharField(max_length=255, verbose_name="Objet de la mission")
+    destination        = models.CharField(max_length=255, verbose_name="Destination")
+    date_depart        = models.DateTimeField(verbose_name="Date/heure de départ souhaitée")
+    date_retour_prevue = models.DateTimeField(verbose_name="Date/heure de retour prévue")
+    nb_passagers       = models.PositiveSmallIntegerField(default=1, verbose_name="Nombre de passagers")
+    urgency            = models.CharField(max_length=10, choices=URGENCY_CHOICES, default='NORMALE')
+    motif              = models.TextField(blank=True, verbose_name="Motif détaillé")
+
+    # Véhicule affecté (rempli à la validation)
+    vehicule           = models.ForeignKey(Vehicule, on_delete=models.SET_NULL, null=True, blank=True, related_name='demandes')
+    chauffeur          = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='chauffeur_demandes')
+    km_depart          = models.PositiveIntegerField(null=True, blank=True)
+    km_retour          = models.PositiveIntegerField(null=True, blank=True)
+
+    # Validation
+    statut             = models.CharField(max_length=15, choices=STATUT_CHOICES, default='EN_ATTENTE')
+    valide_par         = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='demandes_vehicule_validees')
+    date_validation    = models.DateTimeField(null=True, blank=True)
+    motif_refus        = models.TextField(blank=True)
+    commentaire_valider = models.TextField(blank=True)
+    observation_retour  = models.TextField(blank=True)
+
+    @property
+    def duree_heures(self):
+        if self.date_depart and self.date_retour_prevue:
+            delta = self.date_retour_prevue - self.date_depart
+            return round(delta.total_seconds() / 3600, 1)
+        return None
+
+    @property
+    def km_parcourus(self):
+        if self.km_depart and self.km_retour:
+            return self.km_retour - self.km_depart
+        return None
+
+    def __str__(self):
+        return f"{self.objet} — {self.demandeur.get_full_name()} ({self.get_statut_display()})"
+
+    class Meta:
+        verbose_name = "Demande de véhicule"
+        verbose_name_plural = "Demandes de véhicules"
+        ordering = ['-date_demande']
+
+
+# ═══════════════════════════════════════════════════════════
+# 13. DEMANDES DE SALLES SIMPLIFIÉES
+# ═══════════════════════════════════════════════════════════
+
+
+class DemandeSalle(TracabiliteModel):
+    """
+    Demande simplifiée de salle de conférence pour les utilisateurs.
+    """
+    STATUT_CHOICES = [
+        ('EN_ATTENTE',  'En attente'),
+        ('VALIDEE',     'Validée'),
+        ('REFUSEE',     'Refusée'),
+        ('ANNULEE',     'Annulée'),
+    ]
+
+    # Demande
+    demandeur          = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='demandes_salle')
+    service_demandeur  = models.ForeignKey('core.Service', on_delete=models.SET_NULL, null=True, blank=True)
+    date_demande       = models.DateTimeField(auto_now_add=True)
+
+    # Réunion
+    objet              = models.CharField(max_length=255, verbose_name="Objet de la réunion")
+    description        = models.TextField(blank=True)
+    date_debut         = models.DateTimeField(verbose_name="Date/heure début souhaitée")
+    date_fin           = models.DateTimeField(verbose_name="Date/heure fin souhaitée")
+    nb_participants    = models.PositiveSmallIntegerField(default=1)
+
+    # Salle préférée (optionnel)
+    salle_preferee     = models.ForeignKey(SalleConference, on_delete=models.SET_NULL, null=True, blank=True, related_name='demandes')
+
+    # Équipements souhaités
+    besoin_videoconf   = models.BooleanField(default=False)
+    besoin_video       = models.BooleanField(default=False)
+    besoin_son         = models.BooleanField(default=False)
+    notes_equipement   = models.TextField(blank=True)
+
+    # Validation
+    statut             = models.CharField(max_length=15, choices=STATUT_CHOICES, default='EN_ATTENTE')
+    salle_attribuee    = models.ForeignKey(SalleConference, on_delete=models.SET_NULL, null=True, blank=True, related_name='attributions')
+    valide_par         = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='demandes_salle_validees')
+    date_validation    = models.DateTimeField(null=True, blank=True)
+    motif_refus        = models.TextField(blank=True)
+
+    @property
+    def duree_heures(self):
+        if self.date_debut and self.date_fin:
+            delta = self.date_fin - self.date_debut
+            return round(delta.total_seconds() / 3600, 1)
+        return None
+
+    def __str__(self):
+        return f"{self.objet} — {self.demandeur.get_full_name()} ({self.get_statut_display()})"
+
+    class Meta:
+        verbose_name = "Demande de salle"
+        verbose_name_plural = "Demandes de salles"
+        ordering = ['-date_demande']

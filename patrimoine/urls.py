@@ -79,10 +79,62 @@ path('inventaires/<int:campagne_id>/', views.detail_campagne_inventaire, name='p
 
 path('inventaires/<int:campagne_id>/scan/', views.audit_scan_inventaire, name='patrimoine_audit_scan'),
 
-path('inventaires/<int:campagne_id>/fiche/', views.imprimer_fiche_comptage, name='imprimer_fiche_comptage'),
-
-path('rebuts/', views.registre_rebuts, name='patrimoine_rebuts'),
-
-path('pertes/', views.registre_pertes, name='patrimoine_pertes'),
-
+path('inventaires/<int:campagne_id>/fiche/', views.imprimer_fiche_comptage, name='imprimer_fiche_comptage'),path('rebuts/', views.registre_rebuts, name='patrimoine_rebuts'),
+
+
+path('pertes/', views.registre_pertes, name='patrimoine_pertes'),
+
+
+    # ═══════════════════════════════════════════════════════════
+    # GESTION DES VÉHICULES
+    # ═══════════════════════════════════════════════════════════
+    path('vehicules/',                            views.liste_vehicules,           name='patrimoine_vehicules'),
+    path('vehicules/creer/',                      views.creer_vehicule,            name='patrimoine_vehicule_creer'),
+    path('vehicules/<int:pk>/',                   views.detail_vehicule,           name='patrimoine_vehicule_detail'),
+    path('vehicules/<int:pk>/modifier/',          views.modifier_vehicule,         name='patrimoine_vehicule_modifier'),
+    path('vehicules/<int:pk>/supprimer/',         views.supprimer_vehicule,        name='patrimoine_vehicule_supprimer'),
+    path('vehicules/<int:vehicule_pk>/interventions/',    views.liste_interventions_vehicule,  name='patrimoine_vehicule_interventions'),
+    path('vehicules/<int:vehicule_pk>/interventions/creer/', views.creer_intervention_vehicule, name='patrimoine_vehicule_intervention_creer'),
+    path('vehicules/<int:vehicule_pk>/missions/',         views.liste_missions_vehicule,       name='patrimoine_vehicule_missions'),
+    path('vehicules/<int:vehicule_pk>/missions/creer/',   views.creer_mission_vehicule,        name='patrimoine_vehicule_mission_creer'),
+    path('ajax/vehicules/modeles/',               views.ajax_modeles_vehicule,     name='patrimoine_vehicule_ajax_modeles'),
+
+    # ═══════════════════════════════════════════════════════════
+    # GESTION DES SALLES DE CONFÉRENCE
+    # ═══════════════════════════════════════════════════════════
+    path('salles/',                               views.liste_salles,              name='patrimoine_salles'),
+    path('salles/creer/',                         views.creer_salle,               name='patrimoine_salle_creer'),
+    path('salles/<int:pk>/',                      views.detail_salle,              name='patrimoine_salle_detail'),
+    path('salles/<int:pk>/modifier/',             views.modifier_salle,            name='patrimoine_salle_modifier'),
+    path('salles/<int:pk>/supprimer/',            views.supprimer_salle,           name='patrimoine_salle_supprimer'),
+    path('salles/calendrier/',                    views.calendrier_reservations,   name='patrimoine_calendrier'),
+    path('salles/reservations/',                  views.liste_reservations,        name='patrimoine_reservations'),
+    path('salles/reservations/creer/',            views.creer_reservation,         name='patrimoine_reservation_creer'),
+    path('salles/reservations/<int:pk>/',         views.detail_reservation,        name='patrimoine_reservation_detail'),
+    path('salles/reservations/<int:pk>/valider/',  views.valider_reservation,       name='patrimoine_reservation_valider'),
+    path('salles/reservations/<int:pk>/annuler/',  views.annuler_reservation,       name='patrimoine_reservation_annuler'),
+    path('ajax/salles/disponibilite/',            views.ajax_disponibilite_salle,  name='patrimoine_salle_ajax_dispo'),
+    path('ajax/salles/reservations/',             views.ajax_reservations_salle,   name='patrimoine_salle_ajax_reservations'),
+    path('ajax/salles/etages/',                   views.ajax_etages_salle,         name='patrimoine_salle_ajax_etages'),
+    path('ajax/salles/bureaux/',                  views.ajax_bureaux_salle,        name='patrimoine_salle_ajax_bureaux'),
+
+    # ═══════════════════════════════════════════════════════════
+    # DEMANDES DE VÉHICULES (utilisateurs)
+    # ═══════════════════════════════════════════════════════════
+    path('demandes-vehicule/',                    views.mes_demandes_vehicule,       name='patrimoine_mes_demandes_vehicule'),
+    path('demandes-vehicule/creer/',              views.creer_demande_vehicule,      name='patrimoine_demande_vehicule_creer'),
+    path('demandes-vehicule/<int:pk>/',           views.detail_demande_vehicule,     name='patrimoine_detail_demande_vehicule'),
+    path('demandes-vehicule/<int:pk>/annuler/',   views.annuler_demande_vehicule,    name='patrimoine_annuler_demande_vehicule'),
+    path('demandes-vehicule/valider/',            views.demandes_vehicule_a_valider, name='patrimoine_demandes_vehicule_valider'),
+    path('demandes-vehicule/<int:pk>/valider/',   views.valider_demande_vehicule,    name='patrimoine_valider_demande_vehicule'),
+
+    # ═══════════════════════════════════════════════════════════
+    # DEMANDES DE SALLES (utilisateurs)
+    # ═══════════════════════════════════════════════════════════
+    path('demandes-salle/',                       views.mes_demandes_salle,          name='patrimoine_mes_demandes_salle'),
+    path('demandes-salle/creer/',                 views.creer_demande_salle,         name='patrimoine_demande_salle_creer'),
+    path('demandes-salle/<int:pk>/',              views.detail_demande_salle,        name='patrimoine_detail_demande_salle'),
+    path('demandes-salle/<int:pk>/annuler/',      views.annuler_demande_salle,       name='patrimoine_annuler_demande_salle'),
+    path('demandes-salle/valider/',               views.demandes_salle_a_valider,    name='patrimoine_demandes_salle_valider'),
+    path('demandes-salle/<int:pk>/valider/',      views.valider_demande_salle,       name='patrimoine_valider_demande_salle'),
 ]

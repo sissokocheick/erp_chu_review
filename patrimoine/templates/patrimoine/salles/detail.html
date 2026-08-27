@@ -1,0 +1,186 @@
+{% extends "base_ui.html" %}
+{% load static %}
+
+{% block title %}{{ salle.nom }} — Salle de conférence{% endblock %}
+
+{% block contenu %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'patrimoine_salles' %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour aux salles</a>
+            <h4 class="mb-0 mt-1"><i class="fas fa-door-open me-2"></i>{{ salle.nom }}</h4>
+            <small class="text-muted">{{ salle.code }} — {{ salle.batiment|default:"" }} {{ salle.etage|default:"" }}</small>
+        </div>
+        <div>
+            <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ salle.pk }}" class="btn btn-success me-2">
+                <i class="fas fa-calendar-plus me-1"></i>Réserver
+            </a>
+            {% if perms.accounts.menu_pat_registre or request.user.is_superuser %}<a href="{% url 'patrimoine_salle_modifier' salle.pk %}" class="btn btn-warning"><i class="fas fa-edit me-1"></i>Modifier</a>{% endif %}
+        </div>
+    </div>
+
+    <!-- Alerte si en cours -->
+    {% if reservation_en_cours %}
+    <div class="alert alert-info">
+        <i class="fas fa-video me-2"></i>
+        <strong>Réunion en cours :</strong> {{ reservation_en_cours.objet }} — {{ reservation_en_cours.demandeur.get_full_name|default:"" }}
+        ({{ reservation_en_cours.date_debut|date:"H:i" }} — {{ reservation_en_cours.date_fin|date:"H:i" }})
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <!-- Colonne gauche -->
+        <div class="col-md-8">
+            <!-- Infos salle -->
+            <div class="card mb-4">
+                <div class="card-header"><i class="fas fa-info-circle me-2"></i>Informations</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-borderless">
+                                <tr><td class="text-muted" style="width:40%">Capacité</td><td class="fw-bold">{{ salle.capacite }} personnes</td></tr>
+                                <tr><td class="text-muted">Superficie</td><td>{{ salle.superficie_m2|default:"—" }} m²</td></tr>
+                                <tr><td class="text-muted">Statut</td>
+                                    <td>
+                                        {% if salle.statut == 'DISPONIBLE' %}
+                                            <span class="badge bg-success">Disponible</span>
+                                        {% elif salle.statut == 'INDISPONIBLE' %}
+                                            <span class="badge bg-danger">Indisponible</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">En maintenance</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                <tr><td class="text-muted">Service gestionnaire</td><td>{{ salle.service_gestionnaire|default:"—" }}</td></tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted">Équipements</h6>
+                            <div>
+                                {% for eq in salle.equipements_liste %}
+                                <span class="badge bg-info me-1 mb-1"><i class="fas fa-check me-1"></i>{{ eq }}</span>
+                                {% empty %}
+                                <span class="text-muted">Aucun équipement renseigné</span>
+                                {% endfor %}
+                            </div>
+                            {% if salle.description %}
+                            <div class="mt-3">
+                                <h6 class="text-muted">Description</h6>
+                                <p>{{ salle.description }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Réservations à venir -->
+            <div class="card mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="fas fa-calendar me-2"></i>Réservations à venir</span>
+                    <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ salle.pk }}" class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Ajouter</a>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Heure</th>
+                                    <th>Objet</th>
+                                    <th>Demandeur</th>
+                                    <th>Nb</th>
+                                    <th>Statut</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in reservations_avenir %}
+                                <tr>
+                                    <td>{{ r.date_debut|date:"d/m/Y" }}</td>
+                                    <td>{{ r.date_debut|date:"H:i" }} — {{ r.date_fin|date:"H:i" }}</td>
+                                    <td><a href="{% url 'patrimoine_reservation_detail' r.pk %}">{{ r.objet }}</a></td>
+                                    <td>{{ r.demandeur.get_full_name|default:"—" }}</td>
+                                    <td>{{ r.nb_participants }}</td>
+                                    <td>
+                                        {% if r.statut == 'CONFIRMEE' %}
+                                            <span class="badge bg-success">Confirmée</span>
+                                        {% elif r.statut == 'EN_ATTENTE' %}
+                                            <span class="badge bg-warning text-dark">En attente</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ r.get_statut_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr><td colspan="6" class="text-center text-muted">Aucune réservation à venir</td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite : Stats -->
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header"><i class="fas fa-chart-pie me-2"></i>Statistiques</div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <h3 class="text-primary">{{ nb_reservations_mois }}</h3>
+                        <small class="text-muted">Réservations ce mois</small>
+                    </div>
+                    <div class="progress mb-2" style="height: 20px;">
+                        <div class="progress-bar bg-success" style="width: {{ taux_occupation }}%">{{ taux_occupation }}%</div>
+                    </div>
+                    <small class="text-muted d-block text-center">Taux d'occupation estimé</small>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header"><i class="fas fa-bolt me-2"></i>Actions rapides</div>
+                <div class="card-body">
+                    <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ salle.pk }}" class="btn btn-outline-success w-100 mb-2">
+                        <i class="fas fa-calendar-plus me-1"></i>Nouvelle réservation
+                    </a>
+                    <a href="{% url 'patrimoine_calendrier' %}" class="btn btn-outline-primary w-100 mb-2">
+                        <i class="fas fa-calendar me-1"></i>Voir le calendrier
+                    </a>
+                    {% if perms.accounts.menu_pat_registre or request.user.is_superuser %}
+                    <a href="{% url 'patrimoine_salle_modifier' salle.pk %}" class="btn btn-outline-warning w-100 mb-2">
+                        <i class="fas fa-edit me-1"></i>Modifier la salle
+                    </a>
+                    <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#modalSupprimer">
+                        <i class="fas fa-trash me-1"></i>Supprimer
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Supprimer -->
+<div class="modal fade" id="modalSupprimer" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-trash me-2"></i>Supprimer la salle</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Êtes-vous sûr de vouloir supprimer la salle <strong>{{ salle.nom }}</strong> ?</p>
+                <p class="text-danger"><small>Cette action est irréversible. Les réservations existantes seront supprimées.</small></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <form method="POST" action="{% url 'patrimoine_salle_supprimer' salle.pk %}" class="d-inline">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Supprimer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

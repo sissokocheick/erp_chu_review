@@ -1,0 +1,157 @@
+{% extends "base_ui.html" %}
+{% load static %}
+{% block title %}{% if salle %}Modifier{% else %}Ajouter{% endif %} une salle — Patrimoine{% endblock %}
+{% block contenu %}
+<style>
+  :root { --rad: 12px; --rad-sm: 8px; }
+  .sal-ph { background: linear-gradient(135deg, #1d4ed8, #3b82f6); border-radius: var(--rad); padding: 22px 26px; margin-bottom: 20px; display: flex; align-items: center; gap: 18px; box-shadow: 0 6px 20px rgba(59,130,246,0.25); }
+  .sal-ph-icon { background: rgba(255,255,255,0.15); width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
+  .sal-ph h4 { margin: 0; font-size: 22px; font-weight: 800; color: white; }
+  .sal-ph small { opacity: 0.85; font-size: 13px; color: white; }
+  .btn-back { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-back:hover { color: white; }
+  .sal-card { background: white; border-radius: var(--rad); box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; overflow: hidden; }
+  .sal-card-head { padding: 16px 22px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
+  .sal-card-head-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .sal-card-head h5 { margin: 0; font-size: 15px; font-weight: 700; color: #1e293b; }
+  .sal-card-body { padding: 22px; }
+  .sal-label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 0.3px; }
+  .sal-input { width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: var(--rad-sm); font-size: 14px; background: #f8fafc; transition: 0.2s; }
+  .sal-input:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); background: white; }
+  .sal-check { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: var(--rad-sm); cursor: pointer; transition: 0.2s; }
+  .sal-check:hover { border-color: #3b82f6; background: #eff6ff; }
+  .sal-check input:checked + span { color: #1d4ed8; font-weight: 700; }
+  .btn-submit { background: linear-gradient(135deg, #2563eb, #1d4ed8); color: white; border: none; padding: 14px 24px; border-radius: var(--rad-sm); font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: 0.2s; box-shadow: 0 4px 12px rgba(37,99,235,0.3); }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(37,99,235,0.4); }
+  .btn-cancel { background: white; color: #475569; border: 1.5px solid #e2e8f0; padding: 14px 24px; border-radius: var(--rad-sm); font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: 0.2s; text-decoration: none; }
+  .btn-cancel:hover { background: #f1f5f9; border-color: #cbd5e1; }
+</style>
+
+<div style="display:grid;grid-template-columns:1fr 320px;gap:24px;align-items:start;max-width:1200px;margin:0 auto;">
+
+  <!-- Colonne principale -->
+  <div>
+    <!-- Header -->
+    <div class="sal-ph">
+      <a href="{% url 'patrimoine_salles' %}" class="btn-back"><i class="fas fa-arrow-left"></i> Retour</a>
+      <div class="sal-ph-icon"><i class="fas fa-door-open"></i></div>
+      <div>
+        <h4>{% if salle %}Modifier {{ salle.nom }}{% else %}Ajouter une Salle{% endif %}</h4>
+        <small>{% if salle %}Mise à jour des informations{% else %}Nouvelle salle de conférence{% endif %}</small>
+      </div>
+    </div>
+
+    <form method="POST" novalidate id="formSalle">
+      {% csrf_token %}
+
+      <!-- Informations générales -->
+      <div class="sal-card" style="margin-bottom:20px;">
+        <div class="sal-card-head">
+          <div class="sal-card-head-icon" style="background:linear-gradient(135deg,#dbeafe,#bfdbfe);"><i class="fas fa-info-circle" style="color:#2563eb;font-size:14px;"></i></div>
+          <h5>Informations générales</h5>
+        </div>
+        <div class="sal-card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div><label class="sal-label">Nom *</label><input type="text" name="nom" class="sal-input" value="{{ salle.nom|default:'' }}" required placeholder="Ex: Salle Réunion A"></div>
+            <div><label class="sal-label">Code *</label><input type="text" name="code" class="sal-input" value="{{ salle.code|default:'' }}" required placeholder="Ex: SAL-001"></div>
+            <div><label class="sal-label">Capacité</label><input type="number" name="capacite" class="sal-input" value="{{ salle.capacite|default:'10' }}"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div><label class="sal-label">Superficie (m²)</label><input type="number" name="superficie_m2" class="sal-input" value="{{ salle.superficie_m2|default:'' }}"></div>
+            <div><label class="sal-label">Statut</label>
+              <select name="statut" class="sal-input">
+                <option value="DISPONIBLE" {% if salle.statut == 'DISPONIBLE' %}selected{% endif %}>Disponible</option>
+                <option value="INDISPONIBLE" {% if salle.statut == 'INDISPONIBLE' %}selected{% endif %}>Indisponible</option>
+                <option value="EN_MAINTENANCE" {% if salle.statut == 'EN_MAINTENANCE' %}selected{% endif %}>En maintenance</option>
+              </select>
+            </div>
+            <div><label class="sal-label">Service gestionnaire</label>
+              <select name="service_gestionnaire" class="sal-input">
+                <option value="">-- Aucun --</option>
+                {% for s in services %}<option value="{{ s.pk }}" {% if salle.service_gestionnaire_id == s.pk %}selected{% endif %}>{{ s.nom }}</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div><label class="sal-label">Description</label><textarea name="description" class="sal-input" rows="2" style="resize:vertical;">{{ salle.description|default:'' }}</textarea></div>
+        </div>
+      </div>
+
+      <!-- Localisation -->
+      <div class="sal-card" style="margin-bottom:20px;">
+        <div class="sal-card-head">
+          <div class="sal-card-head-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);"><i class="fas fa-map-marker-alt" style="color:#d97706;font-size:14px;"></i></div>
+          <h5>Localisation</h5>
+        </div>
+        <div class="sal-card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+            <div><label class="sal-label">Bâtiment</label>
+              <select name="batiment" class="sal-input" id="id_batiment">
+                <option value="">-- Aucun --</option>
+                {% for b in batiments %}<option value="{{ b.pk }}" {% if salle.batiment_id == b.pk %}selected{% endif %}>{{ b.nom }}</option>{% endfor %}
+              </select>
+            </div>
+            <div><label class="sal-label">Étage</label><select name="etage" class="sal-input" id="id_etage"><option value="">-- Choisir --</option></select></div>
+            <div><label class="sal-label">Bureau</label><select name="bureau" class="sal-input" id="id_bureau"><option value="">-- Choisir --</option></select></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="sal-card" style="margin-bottom:20px;">
+        <div class="sal-card-body">
+          <label class="sal-label">Notes</label>
+          <textarea name="notes" class="sal-input" rows="2" style="resize:vertical;">{{ salle.notes|default:'' }}</textarea>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Colonne droite -->
+  <div style="position:sticky;top:80px;display:flex;flex-direction:column;gap:16px;">
+    <!-- Équipements -->
+    <div class="sal-card">
+      <div class="sal-card-head" style="background:linear-gradient(135deg,#eff6ff,#dbeafe);">
+        <div class="sal-card-head-icon" style="background:white;"><i class="fas fa-tools" style="color:#1d4ed8;font-size:14px;"></i></div>
+        <h5>Équipements</h5>
+      </div>
+      <div class="sal-card-body" style="display:flex;flex-direction:column;gap:8px;">
+        <label class="sal-check"><input type="checkbox" name="videoconf" {% if salle.videoconf %}checked{% endif %}><span><i class="fas fa-video"></i> Vidéoconférence</span></label>
+        <label class="sal-check"><input type="checkbox" name="ecran_projecteur" {% if salle.ecran_projecteur %}checked{% endif %}><span><i class="fas fa-tv"></i> Écran / Vidéoprojecteur</span></label>
+        <label class="sal-check"><input type="checkbox" name="tableau_blanc" {% if salle.tableau_blanc %}checked{% endif %}><span><i class="fas fa-chalkboard"></i> Tableau blanc</span></label>
+        <label class="sal-check"><input type="checkbox" name="wifi" {% if salle.wifi or not salle %}checked{% endif %}><span><i class="fas fa-wifi"></i> WiFi</span></label>
+        <label class="sal-check"><input type="checkbox" name="climatisation" {% if salle.climatisation %}checked{% endif %}><span><i class="fas fa-snowflake"></i> Climatisation</span></label>
+        <label class="sal-check"><input type="checkbox" name="sonorisation" {% if salle.sonorisation %}checked{% endif %}><span><i class="fas fa-volume-up"></i> Sonorisation</span></label>
+        <label class="sal-check"><input type="checkbox" name="micro" {% if salle.micro %}checked{% endif %}><span><i class="fas fa-microphone"></i> Micro</span></label>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="sal-card">
+      <div class="sal-card-body" style="display:flex;flex-direction:column;gap:10px;">
+        <button type="submit" form="formSalle" class="btn-submit"><i class="fas fa-save"></i> {% if salle %}Enregistrer{% else %}Créer la salle{% endif %}</button>
+        <a href="{% url 'patrimoine_salles' %}" class="btn-cancel"><i class="fas fa-times"></i> Annuler</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('id_batiment').addEventListener('change', function() {
+    const batimentId = this.value;
+    const etageSelect = document.getElementById('id_etage');
+    const bureauSelect = document.getElementById('id_bureau');
+    if (!batimentId) { etageSelect.innerHTML = '<option value="">-- Choisir --</option>'; bureauSelect.innerHTML = '<option value="">-- Choisir --</option>'; return; }
+    fetch(`/patrimoine/ajax/salles/etages/?batiment_id=${batimentId}`)
+        .then(r => r.json())
+        .then(data => { etageSelect.innerHTML = '<option value="">-- Choisir --</option>'; data.etages.forEach(e => { const opt = document.createElement('option'); opt.value = e.id; opt.textContent = e.nom; etageSelect.appendChild(opt); }); });
+});
+document.getElementById('id_etage').addEventListener('change', function() {
+    const etageId = this.value;
+    const bureauSelect = document.getElementById('id_bureau');
+    if (!etageId) { bureauSelect.innerHTML = '<option value="">-- Choisir --</option>'; return; }
+    fetch(`/patrimoine/ajax/salles/bureaux/?etage_id=${etageId}`)
+        .then(r => r.json())
+        .then(data => { bureauSelect.innerHTML = '<option value="">-- Choisir --</option>'; data.bureaux.forEach(b => { const opt = document.createElement('option'); opt.value = b.id; opt.textContent = b.nom; bureauSelect.appendChild(opt); }); });
+});
+</script>
+{% endblock %}

@@ -128,7 +128,7 @@
   </button>
 </div>
 
-{% if alerte_backup %}
+{% if alerte_backup and user.is_superuser %}
 <div style="background:#fdecea;border-left:5px solid #e74c3c;color:#7b241c;padding:12px 16px;border-radius:8px;margin-bottom:18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
   <i class="fas fa-database" style="font-size:20px;color:#e74c3c;"></i>
   <div style="flex:1;font-size:13px;min-width:220px;">

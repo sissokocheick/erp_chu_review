@@ -1,0 +1,241 @@
+{% extends "base_ui.html" %}
+{% load static %}
+{% block title %}Nouvelle réservation — Salles{% endblock %}
+{% block contenu %}
+<style>
+  :root { --rad: 12px; --rad-sm: 8px; }
+  .res-ph { background: linear-gradient(135deg, #0e7490, #06b6d4, #22d3ee); border-radius: var(--rad); padding: 22px 26px; margin-bottom: 20px; display: flex; align-items: center; gap: 18px; box-shadow: 0 6px 20px rgba(6,182,212,0.25); }
+  .res-ph-icon { background: rgba(255,255,255,0.15); width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
+  .res-ph h4 { margin: 0; font-size: 22px; font-weight: 800; color: white; }
+  .res-ph small { opacity: 0.85; font-size: 13px; color: white; }
+  .res-card { background: white; border-radius: var(--rad); box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; overflow: hidden; }
+  .res-card-head { padding: 16px 22px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
+  .res-card-head-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
+  .res-card-head h5 { margin: 0; font-size: 15px; font-weight: 700; color: #1e293b; }
+  .res-card-body { padding: 22px; }
+  .res-label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 0.3px; }
+  .res-input { width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: var(--rad-sm); font-size: 14px; background: #f8fafc; transition: 0.2s; }
+  .res-input:focus { outline: none; border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.1); background: white; }
+  .res-input::placeholder { color: #94a3b8; }
+  .res-check { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: var(--rad-sm); cursor: pointer; transition: 0.2s; }
+  .res-check:hover { border-color: #06b6d4; background: #ecfeff; }
+  .res-check input:checked + span { color: #0e7490; font-weight: 700; }
+  .btn-submit { background: linear-gradient(135deg, #0891b2, #06b6d4); color: white; border: none; padding: 14px 24px; border-radius: var(--rad-sm); font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: 0.2s; box-shadow: 0 4px 12px rgba(6,182,212,0.3); }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(6,182,212,0.4); }
+  .btn-cancel { background: white; color: #475569; border: 1.5px solid #e2e8f0; padding: 14px 24px; border-radius: var(--rad-sm); font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: 0.2s; text-decoration: none; }
+  .btn-cancel:hover { background: #f1f5f9; border-color: #cbd5e1; }
+  .btn-back { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; }
+  .btn-back:hover { color: white; }
+  .dispo-ok { background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: var(--rad-sm); padding: 20px; text-align: center; color: #166534; }
+  .dispo-ko { background: #fef2f2; border: 1.5px solid #fecaca; border-radius: var(--rad-sm); padding: 20px; text-align: center; color: #991b1b; }
+  .dispo-wait { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: var(--rad-sm); padding: 20px; text-align: center; color: #64748b; }
+</style>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;">
+
+  <!-- Colonne principale -->
+  <div>
+    <!-- Header -->
+    <div class="res-ph">
+      <a href="{% url 'patrimoine_salles' %}" class="btn-back"><i class="fas fa-arrow-left"></i> Retour</a>
+      <div class="res-ph-icon"><i class="fas fa-calendar-plus"></i></div>
+      <div>
+        <h4>Nouvelle Réservation</h4>
+        <small>Réserver une salle de conférence</small>
+      </div>
+    </div>
+
+    <form method="POST" novalidate id="formReservation">
+      {% csrf_token %}
+
+      <!-- Détails -->
+      <div class="res-card" style="margin-bottom:20px;">
+        <div class="res-card-head">
+          <div class="res-card-head-icon" style="background:linear-gradient(135deg,#ecfeff,#cffafe);"><i class="fas fa-clipboard-list" style="color:#0891b2;font-size:14px;"></i></div>
+          <h5>Détails de la réservation</h5>
+        </div>
+        <div class="res-card-body">
+          <div style="margin-bottom:16px;">
+            <label class="res-label">Salle *</label>
+            <select name="salle" class="res-input" id="id_salle" required>
+              <option value="">-- Choisir une salle --</option>
+              {% for s in salles %}
+              <option value="{{ s.pk }}" {% if salle_preselect == s.pk|stringformat:"d" %}selected{% endif %}>
+                {{ s.nom }} ({{ s.capacite }} places) — {% if s.videoconf %}Vidéoconf {% endif %}{% if s.wifi %}WiFi{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          <div style="margin-bottom:16px;">
+            <label class="res-label">Objet de la réunion *</label>
+            <input type="text" name="objet" class="res-input" required placeholder="Ex: Réunion de direction, Comité technique...">
+          </div>
+          <div style="margin-bottom:16px;">
+            <label class="res-label">Description / Ordre du jour</label>
+            <textarea name="description" class="res-input" rows="2" placeholder="Détails optionnels..." style="resize:vertical;"></textarea>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:16px;">
+            <div>
+              <label class="res-label">Date/heure début *</label>
+              <input type="datetime-local" name="date_debut" class="res-input" id="id_date_debut" required>
+            </div>
+            <div>
+              <label class="res-label">Date/heure fin *</label>
+              <input type="datetime-local" name="date_fin" class="res-input" id="id_date_fin" required>
+            </div>
+            <div>
+              <label class="res-label">Participants</label>
+              <input type="number" name="nb_participants" class="res-input" value="1" min="1" id="id_nb_participants">
+            </div>
+          </div>
+          <div style="margin-bottom:0;">
+            <label class="res-label">Service demandeur</label>
+            <select name="service_demandeur" class="res-input">
+              <option value="">-- Aucun service --</option>
+              {% for s in services %}
+              <option value="{{ s.pk }}">{{ s.nom }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Équipements -->
+      <div class="res-card" style="margin-bottom:20px;">
+        <div class="res-card-head">
+          <div class="res-card-head-icon" style="background:linear-gradient(135deg,#ede9fe,#ddd6fe);"><i class="fas fa-tools" style="color:#7c3aed;font-size:14px;"></i></div>
+          <h5>Équipements nécessaires</h5>
+        </div>
+        <div class="res-card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+            <label class="res-check">
+              <input type="checkbox" name="besoin_videoconf" id="check_videoconf">
+              <span><i class="fas fa-video"></i> Vidéoconférence</span>
+            </label>
+            <label class="res-check">
+              <input type="checkbox" name="besoin_video" id="check_video">
+              <span><i class="fas fa-tv"></i> Vidéoprojecteur</span>
+            </label>
+            <label class="res-check">
+              <input type="checkbox" name="besoin_son" id="check_son">
+              <span><i class="fas fa-volume-up"></i> Sonorisation</span>
+            </label>
+          </div>
+          <div>
+            <label class="res-label">Notes équipements</label>
+            <input type="text" name="notes_equipement" class="res-input" placeholder="Ex: Besoin d'un micro-cravate pour 5 personnes">
+          </div>
+        </div>
+      </div>
+
+      <!-- Récurrence -->
+      <div class="res-card" style="margin-bottom:20px;">
+        <div class="res-card-head">
+          <div class="res-card-head-icon" style="background:linear-gradient(135deg,#fef3c7,#fde68a);"><i class="fas fa-sync" style="color:#d97706;font-size:14px;"></i></div>
+          <h5>Réservation récurrente</h5>
+        </div>
+        <div class="res-card-body">
+          <label class="res-check" style="margin-bottom:12px;">
+            <input type="checkbox" name="recurrente" id="check_recurrente">
+            <span><i class="fas fa-sync"></i> Activer la récurrence</span>
+          </label>
+          <div id="frequence_section" style="display:none;">
+            <select name="frequence" class="res-input" style="max-width:350px;">
+              <option value="HEBDOMADAIRE">📅 Hebdomadaire (chaque semaine)</option>
+              <option value="BIMENSUEL">📅 Bimensuel (toutes les 2 semaines)</option>
+              <option value="MENSUEL">📅 Mensuel (chaque mois)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Boutons mobile -->
+      <div style="display:none;" class="mobile-actions">
+        <button type="submit" class="btn-submit" style="margin-bottom:10px;"><i class="fas fa-save"></i> Créer la réservation</button>
+        <a href="{% url 'patrimoine_salles' %}" class="btn-cancel">Annuler</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Colonne droite -->
+  <div style="position:sticky;top:80px;display:flex;flex-direction:column;gap:16px;">
+    <!-- Vérification disponibilité -->
+    <div class="res-card" id="dispo_card" style="display:none;">
+      <div class="res-card-head" style="background:linear-gradient(135deg,#ecfeff,#cffafe);">
+        <div class="res-card-head-icon" style="background:white;"><i class="fas fa-check-circle" style="color:#06b6d4;font-size:14px;"></i></div>
+        <h5>Disponibilité</h5>
+      </div>
+      <div class="res-card-body" id="dispo_body">
+        <div class="dispo-wait">
+          <i class="fas fa-info-circle" style="font-size:20px;margin-bottom:8px;display:block;"></i>
+          Sélectionnez une salle et les dates
+        </div>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="res-card">
+      <div class="res-card-head" style="background:linear-gradient(135deg,#ecfeff,#cffafe);">
+        <div class="res-card-head-icon" style="background:white;"><i class="fas fa-bolt" style="color:#0e7490;font-size:14px;"></i></div>
+        <h5>Actions</h5>
+      </div>
+      <div class="res-card-body" style="display:flex;flex-direction:column;gap:10px;">
+        <button type="submit" form="formReservation" class="btn-submit">
+          <i class="fas fa-save"></i> Créer la réservation
+        </button>
+        <a href="{% url 'patrimoine_salles' %}" class="btn-cancel">
+          <i class="fas fa-times"></i> Annuler
+        </a>
+      </div>
+    </div>
+
+    <!-- Aide -->
+    <div class="res-card" style="background:linear-gradient(135deg,#ecfeff,#cffafe);border-color:#a5f3fc;">
+      <div class="res-card-body">
+        <div style="font-size:13px;color:#0e7490;font-weight:700;margin-bottom:8px;"><i class="fas fa-lightbulb me-1"></i> Astuce</div>
+        <div style="font-size:12px;color:#155e75;line-height:1.6;">
+          La vérification de disponibilité se fait automatiquement quand vous sélectionnez une salle et les dates. En cas de conflit, choisissez un autre créneau.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.getElementById('check_recurrente').addEventListener('change', function() {
+    document.getElementById('frequence_section').style.display = this.checked ? 'block' : 'none';
+});
+
+const salleSelect = document.getElementById('id_salle');
+const dateDebut = document.getElementById('id_date_debut');
+const dateFin = document.getElementById('id_date_fin');
+const dispoCard = document.getElementById('dispo_card');
+const dispoBody = document.getElementById('dispo_body');
+
+function checkDispo() {
+    if (!salleSelect.value || !dateDebut.value || !dateFin.value) {
+        dispoCard.style.display = 'none';
+        return;
+    }
+    dispoCard.style.display = 'block';
+    dispoBody.innerHTML = '<div class="dispo-wait"><i class="fas fa-spinner fa-spin" style="font-size:20px;margin-bottom:8px;display:block;"></i>Vérification en cours...</div>';
+
+    fetch(`/patrimoine/ajax/salles/disponibilite/?salle_id=${salleSelect.value}&debut=${dateDebut.value}&fin=${dateFin.value}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.disponible) {
+                dispoBody.innerHTML = '<div class="dispo-ok"><i class="fas fa-check-circle" style="font-size:32px;margin-bottom:8px;display:block;"></i><strong style="font-size:15px;">Salle disponible</strong><br><span style="font-size:12px;opacity:0.8;">Aucun conflit détecté</span></div>';
+            } else {
+                dispoBody.innerHTML = '<div class="dispo-ko"><i class="fas fa-times-circle" style="font-size:32px;margin-bottom:8px;display:block;"></i><strong style="font-size:15px;">Salle occupée</strong><br><span style="font-size:12px;opacity:0.8;">' + data.conflits + ' conflit(s) détecté(s)</span></div>';
+            }
+        })
+        .catch(() => {
+            dispoBody.innerHTML = '<div class="dispo-wait"><i class="fas fa-exclamation-triangle" style="font-size:20px;margin-bottom:8px;display:block;"></i>Erreur de vérification</div>';
+        });
+}
+
+salleSelect.addEventListener('change', checkDispo);
+dateDebut.addEventListener('change', checkDispo);
+dateFin.addEventListener('change', checkDispo);
+</script>
+{% endblock %}

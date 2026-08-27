@@ -1,0 +1,90 @@
+{% extends "base_ui.html" %}
+{% load static %}
+
+{% block title %}Nouvelle mission — {{ vehicule.immatriculation }}{% endblock %}
+
+{% block contenu %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour au véhicule</a>
+        <h4 class="mb-0 mt-1"><i class="fas fa-route me-2"></i>Nouvelle mission — {{ vehicule.immatriculation }}</h4>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" novalidate>
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Objet de la mission *</label>
+                            <input type="text" name="objet" class="form-control" required placeholder="Ex: Transport de matériel médical">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Destination *</label>
+                            <input type="text" name="destination" class="form-control" required placeholder="Ex: CHU de Cocody">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Date/heure départ *</label>
+                                <input type="datetime-local" name="date_depart" class="form-control" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date/heure retour</label>
+                                <input type="datetime-local" name="date_retour" class="form-control">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">KM au départ</label>
+                                <input type="number" name="km_depart" class="form-control" value="{{ vehicule.kilometrage }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">KM au retour</label>
+                                <input type="number" name="km_retour" class="form-control">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Statut</label>
+                                <select name="statut" class="form-select">
+                                    <option value="EN_COURS">En cours</option>
+                                    <option value="TERMINEE">Terminée</option>
+                                    <option value="ANNULEE">Annulée</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Demandeur</label>
+                            <select name="demandeur" class="form-select">
+                                <option value="">-- Choisir --</option>
+                                {% for u in users %}
+                                <option value="{{ u.pk }}">{{ u.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Observations</label>
+                            <textarea name="observation" class="form-control" rows="3" placeholder="Notes sur la mission..."></textarea>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn btn-secondary me-2">Annuler</a>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Enregistrer la mission</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6><i class="fas fa-info-circle me-1"></i>Résumé du véhicule</h6>
+                    <table class="table table-borderless table-sm mb-0">
+                        <tr><td class="text-muted">Immatriculation</td><td>{{ vehicule.immatriculation }}</td></tr>
+                        <tr><td class="text-muted">Kilométrage</td><td>{{ vehicule.kilometrage|floatformat:0 }} km</td></tr>
+                        <tr><td class="text-muted">Statut</td><td>{{ vehicule.get_statut_display }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

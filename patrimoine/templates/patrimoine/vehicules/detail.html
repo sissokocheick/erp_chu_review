@@ -1,0 +1,142 @@
+{% extends "base_ui.html" %}
+{% load static %}
+{% block title %}{{ vehicule.immatriculation }} — Véhicule{% endblock %}
+{% block contenu %}
+<style>
+  :root { --rad: 12px; --rad-sm: 8px; }
+  .ph { background: linear-gradient(135deg, #1e293b, #475569); border-radius: var(--rad); padding: 22px 26px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 6px 20px rgba(0,0,0,0.2); flex-wrap: wrap; gap: 14px; }
+  .ph-left { display: flex; align-items: center; gap: 18px; }
+  .ph-left-icon { background: rgba(255,255,255,0.15); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; color: white; }
+  .ph h4 { margin: 0; font-size: 24px; font-weight: 800; color: white; }
+  .ph small { opacity: 0.85; font-size: 14px; color: white; }
+  .btn-h { background: white; color: #475569; border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; text-decoration: none; }
+  .btn-h:hover { background: #f1f5f9; transform: translateY(-2px); }
+  .info-card { background: white; border-radius: var(--rad); box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eef0f3; overflow: hidden; }
+  .info-card .card-head { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 14px; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+  .info-card .card-body { padding: 20px; }
+  .info-row { display: flex; padding: 10px 0; border-bottom: 1px solid #f1f5f9; }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { width: 180px; font-size: 13px; color: #64748b; font-weight: 600; flex-shrink: 0; }
+  .info-value { font-size: 14px; color: #1e293b; font-weight: 600; }
+  .st-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .st-DISPONIBLE { background: #d4edda; color: #155724; }
+  .st-EN_SERVICE { background: #cce5ff; color: #004085; }
+  .st-EN_MAINTENANCE { background: #fff3cd; color: #856404; }
+  .st-HORS_SERVICE { background: #f8d7da; color: #721c24; }
+  .st-VALIDE { background: #d4edda; color: #155724; }
+  .st-EXPIREE { background: #f8d7da; color: #721c24; }
+  .alert-warn { background: #fffbeb; border: 1px solid #fbd38d; border-radius: var(--rad-sm); padding: 12px 20px; margin-bottom: 16px; font-size: 14px; font-weight: 600; color: #dd6b20; display: flex; align-items: center; gap: 10px; }
+  .alert-danger { background: #fef2f2; border: 1px solid #fecaca; border-radius: var(--rad-sm); padding: 12px 20px; margin-bottom: 16px; font-size: 14px; font-weight: 600; color: #991b1b; display: flex; align-items: center; gap: 10px; }
+  .quick-action { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: var(--rad-sm); border: 1px solid #e2e8f0; text-decoration: none; color: #334155; transition: 0.2s; margin-bottom: 8px; }
+  .quick-action:hover { background: #f8fafc; border-color: #94a3b8; transform: translateX(4px); }
+  .quick-action i { font-size: 18px; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 10px; flex-shrink: 0; }
+  .cost-card { background: linear-gradient(135deg, #1e3a8a, #3b82f6); border-radius: var(--rad); padding: 20px; text-align: center; color: white; margin-bottom: 16px; }
+  .cost-card .cost-val { font-size: 28px; font-weight: 800; }
+  .cost-card .cost-lbl { font-size: 12px; opacity: 0.8; margin-top: 4px; }
+</style>
+
+<div class="ph">
+  <div class="ph-left">
+    <div class="ph-left-icon"><i class="fas fa-car"></i></div>
+    <div>
+      <h4>{{ vehicule.immatriculation }}</h4>
+      <small>{{ vehicule.marque|default:"" }} {{ vehicule.modele|default:"" }} — {{ vehicule.get_type_vehicule_display }}</small>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;">
+    <a href="{% url 'patrimoine_vehicules' %}" class="btn-h"><i class="fas fa-arrow-left"></i> Retour</a>
+    {% if perms.accounts.menu_pat_registre or request.user.is_superuser %}
+    <a href="{% url 'patrimoine_vehicule_modifier' vehicule.pk %}" class="btn-h" style="background:#fffbeb;color:#b45309;"><i class="fas fa-edit"></i> Modifier</a>
+    <button class="btn-h" style="background:#fef2f2;color:#dc2626;" data-bs-toggle="modal" data-bs-target="#modalSupprimer"><i class="fas fa-trash"></i> Supprimer</button>
+    {% endif %}
+  </div>
+</div>
+
+{% if vehicule.assurance_valide == False %}
+<div class="alert-danger"><i class="fas fa-exclamation-circle"></i> <strong>Assurance expirée</strong> depuis le {{ vehicule.assurance_fin|date:"d/m/Y" }}</div>
+{% elif vehicule.assurance_valide == True and vehicule.jours_avant_assurance < 30 %}
+<div class="alert-warn"><i class="fas fa-exclamation-triangle"></i> Assurance expire dans <strong>{{ vehicule.jours_avant_assurance }}</strong> jour(s)</div>
+{% endif %}
+{% if vehicule.ct_prochaine_date and vehicule.ct_prochaine_date < today %}
+<div class="alert-danger"><i class="fas fa-exclamation-circle"></i> <strong>Contrôle technique dépassé</strong> depuis le {{ vehicule.ct_prochaine_date|date:"d/m/Y" }}</div>
+{% endif %}
+
+<div class="row">
+  <div class="col-md-8">
+    <div class="info-card mb-4">
+      <div class="card-head"><i class="fas fa-id-card" style="color:#1e3a8a;"></i> Informations générales</div>
+      <div class="card-body">
+        <div class="info-row"><div class="info-label">Immatriculation</div><div class="info-value" style="font-family:monospace;font-size:16px;">{{ vehicule.immatriculation }}</div></div>
+        <div class="info-row"><div class="info-label">Type</div><div class="info-value"><span class="st-badge st-{{ vehicule.statut }}">{{ vehicule.get_type_vehicule_display }}</span></div></div>
+        <div class="info-row"><div class="info-label">Marque / Modèle</div><div class="info-value">{{ vehicule.marque|default:"—" }} {{ vehicule.modele|default:"" }}</div></div>
+        <div class="info-row"><div class="info-label">Couleur</div><div class="info-value">{{ vehicule.couleur|default:"—" }}</div></div>
+        <div class="info-row"><div class="info-label">Carburant</div><div class="info-value">{{ vehicule.get_carburant_display }}</div></div>
+        <div class="info-row"><div class="info-label">Kilométrage</div><div class="info-value" style="font-family:monospace;font-size:16px;font-weight:800;">{{ vehicule.kilometrage|floatformat:0 }} km</div></div>
+        <div class="info-row"><div class="info-label">1ère circulation</div><div class="info-value">{{ vehicule.date_premiere_circulation|date:"d/m/Y"|default:"—" }}</div></div>
+        <div class="info-row"><div class="info-label">Âge</div><div class="info-value">{{ vehicule.age_annees|default:"—" }} ans</div></div>
+        <div class="info-row"><div class="info-label">Valeur acquisition</div><div class="info-value" style="font-weight:800;">{{ vehicule.valeur_acquisition|floatformat:0 }} FCFA</div></div>
+        <div class="info-row"><div class="info-label">Statut</div><div class="info-value"><span class="st-badge st-{{ vehicule.statut }}">{{ vehicule.get_statut_display }}</span></div></div>
+      </div>
+    </div>
+
+    <div class="info-card mb-4">
+      <div class="card-head"><i class="fas fa-shield-alt" style="color:#17a2b8;"></i> Assurance & Contrôle Technique</div>
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6">
+            <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#64748b;margin-bottom:10px;">Assurance</div>
+            <div class="info-row"><div class="info-label">Compagnie</div><div class="info-value">{{ vehicule.assurance_compagnie|default:"—" }}</div></div>
+            <div class="info-row"><div class="info-label">N° Police</div><div class="info-value">{{ vehicule.assurance_numero|default:"—" }}</div></div>
+            <div class="info-row"><div class="info-label">Période</div><div class="info-value">{{ vehicule.assurance_debut|date:"d/m/Y"|default:"?" }} — {{ vehicule.assurance_fin|date:"d/m/Y"|default:"?" }}</div></div>
+            <div class="info-row"><div class="info-label">Prime</div><div class="info-value" style="font-weight:800;">{{ vehicule.assurance_premium|floatformat:0 }} FCFA</div></div>
+          </div>
+          <div class="col-md-6">
+            <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#64748b;margin-bottom:10px;">Contrôle technique</div>
+            <div class="info-row"><div class="info-label">Dernier CT</div><div class="info-value">{{ vehicule.ct_dernier_date|date:"d/m/Y"|default:"—" }}</div></div>
+            <div class="info-row"><div class="info-label">Prochain CT</div><div class="info-value">{{ vehicule.ct_prochaine_date|date:"d/m/Y"|default:"—" }} {% if vehicule.ct_a_jour == False %}<span class="st-badge st-EXPIREE" style="margin-left:8px;">Expiré</span>{% elif vehicule.ct_a_jour == True %}<span class="st-badge st-VALIDE" style="margin-left:8px;">OK</span>{% endif %}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <div class="cost-card">
+      <div class="cost-val">{{ cout_total|floatformat:0 }} FCFA</div>
+      <div class="cost-lbl">Coût total interventions</div>
+    </div>
+
+    <div class="info-card mb-4">
+      <div class="card-head"><i class="fas fa-bolt" style="color:#f59e0b;"></i> Actions rapides</div>
+      <div class="card-body" style="padding:12px;">
+        <a href="{% url 'patrimoine_vehicule_intervention_creer' vehicule.pk %}" class="quick-action"><i style="background:#eff6ff;color:#3b82f6;"><i class="fas fa-wrench"></i></i> Nouvelle intervention</a>
+        <a href="{% url 'patrimoine_vehicule_mission_creer' vehicule.pk %}" class="quick-action"><i style="background:#f0fdf4;color:#22c55e;"><i class="fas fa-route"></i></i> Nouvelle mission</a>
+        <a href="{% url 'patrimoine_vehicule_interventions' vehicule.pk %}" class="quick-action"><i style="background:#f8fafc;color:#64748b;"><i class="fas fa-history"></i></i> Historique interventions</a>
+        <a href="{% url 'patrimoine_vehicule_missions' vehicule.pk %}" class="quick-action"><i style="background:#f8fafc;color:#64748b;"><i class="fas fa-list"></i></i> Historique missions</a>
+      </div>
+    </div>
+
+    {% if interventions %}
+    <div class="info-card">
+      <div class="card-head"><i class="fas fa-wrench" style="color:#f59e0b;"></i> Dernières interventions</div>
+      <div class="card-body" style="padding:12px;">
+        {% for i in interventions %}
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-bottom:1px solid #f1f5f9;">
+          <div>
+            <div style="font-weight:700;font-size:13px;">{{ i.get_type_intervention_display }}</div>
+            <div style="font-size:12px;color:#94a3b8;">{{ i.date_prevue|date:"d/m/Y"|default:"—" }}</div>
+          </div>
+          <div style="text-align:right;">
+            <span class="st-badge {% if i.statut == 'TERMINEE' %}st-DISPONIBLE{% elif i.statut == 'EN_COURS' %}st-EN_SERVICE{% else %}st-EN_MAINTENANCE{% endif %}">{% if i.statut == 'PLANIFIEE' %}Planifiée{% elif i.statut == 'EN_COURS' %}En cours{% else %}Terminée{% endif %}</span>
+            <div style="font-size:12px;color:#64748b;margin-top:4px;">{{ i.cout|floatformat:0 }} FCFA</div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="modal fade" id="modalSupprimer" tabindex="-1"><div class="modal-dialog"><div class="modal-content"><div style="background:linear-gradient(135deg,#dc2626,#ef4444);color:white;padding:18px 24px;display:flex;align-items:center;justify-content:space-between;"><h5 style="margin:0;font-size:16px;font-weight:800;"><i class="fas fa-trash me-2"></i>Supprimer</h5><button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button></div><div class="modal-body" style="padding:24px;"><p style="font-size:15px;">Supprimer le véhicule <strong>{{ vehicule.immatriculation }}</strong> ?</p><p style="color:#dc2626;font-size:13px;">Action irréversible.</p></div><div style="padding:14px 24px;border-top:1px solid #e2e8f0;display:flex;justify-content:flex-end;gap:10px;background:#f8fafc;"><button type="button" class="btn-h" data-bs-dismiss="modal">Annuler</button><form method="POST" action="{% url 'patrimoine_vehicule_supprimer' vehicule.pk %}" class="d-inline">{% csrf_token %}<button type="submit" class="btn-h" style="background:#dc2626;color:white;">Supprimer</button></form></div></div></div></div>
+{% endblock %}

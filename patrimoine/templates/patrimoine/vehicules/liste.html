@@ -1,0 +1,126 @@
+{% extends "base_ui.html" %}
+{% load static %}
+{% block title %}Véhicules — Patrimoine{% endblock %}
+
+{% block contenu %}
+<style>
+  :root { --pb: #1e3a8a; --pb2: #3b82f6; --rad: 12px; --rad-sm: 8px; }
+  .ph { background: linear-gradient(135deg, #dc2626, #ef4444); border-radius: var(--rad); padding: 22px 26px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 6px 20px rgba(220,38,38,0.25); flex-wrap: wrap; gap: 14px; }
+  .ph-left { display: flex; align-items: center; gap: 18px; }
+  .ph-left-icon { background: rgba(255,255,255,0.15); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; color: white; }
+  .ph h4 { margin: 0; font-size: 24px; font-weight: 800; color: white; }
+  .ph small { opacity: 0.85; font-size: 14px; color: white; font-weight: 500; }
+  .s-chip { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; border: none; text-decoration: none; }
+  .s-chip:hover { transform: translateY(-3px); filter: brightness(1.1); }
+  .s-total { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); }
+  .s-dispo { background: #d4edda; color: #155724; }
+  .s-service { background: #cce5ff; color: #004085; }
+  .s-panne { background: #f8d7da; color: #721c24; }
+  .s-alert { background: #fff3cd; color: #856404; }
+  .btn-h { background: white; color: #dc2626; border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-decoration: none; }
+  .btn-h:hover { background: #fef2f2; transform: translateY(-2px); }
+  .card-tbl { background: white; border-radius: var(--rad); box-shadow: 0 2px 10px rgba(0,0,0,0.04); overflow: hidden; border: 1px solid #eef0f3; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+  .tbl thead tr { background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
+  .tbl thead th { padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: none; white-space: nowrap; text-align: left; }
+  .tbl tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+  .tbl tbody tr:hover { background: #f8fafc; }
+  .tbl tbody td { padding: 14px 16px; vertical-align: middle; }
+  .empty-row td { text-align: center; padding: 60px; color: #94a3b8; font-size: 15px; }
+  .code-link { font-weight: 800; color: #1e293b; font-size: 15px; text-decoration: none; }
+  .code-link:hover { color: #dc2626; }
+  .st-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border: 1px solid transparent; }
+  .st-DISPONIBLE { background: #d4edda; color: #155724; border-color: #c3e6cb; }
+  .st-EN_SERVICE { background: #cce5ff; color: #004085; border-color: #b8daff; }
+  .st-EN_MAINTENANCE { background: #fff3cd; color: #856404; border-color: #ffeeba; }
+  .st-HORS_SERVICE { background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
+  .st-VALIDE { background: #d4edda; color: #155724; }
+  .st-EXPIREE { background: #f8d7da; color: #721c24; }
+  .filter-bar { background: white; border-radius: var(--rad); padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eef0f3; margin-bottom: 18px; }
+  .filter-bar input, .filter-bar select { padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: var(--rad-sm); font-size: 13px; background: #f8fafc; }
+  .filter-bar input:focus, .filter-bar select:focus { border-color: #dc2626; box-shadow: 0 0 0 3px rgba(220,38,38,0.1); background: white; }
+</style>
+
+<div class="ph">
+  <div class="ph-left">
+    <div class="ph-left-icon"><i class="fas fa-car"></i></div>
+    <div>
+      <h4>Gestion des Véhicules</h4>
+      <small>Parc automobile du CHU — Suivi & maintenance</small>
+    </div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+    <span class="s-chip s-total" title="Total"><i class="fas fa-car"></i> {{ stats.total }}</span>
+    <span class="s-chip s-dispo" title="Disponibles"><i class="fas fa-check-circle"></i> {{ stats.disponibles }}</span>
+    <span class="s-chip s-service" title="En service"><i class="fas fa-road"></i> {{ stats.en_service }}</span>
+    <span class="s-chip s-panne" title="En maintenance"><i class="fas fa-tools"></i> {{ stats.en_maintenance }}</span>
+    {% if stats.assurance_expiree %}
+    <span class="s-chip s-alert" title="Assurance expirée"><i class="fas fa-exclamation-triangle"></i> {{ stats.assurance_expiree }} assurance expirée</span>
+    {% endif %}
+    {% if perms.accounts.menu_pat_registre or request.user.is_superuser %}<a href="{% url 'patrimoine_vehicule_creer' %}" class="btn-h" style="background:#dc2626;color:white;"><i class="fas fa-plus"></i> Ajouter un véhicule</a>{% endif %}
+  </div>
+</div>
+
+{% if stats.assurance_expiree or stats.ct_proche %}
+<div style="background:#fffbeb;border:1px solid #fbd38d;border-radius:var(--rad-sm);padding:12px 20px;margin-bottom:20px;display:flex;align-items:center;font-size:14px;font-weight:600;color:#dd6b20;">
+  <i class="fas fa-exclamation-triangle" style="margin-right:10px;"></i>
+  {% if stats.assurance_expiree %}<strong>{{ stats.assurance_expiree }}</strong> véhicule(s) avec assurance expirée.{% endif %}
+  {% if stats.ct_proche %} <strong>{{ stats.ct_proche }}</strong> CT à faire dans les 30 jours.{% endif %}
+</div>
+{% endif %}
+
+<form method="GET">
+<div class="filter-bar">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <input type="text" name="q" placeholder="🔍 Rechercher (immatriculation, marque...)" value="{{ q }}" style="flex:1;min-width:200px;">
+    <select name="statut"><option value="">-- Statut --</option><option value="DISPONIBLE" {% if statut_filter == 'DISPONIBLE' %}selected{% endif %}>Disponible</option><option value="EN_SERVICE" {% if statut_filter == 'EN_SERVICE' %}selected{% endif %}>En service</option><option value="EN_MAINTENANCE" {% if statut_filter == 'EN_MAINTENANCE' %}selected{% endif %}>En maintenance</option><option value="HORS_SERVICE" {% if statut_filter == 'HORS_SERVICE' %}selected{% endif %}>Hors service</option></select>
+    <select name="type"><option value="">-- Type --</option><option value="BERLINE" {% if type_filter == 'BERLINE' %}selected{% endif %}>Berline</option><option value="SUV" {% if type_filter == 'SUV' %}selected{% endif %}>SUV</option><option value="PICKUP" {% if type_filter == 'PICKUP' %}selected{% endif %}>Pick-up</option><option value="VAN" {% if type_filter == 'VAN' %}selected{% endif %}>Van</option><option value="AMBULANCE" {% if type_filter == 'AMBULANCE' %}selected{% endif %}>Ambulance</option></select>
+    <button type="submit" class="btn-h" style="background:#1e3a8a;color:white;"><i class="fas fa-search"></i> Filtrer</button>
+    {% if q or statut_filter or type_filter %}<a href="{% url 'patrimoine_vehicules' %}" class="btn-h" style="background:#fee2e2;color:#dc2626;"><i class="fas fa-times"></i></a>{% endif %}
+  </div>
+</div>
+</form>
+
+<div class="card-tbl">
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>Immatriculation</th><th>Type</th><th>Marque / Modèle</th><th>Kilométrage</th><th>Conducteur</th><th>Statut</th><th>Assurance</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in vehicules %}
+      <tr>
+        <td><a href="{% url 'patrimoine_vehicule_detail' v.pk %}" class="code-link">{{ v.immatriculation }}</a></td>
+        <td><span style="background:#e2e8f0;color:#334155;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;">{{ v.get_type_vehicule_display }}</span></td>
+        <td><span style="font-weight:600;">{{ v.marque|default:"—" }}</span> {{ v.modele|default:"" }}</td>
+        <td style="font-family:monospace;font-weight:700;">{{ v.kilometrage|floatformat:0 }} km</td>
+        <td>{{ v.conducteur_titulaire.get_full_name|default:"—" }}</td>
+        <td><span class="st-badge st-{{ v.statut }}">{{ v.get_statut_display }}</span></td>
+        <td>
+          {% if v.assurance_valide == True %}<span class="st-badge st-VALIDE"><i class="fas fa-check"></i> Valide</span>
+          {% elif v.assurance_valide == False %}<span class="st-badge st-EXPIREE"><i class="fas fa-times"></i> Expirée</span>
+          {% else %}<span style="color:#94a3b8;font-size:12px;">—</span>{% endif %}
+        </td>
+        <td>
+          <a href="{% url 'patrimoine_vehicule_detail' v.pk %}" class="btn-h" style="padding:6px 10px;font-size:12px;background:#f0f9ff;color:#1e3a8a;" title="Voir"><i class="fas fa-eye"></i></a>
+          <a href="{% url 'patrimoine_vehicule_modifier' v.pk %}" class="btn-h" style="padding:6px 10px;font-size:12px;background:#fffbeb;color:#b45309;" title="Modifier"><i class="fas fa-edit"></i></a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr class="empty-row"><td colspan="8"><i class="fas fa-car" style="font-size:40px;display:block;margin-bottom:12px;"></i>Aucun véhicule trouvé<br><small style="color:#94a3b8;">Ajoutez un véhicule pour commencer</small></td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if vehicules.has_other_pages %}
+<div style="display:flex;justify-content:center;margin-top:20px;">
+  <div style="display:flex;gap:4px;">
+    {% if vehicules.has_previous %}<a href="?page={{ vehicules.previous_page_number }}{% if q %}&q={{ q }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}" class="btn-h" style="padding:6px 12px;font-size:12px;">« </a>{% endif %}
+    {% for num in vehicules.paginator.page_range %}<a href="?page={{ num }}" class="btn-h" style="padding:6px 12px;font-size:12px;{% if vehicules.number == num %}background:#1e3a8a;color:white;{% endif %}">{{ num }}</a>{% endfor %}
+    {% if vehicules.has_next %}<a href="?page={{ vehicules.next_page_number }}{% if q %}&q={{ q }}{% endif %}{% if statut_filter %}&statut={{ statut_filter }}{% endif %}" class="btn-h" style="padding:6px 12px;font-size:12px;"> »</a>{% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

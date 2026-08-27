@@ -1,0 +1,117 @@
+{% extends "base_ui.html" %}
+{% load static %}
+{% block title %}Salles de conférence — Patrimoine{% endblock %}
+{% block contenu %}
+<style>
+  :root { --rad: 12px; --rad-sm: 8px; }
+  .ph { background: linear-gradient(135deg, #1d4ed8, #3b82f6); border-radius: var(--rad); padding: 22px 26px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 6px 20px rgba(59,130,246,0.25); flex-wrap: wrap; gap: 14px; }
+  .ph-left { display: flex; align-items: center; gap: 18px; }
+  .ph-left-icon { background: rgba(255,255,255,0.15); width: 60px; height: 60px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; color: white; }
+  .ph h4 { margin: 0; font-size: 24px; font-weight: 800; color: white; }
+  .ph small { opacity: 0.85; font-size: 14px; color: white; }
+  .s-chip { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: 0.2s; border: none; text-decoration: none; }
+  .s-chip:hover { transform: translateY(-3px); filter: brightness(1.1); }
+  .s-total { background: rgba(255,255,255,0.2); color: white; border: 1px solid rgba(255,255,255,0.3); }
+  .s-dispo { background: #d4edda; color: #155724; }
+  .s-resa { background: #cce5ff; color: #004085; }
+  .s-wait { background: #fff3cd; color: #856404; }
+  .btn-h { background: white; color: #1d4ed8; border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-decoration: none; }
+  .btn-h:hover { background: #eff6ff; transform: translateY(-2px); }
+  .room-card { background: white; border-radius: var(--rad); box-shadow: 0 2px 10px rgba(0,0,0,0.06); border: 1px solid #eef0f3; overflow: hidden; transition: 0.2s; height: 100%; display: flex; flex-direction: column; }
+  .room-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.12); }
+  .room-head { padding: 16px 18px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f1f5f9; }
+  .room-body { padding: 14px 18px; flex: 1; }
+  .room-foot { padding: 12px 18px; border-top: 1px solid #f1f5f9; background: #f8fafc; display: flex; gap: 6px; flex-wrap: wrap; }
+  .eq-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; background: #eff6ff; color: #1d4ed8; }
+  .st-LIBRE { background: #d4edda; color: #155724; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; }
+  .st-OCCUPEE { background: #fff3cd; color: #856404; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; }
+  .st-INDISP { background: #f8d7da; color: #721c24; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 800; }
+  .filter-bar { background: white; border-radius: var(--rad); padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eef0f3; margin-bottom: 18px; }
+  .filter-bar input, .filter-bar select { padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: var(--rad-sm); font-size: 13px; background: #f8fafc; }
+</style>
+
+<div class="ph">
+  <div class="ph-left">
+    <div class="ph-left-icon"><i class="fas fa-door-open"></i></div>
+    <div><h4>Salles de Conférence</h4><small>Gestion des espaces & réservations</small></div>
+  </div>
+  <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+    <span class="s-chip s-total"><i class="fas fa-door-open"></i> {{ stats.total }}</span>
+    <span class="s-chip s-dispo"><i class="fas fa-check-circle"></i> {{ stats.disponibles }} disponibles</span>
+    <span class="s-chip s-resa"><i class="fas fa-calendar"></i> {{ stats.reservations_today }} résa(s) aujourd'hui</span>
+    {% if stats.en_attente %}<span class="s-chip s-wait"><i class="fas fa-clock"></i> {{ stats.en_attente }} en attente</span>{% endif %}
+    <a href="{% url 'patrimoine_calendrier' %}" class="btn-h"><i class="fas fa-calendar"></i> Calendrier</a>
+    {% if perms.accounts.menu_pat_registre or request.user.is_superuser %}<a href="{% url 'patrimoine_salle_creer' %}" class="btn-h" style="background:#1d4ed8;color:white;"><i class="fas fa-plus"></i> Ajouter une salle</a>{% endif %}
+  </div>
+</div>
+
+<form method="GET">
+<div class="filter-bar">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <input type="text" name="q" placeholder="🔍 Rechercher..." value="{{ q }}" style="flex:1;min-width:180px;">
+    <select name="statut"><option value="">-- Statut --</option><option value="DISPONIBLE" {% if statut_filter == 'DISPONIBLE' %}selected{% endif %}>Disponible</option><option value="INDISPONIBLE" {% if statut_filter == 'INDISPONIBLE' %}selected{% endif %}>Indisponible</option></select>
+    <select name="equipement"><option value="">-- Équipement --</option><option value="videoconf" {% if equipement_filter == 'videoconf' %}selected{% endif %}>Vidéoconférence</option><option value="ecran" {% if equipement_filter == 'ecran' %}selected{% endif %}>Écran</option><option value="wifi" {% if equipement_filter == 'wifi' %}selected{% endif %}>WiFi</option><option value="clim" {% if equipement_filter == 'clim' %}selected{% endif %}>Clim</option></select>
+    <select name="capacite_min"><option value="">-- Capacité --</option><option value="5" {% if capacite_min == '5' %}selected{% endif %}>5+ pers.</option><option value="10" {% if capacite_min == '10' %}selected{% endif %}>10+ pers.</option><option value="20" {% if capacite_min == '20' %}selected{% endif %}>20+ pers.</option></select>
+    <button type="submit" class="btn-h" style="background:#1d4ed8;color:white;"><i class="fas fa-search"></i></button>
+  </div>
+</div>
+</form>
+
+<div class="row">
+  {% for s in salles %}
+  <div class="col-md-4 mb-4">
+    <div class="room-card">
+      <div class="room-head">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:{% if s.statut == 'DISPONIBLE' and not s.reservation_en_cours %}#dcfce7{% elif s.reservation_en_cours %}#fef3c7{% else %}#fee2e2{% endif %};">
+            <i class="fas fa-door-open" style="color:{% if s.statut == 'DISPONIBLE' and not s.reservation_en_cours %}#16a34a{% elif s.reservation_en_cours %}#d97706{% else %}#dc2626{% endif %};"></i>
+          </div>
+          <div><div style="font-weight:800;font-size:15px;">{{ s.nom }}</div><div style="font-size:12px;color:#94a3b8;">{{ s.code }} — {{ s.batiment|default:"" }}</div></div>
+        </div>
+        {% if s.reservation_en_cours %}<span class="st-OCCUPEE">Occupée</span>{% else %}<span class="st-LIBRE">Libre</span>{% endif %}
+      </div>
+      <div class="room-body">
+        <div style="display:flex;justify-content:space-between;margin-bottom:10px;">
+          <span style="font-size:13px;color:#64748b;"><i class="fas fa-users me-1"></i>{{ s.capacite }} places</span>
+          <span style="font-size:13px;color:#64748b;"><i class="fas fa-calendar me-1"></i>{{ s.nb_reservations_today }} résa(s)</span>
+        </div>
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">
+          {% if s.videoconf %}<span class="eq-badge"><i class="fas fa-video"></i> Vidéoconf</span>{% endif %}
+          {% if s.ecran_projecteur %}<span class="eq-badge"><i class="fas fa-tv"></i> Écran</span>{% endif %}
+          {% if s.wifi %}<span class="eq-badge"><i class="fas fa-wifi"></i> WiFi</span>{% endif %}
+          {% if s.climatisation %}<span class="eq-badge"><i class="fas fa-snowflake"></i> Clim</span>{% endif %}
+          {% if s.micro %}<span class="eq-badge"><i class="fas fa-microphone"></i> Micro</span>{% endif %}
+        </div>
+        {% if s.reservation_en_cours %}
+        <div style="margin-top:10px;padding:8px 12px;background:#fef3c7;border-radius:8px;font-size:12px;border:1px solid #fde68a;">
+          <i class="fas fa-user me-1" style="color:#d97706;"></i> <strong>{{ s.reservation_en_cours.objet|truncatechars:30 }}</strong> — {{ s.reservation_en_cours.demandeur.get_full_name|default:"" }}
+        </div>
+        {% endif %}
+      </div>
+      <div class="room-foot">
+        <a href="{% url 'patrimoine_salle_detail' s.pk %}" class="btn-h" style="padding:6px 12px;font-size:12px;background:#f0f9ff;color:#1e3a8a;"><i class="fas fa-eye me-1"></i>Détail</a>
+        <a href="{% url 'patrimoine_salle_modifier' s.pk %}" class="btn-h" style="padding:6px 12px;font-size:12px;background:#fffbeb;color:#b45309;"><i class="fas fa-edit me-1"></i>Modifier</a>
+        <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ s.pk }}" class="btn-h" style="padding:6px 12px;font-size:12px;background:#f0fdf4;color:#16a34a;"><i class="fas fa-calendar-plus me-1"></i>Réserver</a>
+      </div>
+    </div>
+  </div>
+  {% empty %}
+  <div class="col-12">
+    <div style="background:white;border-radius:var(--rad);box-shadow:0 2px 10px rgba(0,0,0,0.04);border:1px solid #eef0f3;text-align:center;padding:60px;">
+      <i class="fas fa-door-open" style="font-size:50px;color:#cbd5e0;display:block;margin-bottom:16px;"></i>
+      <h5 style="color:#475569;margin-bottom:8px;">Aucune salle configurée</h5>
+      <p style="color:#94a3b8;margin-bottom:16px;">Commencez par ajouter une salle de conférence.</p>
+      <a href="{% url 'patrimoine_salle_creer' %}" class="btn-h" style="background:#1d4ed8;color:white;"><i class="fas fa-plus me-1"></i>Ajouter une salle</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+{% if salles.has_other_pages %}
+<div style="display:flex;justify-content:center;margin-top:20px;"><div style="display:flex;gap:4px;">
+  {% if salles.has_previous %}<a href="?page={{ salles.previous_page_number }}" class="btn-h" style="padding:6px 12px;font-size:12px;">«</a>{% endif %}
+  {% for num in salles.paginator.page_range %}<a href="?page={{ num }}" class="btn-h" style="padding:6px 12px;font-size:12px;{% if salles.number == num %}background:#1d4ed8;color:white;{% endif %}">{{ num }}</a>{% endfor %}
+  {% if salles.has_next %}<a href="?page={{ salles.next_page_number }}" class="btn-h" style="padding:6px 12px;font-size:12px;">»</a>{% endif %}
+</div></div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base_ui.html" %}
+{% load static %}
+
+{% block title %}Nouvelle intervention — {{ vehicule.immatriculation }}{% endblock %}
+
+{% block contenu %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour au véhicule</a>
+        <h4 class="mb-0 mt-1"><i class="fas fa-wrench me-2"></i>Nouvelle intervention — {{ vehicule.immatriculation }}</h4>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-body">
+                    <form method="POST" novalidate>
+                        {% csrf_token %}
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Type d'intervention *</label>
+                                <select name="type_intervention" class="form-select" required>
+                                    <option value="ENTRETIEN">Entretien courant</option>
+                                    <option value="REPARATION">Réparation</option>
+                                    <option value="VIDANGE">Vidange</option>
+                                    <option value="PNEU">Changement pneus</option>
+                                    <option value="ASSURANCE">Renouvellement assurance</option>
+                                    <option value="CT">Contrôle technique</option>
+                                    <option value="CARROSSERIE">Carrosserie / Peinture</option>
+                                    <option value="ELECTRIQUE">Électronique / Électrique</option>
+                                    <option value="AUTRE">Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Statut</label>
+                                <select name="statut" class="form-select">
+                                    <option value="PLANIFIEE">Planifiée</option>
+                                    <option value="EN_COURS">En cours</option>
+                                    <option value="TERMINEE">Terminée</option>
+                                    <option value="ANNULEE">Annulée</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date prévue</label>
+                                <input type="date" name="date_prevue" class="form-control">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date de réalisation</label>
+                                <input type="date" name="date_realisation" class="form-control">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Garage / Prestataire</label>
+                            <input type="text" name="garage_prestataire" class="form-control" placeholder="Ex: Garage Central, ATG...">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            <textarea name="description" class="form-control" rows="3" placeholder="Détails de l'intervention..."></textarea>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Coût (FCFA)</label>
+                                <input type="number" name="cout" class="form-control" step="0.01" value="0">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Kilométrage</label>
+                                <input type="number" name="kilometrage" class="form-control" value="{{ vehicule.kilometrage }}">
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label class="form-label">Prochaine vidange à (km)</label>
+                                <input type="number" name="kilometre_prochaine_vidange" class="form-control">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-end">
+                            <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn btn-secondary me-2">Annuler</a>
+                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Enregistrer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6><i class="fas fa-info-circle me-1"></i>Résumé du véhicule</h6>
+                    <table class="table table-borderless table-sm mb-0">
+                        <tr><td class="text-muted">Kilométrage</td><td>{{ vehicule.kilometrage|floatformat:0 }} km</td></tr>
+                        <tr><td class="text-muted">Carburant</td><td>{{ vehicule.get_carburant_display }}</td></tr>
+                        <tr><td class="text-muted">Garage habituel</td><td>{{ vehicule.garage|default:"—" }}</td></tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

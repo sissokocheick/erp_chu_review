@@ -1,0 +1,109 @@
+{% extends "base_ui.html" %}
+{% load static %}
+
+{% block title %}Valider demande véhicule #{{ demande.pk }}{% endblock %}
+
+{% block contenu %}
+<div class="nx-page" style="max-width:1000px;margin:0 auto;">
+
+  <!-- Header -->
+  <div class="nx-card" style="background:linear-gradient(135deg,#581c87,#7c3aed);border:none;color:#fff;border-radius:16px;margin-bottom:24px;">
+    <div style="padding:28px 32px;display:flex;align-items:center;gap:16px;">
+      <a href="{% url 'patrimoine_demandes_vehicule_valider' %}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:18px;"><i class="fas fa-arrow-left"></i></a>
+      <div style="width:48px;height:48px;background:rgba(255,255,255,0.2);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;">✅</div>
+      <div>
+        <h2 style="margin:0;font-size:20px;font-weight:800;">Validation demande #{{ demande.pk }}</h2>
+        <p style="margin:4px 0 0;opacity:0.8;font-size:13px;">{{ demande.demandeur.get_full_name }} — {{ demande.objet }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 360px;gap:24px;align-items:start;">
+
+    <!-- Résumé demande -->
+    <div class="nx-card" style="border-radius:14px;">
+      <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+        <div style="width:32px;height:32px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-clipboard-list" style="color:#7c3aed;font-size:14px;"></i></div>
+        <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Résumé de la demande</h3>
+      </div>
+      <div style="padding:20px 22px;">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div>
+            <div class="vr"><span class="vl">Demandeur</span><span class="vv">{{ demande.demandeur.get_full_name }}</span></div>
+            <div class="vr"><span class="vl">Service</span><span class="vv">{{ demande.service_demandeur|default:"—" }}</span></div>
+            <div class="vr"><span class="vl">Objet</span><span class="vv" style="font-weight:700;">{{ demande.objet }}</span></div>
+            <div class="vr"><span class="vl">Destination</span><span class="vv">{{ demande.destination }}</span></div>
+          </div>
+          <div>
+            <div class="vr"><span class="vl">Départ</span><span class="vv" style="color:#2563eb;">{{ demande.date_depart|date:"d/m/Y H:i" }}</span></div>
+            <div class="vr"><span class="vl">Retour prévu</span><span class="vv">{{ demande.date_retour_prevue|date:"d/m/Y H:i" }}</span></div>
+            <div class="vr"><span class="vl">Durée</span><span class="vv" style="font-weight:700;">{{ demande.duree_heures }}h</span></div>
+            <div class="vr"><span class="vl">Passagers</span><span class="vv" style="font-weight:700;">{{ demande.nb_passagers }}</span></div>
+          </div>
+        </div>
+        {% if demande.motif %}
+        <div style="margin-top:14px;padding:12px;background:#f8fafc;border-radius:8px;border-left:3px solid #7c3aed;">
+          <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Motif</div>
+          <div style="font-size:13px;color:#334155;">{{ demande.motif }}</div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Formulaire validation -->
+    <div class="nx-card" style="border-radius:14px;border:2px solid #c4b5fd;">
+      <div style="padding:18px 20px;background:linear-gradient(135deg,#f5f3ff,#ede9fe);border-bottom:1px solid #e9d5ff;border-radius:14px 14px 0 0;">
+        <h4 style="margin:0;font-size:15px;font-weight:700;color:#581c87;"><i class="fas fa-gavel me-1"></i> Décision</h4>
+      </div>
+      <div style="padding:20px;">
+        <form method="POST" onsubmit="confirmerValidation(this, 'vehicule'); return false;">
+          {% csrf_token %}
+
+          <!-- Sélection véhicule -->
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-car me-1"></i> Véhicule à affecter</label>
+            <select name="vehicule_id" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;background:#fff;" required>
+              <option value="">-- Sélectionner un véhicule disponible --</option>
+              {% for v in vehicules_disponibles %}
+              <option value="{{ v.pk }}">{{ v.immatriculation }} — {{ v.marque|default:v.type_vehicule }} ({{ v.kilometrage|default:0 }} km)</option>
+              {% endfor %}
+            </select>
+          </div>
+
+          <!-- KM départ -->
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-tachometer-alt me-1"></i> KM au départ</label>
+            <input type="number" name="km_depart" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;" placeholder="Kilométrage actuel" required>
+          </div>
+
+          <!-- Commentaire -->
+          <div style="margin-bottom:20px;">
+            <label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-comment me-1"></i> Commentaire</label>
+            <textarea name="commentaire_valider" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;resize:vertical;" rows="2" placeholder="Instructions au chauffeur..."></textarea>
+          </div>
+
+          <!-- Boutons -->
+          <div style="display:flex;gap:10px;">
+            <button type="submit" name="action" value="valider" style="flex:1;padding:14px;border-radius:10px;background:linear-gradient(135deg,#22c55e,#16a34a);color:#fff;border:none;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+              <i class="fas fa-check"></i> Valider
+            </button>
+          </div>
+        </form>
+
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid #f1f5f9;">
+          <a href="#" onclick="confirmerRefus('{% url 'patrimoine_valider_demande_vehicule' demande.pk %}', 'vehicule'); return false;" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;background:#fef2f2;color:#dc2626;border:1px solid #fecaca;font-weight:700;font-size:13px;text-decoration:none;">
+            <i class="fas fa-times"></i> Refuser cette demande
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .vr { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f8fafc; }
+  .vr:last-child { border-bottom:none; }
+  .vl { font-size:12px; color:#94a3b8; font-weight:600; }
+  .vv { font-size:13px; color:#1e293b; }
+</style>
+{% endblock %}

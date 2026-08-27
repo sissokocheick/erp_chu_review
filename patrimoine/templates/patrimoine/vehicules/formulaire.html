@@ -1,0 +1,242 @@
+{% extends "base_ui.html" %}
+{% load static %}
+
+{% block title %}{% if vehicule %}Modifier{% else %}Ajouter{% endif %} un véhicule — Patrimoine{% endblock %}
+
+{% block contenu %}
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <a href="{% url 'patrimoine_vehicules' %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour</a>
+            <h4 class="mb-0 mt-1">
+                <i class="fas fa-car me-2"></i>
+                {% if vehicule %}Modifier {{ vehicule.immatriculation }}{% else %}Ajouter un véhicule{% endif %}
+            </h4>
+        </div>
+    </div>
+
+    <form method="POST" novalidate>
+        {% csrf_token %}
+        <div class="row">
+            <!-- Colonne gauche : Identification -->
+            <div class="col-md-6">
+                <div class="card mb-4">
+                    <div class="card-header"><i class="fas fa-id-card me-2"></i>Identification</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Immatriculation *</label>
+                            <input type="text" name="immatriculation" class="form-control" value="{{ vehicule.immatriculation|default:'' }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Type de véhicule</label>
+                            <select name="type_vehicule" class="form-select">
+                                {% for val, label in vehicule.get_type_vehicule_display %}
+                                <option value="{{ val }}" {% if vehicule.type_vehicule == val %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Marque</label>
+                                <select name="marque" class="form-select" id="id_marque">
+                                    <option value="">-- Choisir --</option>
+                                    {% for m in marques %}
+                                    <option value="{{ m.pk }}" {% if vehicule.marque_id == m.pk %}selected{% endif %}>{{ m.nom }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">Modèle</label>
+                                <select name="modele" class="form-select" id="id_modele">
+                                    <option value="">-- Choisir --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Couleur</label>
+                                <input type="text" name="couleur" class="form-control" value="{{ vehicule.couleur|default:'' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">N° de châssis</label>
+                                <input type="text" name="numero_chassis" class="form-control" value="{{ vehicule.numero_chassis|default:'' }}">
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Carburant</label>
+                                <select name="carburant" class="form-select">
+                                    <option value="ESSENCE" {% if vehicule.carburant == 'ESSENCE' %}selected{% endif %}>Essence</option>
+                                    <option value="DIESEL" {% if vehicule.carburant == 'DIESEL' or not vehicule %}selected{% endif %}>Diesel</option>
+                                    <option value="ELECTRIQUE" {% if vehicule.carburant == 'ELECTRIQUE' %}selected{% endif %}>Électrique</option>
+                                    <option value="HYBRIDE" {% if vehicule.carburant == 'HYBRIDE' %}selected{% endif %}>Hybride</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Puissance (CV)</label>
+                                <input type="number" name="puissance_cv" class="form-control" value="{{ vehicule.puissance_cv|default:'' }}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Kilométrage actuel (km)</label>
+                            <input type="number" name="kilometrage" class="form-control" value="{{ vehicule.kilometrage|default:'0' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acquisition -->
+                <div class="card mb-4">
+                    <div class="card-header"><i class="fas fa-shopping-cart me-2"></i>Acquisition</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Date d'acquisition</label>
+                                <input type="date" name="date_acquisition" class="form-control" value="{{ vehicule.date_acquisition|date:'Y-m-d'|default:'' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">1ère mise en circulation</label>
+                                <input type="date" name="date_premiere_circulation" class="form-control" value="{{ vehicule.date_premiere_circulation|date:'Y-m-d'|default:'' }}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Valeur d'acquisition (FCFA)</label>
+                            <input type="number" name="valeur_acquisition" class="form-control" step="0.01" value="{{ vehicule.valeur_acquisition|default:'0' }}">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Colonne droite : Assurance, CT, Affectation -->
+            <div class="col-md-6">
+                <!-- Assurance -->
+                <div class="card mb-4">
+                    <div class="card-header"><i class="fas fa-shield-alt me-2"></i>Assurance</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Compagnie d'assurance</label>
+                            <input type="text" name="assurance_compagnie" class="form-control" value="{{ vehicule.assurance_compagnie|default:'' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">N° de police</label>
+                            <input type="text" name="assurance_numero" class="form-control" value="{{ vehicule.assurance_numero|default:'' }}">
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Début assurance</label>
+                                <input type="date" name="assurance_debut" class="form-control" value="{{ vehicule.assurance_debut|date:'Y-m-d'|default:'' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Fin assurance</label>
+                                <input type="date" name="assurance_fin" class="form-control" value="{{ vehicule.assurance_fin|date:'Y-m-d'|default:'' }}">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Prime annuelle (FCFA)</label>
+                            <input type="number" name="assurance_premium" class="form-control" step="0.01" value="{{ vehicule.assurance_premium|default:'0' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contrôle technique -->
+                <div class="card mb-4">
+                    <div class="card-header"><i class="fas fa-certificate me-2"></i>Contrôle technique</div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Dernier CT</label>
+                                <input type="date" name="ct_dernier_date" class="form-control" value="{{ vehicule.ct_dernier_date|date:'Y-m-d'|default:'' }}">
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Prochain CT</label>
+                                <input type="date" name="ct_prochaine_date" class="form-control" value="{{ vehicule.ct_prochaine_date|date:'Y-m-d'|default:'' }}">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Affectation -->
+                <div class="card mb-4">
+                    <div class="card-header"><i class="fas fa-user me-2"></i>Affectation</div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label">Service d'affectation</label>
+                            <select name="service_affectation" class="form-select">
+                                <option value="">-- Aucun service --</option>
+                                {% for s in services %}
+                                <option value="{{ s.pk }}" {% if vehicule.service_affectation_id == s.pk %}selected{% endif %}>{{ s.nom }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Conducteur titulaire</label>
+                            <select name="conducteur_titulaire" class="form-select">
+                                <option value="">-- Aucun conducteur --</option>
+                                {% for u in conducteurs %}
+                                <option value="{{ u.pk }}" {% if vehicule.conducteur_titulaire_id == u.pk %}selected{% endif %}>{{ u.get_full_name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Garage / Stationnement</label>
+                            <input type="text" name="garage" class="form-control" value="{{ vehicule.garage|default:'' }}">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Statut</label>
+                            <select name="statut" class="form-select">
+                                <option value="DISPONIBLE" {% if vehicule.statut == 'DISPONIBLE' %}selected{% endif %}>Disponible</option>
+                                <option value="EN_SERVICE" {% if vehicule.statut == 'EN_SERVICE' %}selected{% endif %}>En service</option>
+                                <option value="EN_MAINTENANCE" {% if vehicule.statut == 'EN_MAINTENANCE' %}selected{% endif %}>En maintenance</option>
+                                <option value="HORS_SERVICE" {% if vehicule.statut == 'HORS_SERVICE' %}selected{% endif %}>Hors service</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            <textarea name="notes" class="form-control" rows="3">{{ vehicule.notes|default:'' }}</textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Boutons -->
+        <div class="d-flex justify-content-end mb-4">
+            <a href="{% url 'patrimoine_vehicules' %}" class="btn btn-secondary me-2">Annuler</a>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>{% if vehicule %}Enregistrer{% else %}Créer{% endif %}</button>
+        </div>
+    </form>
+</div>
+
+<script>
+// Chargement dynamique des modèles selon la marque
+document.getElementById('id_marque').addEventListener('change', function() {
+    const marqueId = this.value;
+    const modeleSelect = document.getElementById('id_modele');
+    modeleSelect.innerHTML = '<option value="">Chargement...</option>';
+    
+    if (!marqueId) {
+        modeleSelect.innerHTML = '<option value="">-- Choisir d\'abord une marque --</option>';
+        return;
+    }
+    
+    fetch(`/patrimoine/ajax/vehicules/modeles/?marque_id=${marqueId}`)
+        .then(r => r.json())
+        .then(data => {
+            modeleSelect.innerHTML = '<option value="">-- Choisir --</option>';
+            data.modeles.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.nom;
+                {% if vehicule and vehicule.modele_id %}
+                if (m.id == {{ vehicule.modele_id }}) opt.selected = true;
+                {% endif %}
+                modeleSelect.appendChild(opt);
+            });
+        });
+});
+
+// Charger les modèles au chargement si une marque est sélectionnée
+{% if vehicule and vehicule.marque_id %}
+document.getElementById('id_marque').dispatchEvent(new Event('change'));
+{% endif %}
+</script>
+{% endblock %}
