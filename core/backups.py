@@ -157,9 +157,10 @@ def ecrire_config(donnees):
     return True, "✅ Configuration des sauvegardes enregistrée."
 
 
-def lancer_sauvegarde():
+def lancer_sauvegarde(source='manuel'):
     """Lance scripts/backup_db.py (pg_dump + rétention + copie distante).
 
+    ``source`` : 'manuel' (bouton interface), 'auto' (API), 'scheduled' (cron/schtasks).
     Retourne (ok, sortie_texte).
     """
     config = lire_config()
@@ -173,6 +174,7 @@ def lancer_sauvegarde():
         '--keep-days', str(config['keep_days']),
         '--keep-weeks', str(config['keep_weeks']),
         '--keep-months', str(config['keep_months']),
+        '--source', source,
     ]
     if config['type_distant'] != 'aucun' and config['host']:
         cmd += ['--remote-host', config['host'],
@@ -698,7 +700,7 @@ def _schtasks_create(mode, heure, minute, interval, jours, python, script, log):
             bat_lines.append('    cmdkey /generic:"' + smb_host + '" /user:"' + smb_user + '" /pass:"' + smb_pass + '" >nul 2>&1')
             bat_lines.append('    net use "' + unc + '" >nul 2>&1')
             bat_lines.append(')')
-    bat_lines.append(f'"{python}" "{script}" --quiet{remote_args} >> "{log}" 2>&1')
+    bat_lines.append(f'"{python}" "{script}" --quiet --source scheduled{remote_args} >> "{log}" 2>&1')
     if remote_args:
         bat_lines.append(f'net use "{unc}" /delete >nul 2>&1')
     bat_content = '\r\n'.join(bat_lines) + '\r\n'
@@ -781,7 +783,7 @@ def _crontab_create(mode, heure, minute, interval, jours, python, script, log):
         return False, f"❌ Mode inconnu : {mode}"
 
     entry = (f'{cron_expr} cd {BASE_DIR} && venv/bin/python '
-             f'scripts/backup_db.py --quiet >> logs/backup.log 2>&1')
+             f'scripts/backup_db.py --quiet --source scheduled >> logs/backup.log 2>&1')
 
     try:
         r = sp.run('crontab -l 2>/dev/null', shell=True, capture_output=True, text=True)

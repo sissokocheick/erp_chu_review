@@ -125,13 +125,12 @@ def _sauvegardes_post(request):
         return redirect(url)
 
     if action == 'lancer':
-        ok, sortie = backups_service.lancer_sauvegarde()
+        ok, sortie = backups_service.lancer_sauvegarde(source='manuel')
         if ok:
             messages.success(request, "✅ Sauvegarde terminée avec succès.")
         else:
             messages.error(request, "❌ La sauvegarde a échoué — voir le détail ci-dessous.")
-        # Le détail complet est ré-affiché sur la page (dernière exécution)
-        _ecrire_derniere_execution(sortie, ok)
+        _ecrire_derniere_execution(sortie, ok, source='manuel')
         return redirect(url)
 
     if action == 'supprimer':
@@ -314,10 +313,10 @@ def _fichier_derniere_execution():
     return backups_service._dossier_backups() / 'derniere_execution.txt'
 
 
-def _ecrire_derniere_execution(sortie, ok):
+def _ecrire_derniere_execution(sortie, ok, source='manuel'):
     try:
         _fichier_derniere_execution().write_text(
-            f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}|{'OK' if ok else 'ECHEC'}\n{sortie}",
+            f"{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}|{'OK' if ok else 'ECHEC'}|{source}\n{sortie}",
             encoding='utf-8')
     except OSError:
         pass
@@ -329,10 +328,23 @@ def lire_derniere_execution():
     except OSError:
         return None
     premiere, _, reste = texte.partition('\n')
-    quand, sep, statut = premiere.partition('|')
-    if not sep:
+    parts = premiere.split('|')
+    if len(parts) < 2:
         return None
-    return {'date': quand, 'ok': statut == 'OK', 'sortie': reste.strip()}
+    quand = parts[0]
+    statut = parts[1]
+    # Source dans la ligne header ou dans le corps (SOURCE:xxx)
+    source = parts[2] if len(parts) >= 3 else ''
+    corps = reste.strip()
+    if not source:
+        for ligne in corps.split('\n'):
+            if ligne.startswith('SOURCE:'):
+                source = ligne.split(':', 1)[1].strip()
+                break
+    # Nettoyer la ligne SOURCE du corps affiché
+    if source:
+        corps = '\n'.join(l for l in corps.split('\n') if not l.startswith('SOURCE:'))
+    return {'date': quand, 'ok': statut == 'OK', 'source': source, 'sortie': corps}
 
 
 @login_required(login_url='/auth/login/')

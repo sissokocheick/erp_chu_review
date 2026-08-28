@@ -270,6 +270,8 @@ def main():
     ap.add_argument('--keep-days', type=int, default=7)
     ap.add_argument('--keep-weeks', type=int, default=8)
     ap.add_argument('--keep-months', type=int, default=12)
+    ap.add_argument('--source', default='manuel', choices=['manuel', 'auto', 'scheduled'],
+                     help='Origine de la sauvegarde (manuel, auto=API, scheduled=cron/schtasks)')
     ap.add_argument('--quiet', action='store_true')
     ap.add_argument('--dry-run', action='store_true')
     # Options de copie distante
@@ -352,6 +354,18 @@ def main():
     if not args.quiet:
         print(f"OK  : rétention — {len(files)} backup(s), {len(to_delete)} supprimé(s), "
               f"{len(files) - len(to_delete)} conservé(s)")
+    # ── Écrire dans derniere_execution.txt (lecture par Django) ──
+    try:
+        exec_file = backup_dir / 'derniere_execution.txt'
+        exec_file.write_text(
+            f"{now.strftime('%d/%m/%Y %H:%M:%S')}|OK|{args.source}\n"
+            f"Backup : {dest.name} ({size / 1024:.0f} Ko)\n"
+            f"Rétention : {len(files)} total, {len(to_delete)} supprimés, "
+            f"{len(files) - len(to_delete)} conservés\n",
+            encoding='utf-8')
+    except OSError:
+        pass
+    print(f"SOURCE:{args.source}")
     return 0
 
 

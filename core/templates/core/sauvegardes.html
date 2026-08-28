@@ -209,7 +209,14 @@
       <div class="bk-kpi {{ derniere_execution.ok|yesno:'green,grey' }}">
         <div class="lbl">Dernière exécution</div>
         <div class="val" style="font-size:18px;color:{% if derniere_execution.ok %}#27ae60{% else %}#e74c3c{% endif %};">{{ derniere_execution.date }}</div>
-        <div class="sub">{{ derniere_execution.ok|yesno:'Succès,Échec' }}</div>
+        <div class="sub">
+          {{ derniere_execution.ok|yesno:'Succès,Échec' }}
+          {% if derniere_execution.source %}
+            <span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;margin-left:6px;vertical-align:middle;{% if derniere_execution.source == 'scheduled' or derniere_execution.source == 'auto' %}background:#e8f4fd;color:#0d47a1;{% else %}background:#f0fdf4;color:#27ae60;{% endif %}">
+              {% if derniere_execution.source == 'scheduled' or derniere_execution.source == 'auto' %}⏱ Auto{% else %}👤 Manuel{% endif %}
+            </span>
+          {% endif %}
+        </div>
       </div>
       {% endif %}
     </div>
