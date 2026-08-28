@@ -110,6 +110,18 @@ def parametres_sauvegardes(request):
     }
     octets = context['taille_base_octets']
     context['taille_base_lisible'] = _taille_lisible(octets) if octets else '—'
+    # Taille totale des backups + taille du dernier backup
+    sauvegardes = context['sauvegardes']
+    if sauvegardes:
+        context['taille_totale_backups'] = sum(s.get('taille', 0) for s in sauvegardes)
+        context['taille_totale_lisible'] = _taille_lisible(context['taille_totale_backups'])
+        context['dernier_backup_taille'] = sauvegardes[0].get('taille', 0)
+        context['dernier_backup_taille_lisible'] = _taille_lisible(context['dernier_backup_taille'])
+    else:
+        context['taille_totale_backups'] = 0
+        context['taille_totale_lisible'] = '—'
+        context['dernier_backup_taille'] = 0
+        context['dernier_backup_taille_lisible'] = '—'
     return render(request, 'core/sauvegardes.html', context)
 
 
