@@ -22,7 +22,4 @@ def paginer(qs, request, per_page_key='per_page', default=15, max_all=500, page_
         limite = max(1, min(limite, max_all))
 
     page = request.GET.get(page_key)
-    # Return the original string for 'all' (template checks per_page == 'all'),
-    # otherwise return the sanitized int so template dropdown can match
-    display = per_page if per_page == 'all' else limite
-    return Paginator(qs, limite).get_page(page), display
+    return Paginator(qs, limite).get_page(page), per_page
