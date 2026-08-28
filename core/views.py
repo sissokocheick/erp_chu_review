@@ -296,6 +296,22 @@ def tester_connectivite_ajax(request):
     elapsed = round(time.time() - start, 1)
     all_ok = all(d['ok'] for d in details)
 
+    # Mettre à jour le cache distant si tous les tests passent
+    if all_ok:
+        from core.backups import _ecrire_cache_distant, _lire_cache_distant
+        # Lister les fichiers .backup distants pour le cache
+        fichiers_distants = [d for d in details if d['test'] == 'Listage fichiers']
+        nb_backups = 0
+        if fichiers_distants:
+            import re as _re
+            m = _re.search(r'(\d+) backup', fichiers_distants[0]['detail'])
+            if m:
+                nb_backups = int(m.group(1))
+        if nb_backups > 0:
+            _ecrire_cache_distant('ok', '', None, None)
+        else:
+            _ecrire_cache_distant('critique', '', None, None)
+
     return JsonResponse({
         'ok': all_ok,
         'statut': 'ok' if all_ok else 'erreur',

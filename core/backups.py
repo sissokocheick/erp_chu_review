@@ -190,6 +190,12 @@ def lancer_sauvegarde():
 
     sortie = ((proc.stdout or '') + '\n' + (proc.stderr or '')).strip()
     ok = proc.returncode == 0
+
+    # Rafraîchir le cache distant après une copie réussie
+    if ok and config['type_distant'] != 'aucun' and config['host']:
+        if 'copie' in sortie.lower() or 'remote' in sortie.lower() or 'scp' in sortie.lower():
+            _ecrire_cache_distant('ok', '', None, None)
+
     return ok, (sortie or ('Sauvegarde terminée.' if ok else 'Échec (code %d).' % proc.returncode))[-4000:]
 
 
@@ -290,51 +296,120 @@ def _chemin_distant():
     return Path(f"//{config['host']}/{base}")
 
 
+def _lire_cache_distant():
+    """Lit le cache du statut distant depuis config.json."""
+    config = lire_config()
+    return config.get('_distant_cache', None)
+
+
+def _ecrire_cache_distant(statut, age_libelle='', dernier_nom=None, dernier_date=None):
+    """Écrit le cache du statut distant dans config.json."""
+    config = lire_config()
+    config['_distant_cache'] = {
+        'statut': statut,
+        'age_libelle': age_libelle,
+        'dernier_nom': dernier_nom,
+        'dernier_date': dernier_date,
+        'timestamp': datetime.now().isoformat(),
+    }
+    try:
+        CONFIG_PATH.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding='utf-8')
+    except OSError:
+        pass
+
+
 def etat_distant():
     """État de fraîcheur de la COPIE DISTANTE (partage SMB / serveur SSH).
 
-    Retourne un dict :
-      - statut : 'non_configure' (pas de destination distante),
-                 'indisponible' (partage injoignable — réseau, identifiants),
-                 'critique' (dossier distant sans aucun .backup),
-                 'alerte' (dernière copie > SEUIL_ALERTE_HEURES),
-                 'ok'
-      - age_libelle / dernier_nom / dernier_date : infos de la dernière copie
+    Utilise un cache (config.json) pour éviter de tester la connectivité
+    à chaque chargement de page (ce qui est lent et sujet aux timeouts).
+    Le cache est rafraîchi quand :
+      - l'utilisateur clique « Tester la connexion distante »
+      - une copie distante est effectuée (backup_db.py)
+      - le cache a plus d'1 heure → fait un check live
     """
     dossier = _chemin_distant()
     if not dossier:
         return {'statut': 'non_configure', 'age_libelle': '',
                 'dernier_nom': None, 'dernier_date': None}
-    # ⚠️ Sur un hôte injoignable, glob() ne lève PAS d'exception : il retourne
-    # simplement 0 fichier (après le timeout SMB). On teste donc d'abord
-    # l'existence du dossier pour distinguer « injoignable » de « vide ».
-    try:
-        if not dossier.is_dir():
-            return {'statut': 'indisponible', 'age_libelle': '',
-                    'dernier_nom': None, 'dernier_date': None}
-        fichiers = sorted(dossier.glob('*.backup'),
-                          key=lambda p: p.stat().st_mtime, reverse=True)
-    except OSError:
-        return {'statut': 'indisponible', 'age_libelle': '',
-                'dernier_nom': None, 'dernier_date': None}
-    dernier = None
-    for f in fichiers:
+
+    # ── Vérifier le cache (valide 1 heure) ──
+    cache = _lire_cache_distant()
+    if cache and cache.get('timestamp'):
         try:
-            dernier = (f, datetime.fromtimestamp(f.stat().st_mtime))
-            break
+            ts = datetime.fromisoformat(cache['timestamp'])
+            age_cache = (datetime.now() - ts).total_seconds() / 3600
+            if age_cache < 1:
+                # Cache récent : l'utiliser tel quel
+                return {
+                    'statut': cache.get('statut', 'indisponible'),
+                    'age_libelle': cache.get('age_libelle', ''),
+                    'dernier_nom': cache.get('dernier_nom'),
+                    'dernier_date': cache.get('dernier_date'),
+                }
+        except (ValueError, TypeError):
+            pass
+
+    # ── Cache absent ou expiré : faire un check live ──
+    # ⚠️ Timeout court (3s) pour ne pas bloquer le chargement de la page.
+    import socket, threading
+    result = {'statut': 'indisponible', 'age_libelle': '',
+              'dernier_nom': None, 'dernier_date': None}
+
+    def _check():
+        nonlocal result
+        try:
+            if not dossier.is_dir():
+                return
+            fichiers = sorted(dossier.glob('*.backup'),
+                              key=lambda p: p.stat().st_mtime, reverse=True)
+            dernier = None
+            for f in fichiers:
+                try:
+                    dernier = (f, datetime.fromtimestamp(f.stat().st_mtime))
+                    break
+                except OSError:
+                    continue
+            if not dernier:
+                result = {'statut': 'critique', 'age_libelle': '',
+                          'dernier_nom': None, 'dernier_date': None}
+                return
+            chemin, mtime = dernier
+            heures = (datetime.now() - mtime).total_seconds() / 3600
+            result = {
+                'statut': 'alerte' if heures > SEUIL_ALERTE_HEURES else 'ok',
+                'age_libelle': _duree_lisible(heures),
+                'dernier_nom': chemin.name,
+                'dernier_date': mtime.strftime('%d/%m/%Y %H:%M'),
+            }
         except OSError:
-            continue
-    if not dernier:
-        return {'statut': 'critique', 'age_libelle': '',
-                'dernier_nom': None, 'dernier_date': None}
-    chemin, mtime = dernier
-    heures = (datetime.now() - mtime).total_seconds() / 3600
-    return {
-        'statut': 'alerte' if heures > SEUIL_ALERTE_HEURES else 'ok',
-        'age_libelle': _duree_lisible(heures),
-        'dernier_nom': chemin.name,
-        'dernier_date': mtime.strftime('%d/%m/%Y %H:%M'),
-    }
+            pass
+
+    t = threading.Thread(target=_check, daemon=True)
+    t.start()
+    t.join(timeout=3)  # Max 3 secondes pour ne pas bloquer
+
+    # Mettre à jour le cache
+    _ecrire_cache_distant(
+        result['statut'],
+        result.get('age_libelle', ''),
+        result.get('dernier_nom'),
+        result.get('dernier_date'),
+    )
+
+    return result
+
+
+def actualiser_etat_distant():
+    """Force le rafraîchissement du cache distant (appelé après test AJAX)."""
+    # Supprimer le cache pour forcer un check live
+    config = lire_config()
+    config.pop('_distant_cache', None)
+    try:
+        CONFIG_PATH.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding='utf-8')
+    except OSError:
+        pass
+    return etat_distant()
 
 
 def etat_sauvegardes():
