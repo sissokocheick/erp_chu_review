@@ -56,13 +56,13 @@
 
     <div>
         <select class="per-page-select" onchange="changerParPage(this.value)">
-            <option value="10" {% if per_page == 10 %}selected{% endif %}>10 / page</option>
-            <option value="15" {% if per_page == 15 %}selected{% endif %}>15 / page</option>
-            <option value="25" {% if per_page == 25 %}selected{% endif %}>25 / page</option>
-            <option value="50" {% if per_page == 50 %}selected{% endif %}>50 / page</option>
-            <option value="100" {% if per_page == 100 %}selected{% endif %}>100 / page</option>
-            <option value="200" {% if per_page == 200 %}selected{% endif %}>200 / page</option>
-            <option value="400" {% if per_page == 400 %}selected{% endif %}>400 / page</option>
+            <option value="10" {% if per_page == '10' %}selected{% endif %}>10 / page</option>
+            <option value="15" {% if per_page == '15' %}selected{% endif %}>15 / page</option>
+            <option value="25" {% if per_page == '25' %}selected{% endif %}>25 / page</option>
+            <option value="50" {% if per_page == '50' %}selected{% endif %}>50 / page</option>
+            <option value="100" {% if per_page == '100' %}selected{% endif %}>100 / page</option>
+            <option value="200" {% if per_page == '200' %}selected{% endif %}>200 / page</option>
+            <option value="400" {% if per_page == '400' %}selected{% endif %}>400 / page</option>
             <option value="all" {% if per_page == 'all' %}selected{% endif %}>Tout afficher</option>
         </select>
     </div>

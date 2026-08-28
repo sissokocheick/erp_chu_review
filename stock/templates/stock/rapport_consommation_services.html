@@ -305,9 +305,9 @@
   </div>
   <div>
     <select class="rc-pag-per" onchange="changerDetailParPage(this.value)">
-      <option value="20" {% if detail_per_page == 20 %}selected{% endif %}>20 / page</option>
-      <option value="50" {% if detail_per_page == 50 %}selected{% endif %}>50 / page</option>
-      <option value="100" {% if detail_per_page == 100 %}selected{% endif %}>100 / page</option>
+      <option value="20" {% if detail_per_page == '20' %}selected{% endif %}>20 / page</option>
+      <option value="50" {% if detail_per_page == '50' %}selected{% endif %}>50 / page</option>
+      <option value="100" {% if detail_per_page == '100' %}selected{% endif %}>100 / page</option>
       <option value="all" {% if detail_per_page == 'all' %}selected{% endif %}>Tout</option>
     </select>
   </div>
