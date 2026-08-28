@@ -302,8 +302,12 @@ def _lire_cache_distant():
     return config.get('_distant_cache', None)
 
 
-def _ecrire_cache_distant(statut, age_libelle='', dernier_nom=None, dernier_date=None):
-    """Écrit le cache du statut distant dans config.json."""
+def _ecrire_cache_distant(statut, age_libelle='', dernier_nom=None, dernier_date=None, ajax_valide=False):
+    """Écrit le cache du statut distant dans config.json.
+
+    Si ajax_valide=True, le cache est marqué comme validé par un test AJAX
+    et reste valide 24h (au lieu de 1h pour un check live).
+    """
     config = lire_config()
     config['_distant_cache'] = {
         'statut': statut,
@@ -311,6 +315,7 @@ def _ecrire_cache_distant(statut, age_libelle='', dernier_nom=None, dernier_date
         'dernier_nom': dernier_nom,
         'dernier_date': dernier_date,
         'timestamp': datetime.now().isoformat(),
+        'ajax_valide': ajax_valide,
     }
     try:
         CONFIG_PATH.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding='utf-8')
@@ -333,14 +338,23 @@ def etat_distant():
         return {'statut': 'non_configure', 'age_libelle': '',
                 'dernier_nom': None, 'dernier_date': None}
 
-    # ── Vérifier le cache (valide 1 heure) ──
+    # ── Vérifier le cache ──
     cache = _lire_cache_distant()
     if cache and cache.get('timestamp'):
         try:
             ts = datetime.fromisoformat(cache['timestamp'])
             age_cache = (datetime.now() - ts).total_seconds() / 3600
+            # Si le cache a été validé par un test AJAX réussi, il est valide 24h
+            # ET ne jamais faire de check live qui l'écraserait
+            if cache.get('ajax_valide') and age_cache < 24:
+                return {
+                    'statut': cache.get('statut', 'ok'),
+                    'age_libelle': cache.get('age_libelle', ''),
+                    'dernier_nom': cache.get('dernier_nom'),
+                    'dernier_date': cache.get('dernier_date'),
+                }
+            # Cache non validé par AJAX : valide 1h seulement
             if age_cache < 1:
-                # Cache récent : l'utiliser tel quel
                 return {
                     'statut': cache.get('statut', 'indisponible'),
                     'age_libelle': cache.get('age_libelle', ''),
@@ -352,7 +366,7 @@ def etat_distant():
 
     # ── Cache absent ou expiré : faire un check live ──
     # ⚠️ Timeout court (3s) pour ne pas bloquer le chargement de la page.
-    import socket, threading
+    import threading
     result = {'statut': 'indisponible', 'age_libelle': '',
               'dernier_nom': None, 'dernier_date': None}
 
@@ -389,20 +403,20 @@ def etat_distant():
     t.start()
     t.join(timeout=3)  # Max 3 secondes pour ne pas bloquer
 
-    # Mettre à jour le cache
+    # Mettre à jour le cache (sans flag ajax_valide car c'est un check live)
     _ecrire_cache_distant(
         result['statut'],
         result.get('age_libelle', ''),
         result.get('dernier_nom'),
         result.get('dernier_date'),
+        ajax_valide=False,
     )
 
     return result
 
 
 def actualiser_etat_distant():
-    """Force le rafraîchissement du cache distant (appelé après test AJAX)."""
-    # Supprimer le cache pour forcer un check live
+    """Force le rafraîchissement du cache distant."""
     config = lire_config()
     config.pop('_distant_cache', None)
     try:
@@ -410,6 +424,11 @@ def actualiser_etat_distant():
     except OSError:
         pass
     return etat_distant()
+
+
+def valider_distant_ajax():
+    """Marque le distant comme valide via test AJAX (cache 24h)."""
+    _ecrire_cache_distant('ok', '', None, None, ajax_valide=True)
 
 
 def etat_sauvegardes():
