@@ -154,10 +154,9 @@
           
           <td style="text-align:right;">
             {% if i.statut == 'EN_ATTENTE_VALIDATION' and perms.accounts.menu_pat_tech %}
-            <form method="POST" action="{% url 'patrimoine_valider_intervention' i.id %}" style="display:inline;margin:0;"
-                  onsubmit="return confirm('Valider et clôturer l\'intervention {{ i.id }} ? L\'équipement sera remis en service.');">
+            <form method="POST" action="{% url 'patrimoine_valider_intervention' i.id %}" style="display:inline;margin:0;" id="form-val-interv-{{ i.id }}">
               {% csrf_token %}
-              <button type="submit" class="btn-action btn-validate">
+              <button type="button" class="btn-action btn-validate" onclick="confirmerSweetAlert('Valider l\'intervention ?', 'L\'équipement sera remis en service.', 'question', 'Valider', '#10b981', function(){document.getElementById('form-val-interv-{{ i.id }}').submit();})">
                 <i class="fas fa-signature"></i> Valider
               </button>
             </form>

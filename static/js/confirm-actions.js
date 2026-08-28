@@ -225,3 +225,26 @@ function confirmerRefus(url, type) {
     });
     return false;
 }
+
+/**
+ * Modale SweetAlert2 réutilisable pour toute action nécessitant une confirmation.
+ * Utilisation: onclick="confirmerSweetAlert('Titre', 'Description', 'question', 'Confirmer', '#007bff', callback)"
+ */
+function confirmerSweetAlert(title, text, icon, confirmText, confirmColor, onConfirm) {
+    Swal.fire({
+        title: title,
+        text: text,
+        icon: icon || 'question',
+        showCancelButton: true,
+        confirmButtonColor: confirmColor || '#0d47a1',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-check"></i>&nbsp; ' + (confirmText || 'Confirmer'),
+        cancelButtonText: 'Annuler',
+        focusCancel: true,
+        reverseButtons: true
+    }).then(function(result) {
+        if (result.isConfirmed && typeof onConfirm === 'function') {
+            onConfirm();
+        }
+    });
+}

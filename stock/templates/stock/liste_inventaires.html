@@ -636,10 +636,9 @@
           <td>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               {% if plan.statut == 'ACTIF' %}
-              <form method="POST" action="{% url 'generer_campagne_tournante' plan.id %}" style="display:inline;margin:0;"
-                    onsubmit="return confirm('Générer la campagne d\'inventaire « {{ plan.titre|escapejs }} » maintenant ?');">
+              <form method="POST" action="{% url 'generer_campagne_tournante' plan.id %}" style="display:inline;margin:0;" id="form-gen-camp-{{ plan.id }}">
                 {% csrf_token %}
-                <button type="submit" class="pl-btn-gen" title="Générer la campagne d'inventaire maintenant"><i class="fas fa-magic"></i> Générer</button>
+                <button type="button" class="pl-btn-gen" title="Générer la campagne d'inventaire maintenant" onclick="confirmerSweetAlert('Générer la campagne ?', '{{ plan.titre|escapejs }} sera lancée.', 'question', 'Générer', '#6f42c1', function(){document.getElementById('form-gen-camp-{{ plan.id }}').submit();})"><i class="fas fa-magic"></i> Générer</button>
               </form>
               <form method="POST" action="{% url 'basculer_statut_plan' plan.id %}" style="display:inline;margin:0;">
                 {% csrf_token %}

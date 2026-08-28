@@ -27,10 +27,9 @@
             <i class="fas fa-print"></i> Imprimer
         </a>
         {% if t.statut_validation == 'ATTENTE' and not t.est_annule %}
-        <form method="POST" action="{% url 'receptionner_transfert' t.id %}" style="display:inline;"
-              onsubmit="return confirm('Confirmer la réception du transfert {{ t.numero_bon|escapejs }} dans le magasin {{ t.magasin_destination.nom|escapejs }} ?');">
+        <form method="POST" action="{% url 'receptionner_transfert' t.id %}" style="display:inline;" id="form-recep-trans-{{ t.id }}">
             {% csrf_token %}
-            <button type="submit" class="btn-action btn-print" title="Confirmer la réception du stock dans le magasin destination">
+            <button type="button" class="btn-action btn-print" title="Confirmer la réception du stock dans le magasin destination" onclick="confirmerSweetAlert('Réceptionner le transfert ?', 'Le stock sera transféré vers {{ t.magasin_destination.nom|escapejs }}.', 'question', 'Réceptionner', '#007bff', function(){document.getElementById('form-recep-trans-{{ t.id }}').submit();})">
                 <i class="fas fa-check-double"></i> Réceptionner
             </button>
         </form>

@@ -17,9 +17,9 @@
                     <i class="fas fa-lock"></i> Attente validation
                 </span>
                 {% if circuit_sortie and est_valideur_retour_fournisseur %}
-                <form method="POST" action="{% url 'valider_bon_retour_fournisseur' bon.id %}" style="display:inline; margin:0;" onsubmit="return confirm('Valider le retour fournisseur {{ bon.numero_bon|escapejs }} ? Le stock sera retiré.');">
+                <form method="POST" action="{% url 'valider_bon_retour_fournisseur' bon.id %}" style="display:inline; margin:0;" id="form-val-retfour-{{ bon.id }}">
                     {% csrf_token %}
-                    <button type="submit" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le retour fournisseur" aria-label="Valider le retour fournisseur {{ bon.numero_bon }}">
+                    <button type="button" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le retour fournisseur" aria-label="Valider le retour fournisseur {{ bon.numero_bon }}" onclick="confirmerSweetAlert('Valider le retour fournisseur ?', 'Le stock sera retiré.', 'question', 'Valider', '#007bff', function(){document.getElementById('form-val-retfour-{{ bon.id }}').submit();})">
                         <i class="fas fa-stamp"></i> Valider
                     </button>
                 </form>

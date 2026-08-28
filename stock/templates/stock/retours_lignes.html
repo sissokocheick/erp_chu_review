@@ -17,9 +17,9 @@
                     <i class="fas fa-lock"></i> Attente validation
                 </span>
                 {% if circuit_retour and est_valideur_retour %}
-                <form method="POST" action="{% url 'valider_bon_retour' bon.id %}" style="display:inline; margin:0;" onsubmit="return confirm('Valider le bon de retour {{ bon.numero_bon|escapejs }} ? Le stock sera réintégré.');">
+                <form method="POST" action="{% url 'valider_bon_retour' bon.id %}" style="display:inline; margin:0;" id="form-val-retour-{{ bon.id }}">
                     {% csrf_token %}
-                    <button type="submit" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le bon de retour" aria-label="Valider le bon de retour {{ bon.numero_bon }}">
+                    <button type="button" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le bon de retour" aria-label="Valider le bon de retour {{ bon.numero_bon }}" onclick="confirmerSweetAlert('Valider le bon de retour ?', 'Le stock sera r\'intégré.', 'question', 'Valider', '#007bff', function(){document.getElementById('form-val-retour-{{ bon.id }}').submit();})">
                         <i class="fas fa-stamp"></i> Valider
                     </button>
                 </form>
