@@ -64,6 +64,7 @@
       <div style="padding:20px;">
         <form method="POST" novalidate onsubmit="confirmerValidation(this, 'salle'); return false;">
           {% csrf_token %}
+          <input type="hidden" name="action" value="valider">
 
           <!-- Sélection salle -->
           <div style="margin-bottom:16px;">

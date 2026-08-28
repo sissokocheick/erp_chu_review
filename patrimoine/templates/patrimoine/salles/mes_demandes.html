@@ -166,6 +166,16 @@
               <label class="nx-label">Salle préférée</label>
               <select name="salle_preferee" class="nx-select">
                 <option value="">-- Aucune préférence --</option>
+                {% for s in salles %}<option value="{{ s.pk }}">{{ s.nom }} ({{ s.capacite }}p)</option>{% endfor %}
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+            <div class="nx-form-group">
+              <label class="nx-label">Service demandeur</label>
+              <select name="service_demandeur" class="nx-select">
+                <option value="">-- Mon service --</option>
+                {% for s in services %}<option value="{{ s.pk }}">{{ s.code }} — {{ s.nom }}</option>{% endfor %}
               </select>
             </div>
           </div>

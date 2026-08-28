@@ -187,10 +187,13 @@ def creer_salle(request):
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
     
+    from core.models import Service
     batiments = Batiment.objects.all().order_by('nom')
+    services = Service.objects.all().order_by('nom')
     return render(request, 'patrimoine/salles/formulaire.html', {
         'salle': None,
         'batiments': batiments,
+        'services': services,
     })
 
 
@@ -234,10 +237,13 @@ def modifier_salle(request, pk):
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
     
+    from core.models import Service
     batiments = Batiment.objects.all().order_by('nom')
+    services = Service.objects.all().order_by('nom')
     return render(request, 'patrimoine/salles/formulaire.html', {
         'salle': salle,
         'batiments': batiments,
+        'services': services,
     })
 
 
@@ -409,9 +415,12 @@ def creer_reservation(request):
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
     
+    from core.models import Service
     salles = SalleConference.objects.filter(statut='DISPONIBLE').order_by('nom')
+    services = Service.objects.all().order_by('nom')
     return render(request, 'patrimoine/salles/formulaire_reservation.html', {
         'salles': salles,
+        'services': services,
         'salle_preselect': salle_preselect,
     })
 
@@ -460,7 +469,7 @@ def annuler_reservation(request, pk):
     """Annuler une réservation."""
     reservation = get_object_or_404(ReservationSalle, pk=pk)
     
-    if request.method == 'POST':
+    if request.method in ('POST', 'GET'):
         reservation.statut = 'ANNULEE'
         reservation.save()
         messages.warning(request, f'🚫 Réservation annulée : {reservation.objet}')

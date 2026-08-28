@@ -136,22 +136,52 @@
 </div>
 
 <script>
-document.getElementById('id_batiment').addEventListener('change', function() {
-    const batimentId = this.value;
+function loadEtages(batimentId, selectedEtage) {
     const etageSelect = document.getElementById('id_etage');
     const bureauSelect = document.getElementById('id_bureau');
     if (!batimentId) { etageSelect.innerHTML = '<option value="">-- Choisir --</option>'; bureauSelect.innerHTML = '<option value="">-- Choisir --</option>'; return; }
     fetch(`/patrimoine/ajax/salles/etages/?batiment_id=${batimentId}`)
         .then(r => r.json())
-        .then(data => { etageSelect.innerHTML = '<option value="">-- Choisir --</option>'; data.etages.forEach(e => { const opt = document.createElement('option'); opt.value = e.id; opt.textContent = e.nom; etageSelect.appendChild(opt); }); });
-});
-document.getElementById('id_etage').addEventListener('change', function() {
-    const etageId = this.value;
+        .then(data => {
+            etageSelect.innerHTML = '<option value="">-- Choisir --</option>';
+            data.etages.forEach(e => {
+                const opt = document.createElement('option');
+                opt.value = e.id; opt.textContent = e.nom;
+                if (selectedEtage && e.id == selectedEtage) opt.selected = true;
+                etageSelect.appendChild(opt);
+            });
+            if (selectedEtage) loadBureaux(selectedEtage, null);
+        });
+}
+function loadBureaux(etageId, selectedBureau) {
     const bureauSelect = document.getElementById('id_bureau');
     if (!etageId) { bureauSelect.innerHTML = '<option value="">-- Choisir --</option>'; return; }
     fetch(`/patrimoine/ajax/salles/bureaux/?etage_id=${etageId}`)
         .then(r => r.json())
-        .then(data => { bureauSelect.innerHTML = '<option value="">-- Choisir --</option>'; data.bureaux.forEach(b => { const opt = document.createElement('option'); opt.value = b.id; opt.textContent = b.nom; bureauSelect.appendChild(opt); }); });
+        .then(data => {
+            bureauSelect.innerHTML = '<option value="">-- Choisir --</option>';
+            data.bureaux.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.id; opt.textContent = b.nom;
+                if (selectedBureau && b.id == selectedBureau) opt.selected = true;
+                bureauSelect.appendChild(opt);
+            });
+        });
+}
+document.getElementById('id_batiment').addEventListener('change', function() {
+    loadEtages(this.value, null);
 });
+document.getElementById('id_etage').addEventListener('change', function() {
+    loadBureaux(this.value, null);
+});
+// Pre-load etages/bureaux when editing
+{% if salle and salle.batiment_id %}
+setTimeout(function() {
+    loadEtages({{ salle.batiment_id }}, {{ salle.etage_id|default:'null' }});
+    {% if salle.etage_id %}
+    setTimeout(function() { loadBureaux({{ salle.etage_id }}, {{ salle.bureau_id|default:'null' }}); }, 500);
+    {% endif %}
+}, 100);
+{% endif %}
 </script>
 {% endblock %}

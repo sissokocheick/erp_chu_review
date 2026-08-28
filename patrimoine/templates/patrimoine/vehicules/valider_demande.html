@@ -58,13 +58,14 @@
       <div style="padding:20px;">
         <form method="POST" onsubmit="confirmerValidation(this, 'vehicule'); return false;">
           {% csrf_token %}
+          <input type="hidden" name="action" value="valider">
 
           <!-- Sélection véhicule -->
           <div style="margin-bottom:16px;">
             <label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-car me-1"></i> Véhicule à affecter</label>
-            <select name="vehicule_id" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;background:#fff;" required>
+            <select name="vehicule" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;background:#fff;" required>
               <option value="">-- Sélectionner un véhicule disponible --</option>
-              {% for v in vehicules_disponibles %}
+              {% for v in vehicules_dispo %}
               <option value="{{ v.pk }}">{{ v.immatriculation }} — {{ v.marque|default:v.type_vehicule }} ({{ v.kilometrage|default:0 }} km)</option>
               {% endfor %}
             </select>

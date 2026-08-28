@@ -177,6 +177,13 @@
                 <option value="CRITIQUE">🔴 Critique</option>
               </select>
             </div>
+            <div class="nx-form-group">
+              <label class="nx-label">Service demandeur</label>
+              <select name="service_demandeur" class="nx-select">
+                <option value="">-- Mon service --</option>
+                {% for s in services %}<option value="{{ s.pk }}">{{ s.code }} — {{ s.nom }}</option>{% endfor %}
+              </select>
+            </div>
             <div style="grid-column:1/-1;" class="nx-form-group">
               <label class="nx-label">Motif détaillé</label>
               <textarea name="motif" class="nx-textarea" rows="3" placeholder="Décrivez le besoin..."></textarea>

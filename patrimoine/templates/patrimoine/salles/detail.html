@@ -4,183 +4,236 @@
 {% block title %}{{ salle.nom }} — Salle de conférence{% endblock %}
 
 {% block contenu %}
-<div class="container-fluid">
-    <!-- En-tête -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="nx-page" style="max-width:1100px;margin:0 auto;">
+
+  <!-- Header -->
+  <div class="nx-card" style="background:linear-gradient(135deg,#164e63,#0891b2);border:none;color:#fff;border-radius:16px;margin-bottom:24px;">
+    <div style="padding:28px 32px;display:flex;align-items:center;gap:16px;">
+      <a href="{% url 'patrimoine_salles' %}" style="color:rgba(255,255,255,0.7);text-decoration:none;font-size:18px;"><i class="fas fa-arrow-left"></i></a>
+      <div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;">🚪</div>
+      <div style="flex:1;">
+        <h2 style="margin:0;font-size:22px;font-weight:800;">{{ salle.nom }}</h2>
+        <p style="margin:4px 0 0;opacity:0.8;font-size:13px;">
+          {{ salle.code }}
+          {% if salle.batiment %} · {{ salle.batiment.nom }}{% endif %}
+          {% if salle.etage %} / {{ salle.etage.nom }}{% endif %}
+          {% if salle.bureau %} / {{ salle.bureau.nom }}{% endif %}
+        </p>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ salle.pk }}" class="btn-h" style="background:white;color:#0891b2;">
+          <i class="fas fa-calendar-plus"></i> Réserver
+        </a>
+        {% if perms.accounts.menu_pat_registre or request.user.is_superuser %}
+        <a href="{% url 'patrimoine_salle_modifier' salle.pk %}" class="btn-h" style="background:rgba(255,255,255,0.15);color:white;">
+          <i class="fas fa-edit"></i> Modifier
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px;">
+    <div class="nx-card" style="border-radius:12px;border-left:4px solid #0891b2;">
+      <div style="padding:16px 18px;display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(8,145,178,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">👥</div>
         <div>
-            <a href="{% url 'patrimoine_salles' %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour aux salles</a>
-            <h4 class="mb-0 mt-1"><i class="fas fa-door-open me-2"></i>{{ salle.nom }}</h4>
-            <small class="text-muted">{{ salle.code }} — {{ salle.batiment|default:"" }} {{ salle.etage|default:"" }}</small>
+          <div style="font-size:22px;font-weight:800;color:#0891b2;">{{ salle.capacite }}</div>
+          <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Places</div>
         </div>
+      </div>
+    </div>
+    <div class="nx-card" style="border-radius:12px;border-left:4px solid #22c55e;">
+      <div style="padding:16px 18px;display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(34,197,94,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">📐</div>
         <div>
-            <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ salle.pk }}" class="btn btn-success me-2">
-                <i class="fas fa-calendar-plus me-1"></i>Réserver
-            </a>
-            {% if perms.accounts.menu_pat_registre or request.user.is_superuser %}<a href="{% url 'patrimoine_salle_modifier' salle.pk %}" class="btn btn-warning"><i class="fas fa-edit me-1"></i>Modifier</a>{% endif %}
+          <div style="font-size:22px;font-weight:800;color:#22c55e;">{{ salle.superficie_m2|default:"—" }}</div>
+          <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">m²</div>
         </div>
+      </div>
+    </div>
+    <div class="nx-card" style="border-radius:12px;border-left:4px solid #f59e0b;">
+      <div style="padding:16px 18px;display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(245,158,11,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">📅</div>
+        <div>
+          <div style="font-size:22px;font-weight:800;color:#f59e0b;">{{ nb_reservations_mois }}</div>
+          <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Résas/mois</div>
+        </div>
+      </div>
+    </div>
+    <div class="nx-card" style="border-radius:12px;border-left:4px solid #8b5cf6;">
+      <div style="padding:16px 18px;display:flex;align-items:center;gap:12px;">
+        <div style="width:40px;height:40px;background:rgba(139,92,246,0.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;">📊</div>
+        <div>
+          <div style="font-size:22px;font-weight:800;color:#8b5cf6;">{{ taux_occupation }}%</div>
+          <div style="font-size:10px;color:#94a3b8;text-transform:uppercase;font-weight:700;">Occupation</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alerte si réunion en cours -->
+  {% if reservation_en_cours %}
+  <div class="nx-card" style="background:linear-gradient(135deg,#fef3c7,#fde68a);border-color:#f59e0b;border-radius:12px;margin-bottom:20px;">
+    <div style="padding:16px 20px;display:flex;align-items:center;gap:12px;">
+      <div style="width:36px;height:36px;background:#f59e0b;border-radius:50%;display:flex;align-items:center;justify-content:center;color:white;font-size:16px;animation:pulse 2s infinite;">🔴</div>
+      <div>
+        <div style="font-weight:700;color:#92400e;font-size:14px;"><i class="fas fa-video" style="margin-right:6px;"></i> Réunion en cours</div>
+        <div style="font-size:13px;color:#a16207;">{{ reservation_en_cours.objet }} — {{ reservation_en_cours.demandeur.get_full_name|default:"" }} ({{ reservation_en_cours.date_debut|date:"H:i" }} → {{ reservation_en_cours.date_fin|date:"H:i" }})</div>
+      </div>
+    </div>
+  </div>
+  <style>@keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }</style>
+  {% endif %}
+
+  <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;">
+
+    <!-- Colonne gauche -->
+    <div style="display:flex;flex-direction:column;gap:20px;">
+
+      <!-- Informations -->
+      <div class="nx-card" style="border-radius:14px;">
+        <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;background:linear-gradient(135deg,#cffafe,#a5f3fc);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-info-circle" style="color:#0891b2;font-size:14px;"></i></div>
+          <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Informations</h3>
+        </div>
+        <div style="padding:20px 22px;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+            <div>
+              <div class="vr"><span class="vl">Statut</span><span class="vv">
+                {% if salle.statut == 'DISPONIBLE' %}<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#dcfce7;color:#16a34a;border-radius:12px;font-size:11px;font-weight:700;">✅ Disponible</span>
+                {% elif salle.statut == 'INDISPONIBLE' %}<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#fee2e2;color:#dc2626;border-radius:12px;font-size:11px;font-weight:700;">⛔ Indisponible</span>
+                {% else %}<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#f3f4f6;color:#6b7280;border-radius:12px;font-size:11px;font-weight:700;">🔧 Maintenance</span>
+                {% endif %}
+              </span></div>
+              <div class="vr"><span class="vl">Capacité</span><span class="vv" style="font-weight:700;">{{ salle.capacite }} personnes</span></div>
+              <div class="vr"><span class="vl">Superficie</span><span class="vv">{{ salle.superficie_m2|default:"—" }} m²</span></div>
+              <div class="vr"><span class="vl">Service gestionnaire</span><span class="vv">{{ salle.service_gestionnaire|default:"—" }}</span></div>
+            </div>
+            <div>
+              <div class="vr"><span class="vl">Bâtiment</span><span class="vv" style="font-weight:700;">{{ salle.batiment.nom|default:"—" }}</span></div>
+              <div class="vr"><span class="vl">Étage</span><span class="vv">{{ salle.etage.nom|default:"—" }}</span></div>
+              <div class="vr"><span class="vl">Bureau</span><span class="vv">{{ salle.bureau.nom|default:"—" }}</span></div>
+            </div>
+          </div>
+          {% if salle.description %}
+          <div style="margin-top:14px;padding:12px;background:#f8fafc;border-radius:8px;border-left:3px solid #0891b2;">
+            <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Description</div>
+            <div style="font-size:13px;color:#334155;">{{ salle.description }}</div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Équipements -->
+      <div class="nx-card" style="border-radius:14px;">
+        <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
+          <div style="width:32px;height:32px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-tools" style="color:#7c3aed;font-size:14px;"></i></div>
+          <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Équipements</h3>
+        </div>
+        <div style="padding:18px 22px;display:flex;flex-wrap:wrap;gap:8px;">
+          {% if salle.videoconf %}<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#ecfeff;border:1px solid #a5f3fc;border-radius:20px;font-size:12px;font-weight:600;color:#0891b2;"><i class="fas fa-video"></i> Vidéoconférence</span>{% endif %}
+          {% if salle.ecran_projecteur %}<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#eff6ff;border:1px solid #bfdbfe;border-radius:20px;font-size:12px;font-weight:600;color:#2563eb;"><i class="fas fa-tv"></i> Écran/Vidéoprojecteur</span>{% endif %}
+          {% if salle.tableau_blanc %}<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:20px;font-size:12px;font-weight:600;color:#16a34a;"><i class="fas fa-chalkboard"></i> Tableau blanc</span>{% endif %}
+          {% if salle.wifi %}<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:20px;font-size:12px;font-weight:600;color:#7c3aed;"><i class="fas fa-wifi"></i> WiFi</span>{% endif %}
+          {% if salle.climatisation %}<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#ecfeff;border:1px solid #a5f3fc;border-radius:20px;font-size:12px;font-weight:600;color:#0891b2;"><i class="fas fa-snowflake"></i> Climatisation</span>{% endif %}
+          {% if salle.sonorisation %}<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#fef3c7;border:1px solid #fde68a;border-radius:20px;font-size:12px;font-weight:600;color:#d97706;"><i class="fas fa-volume-up"></i> Sonorisation</span>{% endif %}
+          {% if salle.micro %}<span style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:20px;font-size:12px;font-weight:600;color:#dc2626;"><i class="fas fa-microphone"></i> Micro</span>{% endif %}
+          {% if not salle.videoconf and not salle.ecran_projecteur and not salle.wifi and not salle.climatisation and not salle.sonorisation and not salle.micro and not salle.tableau_blanc %}
+          <span style="font-size:13px;color:#94a3b8;"><i class="fas fa-info-circle" style="margin-right:4px;"></i> Aucun équipement renseigné</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Réservations à venir -->
+      <div class="nx-card" style="border-radius:14px;">
+        <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;justify-content:space-between;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-calendar" style="color:#16a34a;font-size:14px;"></i></div>
+            <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Réservations à venir</h3>
+            <span style="background:#e0f2fe;color:#0369a1;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;">{{ reservations_avenir|length }}</span>
+          </div>
+          <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ salle.pk }}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;border-radius:8px;font-size:12px;font-weight:700;text-decoration:none;"><i class="fas fa-plus"></i> Ajouter</a>
+        </div>
+        <div style="padding:0;">
+          <table style="width:100%;border-collapse:collapse;font-size:13px;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;font-weight:700;">Date</th>
+                <th style="padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;font-weight:700;">Objet</th>
+                <th style="padding:10px 16px;text-align:center;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;font-weight:700;">Nb</th>
+                <th style="padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;color:#94a3b8;font-weight:700;">Statut</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in reservations_avenir %}
+              <tr style="border-bottom:1px solid #f1f5f9;transition:background 0.2s;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='transparent'">
+                <td style="padding:12px 16px;white-space:nowrap;">
+                  <div style="font-weight:700;color:#1e293b;">{{ r.date_debut|date:"d/m" }}</div>
+                  <div style="font-size:11px;color:#94a3b8;">{{ r.date_debut|date:"H:i" }} → {{ r.date_fin|date:"H:i" }}</div>
+                </td>
+                <td style="padding:12px 16px;">
+                  <a href="{% url 'patrimoine_reservation_detail' r.pk %}" style="color:#0891b2;text-decoration:none;font-weight:600;">{{ r.objet }}</a>
+                  <div style="font-size:11px;color:#94a3b8;">{{ r.demandeur.get_full_name|default:"—" }}</div>
+                </td>
+                <td style="padding:12px 16px;text-align:center;">
+                  <span style="font-weight:700;color:#1e293b;">{{ r.nb_participants }}</span>
+                </td>
+                <td style="padding:12px 16px;">
+                  {% if r.statut == 'CONFIRMEE' %}<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#dcfce7;color:#16a34a;border-radius:12px;font-size:11px;font-weight:700;">✅ Confirmée</span>
+                  {% elif r.statut == 'EN_ATTENTE' %}<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#fef3c7;color:#d97706;border-radius:12px;font-size:11px;font-weight:700;">⏳ En attente</span>
+                  {% else %}<span style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;background:#f3f4f6;color:#6b7280;border-radius:12px;font-size:11px;font-weight:700;">{{ r.get_statut_display }}</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% empty %}
+              <tr>
+                <td colspan="4" style="padding:30px;text-align:center;color:#94a3b8;font-size:13px;">
+                  <i class="fas fa-calendar-check" style="font-size:24px;display:block;margin-bottom:8px;opacity:0.3;"></i>
+                  Aucune réservation à venir
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
 
-    <!-- Alerte si en cours -->
-    {% if reservation_en_cours %}
-    <div class="alert alert-info">
-        <i class="fas fa-video me-2"></i>
-        <strong>Réunion en cours :</strong> {{ reservation_en_cours.objet }} — {{ reservation_en_cours.demandeur.get_full_name|default:"" }}
-        ({{ reservation_en_cours.date_debut|date:"H:i" }} — {{ reservation_en_cours.date_fin|date:"H:i" }})
-    </div>
-    {% endif %}
-
-    <div class="row">
-        <!-- Colonne gauche -->
-        <div class="col-md-8">
-            <!-- Infos salle -->
-            <div class="card mb-4">
-                <div class="card-header"><i class="fas fa-info-circle me-2"></i>Informations</div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <table class="table table-borderless">
-                                <tr><td class="text-muted" style="width:40%">Capacité</td><td class="fw-bold">{{ salle.capacite }} personnes</td></tr>
-                                <tr><td class="text-muted">Superficie</td><td>{{ salle.superficie_m2|default:"—" }} m²</td></tr>
-                                <tr><td class="text-muted">Statut</td>
-                                    <td>
-                                        {% if salle.statut == 'DISPONIBLE' %}
-                                            <span class="badge bg-success">Disponible</span>
-                                        {% elif salle.statut == 'INDISPONIBLE' %}
-                                            <span class="badge bg-danger">Indisponible</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">En maintenance</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                <tr><td class="text-muted">Service gestionnaire</td><td>{{ salle.service_gestionnaire|default:"—" }}</td></tr>
-                            </table>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="text-muted">Équipements</h6>
-                            <div>
-                                {% for eq in salle.equipements_liste %}
-                                <span class="badge bg-info me-1 mb-1"><i class="fas fa-check me-1"></i>{{ eq }}</span>
-                                {% empty %}
-                                <span class="text-muted">Aucun équipement renseigné</span>
-                                {% endfor %}
-                            </div>
-                            {% if salle.description %}
-                            <div class="mt-3">
-                                <h6 class="text-muted">Description</h6>
-                                <p>{{ salle.description }}</p>
-                            </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Réservations à venir -->
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="fas fa-calendar me-2"></i>Réservations à venir</span>
-                    <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ salle.pk }}" class="btn btn-sm btn-success"><i class="fas fa-plus me-1"></i>Ajouter</a>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Heure</th>
-                                    <th>Objet</th>
-                                    <th>Demandeur</th>
-                                    <th>Nb</th>
-                                    <th>Statut</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for r in reservations_avenir %}
-                                <tr>
-                                    <td>{{ r.date_debut|date:"d/m/Y" }}</td>
-                                    <td>{{ r.date_debut|date:"H:i" }} — {{ r.date_fin|date:"H:i" }}</td>
-                                    <td><a href="{% url 'patrimoine_reservation_detail' r.pk %}">{{ r.objet }}</a></td>
-                                    <td>{{ r.demandeur.get_full_name|default:"—" }}</td>
-                                    <td>{{ r.nb_participants }}</td>
-                                    <td>
-                                        {% if r.statut == 'CONFIRMEE' %}
-                                            <span class="badge bg-success">Confirmée</span>
-                                        {% elif r.statut == 'EN_ATTENTE' %}
-                                            <span class="badge bg-warning text-dark">En attente</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">{{ r.get_statut_display }}</span>
-                                        {% endif %}
-                                    </td>
-                                </tr>
-                                {% empty %}
-                                <tr><td colspan="6" class="text-center text-muted">Aucune réservation à venir</td></tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
+    <!-- Colonne droite : Actions -->
+    <div style="position:sticky;top:80px;display:flex;flex-direction:column;gap:16px;">
+      <div class="nx-card" style="border-radius:14px;">
+        <div style="padding:18px 20px;background:linear-gradient(135deg,#ecfeff,#cffafe);border-bottom:1px solid #a5f3fc;border-radius:14px 14px 0 0;">
+          <h4 style="margin:0;font-size:15px;font-weight:700;color:#155e75;"><i class="fas fa-bolt me-1"></i> Actions rapides</h4>
         </div>
-
-        <!-- Colonne droite : Stats -->
-        <div class="col-md-4">
-            <div class="card mb-4">
-                <div class="card-header"><i class="fas fa-chart-pie me-2"></i>Statistiques</div>
-                <div class="card-body">
-                    <div class="text-center mb-3">
-                        <h3 class="text-primary">{{ nb_reservations_mois }}</h3>
-                        <small class="text-muted">Réservations ce mois</small>
-                    </div>
-                    <div class="progress mb-2" style="height: 20px;">
-                        <div class="progress-bar bg-success" style="width: {{ taux_occupation }}%">{{ taux_occupation }}%</div>
-                    </div>
-                    <small class="text-muted d-block text-center">Taux d'occupation estimé</small>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header"><i class="fas fa-bolt me-2"></i>Actions rapides</div>
-                <div class="card-body">
-                    <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ salle.pk }}" class="btn btn-outline-success w-100 mb-2">
-                        <i class="fas fa-calendar-plus me-1"></i>Nouvelle réservation
-                    </a>
-                    <a href="{% url 'patrimoine_calendrier' %}" class="btn btn-outline-primary w-100 mb-2">
-                        <i class="fas fa-calendar me-1"></i>Voir le calendrier
-                    </a>
-                    {% if perms.accounts.menu_pat_registre or request.user.is_superuser %}
-                    <a href="{% url 'patrimoine_salle_modifier' salle.pk %}" class="btn btn-outline-warning w-100 mb-2">
-                        <i class="fas fa-edit me-1"></i>Modifier la salle
-                    </a>
-                    <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#modalSupprimer">
-                        <i class="fas fa-trash me-1"></i>Supprimer
-                    </button>
-                    {% endif %}
-                </div>
-            </div>
+        <div style="padding:16px;display:flex;flex-direction:column;gap:10px;">
+          <a href="{% url 'patrimoine_reservation_creer' %}?salle={{ salle.pk }}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:linear-gradient(135deg,#22c55e,#16a34a);color:white;border-radius:10px;font-weight:700;font-size:13px;text-decoration:none;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            <i class="fas fa-calendar-plus"></i> Nouvelle réservation
+          </a>
+          <a href="{% url 'patrimoine_calendrier' %}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:white;color:#0891b2;border:1.5px solid #a5f3fc;border-radius:10px;font-weight:700;font-size:13px;text-decoration:none;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            <i class="fas fa-calendar"></i> Voir le calendrier
+          </a>
+          {% if perms.accounts.menu_pat_registre or request.user.is_superuser %}
+          <a href="{% url 'patrimoine_salle_modifier' salle.pk %}" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:white;color:#d97706;border:1.5px solid #fde68a;border-radius:10px;font-weight:700;font-size:13px;text-decoration:none;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            <i class="fas fa-edit"></i> Modifier la salle
+          </a>
+          <a href="#" onclick="confirmerAnnulation('{% url 'patrimoine_salle_supprimer' salle.pk %}', 'salle'); return false;" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fef2f2;color:#dc2626;border:1.5px solid #fecaca;border-radius:10px;font-weight:700;font-size:13px;text-decoration:none;transition:all 0.2s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+            <i class="fas fa-trash"></i> Supprimer
+          </a>
+          {% endif %}
         </div>
+      </div>
     </div>
+  </div>
 </div>
 
-<!-- Modal Supprimer -->
-<div class="modal fade" id="modalSupprimer" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title"><i class="fas fa-trash me-2"></i>Supprimer la salle</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Êtes-vous sûr de vouloir supprimer la salle <strong>{{ salle.nom }}</strong> ?</p>
-                <p class="text-danger"><small>Cette action est irréversible. Les réservations existantes seront supprimées.</small></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <form method="POST" action="{% url 'patrimoine_salle_supprimer' salle.pk %}" class="d-inline">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Supprimer</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
+<style>
+  .vr { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f8fafc; }
+  .vr:last-child { border-bottom:none; }
+  .vl { font-size:12px; color:#94a3b8; font-weight:600; }
+  .vv { font-size:13px; color:#1e293b; }
+  .btn-h { background:white; color:#0891b2; border:none; padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer; display:inline-flex; align-items:center; gap:6px; transition:0.2s; text-decoration:none; }
+  .btn-h:hover { background:#ecfeff; transform:translateY(-1px); }
+</style>
 {% endblock %}

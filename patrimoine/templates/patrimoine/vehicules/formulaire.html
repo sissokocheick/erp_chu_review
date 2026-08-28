@@ -30,7 +30,7 @@
                         <div class="mb-3">
                             <label class="form-label fw-bold">Type de véhicule</label>
                             <select name="type_vehicule" class="form-select">
-                                {% for val, label in vehicule.get_type_vehicule_display %}
+                                {% for val, label in type_vehicule_choices %}
                                 <option value="{{ val }}" {% if vehicule.type_vehicule == val %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>

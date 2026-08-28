@@ -12,6 +12,7 @@ from django.db.models import Sum, Count, Q
 from django.core.paginator import Paginator
 
 from ..models import Vehicule, InterventionVehicule, MissionVehicule, Marque, Modele
+from core.models import Service
 from ..views.common import patrimoine_required
 
 
@@ -143,10 +144,16 @@ def creer_vehicule(request):
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
     
+    from django.contrib.auth.models import User
     marques = Marque.objects.all().order_by('nom')
+    services = Service.objects.all().order_by('nom')
+    conducteurs = User.objects.filter(is_active=True).order_by('first_name')
     return render(request, 'patrimoine/vehicules/formulaire.html', {
         'vehicule': None,
         'marques': marques,
+        'services': services,
+        'conducteurs': conducteurs,
+        'type_vehicule_choices': Vehicule.TYPE_VEHICULE_CHOICES,
     })
 
 
@@ -196,10 +203,16 @@ def modifier_vehicule(request, pk):
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
     
+    from django.contrib.auth.models import User
     marques = Marque.objects.all().order_by('nom')
+    services = Service.objects.all().order_by('nom')
+    conducteurs = User.objects.filter(is_active=True).order_by('first_name')
     return render(request, 'patrimoine/vehicules/formulaire.html', {
         'vehicule': vehicule,
         'marques': marques,
+        'services': services,
+        'conducteurs': conducteurs,
+        'type_vehicule_choices': Vehicule.TYPE_VEHICULE_CHOICES,
     })
 
 

@@ -7,6 +7,7 @@ from django.utils import timezone
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
 
+from core.models import Service
 from ..models import (
     DemandeVehicule, DemandeSalle, Vehicule, SalleConference, ReservationSalle
 )
@@ -37,10 +38,12 @@ def mes_demandes_vehicule(request):
     page = request.GET.get('page')
     demandes = paginator.get_page(page)
 
+    services = Service.objects.all().order_by('nom')
     return render(request, 'patrimoine/vehicules/mes_demandes.html', {
         'demandes': demandes,
         'stats': stats,
         'statut_filter': statut,
+        'services': services,
     })
 
 
@@ -70,7 +73,10 @@ def creer_demande_vehicule(request):
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
 
-    return render(request, 'patrimoine/vehicules/creer_demande.html')
+    services = Service.objects.all().order_by('nom')
+    return render(request, 'patrimoine/vehicules/creer_demande.html', {
+        'services': services,
+    })
 
 
 @login_required
@@ -203,10 +209,14 @@ def mes_demandes_salle(request):
     page = request.GET.get('page')
     demandes = paginator.get_page(page)
 
+    salles = SalleConference.objects.filter(statut='DISPONIBLE').order_by('nom')
+    services = Service.objects.all().order_by('nom')
     return render(request, 'patrimoine/salles/mes_demandes.html', {
         'demandes': demandes,
         'stats': stats,
         'statut_filter': statut,
+        'salles': salles,
+        'services': services,
     })
 
 
@@ -242,8 +252,10 @@ def creer_demande_salle(request):
             messages.error(request, f'❌ Erreur : {e}')
 
     salles = SalleConference.objects.filter(statut='DISPONIBLE').order_by('nom')
+    services = Service.objects.all().order_by('nom')
     return render(request, 'patrimoine/salles/creer_demande.html', {
         'salles': salles,
+        'services': services,
     })
 
 

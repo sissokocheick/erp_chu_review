@@ -66,7 +66,7 @@
           <div style="width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:{% if s.statut == 'DISPONIBLE' and not s.reservation_en_cours %}#dcfce7{% elif s.reservation_en_cours %}#fef3c7{% else %}#fee2e2{% endif %};">
             <i class="fas fa-door-open" style="color:{% if s.statut == 'DISPONIBLE' and not s.reservation_en_cours %}#16a34a{% elif s.reservation_en_cours %}#d97706{% else %}#dc2626{% endif %};"></i>
           </div>
-          <div><div style="font-weight:800;font-size:15px;">{{ s.nom }}</div><div style="font-size:12px;color:#94a3b8;">{{ s.code }} — {{ s.batiment|default:"" }}</div></div>
+          <div><div style="font-weight:800;font-size:15px;">{{ s.nom }}</div><div style="font-size:12px;color:#94a3b8;">{{ s.code }}{% if s.batiment %} — {{ s.batiment.nom }}{% endif %}{% if s.etage %} / {{ s.etage.nom }}{% endif %}{% if s.bureau %} / {{ s.bureau.nom }}{% endif %}</div></div>
         </div>
         {% if s.reservation_en_cours %}<span class="st-OCCUPEE">Occupée</span>{% else %}<span class="st-LIBRE">Libre</span>{% endif %}
       </div>

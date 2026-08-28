@@ -168,11 +168,10 @@
           <button type="submit" class="btn-action btn-danger-nx"><i class="fas fa-times"></i> Refuser</button>
         </form>
         {% endif %}
-        {% if reservation.statut == 'CONFIRMEE' %}
-        <form method="POST" action="{% url 'patrimoine_reservation_annuler' reservation.pk %}">
-          {% csrf_token %}
-          <button type="submit" class="btn-action btn-danger-nx" onclick="return confirm('Annuler cette réservation ?')"><i class="fas fa-ban"></i> Annuler</button>
-        </form>
+        {% if reservation.statut == 'EN_ATTENTE' or reservation.statut == 'CONFIRMEE' %}
+        <a href="#" onclick="confirmerAnnulation('{% url 'patrimoine_reservation_annuler' reservation.pk %}', 'salle'); return false;" class="btn-action btn-danger-nx" style="text-decoration:none;display:flex;align-items:center;justify-content:center;gap:8px;">
+          <i class="fas fa-ban"></i> Annuler la réservation
+        </a>
         {% endif %}
         <button onclick="window.print()" class="print-btn" style="width:100%;justify-content:center;">
           <i class="fas fa-print"></i> Imprimer / PDF
