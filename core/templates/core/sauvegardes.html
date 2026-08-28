@@ -211,8 +211,8 @@
       </div>
       <div class="bk-kpi blue">
         <div class="lbl">Taille de la base</div>
-        <div class="val" style="font-size:22px;">{{ taille_base_lisible }}</div>
-        <div class="bk-size-bar"><div class="bk-size-bar-fill" style="width:{% widthratio taille_base_octets 536870912 100 %}%;"></div></div>
+        <div class="val" style="font-size:22px;">{% if taille_base_lisible and taille_base_lisible != '—' %}{{ taille_base_lisible }}{% else %}<span style="font-size:16px;color:var(--text-light);">N/A (SQLite)</span>{% endif %}</div>
+        {% if taille_base_octets %}<div class="bk-size-bar"><div class="bk-size-bar-fill" style="width:{% widthratio taille_base_octets 536870912 100 %}%;"></div></div>{% endif %}
         <div class="sub">PostgreSQL · {{ sauvegardes|length }} backup(s)</div>
       </div>
       <div class="bk-kpi purple">
