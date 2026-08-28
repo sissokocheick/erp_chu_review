@@ -181,6 +181,130 @@ def analyser_backup_ajax(request):
     return JsonResponse(analyse)
 
 
+def tester_connectivite_ajax(request):
+    """Endpoint AJAX : teste la connectivité vers le serveur distant de backup."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'POST requis'}, status=405)
+    if not request.user.is_superuser:
+        return JsonResponse({'error': 'Accès interdit'}, status=403)
+
+    config = backups_service.lire_config()
+    type_distant = config.get('type_distant', 'aucun')
+    host = config.get('host', '')
+    user = config.get('user', '')
+    password = config.get('password', '')
+    remote_dir = config.get('remote_dir', '')
+
+    if type_distant == 'aucun' or not host:
+        return JsonResponse({
+            'ok': False,
+            'statut': 'non_configure',
+            'message': 'Aucun serveur distant configuré.',
+            'details': []
+        })
+
+    import time, socket, subprocess, sys, io
+    details = []
+    start = time.time()
+
+    # 1. Test ping (résolution DNS + connectivité réseau)
+    try:
+        ping_out = subprocess.run(
+            ['ping', '-n', '2', '-w', '2000', host],
+            capture_output=True, text=True, timeout=10,
+            encoding='utf-8', errors='replace'
+        )
+        if ping_out.returncode == 0:
+            # Extraire le temps moyen
+            for line in ping_out.stdout.split('\n'):
+                if 'Moyen' in line or 'Average' in line or 'moyen' in line.lower():
+                    details.append({'test': 'Ping', 'ok': True, 'detail': line.strip()})
+                    break
+            else:
+                details.append({'test': 'Ping', 'ok': True, 'detail': f'{host} répond'})
+        else:
+            details.append({'test': 'Ping', 'ok': False, 'detail': f'{host} ne répond pas au ping'})
+    except Exception as e:
+        details.append({'test': 'Ping', 'ok': False, 'detail': f'Erreur : {e}'})
+
+    # 2. Test port (SMB = 445, SSH = 22)
+    port = 445 if type_distant == 'smb' else 22
+    port_name = 'SMB (445)' if type_distant == 'smb' else 'SSH (22)'
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        if result == 0:
+            details.append({'test': f'Port {port_name}', 'ok': True, 'detail': f'Port {port} ouvert'})
+        else:
+            details.append({'test': f'Port {port_name}', 'ok': False, 'detail': f'Port {port} fermé ou filtré'})
+    except Exception as e:
+        details.append({'test': f'Port {port_name}', 'ok': False, 'detail': f'Erreur : {e}'})
+
+    # 3. Test authentification + accès au dossier
+    if type_distant == 'smb':
+        try:
+            import paramiko
+            # Pour SMB, on utilise net use via cmd
+            share_path = f'\\\\{host}\\{remote_dir}' if remote_dir else f'\\\\{host}'
+            test_cmd = f'net use {share_path} /user:{user} {password} 2>&1'
+            r = subprocess.run(
+                ['cmd', '/c', test_cmd],
+                capture_output=True, text=True, timeout=15,
+                encoding='utf-8', errors='replace'
+            )
+            output = (r.stdout + r.stderr).strip()
+            if 'ok' in output.lower() or 'réussie' in output.lower() or r.returncode == 0:
+                details.append({'test': 'Authentification SMB', 'ok': True, 'detail': f'Connexion réussie vers {share_path}'})
+                # Test listing
+                list_cmd = f'dir {share_path} /b 2>&1'
+                r2 = subprocess.run(
+                    ['cmd', '/c', list_cmd],
+                    capture_output=True, text=True, timeout=10,
+                    encoding='utf-8', errors='replace'
+                )
+                files = [l.strip() for l in r2.stdout.strip().split('\n') if l.strip()]
+                backups = [f for f in files if f.endswith('.backup')]
+                details.append({'test': 'Listage fichiers', 'ok': True, 'detail': f'{len(backups)} backup(s) trouvé(s) sur {len(files)} fichier(s)'})
+                # Disconnect
+                subprocess.run(['cmd', '/c', f'net use {share_path} /delete 2>nul'], capture_output=True, timeout=5)
+            else:
+                details.append({'test': 'Authentification SMB', 'ok': False, 'detail': output[:200]})
+        except Exception as e:
+            details.append({'test': 'Authentification SMB', 'ok': False, 'detail': f'Erreur : {e}'})
+
+    elif type_distant == 'ssh':
+        try:
+            import paramiko
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(host, username=user, password=password, timeout=10)
+            details.append({'test': 'Authentification SSH', 'ok': True, 'detail': f'Connecté en tant que {user}@{host}'})
+            # Test listing
+            remote_path = remote_dir if remote_dir else '.'
+            stdin, stdout, stderr = client.exec_command(f'ls -la {remote_path} 2>&1')
+            output = stdout.read().decode('utf-8', errors='replace')
+            files = [l.strip().split()[-1] for l in output.strip().split('\n') if '.backup' in l]
+            details.append({'test': 'Listage fichiers', 'ok': True, 'detail': f'{len(files)} backup(s) trouvé(s) dans {remote_path}'})
+            client.close()
+        except ImportError:
+            details.append({'test': 'Authentification SSH', 'ok': False, 'detail': 'paramiko non installé'})
+        except Exception as e:
+            details.append({'test': 'Authentification SSH', 'ok': False, 'detail': f'Erreur : {e}'})
+
+    elapsed = round(time.time() - start, 1)
+    all_ok = all(d['ok'] for d in details)
+
+    return JsonResponse({
+        'ok': all_ok,
+        'statut': 'ok' if all_ok else 'erreur',
+        'message': f'✅ Tous les tests passés ({elapsed}s)' if all_ok else f'❌ {sum(1 for d in details if not d["ok"])} test(s) échoué(s) sur {len(details)}',
+        'details': details,
+        'elapsed': elapsed,
+    })
+
+
 def _fichier_derniere_execution():
     return backups_service._dossier_backups() / 'derniere_execution.txt'
 

@@ -45,6 +45,7 @@ from core.views import (
     parametres_sauvegardes,
     telecharger_backup,
     analyser_backup_ajax,
+    tester_connectivite_ajax,
 )
 from .views.transferts import (
     liste_transferts, annuler_transfert, receptionner_transfert,
@@ -233,6 +234,7 @@ urlpatterns = [
     path('parametres/sauvegardes/', parametres_sauvegardes, name='parametres_sauvegardes'),
     path('parametres/sauvegardes/<str:nom>/telecharger/', telecharger_backup, name='telecharger_backup'),
     path('parametres/sauvegardes/analyser/', analyser_backup_ajax, name='analyser_backup_ajax'),
+    path('parametres/sauvegardes/tester-connectivite/', tester_connectivite_ajax, name='tester_connectivite_ajax'),
     path('parametres/supprimer/<str:type_entite>/<int:id_entite>/', parametres.supprimer_parametre, name='supprimer_parametre'),
     # NB: motifs d'annulation, circuits de validation et journal d'audit sont gérés
     # respectivement dans parametres_logistique et dans accounts (menu Sécurité & Accès).
