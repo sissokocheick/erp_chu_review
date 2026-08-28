@@ -71,13 +71,17 @@ def liste_vehicules(request):
 def detail_vehicule(request, pk):
     """Détail d'un véhicule avec historique."""
     vehicule = get_object_or_404(
-        Vehicule.objects.select_related('marque', 'modele', 'service_affectation', 'conducteur_titulaire'),
+        Vehicule.objects.select_related(
+            'marque', 'modele', 'service_affectation', 'conducteur_titulaire'
+        ).prefetch_related(
+            'interventions_vehicule__immobilisation__type_equipement',
+            'missions__service_demandeur',
+        ),
         pk=pk
     )
     interventions = vehicule.interventions_vehicule.all()[:10]
     missions = vehicule.missions.all()[:10]
     
-    # Coût total des interventions
     cout_total = vehicule.interventions_vehicule.aggregate(total=Sum('cout'))['total'] or Decimal('0.00')
     
     return render(request, 'patrimoine/vehicules/detail.html', {

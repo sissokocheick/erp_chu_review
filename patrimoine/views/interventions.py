@@ -133,7 +133,23 @@ def liste_interventions(request):
 
 def detail_intervention(request, intervention_id):
 
-    intervention = get_object_or_404(Intervention, id=intervention_id)
+    intervention = get_object_or_404(
+        Intervention.objects.select_related(
+            'immobilisation__type_equipement__categorie',
+            'immobilisation__service_affectation',
+            'immobilisation__contrat_maintenance__prestataire',
+            'immobilisation__bureau__batiment',
+            'intervenant',
+            'technicien_appele',
+            'contrat',
+            'cree_par',
+        ).prefetch_related(
+            'pieces',
+            'demandes_materiaux__lignes_demande__article',
+            'historique_statuts',
+        ),
+        id=intervention_id
+    )
 
     articles_catalogue = Article.objects.all().order_by('designation')
 
@@ -649,7 +665,13 @@ def portail_prestataire(request):
 
     contrats = compte.contrats_autorises.filter(statut='ACTIF').prefetch_related('equipements')
 
-    interventions_recentes = Intervention.objects.filter(contrat__in=contrats).order_by('-date_signalement')[:20]
+    interventions_recentes = Intervention.objects.filter(
+        contrat__in=contrats
+    ).select_related(
+        'immobilisation__type_equipement__categorie',
+        'immobilisation__service_affectation',
+        'intervenant',
+    ).order_by('-date_signalement')[:20]
 
     return render(request, 'patrimoine/portail_prestataire.html', {'compte': compte, 'contrats': contrats, 'interventions_recentes': interventions_recentes})
 
@@ -774,40 +796,23 @@ def dispatch_interventions(request):
         return redirect('patrimoine_dispatch')
 
 
-    if mode_actuel == 'DISPATCH':
-
-        pannes_en_attente = Intervention.objects.filter(
-
-            statut='NOUVELLE', 
-
+    if mode_actuel == 'DISPATCH':        pannes_en_attente = Intervention.objects.filter(
+            statut='NOUVELLE',
             intervenant__isnull=True,
-
             immobilisation__service_affectation=service_chef
-
         ).select_related(
-
             'immobilisation__type_equipement__categorie',
-
             'immobilisation__service_affectation',
-
             'cree_par'
-
         ).order_by('date_signalement')
 
     else:
-
         pannes_en_attente = Intervention.objects.none()
 
-
-    # Techniciens rattachés au même service
-
     techniciens = User.objects.filter(
-
         is_active=True,
-
         profil__service=service_chef
-
-    ).order_by('first_name')
+    ).select_related('profil').order_by('first_name')
 
 
     return render(request, 'patrimoine/dispatch.html', {

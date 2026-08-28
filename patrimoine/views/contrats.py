@@ -245,24 +245,50 @@ def echeancier_maintenance(request):
         statut='ACTIF'
     ).select_related('prestataire', 'type_contrat')
 
+    # ── N+1 fix: pré-fetch des dernières interventions préventives + nb équipements ──
+    contrat_ids = list(contrats.values_list('id', flat=True))
+
+    # Dernière intervention préventive par contrat (1 requête au lieu de N)
+    dernieres_preventives = {}
+    if contrat_ids:
+        rows = (
+            Intervention.objects.filter(
+                contrat_id__in=contrat_ids,
+                type_intervention='PREVENTIVE',
+                date_fin_intervention__isnull=False,
+            )
+            .order_by('contrat_id', '-date_fin_intervention')
+            .values('contrat_id', 'date_fin_intervention')
+        )
+        seen = set()
+        for r in rows:
+            cid = r['contrat_id']
+            if cid not in seen:
+                dernieres_preventives[cid] = r['date_fin_intervention']
+                seen.add(cid)
+
+    # Nombre d'équipements par contrat (1 requête au lieu de N)
+    nb_equip_map = {}
+    if contrat_ids:
+        from django.db.models import Count as CountAgg
+        for row in (
+            Immobilisation.objects.filter(contrat_maintenance_id__in=contrat_ids)
+            .values('contrat_maintenance_id')
+            .annotate(nb=CountAgg('id'))
+        ):
+            nb_equip_map[row['contrat_maintenance_id']] = row['nb']
+
     echeances = []
     for contrat in contrats:
-        derniere = Intervention.objects.filter(
-            contrat=contrat,
-            type_intervention='PREVENTIVE',
-            date_fin_intervention__isnull=False,
-        ).order_by('-date_fin_intervention').first()
+        derniere_date = dernieres_preventives.get(contrat.id)
+        derniere = type('Obj', (object,), {'date_fin_intervention': derniere_date})() if derniere_date else None
 
         if derniere and derniere.date_fin_intervention:
-            base = derniere.date_fin_intervention.date()
+            base = derniere.date_fin_intervention.date() if hasattr(derniere.date_fin_intervention, 'date') else derniere.date_fin_intervention
         else:
             base = contrat.date_debut
 
         if derniere and derniere.date_fin_intervention:
-            # Une préventive a été réalisée : elle satisfait l'échéance de sa
-            # date de fin. La prochaine échéance = date de fin + fréquence.
-            # Si cette échéance est déjà passée (préventive trop ancienne),
-            # le contrat est en retard.
             prochaine = plus_mois(base, contrat.frequence_mois)
             if prochaine < aujourdhui:
                 statut = 'EN_RETARD'
@@ -272,8 +298,6 @@ def echeancier_maintenance(request):
                 statut, jours = statut_echeance(prochaine)
                 echeance_affichee = prochaine
         else:
-            # Aucune préventive réalisée : les échéances partent de la date de
-            # début. La dernière échéance <= aujourd'hui est due.
             echeance_due = None
             echeance = base
             while echeance <= aujourdhui:
@@ -289,8 +313,7 @@ def echeancier_maintenance(request):
                 statut, jours = statut_echeance(target)
                 echeance_affichee = target
 
-        nb_equipements = Immobilisation.objects.filter(
-            contrat_maintenance=contrat).count()
+        nb_equipements = nb_equip_map.get(contrat.id, 0)
 
         echeances.append({
             'contrat': contrat,
@@ -299,7 +322,7 @@ def echeancier_maintenance(request):
             'statut': statut,
             'nb_equipements': nb_equipements,
             'derniere_preventive': (derniere.date_fin_intervention
-                                    if derniere else None),
+                                    if derniere and derniere.date_fin_intervention else None),
         })
 
     ordre = {'EN_RETARD': 0, 'PROCHE': 1, 'OK': 2}

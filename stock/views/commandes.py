@@ -662,7 +662,10 @@ def liste_receptions(request):
     statuts = ['LIVRE_TOTAL', 'SOLDE', 'ANNULE'] if onglet == 'terminees' else ['EN_ATTENTE', 'LIVRE_PARTIEL']
 
     qs = Commande.objects.select_related('fournisseur', 'cree_par', 'famille').prefetch_related(
-        'lignes_commande__article', 'bons_reception__magasin', 'bons_livraison_commande'
+        'lignes_commande__article',
+        'bons_reception__magasin',
+        'bons_reception__bons_livraison_entree',
+        'bons_livraison_commande',
     ).filter( statut__in=statuts).order_by('-date_commande')
 
     if magasin_actif_id:

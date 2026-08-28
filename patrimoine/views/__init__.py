@@ -58,9 +58,10 @@ from .vehicules import (
 
 from .salles import (
     liste_salles, detail_salle, creer_salle, modifier_salle, supprimer_salle,
-    calendrier_reservations, liste_reservations, creer_reservation,
-    detail_reservation, valider_reservation, annuler_reservation,
-    ajax_disponibilite_salle, ajax_reservations_salle, ajax_etages_salle, ajax_bureaux_salle,
+    calendrier_salles, calendrier_reservations, liste_reservations, creer_reservation,
+    detail_reservation, valider_reservation, annuler_reservation, supprimer_reservation,
+    ajax_etages, ajax_bureaux, ajax_etages_salle, ajax_bureaux_salle,
+    ajax_disponibilite_salle, ajax_reservations_salle,
 )
 
 from .demandes import (

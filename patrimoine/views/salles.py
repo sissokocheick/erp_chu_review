@@ -1,17 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Vues de gestion des salles de conférence."""
-import json
-from datetime import timedelta
-
+"""Vues pour les salles de conférence."""
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import JsonResponse
 from django.utils import timezone
-from django.db.models import Q, Count
+from django.db.models import Q, Sum, Count
 from django.core.paginator import Paginator
+from django.http import JsonResponse
+from datetime import timedelta, datetime
+from collections import defaultdict
 
-from ..models import SalleConference, ReservationSalle, Batiment, Etage, Bureau
+from core.models import Service
+from ..models import (
+    SalleConference, ReservationSalle, DemandeSalle, Batiment, Etage, Bureau
+)
 from ..views.common import patrimoine_required
 
 
@@ -20,13 +22,13 @@ from ..views.common import patrimoine_required
 def liste_salles(request):
     """Liste des salles de conférence avec disponibilité."""
     salles = SalleConference.objects.select_related('batiment', 'etage', 'service_gestionnaire')
-    
+
     # Filtres
     statut = request.GET.get('statut', '')
     capacite_min = request.GET.get('capacite_min', '')
     equipement = request.GET.get('equipement', '')
     q = request.GET.get('q', '')
-    
+
     if statut:
         salles = salles.filter(statut=statut)
     if capacite_min:
@@ -41,22 +43,41 @@ def liste_salles(request):
         salles = salles.filter(climatisation=True)
     if q:
         salles = salles.filter(Q(nom__icontains=q) | Q(code__icontains=q))
-    
-    # Disponibilité en temps réel
+
+    # ── N+1 fix: une seule requête pour toutes les réservations aujourd'hui ──
     now = timezone.now()
-    for salle in salles:
-        salle.reservation_en_cours = ReservationSalle.objects.filter(
-            salle=salle,
+    salle_ids = list(salles.values_list('id', flat=True))
+
+    # Réservation en cours (CONFIRMEE, date_debut <= now <= date_fin)
+    reservations_en_cours = {}
+    reservations_today_count = {}
+    if salle_ids:
+        reservations_en_cours_qs = ReservationSalle.objects.filter(
+            salle_id__in=salle_ids,
             statut='CONFIRMEE',
             date_debut__lte=now,
             date_fin__gte=now
-        ).first()
-        salle.nb_reservations_today = ReservationSalle.objects.filter(
-            salle=salle,
-            statut__in=['EN_ATTENTE', 'CONFIRMEE'],
-            date_debut__date=now.date()
-        ).count()
-    
+        ).select_related('demandeur')
+        for r in reservations_en_cours_qs:
+            reservations_en_cours[r.salle_id] = r
+
+        # Nombre de réservations aujourd'hui
+        count_rows = (
+            ReservationSalle.objects.filter(
+                salle_id__in=salle_ids,
+                statut__in=['EN_ATTENTE', 'CONFIRMEE'],
+                date_debut__date=now.date()
+            )
+            .values('salle_id')
+            .annotate(nb=Count('id'))
+        )
+        for row in count_rows:
+            reservations_today_count[row['salle_id']] = row['nb']
+
+    for salle in salles:
+        salle.reservation_en_cours = reservations_en_cours.get(salle.id)
+        salle.nb_reservations_today = reservations_today_count.get(salle.id, 0)
+
     stats = {
         'total': SalleConference.objects.count(),
         'disponibles': SalleConference.objects.filter(statut='DISPONIBLE').count(),
@@ -64,18 +85,12 @@ def liste_salles(request):
             statut__in=['EN_ATTENTE', 'CONFIRMEE'],
             date_debut__date=now.date()
         ).count(),
-        'en_attente': ReservationSalle.objects.filter(statut='EN_ATTENTE').count(),
     }
-    
-    paginator = Paginator(salles, 20)
-    page = request.GET.get('page')
-    salles = paginator.get_page(page)
-    
+
     return render(request, 'patrimoine/salles/liste.html', {
         'salles': salles,
         'stats': stats,
         'statut_filter': statut,
-        'capacite_min': capacite_min,
         'equipement_filter': equipement,
         'q': q,
     })
@@ -89,104 +104,81 @@ def detail_salle(request, pk):
         SalleConference.objects.select_related('batiment', 'etage', 'bureau', 'service_gestionnaire'),
         pk=pk
     )
-    
+
     now = timezone.now()
-    
+
     # Réservations à venir (prochains 30 jours)
     reservations_avenir = ReservationSalle.objects.filter(
         salle=salle,
         statut__in=['EN_ATTENTE', 'CONFIRMEE'],
         date_fin__gte=now
     ).select_related('demandeur', 'service_demandeur').order_by('date_debut')[:20]
-    
-    # Réservation en cours
+
     reservation_en_cours = ReservationSalle.objects.filter(
-        salle=salle,
-        statut='CONFIRMEE',
-        date_debut__lte=now,
-        date_fin__gte=now
-    ).first()
-    
-    # Statistiques
-    mois_actuel = now.month
-    annee_actuelle = now.year
+        salle=salle, statut='CONFIRMEE',
+        date_debut__lte=now, date_fin__gte=now
+    ).select_related('demandeur').first()
+
     nb_reservations_mois = ReservationSalle.objects.filter(
         salle=salle,
-        date_debut__month=mois_actuel,
-        date_debut__year=annee_actuelle,
-        statut__in=['CONFIRMEE', 'TERMINEE']
+        statut__in=['EN_ATTENTE', 'CONFIRMEE'],
+        date_debut__date__gte=now.date().replace(day=1),
+        date_debut__date__lte=now.date()
     ).count()
-    
-    taux_occupation = 0
-    if nb_reservations_mois > 0:
-        # Calcul approximatif : nb réservations × durée moyenne / (heures ouvrables × jours)
-        nb_heures_reservees = ReservationSalle.objects.filter(
-            salle=salle,
-            date_debut__month=mois_actuel,
-            date_debut__year=annee_actuelle,
-            statut__in=['CONFIRMEE', 'TERMINEE']
-        ).aggregate(
-            total=Count('id')
-        )['total'] or 0
-        taux_occupation = min(100, round(nb_heures_reservees / 20 * 100))  # 20 créneaux/jour max
-    
+
+    # Calcul approximatif des heures réservées (en mémoire, 1 requête)
+    reservations_mois = ReservationSalle.objects.filter(
+        salle=salle, statut='CONFIRMEE',
+        date_debut__date__gte=now.date().replace(day=1),
+        date_debut__date__lte=now.date()
+    )
+    total_minutes = 0
+    for r in reservations_mois:
+        delta = r.date_fin - r.date_debut
+        total_minutes += int(delta.total_seconds() / 60)
+    nb_heures_reservees = {'total': total_minutes}
+
+    occupation_mois = round(total_minutes / (30 * 8 * 60) * 100, 1) if total_minutes else 0
+
     return render(request, 'patrimoine/salles/detail.html', {
         'salle': salle,
         'reservations_avenir': reservations_avenir,
         'reservation_en_cours': reservation_en_cours,
         'nb_reservations_mois': nb_reservations_mois,
-        'taux_occupation': taux_occupation,
+        'nb_heures_reservees': nb_heures_reservees.get('total') or 0,
+        'occupation_mois': occupation_mois,
     })
 
 
 @login_required
 @patrimoine_required
 def creer_salle(request):
-    """Créer une nouvelle salle de conférence."""
+    """Créer une salle de conférence."""
     if request.method == 'POST':
         try:
-            salle = SalleConference(
-                nom=request.POST.get('nom', '').strip(),
-                code=request.POST.get('code', '').strip(),
-                capacite=int(request.POST.get('capacite', 10) or 10),
-                superficie_m2=int(request.POST['superficie_m2']) if request.POST.get('superficie_m2') else None,
+            salle = SalleConference.objects.create(
+                nom=request.POST.get('nom'),
+                code=request.POST.get('code'),
+                capacite=int(request.POST.get('capacite', 10)),
                 description=request.POST.get('description', ''),
                 videoconf='videoconf' in request.POST,
-                ecran_projecteur='ecran_projecteur' in request.POST,
-                tableau_blanc='tableau_blanc' in request.POST,
+                ecran_projecteur='ecran' in request.POST,
                 wifi='wifi' in request.POST,
-                climatisation='climatisation' in request.POST,
-                sonorisation='sonorisation' in request.POST,
-                micro='micro' in request.POST,
+                climatisation='clim' in request.POST,
+                sonorisation='son' in request.POST,
                 statut=request.POST.get('statut', 'DISPONIBLE'),
-                notes=request.POST.get('notes', ''),
+                service_gestionnaire_id=request.POST.get('service_gestionnaire') or None,
+                batiment_id=request.POST.get('batiment') or None,
+                etage_id=request.POST.get('etage') or None,
+                bureau_id=request.POST.get('bureau') or None,
                 cree_par=request.user,
                 modifie_par=request.user,
             )
-            
-            # Localisation
-            batiment_id = request.POST.get('batiment')
-            if batiment_id:
-                salle.batiment_id = int(batiment_id)
-            etage_id = request.POST.get('etage')
-            if etage_id:
-                salle.etage_id = int(etage_id)
-            bureau_id = request.POST.get('bureau')
-            if bureau_id:
-                salle.bureau_id = int(bureau_id)
-            
-            # Service
-            service_id = request.POST.get('service_gestionnaire')
-            if service_id:
-                salle.service_gestionnaire_id = int(service_id)
-            
-            salle.save()
             messages.success(request, f'✅ Salle {salle.nom} créée avec succès.')
             return redirect('patrimoine_salle_detail', pk=salle.pk)
-            
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
-    
+
     from core.models import Service
     batiments = Batiment.objects.all().order_by('nom')
     services = Service.objects.all().order_by('nom')
@@ -200,43 +192,32 @@ def creer_salle(request):
 @login_required
 @patrimoine_required
 def modifier_salle(request, pk):
-    """Modifier une salle existante."""
+    """Modifier une salle de conférence."""
     salle = get_object_or_404(SalleConference, pk=pk)
-    
+
     if request.method == 'POST':
         try:
             salle.nom = request.POST.get('nom', salle.nom)
             salle.code = request.POST.get('code', salle.code)
-            salle.capacite = int(request.POST.get('capacite', salle.capacite) or 10)
-            salle.superficie_m2 = int(request.POST['superficie_m2']) if request.POST.get('superficie_m2') else None
-            salle.description = request.POST.get('description', '')
+            salle.capacite = int(request.POST.get('capacite', salle.capacite))
+            salle.description = request.POST.get('description', salle.description)
             salle.videoconf = 'videoconf' in request.POST
-            salle.ecran_projecteur = 'ecran_projecteur' in request.POST
-            salle.tableau_blanc = 'tableau_blanc' in request.POST
+            salle.ecran_projecteur = 'ecran' in request.POST
             salle.wifi = 'wifi' in request.POST
-            salle.climatisation = 'climatisation' in request.POST
-            salle.sonorisation = 'sonorisation' in request.POST
-            salle.micro = 'micro' in request.POST
+            salle.climatisation = 'clim' in request.POST
+            salle.sonorisation = 'son' in request.POST
             salle.statut = request.POST.get('statut', salle.statut)
-            salle.notes = request.POST.get('notes', '')
+            salle.service_gestionnaire_id = request.POST.get('service_gestionnaire') or None
+            salle.batiment_id = request.POST.get('batiment') or None
+            salle.etage_id = request.POST.get('etage') or None
+            salle.bureau_id = request.POST.get('bureau') or None
             salle.modifie_par = request.user
-            
-            batiment_id = request.POST.get('batiment')
-            salle.batiment_id = int(batiment_id) if batiment_id else None
-            etage_id = request.POST.get('etage')
-            salle.etage_id = int(etage_id) if etage_id else None
-            bureau_id = request.POST.get('bureau')
-            salle.bureau_id = int(bureau_id) if bureau_id else None
-            service_id = request.POST.get('service_gestionnaire')
-            salle.service_gestionnaire_id = int(service_id) if service_id else None
-            
             salle.save()
             messages.success(request, f'✅ Salle {salle.nom} mise à jour.')
             return redirect('patrimoine_salle_detail', pk=salle.pk)
-            
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
-    
+
     from core.models import Service
     batiments = Batiment.objects.all().order_by('nom')
     services = Service.objects.all().order_by('nom')
@@ -249,45 +230,33 @@ def modifier_salle(request, pk):
 
 @login_required
 @patrimoine_required
-def supprimer_salle(request, pk):
-    """Supprimer une salle."""
-    salle = get_object_or_404(SalleConference, pk=pk)
-    if request.method == 'POST':
-        nom = salle.nom
-        salle.delete()
-        messages.success(request, f'🗑️ Salle {nom} supprimée.')
-        return redirect('patrimoine_salles')
-    return redirect('patrimoine_salle_detail', pk=pk)
-
-
-# ─── Réservations ─────────────────────────────────────────
-
-@login_required
-@patrimoine_required
-def calendrier_reservations(request):
-    """Vue calendrier des réservations de toutes les salles."""
-    now = timezone.now()
-    
-    # Période affichée (semaine courante par défaut)
-    today = now.date()
-    start_week = today - timedelta(days=today.weekday())  # Lundi
-    end_week = start_week + timedelta(days=6)  # Dimanche
-    
-    # Filtre par semaine
+def calendrier_salles(request):
+    """Calendrier hebdomadaire des réservations."""
+    today = timezone.now().date()
     week_offset = int(request.GET.get('week', 0))
-    start_week += timedelta(weeks=week_offset)
-    end_week += timedelta(weeks=week_offset)
-    
+    start_week = today + timedelta(weeks=week_offset) - timedelta(days=today.weekday())
+    end_week = start_week + timedelta(days=6)
+
     salles = SalleConference.objects.filter(statut='DISPONIBLE').order_by('nom')
-    
-    # Réservations de la semaine
-    reservations = ReservationSalle.objects.filter(
+
+    # ── N+1 fix: charger TOUTES les réservations de la semaine en une requête ──
+    reservations_list = list(ReservationSalle.objects.filter(
         statut__in=['EN_ATTENTE', 'CONFIRMEE'],
         date_debut__date__gte=start_week,
         date_fin__date__lte=end_week
-    ).select_related('salle', 'demandeur', 'service_demandeur')
-    
-    # Organisation par salle et jour
+    ).select_related('salle', 'demandeur', 'service_demandeur'))
+
+    # Organiser en mémoire par salle_id → jour
+    cal_map = defaultdict(lambda: defaultdict(list))
+    for r in reservations_list:
+        # Calculer quels jours cette réservation couvre
+        r_start = max(r.date_debut.date(), start_week)
+        r_end = min(r.date_fin.date(), end_week)
+        d = r_start
+        while d <= r_end:
+            cal_map[r.salle_id][d].append(r)
+            d += timedelta(days=1)
+
     calendrier = {}
     for salle in salles:
         calendrier[salle.pk] = {
@@ -296,12 +265,8 @@ def calendrier_reservations(request):
         }
         for i in range(7):
             jour = start_week + timedelta(days=i)
-            calendrier[salle.pk]['jours'][jour] = reservations.filter(
-                salle=salle,
-                date_debut__date__lte=jour,
-                date_fin__date__gte=jour
-            )
-    
+            calendrier[salle.pk]['jours'][jour] = cal_map[salle.pk].get(jour, [])
+
     # Index du jour today dans la semaine
     today_index = -1
     dates_journee = []
@@ -311,14 +276,9 @@ def calendrier_reservations(request):
         if d == today:
             today_index = i
 
-    # Stats
-    all_reservations_week = ReservationSalle.objects.filter(
-        date_debut__date__gte=start_week,
-        date_fin__date__lte=end_week
-    )
-    total_reservations = all_reservations_week.count()
-    nb_confirmees = all_reservations_week.filter(statut='CONFIRMEE').count()
-    nb_en_attente = all_reservations_week.filter(statut='EN_ATTENTE').count()
+    total_reservations = len(reservations_list)
+    nb_confirmees = sum(1 for r in reservations_list if r.statut == 'CONFIRMEE')
+    nb_en_attente = sum(1 for r in reservations_list if r.statut == 'EN_ATTENTE')
 
     return render(request, 'patrimoine/salles/calendrier.html', {
         'calendrier': calendrier,
@@ -340,13 +300,13 @@ def calendrier_reservations(request):
 def liste_reservations(request):
     """Liste des réservations avec filtres."""
     reservations = ReservationSalle.objects.select_related('salle', 'demandeur', 'service_demandeur')
-    
+
     # Filtres
     statut = request.GET.get('statut', '')
     salle_id = request.GET.get('salle', '')
     date_debut = request.GET.get('date_debut', '')
     date_fin = request.GET.get('date_fin', '')
-    
+
     if statut:
         reservations = reservations.filter(statut=statut)
     if salle_id:
@@ -355,13 +315,13 @@ def liste_reservations(request):
         reservations = reservations.filter(date_debut__date__gte=date_debut)
     if date_fin:
         reservations = reservations.filter(date_fin__date__lte=date_fin)
-    
+
     paginator = Paginator(reservations, 20)
     page = request.GET.get('page')
     reservations = paginator.get_page(page)
-    
+
     salles = SalleConference.objects.filter(statut='DISPONIBLE').order_by('nom')
-    
+
     return render(request, 'patrimoine/salles/reservations.html', {
         'reservations': reservations,
         'salles': salles,
@@ -375,46 +335,47 @@ def liste_reservations(request):
 def creer_reservation(request):
     """Créer une réservation de salle."""
     salle_preselect = request.GET.get('salle', '')
-    
+
     if request.method == 'POST':
         try:
             salle = get_object_or_404(SalleConference, pk=request.POST.get('salle'))
-            
-            reservation = ReservationSalle(
+            date_debut = datetime.strptime(request.POST.get('date_debut'), '%Y-%m-%dT%H:%M')
+            date_fin = datetime.strptime(request.POST.get('date_fin'), '%Y-%m-%dT%H:%M')
+
+            # Vérifier les conflits
+            conflits = ReservationSalle.objects.filter(
+                salle=salle,
+                statut__in=['EN_ATTENTE', 'CONFIRMEE'],
+                date_debut__lt=date_fin,
+                date_fin__gt=date_debut
+            )
+            if conflits.exists():
+                messages.warning(request, f'⚠️ Attention : {conflits.count()} réservation(s) en conflit détectée(s) !')
+
+            service_id = request.POST.get('service_demandeur') or None
+            reservation = ReservationSalle.objects.create(
                 salle=salle,
                 demandeur=request.user,
-                objet=request.POST.get('objet', '').strip(),
+                service_demandeur_id=service_id,
+                objet=request.POST.get('objet'),
                 description=request.POST.get('description', ''),
-                nb_participants=int(request.POST.get('nb_participants', 1) or 1),
-                date_debut=request.POST.get('date_debut'),
-                date_fin=request.POST.get('date_fin'),
-                recurrente='recurrente' in request.POST,
-                frequence=request.POST.get('frequence', ''),
-                besoin_videoconf='besoin_videoconf' in request.POST,
-                besoin_video='besoin_video' in request.POST,
-                besoin_son='besoin_son' in request.POST,
+                nb_participants=int(request.POST.get('nb_participants', 1)),
+                date_debut=date_debut,
+                date_fin=date_fin,
+                statut='EN_ATTENTE',
+                besoin_videoconf='videoconf' in request.POST,
+                besoin_video='video' in request.POST,
+                besoin_son='son' in request.POST,
                 notes_equipement=request.POST.get('notes_equipement', ''),
                 cree_par=request.user,
                 modifie_par=request.user,
             )
-            
-            service_id = request.POST.get('service_demandeur')
-            if service_id:
-                reservation.service_demandeur_id = int(service_id)
-            
-            reservation.save()
-            
-            # Vérifier les conflits
-            conflits = reservation.conflits
-            if conflits.exists():
-                messages.warning(request, f'⚠️ Attention : {conflits.count()} réservation(s) en conflit détectée(s) !')
-            
             messages.success(request, f'✅ Réservation créée : {reservation.objet} le {reservation.date_debut.strftime("%d/%m/%Y %H:%M")}')
             return redirect('patrimoine_reservations')
-            
+
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
-    
+
     from core.models import Service
     salles = SalleConference.objects.filter(statut='DISPONIBLE').order_by('nom')
     services = Service.objects.all().order_by('nom')
@@ -477,90 +438,116 @@ def annuler_reservation(request, pk):
     return redirect('patrimoine_reservations')
 
 
-# ─── AJAX ─────────────────────────────────────────────────
+@login_required
+@patrimoine_required
+def supprimer_reservation(request, pk):
+    """Supprimer une réservation."""
+    reservation = get_object_or_404(ReservationSalle, pk=pk)
+    reservation.delete()
+    messages.warning(request, '🗑️ Réservation supprimée.')
+    return redirect('patrimoine_reservations')
+
+
+# ── AJAX endpoints ──
 
 @login_required
-def ajax_disponibilite_salle(request):
-    """Vérifie la disponibilité d'une salle pour une plage horaire."""
-    salle_id = request.GET.get('salle_id')
-    debut = request.GET.get('debut')
-    fin = request.GET.get('fin')
-    
-    if not all([salle_id, debut, fin]):
-        return JsonResponse({'disponible': False, 'error': 'Paramètres manquants'})
-    
-    from django.utils.dateparse import parse_datetime
-    debut_dt = parse_datetime(debut)
-    fin_dt = parse_datetime(fin)
-    
-    if not debut_dt or not fin_dt:
-        return JsonResponse({'disponible': False, 'error': 'Format de date invalide'})
-    
-    conflits = ReservationSalle.objects.filter(
-        salle_id=salle_id,
-        statut__in=['EN_ATTENTE', 'CONFIRMEE'],
-        date_debut__lt=fin_dt,
-        date_fin__gt=debut_dt
-    ).count()
-    
+def ajax_etages(request):
+    """Retourne les étages d'un bâtiment (JSON)."""
+    batiment_id = request.GET.get('batiment_id')
+    if not batiment_id:
+        return JsonResponse({'etages': []})
+    etages = Etage.objects.filter(batiment_id=batiment_id).order_by('nom')
     return JsonResponse({
-        'disponible': conflits == 0,
-        'conflits': conflits,
+        'etages': [{'id': e.id, 'nom': e.nom} for e in etages]
     })
 
 
 @login_required
-def ajax_reservations_salle(request):
-    """Retourne les réservations d'une salle pour le calendrier (FullCalendar)."""
-    salle_id = request.GET.get('salle_id')
-    start = request.GET.get('start')
-    end = request.GET.get('end')
-    
-    qs = ReservationSalle.objects.filter(statut__in=['EN_ATTENTE', 'CONFIRMEE'])
-    if salle_id:
-        qs = qs.filter(salle_id=salle_id)
-    if start:
-        qs = qs.filter(date_fin__gte=start)
-    if end:
-        qs = qs.filter(date_debut__lte=end)
-    
-    events = []
-    for r in qs.select_related('salle', 'demandeur'):
-        events.append({
-            'id': r.pk,
-            'title': f'{r.salle.nom} — {r.objet}',
-            'start': r.date_debut.isoformat(),
-            'end': r.date_fin.isoformat(),
-            'color': '#28a745' if r.statut == 'CONFIRMEE' else '#ffc107',
-            'url': f'/patrimoine/salles/reservations/{r.pk}/',
-            'extendedProps': {
-                'salle': r.salle.nom,
-                'demandeur': r.demandeur.get_full_name() if r.demandeur else '',
-                'nb_participants': r.nb_participants,
-                'statut': r.statut,
-            }
-        })
-    
-    return JsonResponse(events, safe=False)
-
-
-@login_required
-def ajax_etages_salle(request):
-    """Retourne les étages d'un bâtiment pour le formulaire salle."""
-    batiment_id = request.GET.get('batiment_id')
-    if not batiment_id:
-        return JsonResponse({'etages': []})
-    
-    etages = Etage.objects.filter(batiment_id=batiment_id).order_by('ordre', 'nom').values('id', 'nom')
-    return JsonResponse({'etages': list(etages)})
-
-
-@login_required
-def ajax_bureaux_salle(request):
-    """Retourne les bureaux d'un étage pour le formulaire salle."""
+def ajax_bureaux(request):
+    """Retourne les bureaux d'un étage (JSON)."""
     etage_id = request.GET.get('etage_id')
     if not etage_id:
         return JsonResponse({'bureaux': []})
-    
-    bureaux = Bureau.objects.filter(etage_id=etage_id).order_by('nom').values('id', 'nom')
-    return JsonResponse({'bureaux': list(bureaux)})
+    bureaux = Bureau.objects.filter(etage_id=etage_id).order_by('nom')
+    return JsonResponse({
+        'bureaux': [{'id': b.id, 'nom': b.nom} for b in bureaux]
+    })
+
+
+# ── Aliases pour compatibilité URLs / __init__.py ──
+
+calendrier_reservations = calendrier_salles
+
+
+def supprimer_salle(request, pk):
+    """Supprimer une salle de conférence."""
+    salle = get_object_or_404(SalleConference, pk=pk)
+    salle.delete()
+    messages.warning(request, '🗑️ Salle supprimée.')
+    return redirect('patrimoine_salles')
+
+
+def supprimer_reservation(request, pk):
+    """Supprimer une réservation."""
+    return annuler_reservation(request, pk)
+
+
+@login_required
+def ajax_disponibilite_salle(request):
+    """Vérifie la disponibilité d'une salle sur une période (JSON)."""
+    salle_id = request.GET.get('salle_id')
+    date_debut = request.GET.get('date_debut')
+    date_fin = request.GET.get('date_fin')
+
+    if not all([salle_id, date_debut, date_fin]):
+        return JsonResponse({'disponible': False, 'erreur': 'Paramètres manquants'})
+
+    conflits = ReservationSalle.objects.filter(
+        salle_id=salle_id,
+        statut__in=['EN_ATTENTE', 'CONFIRMEE'],
+        date_debut__lt=date_fin,
+        date_fin__gt=date_debut
+    ).count()
+
+    return JsonResponse({'disponible': conflits == 0, 'conflits': conflits})
+
+
+@login_required
+def ajax_reservations_salle(request):
+    """Retourne les réservations d'une salle pour FullCalendar (JSON)."""
+    salle_id = request.GET.get('salle_id')
+    start = request.GET.get('start')
+    end = request.GET.get('end')
+
+    qs = ReservationSalle.objects.filter(
+        statut__in=['EN_ATTENTE', 'CONFIRMEE']
+    ).select_related('salle', 'demandeur')
+
+    if salle_id:
+        qs = qs.filter(salle_id=salle_id)
+    if start:
+        qs = qs.filter(date_debut__gte=start)
+    if end:
+        qs = qs.filter(date_fin__lte=end)
+
+    events = []
+    for r in qs:
+        events.append({
+            'id': r.id,
+            'title': r.objet,
+            'start': r.date_debut.isoformat(),
+            'end': r.date_fin.isoformat(),
+            'color': '#059669' if r.statut == 'CONFIRMEE' else '#f59e0b',
+            'extendedProps': {
+                'salle': r.salle.nom,
+                'demandeur': r.demandeur.get_full_name() if r.demandeur else '',
+                'statut': r.statut,
+            }
+        })
+
+    return JsonResponse(events, safe=False)
+
+
+# Aliases pour compatibilité URLs
+ajax_etages_salle = ajax_etages
+ajax_bureaux_salle = ajax_bureaux

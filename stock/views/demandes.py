@@ -963,7 +963,10 @@ def demandes_a_valider(request):
     q = request.GET.get('q', '')
 
     demandes_base = DemandeMateriel.objects.filter(
-        service_demandeur=service_user).order_by('-date_demande')
+        service_demandeur=service_user
+    ).select_related('demandeur', 'service_demandeur', 'magasin_cible').prefetch_related(
+        'lignes_demande__article',
+    ).order_by('-date_demande')
 
     if onglet == 'historique':
         demandes = demandes_base.exclude(statut='EN_ATTENTE_VALIDATION')
