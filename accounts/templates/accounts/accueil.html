@@ -12,25 +12,6 @@
   .welcome-hero h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
   .welcome-hero p { margin: 0; opacity: .85; font-size: 13px; }
 
-  .kpi-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px; margin-bottom: 22px;
-  }
-  .kpi-card {
-    background: var(--bg-card); border-radius: 10px; padding: 16px 18px;
-    border: 1px solid var(--border-light); display: flex; align-items: center; gap: 14px;
-    transition: all .2s; cursor: pointer; text-decoration: none; color: var(--text-dark);
-  }
-  .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.1); }
-  .kpi-icon {
-    width: 44px; height: 44px; border-radius: 10px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; color: #fff; flex-shrink: 0;
-  }
-  .kpi-val { font-size: 26px; font-weight: 800; line-height: 1; }
-  .kpi-label { font-size: 12px; color: var(--text-light); margin-top: 2px; }
-
   /* ── Acces rapide ── */
   .recent-section { margin-bottom: 22px; }
   .recent-title {
@@ -133,14 +114,14 @@
   }
   @media (max-width: 640px) {
     .welcome-hero { flex-direction: column; text-align: center; padding: 20px; }
-    .kpi-row { grid-template-columns: 1fr 1fr; }
+
     .modules-grid { grid-template-columns: 1fr 1fr; }
     .mod-icon { width: 40px; height: 40px; font-size: 16px; }
     .mod-label { font-size: 12px; }
-    .kpi-val { font-size: 22px; }
+
   }
   @media (max-width: 400px) {
-    .kpi-row { grid-template-columns: 1fr; }
+
     .modules-grid { grid-template-columns: 1fr; }
     .welcome-hero h2 { font-size: 18px; }
     .welcome-hero p { font-size: 12px; }
@@ -158,36 +139,7 @@
   </div>
 </div>
 
-<div class="kpi-row">
-  <a href="/patrimoine/demandes-vehicule/valider/" class="kpi-card">
-    <div class="kpi-icon" style="background:#e74c3c;"><i class="fas fa-car"></i></div>
-    <div>
-      <div class="kpi-val">{{ kpi_demandes_vehicules }}</div>
-      <div class="kpi-label">Véhicules en attente</div>
-    </div>
-  </a>
-  <a href="/patrimoine/demandes-salle/valider/" class="kpi-card">
-    <div class="kpi-icon" style="background:#3498db;"><i class="fas fa-door-open"></i></div>
-    <div>
-      <div class="kpi-val">{{ kpi_demandes_salles }}</div>
-      <div class="kpi-label">Salles en attente</div>
-    </div>
-  </a>
-  <a href="/patrimoine/mes-tickets/" class="kpi-card">
-    <div class="kpi-icon" style="background:#f59e0b;"><i class="fas fa-ticket-alt"></i></div>
-    <div>
-      <div class="kpi-val">{{ kpi_tickets_ouverts }}</div>
-      <div class="kpi-label">Tickets SAV ouverts</div>
-    </div>
-  </a>
-  <a href="/etat-stock/" class="kpi-card">
-    <div class="kpi-icon" style="background:#28a745;"><i class="fas fa-exchange-alt"></i></div>
-    <div>
-      <div class="kpi-val">{{ kpi_mouvements_semaine }}</div>
-      <div class="kpi-label">Mouvements cette semaine</div>
-    </div>
-  </a>
-</div>
+
 
 {% if recent_modules %}
 <div class="recent-section">
