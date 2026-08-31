@@ -113,29 +113,23 @@
   <div class="about-hero-inner">
     <div class="about-logo">
       <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <!-- Cercle exterieur -->
-        <circle cx="32" cy="32" r="30" stroke="rgba(255,255,255,0.25)" stroke-width="2" fill="none"/>
-        <!-- 3 noeuds en triangle -->
-        <circle cx="32" cy="8" r="5.5" fill="white" opacity="0.9"/>
-        <circle cx="53" cy="44" r="5.5" fill="white" opacity="0.9"/>
-        <circle cx="11" cy="44" r="5.5" fill="white" opacity="0.9"/>
-        <!-- Liaisons triangle -->
-        <line x1="32" y1="13.5" x2="50" y2="40" stroke="white" stroke-width="2.5" opacity="0.5"/>
-        <line x1="32" y1="13.5" x2="14" y2="40" stroke="white" stroke-width="2.5" opacity="0.5"/>
-        <line x1="14" y1="44" x2="50" y2="44" stroke="white" stroke-width="2.5" opacity="0.4"/>
-        <!-- Noeud central (nexus) -->
-        <circle cx="32" cy="32" r="8" fill="white" opacity="0.95"/>
-        <circle cx="32" cy="32" r="4" fill="#1c5b96"/>
-        <!-- Reflet -->
-        <circle cx="32" cy="30" r="1.8" fill="white" opacity="0.4"/>
+        <circle cx="32" cy="32" r="30" stroke="white" stroke-width="2" fill="none" opacity=".3"/>
+        <circle cx="32" cy="12" r="5" fill="white"/>
+        <circle cx="50" cy="44" r="5" fill="white"/>
+        <circle cx="14" cy="44" r="5" fill="white"/>
+        <line x1="32" y1="17" x2="48" y2="40" stroke="white" stroke-width="2.5" opacity=".6"/>
+        <line x1="32" y1="17" x2="16" y2="40" stroke="white" stroke-width="2.5" opacity=".6"/>
+        <line x1="14" y1="44" x2="50" y2="44" stroke="white" stroke-width="2.5" opacity=".4"/>
+        <circle cx="32" cy="32" r="7" fill="white" opacity=".9"/>
+        <circle cx="32" cy="32" r="3" fill="#1c5b96"/>
       </svg>
     </div>
     <div class="version">Version 2.0</div>
     <h1><span>Nexus</span>ERP</h1>
     <div class="slogan">« Tout connecté, tout maîtrisé. »</div>
     <div class="desc">
-      Suite de gestion intégrée pour structures sanitaires et organisations.<br>
-      Le nexus central qui interconnecte toutes les ressources de votre structure.
+      Suite de gestion intégrée du Centre Hospitalier Universitaire d'Angré.<br>
+      Le nexus central qui interconnecte toutes les ressources de votre hôpital.
     </div>
   </div>
 </div>
@@ -144,9 +138,9 @@
 <div class="about-section">
   <h3><i class="fas fa-info-circle"></i> Qu'est-ce que NexusERP ?</h3>
   <p>
-    <strong>NexusERP</strong> est une application web de gestion intégrée conçue pour les
-    <strong>structures sanitaires, hôpitaux, entreprises et organisations</strong>. Elle centralise en un seul point
-    de connexion — le <em>nexus</em> — toutes les ressources critiques : stocks, patrimoine,
+    <strong>NexusERP</strong> est une application web de gestion intégrée conçue spécialement pour le
+    <strong>Centre Hospitalier Universitaire (CHU) d'Angré</strong>. Elle centralise en un seul point
+    de connexion — le <em>nexus</em> — toutes les ressources critiques de l'hôpital : stocks, patrimoine,
     véhicules, salles de conférence, demandes inter-services et bien plus.
   </p>
   <p>
@@ -160,7 +154,7 @@
 <!-- ═══ PÔLES ═══ -->
 <div class="about-section">
   <h3><i class="fas fa-building"></i> Les 6 pôles fonctionnels</h3>
-  <p>NexusERP couvre l'ensemble des activités opérationnelles à travers 6 pôles interconnectés :</p>
+  <p>NexusERP couvre l'ensemble des activités opérationnelles du CHU à travers 6 pôles interconnectés :</p>
 
   <div class="pole-grid">
     <div class="pole-card">
@@ -222,7 +216,7 @@
     </div>
     <div style="display:flex; gap:10px; align-items:start;">
       <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
-      <div><strong>PDF personnalisables</strong><br><span style="font-size:12px;color:var(--text-light);">Bons de sortie, commande, retour avec logos et en-têtes</span></div>
+      <div><strong>PDF personnalisables</strong><br><span style="font-size:12px;color:var(--text-light);">Bons de sortie, commande, retour avec logos CHU</span></div>
     </div>
     <div style="display:flex; gap:10px; align-items:start;">
       <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
@@ -298,10 +292,10 @@
 <div class="about-section">
   <h3><i class="fas fa-users"></i> Équipe & Crédits</h3>
   <p>
-    NexusERP est une solution open source conçue pour les <strong>hôpitaux, centres de santé,
-    entreprises et organisations</strong> ayant besoin de gérer stocks, patrimoine, véhicules
-    et demandes inter-services. L'application est modulable et configurable selon les besoins
-    de chaque structure.
+    NexusERP est développé pour le <strong>CHU d'Angré</strong> (Centre Hospitalier Universitaire)
+    situé en Côte d'Ivoire. L'application est conçue pour répondre aux besoins spécifiques de la
+    gestion hospitalière avec un focus sur la <strong>magasin central</strong> du département de
+    la logistique.
   </p>
   <p>
     <strong>Technologies utilisées :</strong> Django, PostgreSQL, Python, JavaScript, HTML/CSS, WeasyPrint, Gunicorn.
@@ -317,7 +311,7 @@
     <i class="fas fa-link" style="color:var(--primary-blue);"></i>
     NexusERP — <em>« Tout connecté, tout maîtrisé. »</em>
   </div>
-  <div>Suite de Gestion Intégrée — NexusERP</div>
+  <div>Suite de Gestion Intégrée — CHU Angré, Côte d'Ivoire</div>
   <div style="margin-top:4px;">© 2026 NexusERP. Tous droits réservés.</div>
 </div>
 

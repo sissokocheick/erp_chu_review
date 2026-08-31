@@ -1,19 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#1c5b96"/>
-      <stop offset="100%" style="stop-color:#0d47a1"/>
-    </linearGradient>
-  </defs>
-  <circle cx="32" cy="32" r="31" fill="url(#bg)"/>
-  <circle cx="32" cy="32" r="28" stroke="rgba(255,255,255,0.2)" stroke-width="1.5" fill="none"/>
-  <circle cx="32" cy="8" r="5" fill="white" opacity="0.9"/>
-  <circle cx="53" cy="44" r="5" fill="white" opacity="0.9"/>
-  <circle cx="11" cy="44" r="5" fill="white" opacity="0.9"/>
-  <line x1="32" y1="13" x2="50" y2="40" stroke="white" stroke-width="2.5" opacity="0.5"/>
-  <line x1="32" y1="13" x2="14" y2="40" stroke="white" stroke-width="2.5" opacity="0.5"/>
-  <line x1="14" y1="44" x2="50" y2="44" stroke="white" stroke-width="2.5" opacity="0.4"/>
-  <circle cx="32" cy="32" r="8" fill="white" opacity="0.95"/>
-  <circle cx="32" cy="32" r="4" fill="#1c5b96"/>
-  <circle cx="32" cy="30" r="1.8" fill="white" opacity="0.4"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <circle cx="24" cy="24" r="23" fill="#1c5b96"/>
+  <circle cx="24" cy="24" r="16" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" fill="none"/>
+  <circle cx="24" cy="24" r="4" fill="white"/>
+  <circle cx="24" cy="6" r="3" fill="white" opacity="0.8"/>
+  <circle cx="41" cy="18" r="3" fill="white" opacity="0.8"/>
+  <circle cx="41" cy="30" r="3" fill="white" opacity="0.8"/>
+  <circle cx="24" cy="42" r="3" fill="white" opacity="0.8"/>
+  <circle cx="7" cy="30" r="3" fill="white" opacity="0.8"/>
+  <circle cx="7" cy="18" r="3" fill="white" opacity="0.8"/>
 </svg>

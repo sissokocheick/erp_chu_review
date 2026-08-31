@@ -5,13 +5,9 @@
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://cdn.datatables.net https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self';">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="NexusERP - Suite de gestion integree pour structures sanitaires et organisations. Tout connecte, tout maitrise.">
-    <meta name="theme-color" content="#1c5b96">
-    <meta name="apple-mobile-web-app-title" content="NexusERP">
-    <title>{% block title %}NexusERP — Tout connecté, tout maîtrisé{% endblock %}</title>
+    <title>{% block title %}NexusERP{% endblock %}</title>
     <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
-    <link rel="apple-touch-icon" href="/static/favicon.svg">
     <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js" integrity="sha384-1H217gwSVyLSIfaLxHbE7dRb3v4mYCKbpQvzx0cegeju1MVsGrX5xXxAvs/HgeFs" crossorigin="anonymous"></script>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js" integrity="sha384-d3UHjPdzJkZuk5H3qKYMLRyWLAQBJbby2yr2Q58hXXtAGF8RSNO9jpLDlKKPv5v3" crossorigin="anonymous"></script>
@@ -655,21 +651,22 @@
             <div class="logo-full">
                 <div class="logo-graphic">
                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <!-- Cercle exterieur -->
-                        <circle cx="24" cy="24" r="22" stroke="rgba(255,255,255,0.25)" stroke-width="1.5" fill="none"/>
-                        <!-- 3 noeuds en triangle -->
-                        <circle cx="24" cy="6" r="4" fill="white" opacity="0.9"/>
-                        <circle cx="40" cy="34" r="4" fill="white" opacity="0.9"/>
-                        <circle cx="8" cy="34" r="4" fill="white" opacity="0.9"/>
-                        <!-- Liaisons triangle -->
-                        <line x1="24" y1="10" x2="38" y2="31" stroke="white" stroke-width="1.8" opacity="0.5"/>
-                        <line x1="24" y1="10" x2="10" y2="31" stroke="white" stroke-width="1.8" opacity="0.5"/>
-                        <line x1="10" y1="34" x2="38" y2="34" stroke="white" stroke-width="1.8" opacity="0.4"/>
-                        <!-- Noeud central (nexus) -->
-                        <circle cx="24" cy="24" r="6" fill="white" opacity="0.95"/>
-                        <circle cx="24" cy="24" r="3" fill="#1c5b96"/>
-                        <!-- Reflet -->
-                        <circle cx="24" cy="22.5" r="1.2" fill="white" opacity="0.4"/>
+                        <circle cx="24" cy="24" r="7" fill="white" opacity="0.15"/>
+                        <circle cx="24" cy="24" r="3.5" fill="white"/>
+                        <circle cx="24" cy="24" r="16" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" fill="none"/>
+                        <circle cx="24" cy="24" r="20" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" fill="none"/>
+                        <circle cx="24" cy="4" r="2.8" fill="white" opacity="0.8"/>
+                        <circle cx="40" cy="16" r="2.8" fill="white" opacity="0.8"/>
+                        <circle cx="40" cy="32" r="2.8" fill="white" opacity="0.8"/>
+                        <circle cx="24" cy="44" r="2.8" fill="white" opacity="0.8"/>
+                        <circle cx="8" cy="32" r="2.8" fill="white" opacity="0.8"/>
+                        <circle cx="8" cy="16" r="2.8" fill="white" opacity="0.8"/>
+                        <line x1="24" y1="6.8" x2="24" y2="20.5" stroke="white" stroke-width="1.5" opacity="0.5"/>
+                        <line x1="37.2" y1="17.2" x2="27.5" y2="22.5" stroke="white" stroke-width="1.5" opacity="0.5"/>
+                        <line x1="37.2" y1="30.8" x2="27.5" y2="25.5" stroke="white" stroke-width="1.5" opacity="0.5"/>
+                        <line x1="24" y1="41.2" x2="24" y2="27.5" stroke="white" stroke-width="1.5" opacity="0.5"/>
+                        <line x1="10.8" y1="30.8" x2="20.5" y2="25.5" stroke="white" stroke-width="1.5" opacity="0.5"/>
+                        <line x1="10.8" y1="17.2" x2="20.5" y2="22.5" stroke="white" stroke-width="1.5" opacity="0.5"/>
                     </svg>
                 </div>
                 <div class="logo-text">
