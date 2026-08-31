@@ -800,6 +800,9 @@
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-patrimoine"></i>
         </div>
         <div class="submenu" id="menu-patrimoine">
+            <a href="{% url 'patrimoine_dashboard' %}" class="menu-item" data-title="Dashboard Patrimoine" style="border-left:3px solid #20c997;padding-left:11px;">
+                <i class="fas fa-tachometer-alt nav-icon" style="color:#20c997;"></i><span class="nav-text" style="font-weight:700;">Dashboard Patrimoine</span>
+            </a>
             {% if perms.accounts.menu_pat_tickets %}
             <a href="{% url 'patrimoine_mes_tickets' %}" class="menu-item" data-title="Tickets"><i class="fas fa-ticket-alt nav-icon" style="color:#20c997;"></i><span class="nav-text">Tickets SAV</span></a>
             {% endif %}
