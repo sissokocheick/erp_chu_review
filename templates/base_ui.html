@@ -683,7 +683,7 @@
         </a>
         {% endif %}
         {% if perms.accounts.menu_dashboard %}
-        <a href="/" class="module-title" style="text-decoration:none;" data-title="Tableau de bord">
+        <a href="{% if perms.accounts.menu_stock %}/{% else %}{% url 'patrimoine_dashboard' %}{% endif %}" class="module-title" style="text-decoration:none;" data-title="Tableau de bord">
             <i class="fas fa-chart-line nav-icon"></i><span class="nav-text">Tableau de bord</span>
         </a>
         {% endif %}

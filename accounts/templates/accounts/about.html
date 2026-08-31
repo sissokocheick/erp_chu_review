@@ -4,48 +4,29 @@
 {% block contenu %}
 <style>
   .about-hero {
-    background: linear-gradient(135deg, #1c5b96 0%, #0d47a1 50%, #0a3d7a 100%);
-    color: white; border-radius: 16px; padding: 48px 40px;
-    margin-bottom: 32px; text-align: center;
-    position: relative; overflow: hidden;
-    box-shadow: 0 8px 32px rgba(28,91,150,.35);
+    background: var(--bg-card);
+    border: 1px solid var(--border-light);
+    border-radius: 14px; padding: 40px 32px;
+    margin-bottom: 28px; text-align: center;
+    box-shadow: 0 2px 12px var(--shadow);
   }
-  .about-hero::before {
-    content: '';
-    position: absolute; top: -80px; right: -80px;
-    width: 300px; height: 300px;
-    background: rgba(255,255,255,.04);
-    border-radius: 50%;
+  .about-hero h1 {
+    margin: 0 0 6px; font-size: 32px; font-weight: 800;
+    color: var(--text-dark);
   }
-  .about-hero::after {
-    content: '';
-    position: absolute; bottom: -60px; left: -40px;
-    width: 200px; height: 200px;
-    background: rgba(255,255,255,.03);
-    border-radius: 50%;
-  }
-  .about-hero-inner { position: relative; z-index: 1; }
-  .about-logo {
-    width: 100px; height: 100px; margin: 0 auto 20px;
-    background: rgba(255,255,255,.12);
-    border-radius: 24px; display: flex; align-items: center; justify-content: center;
-    backdrop-filter: blur(8px); border: 2px solid rgba(255,255,255,.2);
-  }
-  .about-logo svg { width: 64px; height: 64px; }
-  .about-hero h1 { margin: 0 0 8px; font-size: 36px; font-weight: 800; }
-  .about-hero h1 span { font-weight: 400; opacity: .8; font-size: 24px; }
+  .about-hero h1 span { color: var(--primary-blue); }
   .about-hero .slogan {
-    font-size: 18px; font-style: italic; opacity: .9; margin: 0 0 12px;
-    font-weight: 500;
-  }
-  .about-hero .version {
-    display: inline-block; background: rgba(255,255,255,.15);
-    padding: 4px 14px; border-radius: 20px; font-size: 13px;
-    font-weight: 600; margin-bottom: 16px;
+    font-size: 16px; font-style: italic; color: var(--primary-blue);
+    margin: 0 0 12px; font-weight: 600;
   }
   .about-hero .desc {
-    font-size: 15px; opacity: .8; max-width: 650px; margin: 0 auto;
-    line-height: 1.6;
+    font-size: 14px; color: var(--text-medium); max-width: 600px;
+    margin: 0 auto; line-height: 1.6;
+  }
+  .about-hero .version {
+    display: inline-block; background: rgba(28,91,150,.08);
+    color: var(--primary-blue); padding: 4px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; margin-bottom: 12px;
   }
 
   .about-section {
@@ -110,27 +91,12 @@
 
 <!-- ═══ HERO ═══ -->
 <div class="about-hero">
-  <div class="about-hero-inner">
-    <div class="about-logo">
-      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="32" cy="32" r="30" stroke="white" stroke-width="2" fill="none" opacity=".3"/>
-        <circle cx="32" cy="12" r="5" fill="white"/>
-        <circle cx="50" cy="44" r="5" fill="white"/>
-        <circle cx="14" cy="44" r="5" fill="white"/>
-        <line x1="32" y1="17" x2="48" y2="40" stroke="white" stroke-width="2.5" opacity=".6"/>
-        <line x1="32" y1="17" x2="16" y2="40" stroke="white" stroke-width="2.5" opacity=".6"/>
-        <line x1="14" y1="44" x2="50" y2="44" stroke="white" stroke-width="2.5" opacity=".4"/>
-        <circle cx="32" cy="32" r="7" fill="white" opacity=".9"/>
-        <circle cx="32" cy="32" r="3" fill="#1c5b96"/>
-      </svg>
-    </div>
-    <div class="version">Version 2.0</div>
-    <h1><span>Nexus</span>ERP</h1>
-    <div class="slogan">« Tout connecté, tout maîtrisé. »</div>
-    <div class="desc">
-      Suite de gestion intégrée pour structures sanitaires et organisations.<br>
-      Le nexus central qui interconnecte toutes les ressources de votre structure.
-    </div>
+  <div class="version">v2.0</div>
+  <h1><span>Nexus</span>ERP</h1>
+  <div class="slogan">« Tout connecté, tout maîtrisé. »</div>
+  <div class="desc">
+    Suite de gestion intégrée pour structures sanitaires et organisations.<br>
+    Le nexus central qui interconnecte toutes les ressources de votre structure.
   </div>
 </div>
 

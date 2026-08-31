@@ -675,6 +675,7 @@ def about(request):
     return render(request, 'accounts/about.html')
 
 
+@login_required(login_url='/auth/login/')
 def accueil_personnalise(request):
     """Page d'accueil avec TOUS les modules auxquels l'utilisateur a acces."""
 
@@ -759,6 +760,14 @@ def accueil_personnalise(request):
         'menu_securite_mdp':        {'url': '/auth/securite/mots-de-passe/', 'icon': 'fa-key', 'color': '#dc3545', 'label': 'Securite Mots de Passe', 'category': 'Securite & Acces'},
         # Supervision & Sauvegardes = superuser uniquement (pas de permission menu_)
     }
+
+    # Router le dashboard selon les permissions de l'utilisateur
+    has_stock_perms = request.user.is_superuser or any(
+        p.startswith('accounts.menu_stock') or p.startswith('accounts.menu_entrees')
+        for p in request.user.get_all_permissions()
+    )
+    if not has_stock_perms:
+        MODULES['menu_dashboard']['url'] = '/patrimoine/dashboard/'
 
     if request.user.is_superuser:
         perms_menu = list(MODULES.keys())

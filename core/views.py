@@ -177,6 +177,7 @@ def _sauvegardes_upload(request):
 from django.http import JsonResponse
 
 
+@login_required(login_url='/auth/login/')
 def analyser_backup_ajax(request):
     """Endpoint AJAX : analyse un backup et retourne le preview en JSON."""
     if request.method != 'POST':
@@ -192,6 +193,7 @@ def analyser_backup_ajax(request):
     return JsonResponse(analyse)
 
 
+@login_required(login_url='/auth/login/')
 def tester_connectivite_ajax(request):
     """Endpoint AJAX : teste la connectivité vers le serveur distant de backup."""
     if request.method != 'POST':

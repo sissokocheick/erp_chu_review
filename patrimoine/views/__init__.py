@@ -6,6 +6,7 @@ Ré-exporte toutes les vues pour la compatibilité avec ``from . import views``
 dans urls.py. Chaque module contient un sous-ensemble logique de vues.
 """
 from .common import patrimoine_required
+from .dashboard import dashboard_patrimoine
 
 from .catalogue import (
     registre, fiche_detail, modifier_immo,

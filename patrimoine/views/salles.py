@@ -483,17 +483,13 @@ def ajax_bureaux(request):
 calendrier_reservations = calendrier_salles
 
 
+@verifier_permission_salle("accounts.menu_pat_salles")
 def supprimer_salle(request, pk):
     """Supprimer une salle de conférence."""
     salle = get_object_or_404(SalleConference, pk=pk)
     salle.delete()
     messages.warning(request, '🗑️ Salle supprimée.')
     return redirect('patrimoine_salles')
-
-
-def supprimer_reservation(request, pk):
-    """Supprimer une réservation."""
-    return annuler_reservation(request, pk)
 
 
 @login_required

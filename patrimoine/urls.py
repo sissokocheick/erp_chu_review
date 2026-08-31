@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
 from django.urls import path
 from . import views
-from . import rapports
-
-urlpatterns = [
-
+from . import rapports
+urlpatterns = [
+
+    # ─── Dashboard patrimoine ──────────────────────────────────────────────────
+    path('dashboard/',                             views.dashboard_patrimoine, name='patrimoine_dashboard'),
+
     # ─── Registre / Sas ────────────────────────────────────────────────────────
     path('',                                    views.registre,              name='patrimoine_registre'),
     path('sas/',                                views.sas,                   name='patrimoine_sas'),

@@ -59,7 +59,7 @@ ROLE_DEFS = {
     },
     'Gestionnaire Patrimoine': {
         'description': 'Registre, contrats, inventaires, vehicules, salles, parametres',
-        'perms': ['menu_pat_'],
+        'perms': ['menu_accueil', 'menu_dashboard', 'menu_pat_'],
     },
     'Comptable': {
         'description': 'Registre immobilisations, amortissements, exports',

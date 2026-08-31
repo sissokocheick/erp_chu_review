@@ -1,0 +1,332 @@
+{% extends "base_ui.html" %}
+{% load static %}
+
+{% block contenu %}
+<style>
+  .kpi-grid{display:grid;gap:14px;margin-bottom:22px;}
+  .kpi-grid-2{grid-template-columns:repeat(2,1fr);}
+  .kpi-grid-3{grid-template-columns:repeat(3,1fr);}
+  .kpi-grid-4{grid-template-columns:repeat(4,1fr);}
+  @media(max-width:900px){.kpi-grid-3,.kpi-grid-4{grid-template-columns:repeat(2,1fr);}}
+  @media(max-width:500px){.kpi-grid-2,.kpi-grid-3,.kpi-grid-4{grid-template-columns:1fr;}}
+
+  .kpi-card{
+    background:var(--bg-card);border:1px solid var(--border-light);border-radius:14px;
+    padding:20px 18px;display:flex;align-items:center;gap:14px;
+    transition:transform .15s,box-shadow .15s;cursor:default;
+  }
+  .kpi-card:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(0,0,0,.08);}
+  .kpi-icon{
+    width:50px;height:50px;border-radius:12px;display:flex;align-items:center;
+    justify-content:center;font-size:22px;flex-shrink:0;
+  }
+  .kpi-body h3{font-size:26px;font-weight:800;margin:0;line-height:1.1;color:var(--text-dark);}
+  .kpi-body p{font-size:12px;color:var(--text-medium);margin:2px 0 0;font-weight:500;}
+  .kpi-badge{
+    font-size:10px;padding:2px 8px;border-radius:10px;font-weight:700;
+    display:inline-block;margin-top:4px;
+  }
+
+  .section-title{
+    font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;
+    color:var(--text-medium);margin:28px 0 14px;padding-left:4px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .section-title i{font-size:14px;}
+
+  .alert-bar{
+    display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:10px;
+    margin-bottom:14px;font-size:13px;font-weight:600;transition:transform .15s;
+  }
+  .alert-bar:hover{transform:translateX(3px);}
+  .alert-bar a{color:inherit;text-decoration:none;margin-left:auto;font-size:12px;font-weight:700;}
+
+  .actu-list{list-style:none;padding:0;margin:0;}
+  .actu-item{
+    display:flex;align-items:center;gap:12px;padding:10px 14px;
+    border-bottom:1px solid var(--border-light);font-size:13px;
+    transition:background .15s;
+  }
+  .actu-item:last-child{border-bottom:none;}
+  .actu-item:hover{background:var(--bg-hover);}
+  .actu-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .actu-meta{margin-left:auto;font-size:11px;color:var(--text-light);white-space:nowrap;}
+
+  .stat-bar{height:6px;border-radius:3px;background:var(--border-light);overflow:hidden;margin-top:6px;}
+  .stat-bar-fill{height:100%;border-radius:3px;transition:width .6s ease;}
+
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:700px){.grid-2{grid-template-columns:1fr;}}
+</style>
+
+{# ── ALERTES ─────────────────────────────────────────────────────────── #}
+{% if alertes %}
+  <div style="margin-bottom:18px;">
+    {% for a in alertes %}
+      <div class="alert-bar"
+        {% if a.type == 'danger' %}style="background:var(--bg-danger,#fef2f2);color:#dc2626;border-left:4px solid #dc2626;"
+        {% elif a.type == 'warning' %}style="background:var(--bg-warning,#fffbeb);color:#d97706;border-left:4px solid #d97706;"
+        {% else %}style="background:var(--bg-info,#eff6ff);color:#2563eb;border-left:4px solid #2563eb;"{% endif %}>
+        <i class="{{ a.icon }}"></i>
+        <span>{{ a.texte }}</span>
+        <a href="{{ a.url }}">Voir →</a>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}
+
+{# ── KPIs PRINCIPAUX ─────────────────────────────────────────────────── #}
+<div class="section-title"><i class="fas fa-chart-pie"></i>Vue d'ensemble</div>
+<div class="kpi-grid kpi-grid-4">
+  {# Immobilisations #}
+  <a href="{% url 'patrimoine_registre' %}" style="text-decoration:none;color:inherit;">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#dbeafe,#93c5fd);color:#2563eb;">
+      <i class="fas fa-boxes"></i>
+    </div>
+    <div class="kpi-body">
+      <h3>{{ nb_immos_total }}</h3>
+      <p>Immobilisations</p>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:{% widthratio nb_immos_actives nb_immos_total 100 %}%;background:#22c55e;"></div></div>
+      <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">{{ nb_immos_actives }} actives</span>
+    </div>
+  </div>
+  </a>
+
+  {# Véhicules #}
+  <a href="{% url 'patrimoine_vehicules' %}" style="text-decoration:none;color:inherit;">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#fce7f3,#f9a8d4);color:#db2777;">
+      <i class="fas fa-car"></i>
+    </div>
+    <div class="kpi-body">
+      <h3>{{ nb_vehicules_total }}</h3>
+      <p>Véhicules</p>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:{% widthratio nb_vehicules_disponibles nb_vehicules_total 100 %}%;background:#22c55e;"></div></div>
+      <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">{{ nb_vehicules_disponibles }} dispo</span>
+    </div>
+  </div>
+  </a>
+
+  {# Salles #}
+  <a href="{% url 'patrimoine_salles' %}" style="text-decoration:none;color:inherit;">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#d1fae5,#6ee7b7);color:#059669;">
+      <i class="fas fa-door-open"></i>
+    </div>
+    <div class="kpi-body">
+      <h3>{{ nb_salles_total }}</h3>
+      <p>Salles</p>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:{% widthratio nb_salles_disponibles nb_salles_total 100 %}%;background:#22c55e;"></div></div>
+      <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">{{ nb_salles_disponibles }} dispo</span>
+    </div>
+  </div>
+  </a>
+
+  {# Demandes en attente #}
+  <a href="{% url 'patrimoine_demandes_vehicule_valider' %}" style="text-decoration:none;color:inherit;">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#fef3c7,#fcd34d);color:#d97706;">
+      <i class="fas fa-clipboard-list"></i>
+    </div>
+    <div class="kpi-body">
+      <h3>{{ nb_demandes_totales }}</h3>
+      <p>Demandes en attente</p>
+      <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
+        {% if nb_demandes_vehicule > 0 %}
+          <span class="kpi-badge" style="background:#fce7f3;color:#db2777;">{{ nb_demandes_vehicule }} véhicules</span>
+        {% endif %}
+        {% if nb_demandes_salle > 0 %}
+          <span class="kpi-badge" style="background:#dbeafe;color:#2563eb;">{{ nb_demandes_salle }} salles</span>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  </a>
+</div>
+
+{# ── KPIs SECONDAIRES ────────────────────────────────────────────────── #}
+<div class="kpi-grid kpi-grid-4">
+  {# Interventions en cours #}
+  <a href="{% url 'patrimoine_interventions' %}" style="text-decoration:none;color:inherit;">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#ede9fe,#c4b5fd);color:#7c3aed;">
+      <i class="fas fa-tools"></i>
+    </div>
+    <div class="kpi-body">
+      <h3>{{ nb_interventions_en_cours }}</h3>
+      <p>Interventions en cours</p>
+      {% if nb_interventions_nouvelles > 0 %}
+        <span class="kpi-badge" style="background:#fef3c7;color:#d97706;">{{ nb_interventions_nouvelles }} nouvelles</span>
+      {% endif %}
+    </div>
+  </div>
+  </a>
+
+  {# Réservations semaine #}
+  <a href="{% url 'patrimoine_calendrier' %}" style="text-decoration:none;color:inherit;">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#cffafe,#67e8f9);color:#0891b2;">
+      <i class="fas fa-calendar-check"></i>
+    </div>
+    <div class="kpi-body">
+      <h3>{{ nb_resa_semaine }}</h3>
+      <p>Réservations / semaine</p>
+      {% if nb_resa_aujourd > 0 %}
+        <span class="kpi-badge" style="background:#cffafe;color:#0891b2;">{{ nb_resa_aujourd }} aujourd'hui</span>
+      {% endif %}
+    </div>
+  </div>
+  </a>
+
+  {# Véhicules maintenance #}
+  <a href="{% url 'patrimoine_vehicules' %}?statut=EN_MAINTENANCE" style="text-decoration:none;color:inherit;">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#fee2e2,#fca5a5);color:#dc2626;">
+      <i class="fas fa-wrench"></i>
+    </div>
+    <div class="kpi-body">
+      <h3>{{ nb_vehicules_maintenance }}</h3>
+      <p>Véhicules en maintenance</p>
+    </div>
+  </div>
+  </a>
+
+  {# Contrats #}
+  <a href="{% url 'patrimoine_contrats' %}" style="text-decoration:none;color:inherit;">
+  <div class="kpi-card">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#f0fdf4,#86efac);color:#16a34a;">
+      <i class="fas fa-file-contract"></i>
+    </div>
+    <div class="kpi-body">
+      <h3>{{ contrats_expires }}</h3>
+      <p>Contrats expirés</p>
+      {% if contrats_expires == 0 %}
+        <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">✓ À jour</span>
+      {% else %}
+        <span class="kpi-badge" style="background:#fef2f2;color:#dc2626;">⚠ À renouveler</span>
+      {% endif %}
+    </div>
+  </div>
+  </a>
+</div>
+
+{# ── VALEUR TOTALE ───────────────────────────────────────────────────── #}
+<div class="kpi-grid kpi-grid-2" style="margin-top:6px;">
+  <div class="kpi-card" style="border-left:4px solid #2563eb;">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#dbeafe,#93c5fd);color:#2563eb;">
+      <i class="fas fa-coins"></i>
+    </div>
+    <div class="kpi-body">
+      <h3 style="font-size:22px;">{{ valeur_totale|floatformat:0 }} <span style="font-size:12px;font-weight:500;">FCFA</span></h3>
+      <p>Valeur totale du patrimoine actif</p>
+    </div>
+  </div>
+
+  <div class="kpi-card" style="border-left:4px solid #7c3aed;">
+    <div class="kpi-icon" style="background:linear-gradient(135deg,#ede9fe,#c4b5fd);color:#7c3aed;">
+      <i class="fas fa-history"></i>
+    </div>
+    <div class="kpi-body">
+      <h3>{{ nb_interventions_terminees_30j }}</h3>
+      <p>Interventions terminées (30j)</p>
+    </div>
+  </div>
+</div>
+
+{# ── ACTIVITÉ RÉCENTE + DEMANDES ─────────────────────────────────────── #}
+<div class="grid-2" style="margin-top:18px;">
+  {# Dernières interventions #}
+  <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:14px;padding:18px;">
+    <div style="font-size:13px;font-weight:800;color:var(--text-dark);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-tools" style="color:#7c3aed;"></i> Dernières interventions
+    </div>
+    {% if dernieres_interventions %}
+      <ul class="actu-list">
+        {% for interv in dernieres_interventions %}
+          <li class="actu-item">
+            <div class="actu-dot" style="background:
+              {% if interv.statut == 'EN_COURS' %}#f59e0b
+              {% elif interv.statut == 'TERMINEE' %}#22c55e
+              {% elif interv.statut == 'NOUVELLE' %}#ef4444
+              {% else %}#6b7280{% endif %};"></div>
+            <div>
+              <div style="font-weight:600;color:var(--text-dark);">{{ interv.immobilisation|truncatechars:30 }}</div>
+              <div style="font-size:11px;color:var(--text-light);">{{ interv.get_statut_display }}</div>
+            </div>
+            <div class="actu-meta">{{ interv.date_creation|timesince }}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div style="text-align:center;padding:20px;color:var(--text-light);font-size:13px;">
+        <i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4;"></i>
+        Aucune intervention récente
+      </div>
+    {% endif %}
+  </div>
+
+  {# Dernières demandes #}
+  <div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:14px;padding:18px;">
+    <div style="font-size:13px;font-weight:800;color:var(--text-dark);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <i class="fas fa-clipboard-list" style="color:#d97706;"></i> Dernières demandes
+    </div>
+    {% if dernieres_demandes_vehicule or dernieres_demandes_salle %}
+      <ul class="actu-list">
+        {% for d in dernieres_demandes_vehicule %}
+          <li class="actu-item">
+            <div class="actu-dot" style="background:{% if d.statut == 'EN_ATTENTE' %}#f59e0b{% elif d.statut == 'VALIDEE' %}#22c55e{% else %}#ef4444{% endif %};"></div>
+            <div>
+              <div style="font-weight:600;color:var(--text-dark);">🚗 {{ d.demandeur.get_full_name|default:d.demandeur.username }}</div>
+              <div style="font-size:11px;color:var(--text-light);">Véhicule — {{ d.get_statut_display }}</div>
+            </div>
+            <div class="actu-meta">{{ d.date_creation|timesince }}</div>
+          </li>
+        {% endfor %}
+        {% for d in dernieres_demandes_salle %}
+          <li class="actu-item">
+            <div class="actu-dot" style="background:{% if d.statut == 'EN_ATTENTE' %}#f59e0b{% elif d.statut == 'VALIDEE' %}#22c55e{% else %}#ef4444{% endif %};"></div>
+            <div>
+              <div style="font-weight:600;color:var(--text-dark);">🚪 {{ d.demandeur.get_full_name|default:d.demandeur.username }}</div>
+              <div style="font-size:11px;color:var(--text-light);">Salle — {{ d.get_statut_display }}</div>
+            </div>
+            <div class="actu-meta">{{ d.date_creation|timesince }}</div>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <div style="text-align:center;padding:20px;color:var(--text-light);font-size:13px;">
+        <i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;opacity:.4;"></i>
+        Aucune demande récente
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+{# ── ACCÈS RAPIDE ────────────────────────────────────────────────────── #}
+<div class="section-title" style="margin-top:28px;"><i class="fas fa-bolt"></i>Accès rapide</div>
+<div style="display:flex;gap:10px;flex-wrap:wrap;">
+  <a href="{% url 'patrimoine_registre' %}" style="text-decoration:none;padding:10px 18px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border-light);font-size:13px;font-weight:600;color:var(--text-dark);display:flex;align-items:center;gap:8px;transition:all .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <i class="fas fa-boxes" style="color:#2563eb;"></i> Registre
+  </a>
+  <a href="{% url 'patrimoine_vehicules' %}" style="text-decoration:none;padding:10px 18px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border-light);font-size:13px;font-weight:600;color:var(--text-dark);display:flex;align-items:center;gap:8px;transition:all .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <i class="fas fa-car" style="color:#db2777;"></i> Véhicules
+  </a>
+  <a href="{% url 'patrimoine_salles' %}" style="text-decoration:none;padding:10px 18px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border-light);font-size:13px;font-weight:600;color:var(--text-dark);display:flex;align-items:center;gap:8px;transition:all .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <i class="fas fa-door-open" style="color:#059669;"></i> Salles
+  </a>
+  <a href="{% url 'patrimoine_interventions' %}" style="text-decoration:none;padding:10px 18px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border-light);font-size:13px;font-weight:600;color:var(--text-dark);display:flex;align-items:center;gap:8px;transition:all .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <i class="fas fa-tools" style="color:#7c3aed;"></i> Interventions
+  </a>
+  <a href="{% url 'patrimoine_contrats' %}" style="text-decoration:none;padding:10px 18px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border-light);font-size:13px;font-weight:600;color:var(--text-dark);display:flex;align-items:center;gap:8px;transition:all .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <i class="fas fa-file-contract" style="color:#16a34a;"></i> Contrats
+  </a>
+  <a href="{% url 'patrimoine_calendrier' %}" style="text-decoration:none;padding:10px 18px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border-light);font-size:13px;font-weight:600;color:var(--text-dark);display:flex;align-items:center;gap:8px;transition:all .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <i class="fas fa-calendar-alt" style="color:#0891b2;"></i> Calendrier
+  </a>
+  <a href="{% url 'patrimoine_parametres' %}" style="text-decoration:none;padding:10px 18px;border-radius:10px;background:var(--bg-card);border:1px solid var(--border-light);font-size:13px;font-weight:600;color:var(--text-dark);display:flex;align-items:center;gap:8px;transition:all .15s;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+    <i class="fas fa-sliders-h" style="color:#d97706;"></i> Paramètres
+  </a>
+</div>
+
+{% endblock %}
