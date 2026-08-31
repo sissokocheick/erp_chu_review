@@ -17,14 +17,7 @@
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 14px;
   }
-  .cat-title {
-    font-size: 13px; font-weight: 800; text-transform: uppercase;
-    letter-spacing: 1px; color: var(--text-medium);
-    margin: 24px 0 12px; padding-bottom: 6px;
-    border-bottom: 2px solid var(--border-light);
-    display: flex; align-items: center; gap: 8px;
-  }
-  .cat-title:first-child { margin-top: 0; }
+
   .mod-card {
     background: var(--bg-card); border-radius: 10px;
     border: 1px solid var(--border-light);
@@ -61,11 +54,6 @@
 {% if modules %}
 
   {% for cat in categories %}
-  <div class="cat-title">
-    <i class="fas fa-folder-open" style="color:var(--primary-blue);"></i>
-    {{ cat.name }}
-    <span style="font-size:11px; font-weight:400; color:var(--text-light);">({{ cat.modules|length }})</span>
-  </div>
   <div class="modules-grid">
     {% for m in cat.modules %}
     <a href="{{ m.url }}" class="mod-card">
