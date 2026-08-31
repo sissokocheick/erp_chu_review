@@ -16,8 +16,24 @@ from core.models import Service
 from ..views.common import patrimoine_required
 
 
-@login_required
-@patrimoine_required
+def verifier_permission_vehicule(perm):
+    """Decorator: vérifie une permission véhicules spécifique."""
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def wrapper(request, *args, **kwargs):
+            if not (request.user.is_superuser or request.user.has_perm(perm)):
+                messages.error(request, "\u26d4 Acc\u00e8s non autoris\u00e9.")
+                return redirect('/')
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+from functools import wraps
+
+
+@verifier_permission_vehicule('accounts.menu_pat_vehicules')
 def liste_vehicules(request):
     """Liste des véhicules avec filtres et statistiques."""
     vehicules = Vehicule.objects.select_related('marque', 'modele', 'service_affectation', 'conducteur_titulaire')
@@ -66,8 +82,7 @@ def liste_vehicules(request):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_vehicule("accounts.menu_pat_vehicules")
 def detail_vehicule(request, pk):
     """Détail d'un véhicule avec historique."""
     vehicule = get_object_or_404(
@@ -92,8 +107,7 @@ def detail_vehicule(request, pk):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_vehicule("accounts.menu_pat_vehicules")
 def creer_vehicule(request):
     """Créer un nouveau véhicule."""
     if request.method == 'POST':
@@ -161,8 +175,7 @@ def creer_vehicule(request):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_vehicule("accounts.menu_pat_vehicules")
 def modifier_vehicule(request, pk):
     """Modifier un véhicule existant."""
     vehicule = get_object_or_404(Vehicule, pk=pk)
@@ -220,8 +233,7 @@ def modifier_vehicule(request, pk):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_vehicule("accounts.menu_pat_vehicules")
 def supprimer_vehicule(request, pk):
     """Supprimer un véhicule."""
     vehicule = get_object_or_404(Vehicule, pk=pk)
@@ -235,8 +247,7 @@ def supprimer_vehicule(request, pk):
 
 # ─── Interventions véhicule ───────────────────────────────
 
-@login_required
-@patrimoine_required
+@verifier_permission_vehicule("accounts.menu_pat_vehicules")
 def liste_interventions_vehicule(request, vehicule_pk):
     """Liste des interventions pour un véhicule."""
     vehicule = get_object_or_404(Vehicule, pk=vehicule_pk)
@@ -253,8 +264,7 @@ def liste_interventions_vehicule(request, vehicule_pk):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_vehicule("accounts.menu_pat_vehicules")
 def creer_intervention_vehicule(request, vehicule_pk):
     """Créer une intervention pour un véhicule."""
     vehicule = get_object_or_404(Vehicule, pk=vehicule_pk)
@@ -295,8 +305,7 @@ def creer_intervention_vehicule(request, vehicule_pk):
 
 # ─── Missions véhicule ────────────────────────────────────
 
-@login_required
-@patrimoine_required
+@verifier_permission_vehicule("accounts.menu_pat_vehicules")
 def liste_missions_vehicule(request, vehicule_pk):
     """Liste des missions pour un véhicule."""
     vehicule = get_object_or_404(Vehicule, pk=vehicule_pk)
@@ -313,8 +322,7 @@ def liste_missions_vehicule(request, vehicule_pk):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_vehicule("accounts.menu_pat_vehicules")
 def creer_mission_vehicule(request, vehicule_pk):
     """Créer une mission pour un véhicule."""
     vehicule = get_object_or_404(Vehicule, pk=vehicule_pk)

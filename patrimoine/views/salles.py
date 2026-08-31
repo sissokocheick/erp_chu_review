@@ -15,10 +15,24 @@ from ..models import (
     SalleConference, ReservationSalle, DemandeSalle, Batiment, Etage, Bureau
 )
 from ..views.common import patrimoine_required
+from functools import wraps
 
 
-@login_required
-@patrimoine_required
+def verifier_permission_salle(perm):
+    """Decorator: vérifie une permission salle spécifique."""
+    def decorator(view_func):
+        @wraps(view_func)
+        @login_required
+        def wrapper(request, *args, **kwargs):
+            if not (request.user.is_superuser or request.user.has_perm(perm)):
+                messages.error(request, "Accès non autorisé.")
+                return redirect('/')
+            return view_func(request, *args, **kwargs)
+        return wrapper
+    return decorator
+
+
+@verifier_permission_salle("accounts.menu_pat_salles")
 def liste_salles(request):
     """Liste des salles de conférence avec disponibilité."""
     salles = SalleConference.objects.select_related('batiment', 'etage', 'service_gestionnaire')
@@ -96,8 +110,7 @@ def liste_salles(request):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def detail_salle(request, pk):
     """Détail d'une salle avec réservations à venir."""
     salle = get_object_or_404(
@@ -150,8 +163,7 @@ def detail_salle(request, pk):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def creer_salle(request):
     """Créer une salle de conférence."""
     if request.method == 'POST':
@@ -189,8 +201,7 @@ def creer_salle(request):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def modifier_salle(request, pk):
     """Modifier une salle de conférence."""
     salle = get_object_or_404(SalleConference, pk=pk)
@@ -228,8 +239,7 @@ def modifier_salle(request, pk):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def calendrier_salles(request):
     """Calendrier hebdomadaire des réservations."""
     today = timezone.now().date()
@@ -295,8 +305,7 @@ def calendrier_salles(request):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def liste_reservations(request):
     """Liste des réservations avec filtres."""
     reservations = ReservationSalle.objects.select_related('salle', 'demandeur', 'service_demandeur')
@@ -330,8 +339,7 @@ def liste_reservations(request):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def creer_reservation(request):
     """Créer une réservation de salle."""
     salle_preselect = request.GET.get('salle', '')
@@ -386,8 +394,7 @@ def creer_reservation(request):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def detail_reservation(request, pk):
     """Détail d'une réservation."""
     reservation = get_object_or_404(
@@ -399,8 +406,7 @@ def detail_reservation(request, pk):
     })
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def valider_reservation(request, pk):
     """Valider ou refuser une réservation."""
     reservation = get_object_or_404(ReservationSalle, pk=pk)
@@ -424,8 +430,7 @@ def valider_reservation(request, pk):
     return redirect('patrimoine_reservation_detail', pk=pk)
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def annuler_reservation(request, pk):
     """Annuler une réservation."""
     reservation = get_object_or_404(ReservationSalle, pk=pk)
@@ -438,8 +443,7 @@ def annuler_reservation(request, pk):
     return redirect('patrimoine_reservations')
 
 
-@login_required
-@patrimoine_required
+@verifier_permission_salle("accounts.menu_pat_salles")
 def supprimer_reservation(request, pk):
     """Supprimer une réservation."""
     reservation = get_object_or_404(ReservationSalle, pk=pk)

@@ -297,6 +297,20 @@ MENU_ACCESS_PERMISSIONS = [
     ('menu_pat_rebuts', 'Rebuts'),
     ('menu_pat_pertes', 'Pertes'),
     
+    # === MODULE PATRIMOINE - VÉHICULES ===
+    ('menu_pat_vehicules', 'Parc Véhicules'),
+    ('menu_pat_vehicules_demander', 'Demander Véhicule'),
+    ('menu_pat_vehicules_valider', 'Valider Demandes Véhicule'),
+    ('menu_pat_vehicules_missions', 'Missions Véhicule'),
+    ('menu_pat_vehicules_interventions', 'Interventions Véhicule'),
+    
+    # === MODULE PATRIMOINE - SALLES ===
+    ('menu_pat_salles', 'Salles de Conférence'),
+    ('menu_pat_salles_demander', 'Demander Salle'),
+    ('menu_pat_salles_valider', 'Valider Demandes Salle'),
+    ('menu_pat_salles_calendrier', 'Calendrier Réservations'),
+    ('menu_pat_salles_reservations', 'Réservations Salle'),
+    
     # === MODULE PATRIMOINE - PARAMÈTRES ===
     ('menu_pat_parametres', 'Paramètres Patrimoine'),
     ('menu_pat_historique', 'Historique Patrimoine'),

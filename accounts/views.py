@@ -727,13 +727,16 @@ def accueil_personnalise(request):
         'menu_pat_parametres':      {'url': '/patrimoine/parametres/', 'icon': 'fa-sliders-h', 'color': '#ffda6a', 'label': 'Parametres Patrimoine', 'category': 'Patrimoine & SAV'},
 
         # ── Vehicules & Salles ──
-        'menu_vehicules':           {'url': '/patrimoine/vehicules/', 'icon': 'fa-car', 'color': '#e74c3c', 'label': 'Parc Vehicules', 'category': 'Vehicules & Salles'},
-        'menu_demandes_vehicule':   {'url': '/patrimoine/demandes-vehicule/creer/', 'icon': 'fa-car', 'color': '#e74c3c', 'label': 'Demander Vehicule', 'category': 'Vehicules & Salles'},
-        'menu_valider_vehicules':   {'url': '/patrimoine/demandes-vehicule/valider/', 'icon': 'fa-clipboard-check', 'color': '#e74c3c', 'label': 'Valider Vehicules', 'category': 'Vehicules & Salles'},
-        'menu_salles':              {'url': '/patrimoine/salles/', 'icon': 'fa-door-open', 'color': '#3498db', 'label': 'Salles de Conference', 'category': 'Vehicules & Salles'},
-        'menu_demandes_salle':      {'url': '/patrimoine/demandes-salle/creer/', 'icon': 'fa-door-open', 'color': '#3498db', 'label': 'Demander Salle', 'category': 'Vehicules & Salles'},
-        'menu_valider_salles':      {'url': '/patrimoine/demandes-salle/valider/', 'icon': 'fa-clipboard-check', 'color': '#3498db', 'label': 'Valider Salles', 'category': 'Vehicules & Salles'},
-        'menu_calendrier':          {'url': '/patrimoine/salles/calendrier/', 'icon': 'fa-calendar-alt', 'color': '#9b59b6', 'label': 'Calendrier Reservations', 'category': 'Vehicules & Salles'},
+        'menu_pat_vehicules':             {'url': '/patrimoine/vehicules/', 'icon': 'fa-car', 'color': '#e74c3c', 'label': 'Parc Vehicules', 'category': 'Vehicules & Salles'},
+        'menu_pat_vehicules_demander':    {'url': '/patrimoine/demandes-vehicule/creer/', 'icon': 'fa-car', 'color': '#e74c3c', 'label': 'Demander Vehicule', 'category': 'Vehicules & Salles'},
+        'menu_pat_vehicules_valider':     {'url': '/patrimoine/demandes-vehicule/valider/', 'icon': 'fa-clipboard-check', 'color': '#e74c3c', 'label': 'Valider Vehicules', 'category': 'Vehicules & Salles'},
+        'menu_pat_vehicules_missions':    {'url': '/patrimoine/vehicules/', 'icon': 'fa-route', 'color': '#e74c3c', 'label': 'Missions Vehicule', 'category': 'Vehicules & Salles'},
+        'menu_pat_vehicules_interventions': {'url': '/patrimoine/vehicules/', 'icon': 'fa-wrench', 'color': '#e74c3c', 'label': 'Interventions Vehicule', 'category': 'Vehicules & Salles'},
+        'menu_pat_salles':               {'url': '/patrimoine/salles/', 'icon': 'fa-door-open', 'color': '#3498db', 'label': 'Salles de Conference', 'category': 'Vehicules & Salles'},
+        'menu_pat_salles_demander':      {'url': '/patrimoine/demandes-salle/creer/', 'icon': 'fa-door-open', 'color': '#3498db', 'label': 'Demander Salle', 'category': 'Vehicules & Salles'},
+        'menu_pat_salles_valider':       {'url': '/patrimoine/demandes-salle/valider/', 'icon': 'fa-clipboard-check', 'color': '#3498db', 'label': 'Valider Salles', 'category': 'Vehicules & Salles'},
+        'menu_pat_salles_calendrier':    {'url': '/patrimoine/salles/calendrier/', 'icon': 'fa-calendar-alt', 'color': '#9b59b6', 'label': 'Calendrier Reservations', 'category': 'Vehicules & Salles'},
+        'menu_pat_salles_reservations':  {'url': '/patrimoine/salles/reservations/', 'icon': 'fa-calendar-check', 'color': '#9b59b6', 'label': 'Reservations Salle', 'category': 'Vehicules & Salles'},
 
         # ── Rapports & Exports ──
         'menu_rapports':            {'url': '/rapports/', 'icon': 'fa-chart-line', 'color': '#28a745', 'label': 'Exports CSV / PDF', 'category': 'Rapports & Exports'},
