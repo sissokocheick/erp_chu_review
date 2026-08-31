@@ -687,6 +687,9 @@
             <i class="fas fa-chart-line nav-icon"></i><span class="nav-text">Tableau de bord</span>
         </a>
         {% endif %}
+        <a href="{% url 'accounts:a_propos' %}" class="module-title" style="text-decoration:none;" data-title="A propos">
+            <i class="fas fa-info-circle nav-icon" style="color:#6c757d;"></i><span class="nav-text">A propos</span>
+        </a>
 
         <!-- DEMANDES -->
         {% if perms.accounts.menu_demandes or perms.accounts.menu_guichet or perms.accounts.menu_valider_demandes or peut_valider_demandes %}

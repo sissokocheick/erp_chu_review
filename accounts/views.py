@@ -670,6 +670,11 @@ def changer_mdp_obligatoire(request):
 @login_required(login_url='/auth/login/')
 
 
+def about(request):
+    """Page A propos de NexusERP."""
+    return render(request, 'accounts/about.html')
+
+
 def accueil_personnalise(request):
     """Page d'accueil avec TOUS les modules auxquels l'utilisateur a acces."""
 

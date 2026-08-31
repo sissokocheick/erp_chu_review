@@ -1,0 +1,318 @@
+{% extends "base_ui.html" %}
+{% block title %}À propos — NexusERP{% endblock %}
+
+{% block contenu %}
+<style>
+  .about-hero {
+    background: linear-gradient(135deg, #1c5b96 0%, #0d47a1 50%, #0a3d7a 100%);
+    color: white; border-radius: 16px; padding: 48px 40px;
+    margin-bottom: 32px; text-align: center;
+    position: relative; overflow: hidden;
+    box-shadow: 0 8px 32px rgba(28,91,150,.35);
+  }
+  .about-hero::before {
+    content: '';
+    position: absolute; top: -80px; right: -80px;
+    width: 300px; height: 300px;
+    background: rgba(255,255,255,.04);
+    border-radius: 50%;
+  }
+  .about-hero::after {
+    content: '';
+    position: absolute; bottom: -60px; left: -40px;
+    width: 200px; height: 200px;
+    background: rgba(255,255,255,.03);
+    border-radius: 50%;
+  }
+  .about-hero-inner { position: relative; z-index: 1; }
+  .about-logo {
+    width: 100px; height: 100px; margin: 0 auto 20px;
+    background: rgba(255,255,255,.12);
+    border-radius: 24px; display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(8px); border: 2px solid rgba(255,255,255,.2);
+  }
+  .about-logo svg { width: 64px; height: 64px; }
+  .about-hero h1 { margin: 0 0 8px; font-size: 36px; font-weight: 800; }
+  .about-hero h1 span { font-weight: 400; opacity: .8; font-size: 24px; }
+  .about-hero .slogan {
+    font-size: 18px; font-style: italic; opacity: .9; margin: 0 0 12px;
+    font-weight: 500;
+  }
+  .about-hero .version {
+    display: inline-block; background: rgba(255,255,255,.15);
+    padding: 4px 14px; border-radius: 20px; font-size: 13px;
+    font-weight: 600; margin-bottom: 16px;
+  }
+  .about-hero .desc {
+    font-size: 15px; opacity: .8; max-width: 650px; margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .about-section {
+    background: var(--bg-card); border-radius: 12px;
+    border: 1px solid var(--border-light);
+    padding: 28px 32px; margin-bottom: 20px;
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+  .about-section h3 {
+    margin: 0 0 16px; font-size: 18px; font-weight: 700;
+    color: var(--text-dark); display: flex; align-items: center; gap: 10px;
+  }
+  .about-section h3 i {
+    color: var(--primary-blue); font-size: 20px;
+  }
+  .about-section p {
+    margin: 0 0 12px; font-size: 14px; line-height: 1.7;
+    color: var(--text-medium);
+  }
+
+  .pole-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px; margin-top: 16px;
+  }
+  .pole-card {
+    background: var(--bg-card); border-radius: 10px;
+    border: 1px solid var(--border-light);
+    padding: 20px; display: flex; gap: 16px;
+    transition: all .2s;
+  }
+  .pole-card:hover {
+    box-shadow: 0 4px 15px rgba(0,0,0,.08);
+    border-color: var(--primary-blue);
+  }
+  .pole-icon {
+    width: 48px; height: 48px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; color: white; flex-shrink: 0;
+  }
+  .pole-info h4 { margin: 0 0 4px; font-size: 14px; font-weight: 700; }
+  .pole-info p { margin: 0; font-size: 12px; color: var(--text-light); line-height: 1.5; }
+
+  .tech-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px; margin-top: 16px;
+  }
+  .tech-item {
+    background: var(--bg-card); border-radius: 8px;
+    border: 1px solid var(--border-light);
+    padding: 14px; text-align: center;
+  }
+  .tech-item i { font-size: 28px; color: var(--primary-blue); margin-bottom: 8px; display: block; }
+  .tech-item .tech-name { font-weight: 700; font-size: 13px; }
+  .tech-item .tech-desc { font-size: 11px; color: var(--text-light); margin-top: 4px; }
+
+  .about-footer {
+    text-align: center; padding: 24px; color: var(--text-light);
+    font-size: 12px;
+  }
+  .about-footer a { color: var(--primary-blue); text-decoration: none; font-weight: 600; }
+</style>
+
+<!-- ═══ HERO ═══ -->
+<div class="about-hero">
+  <div class="about-hero-inner">
+    <div class="about-logo">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="32" cy="32" r="30" stroke="white" stroke-width="2" fill="none" opacity=".3"/>
+        <circle cx="32" cy="12" r="5" fill="white"/>
+        <circle cx="50" cy="44" r="5" fill="white"/>
+        <circle cx="14" cy="44" r="5" fill="white"/>
+        <line x1="32" y1="17" x2="48" y2="40" stroke="white" stroke-width="2.5" opacity=".6"/>
+        <line x1="32" y1="17" x2="16" y2="40" stroke="white" stroke-width="2.5" opacity=".6"/>
+        <line x1="14" y1="44" x2="50" y2="44" stroke="white" stroke-width="2.5" opacity=".4"/>
+        <circle cx="32" cy="32" r="7" fill="white" opacity=".9"/>
+        <circle cx="32" cy="32" r="3" fill="#1c5b96"/>
+      </svg>
+    </div>
+    <div class="version">Version 2.0</div>
+    <h1><span>Nexus</span>ERP</h1>
+    <div class="slogan">« Tout connecté, tout maîtrisé. »</div>
+    <div class="desc">
+      Suite de gestion intégrée du Centre Hospitalier Universitaire d'Angré.<br>
+      Le nexus central qui interconnecte toutes les ressources de votre hôpital.
+    </div>
+  </div>
+</div>
+
+<!-- ═══ DESCRIPTION ═══ -->
+<div class="about-section">
+  <h3><i class="fas fa-info-circle"></i> Qu'est-ce que NexusERP ?</h3>
+  <p>
+    <strong>NexusERP</strong> est une application web de gestion intégrée conçue spécialement pour le
+    <strong>Centre Hospitalier Universitaire (CHU) d'Angré</strong>. Elle centralise en un seul point
+    de connexion — le <em>nexus</em> — toutes les ressources critiques de l'hôpital : stocks, patrimoine,
+    véhicules, salles de conférence, demandes inter-services et bien plus.
+  </p>
+  <p>
+    Le nom <strong>Nexus</strong> vient du latin <em>nexus</em> (lien, connexion, nœud). Dans la mythology
+    grecque, Nexus représente le lien indissoluble entre les éléments. Dans la technologie, c'est le hub
+    central qui interconnecte tous les systèmes. <strong>NexusERP</strong> est exactement cela : le point
+    central où tout converge.
+  </p>
+</div>
+
+<!-- ═══ PÔLES ═══ -->
+<div class="about-section">
+  <h3><i class="fas fa-building"></i> Les 6 pôles fonctionnels</h3>
+  <p>NexusERP couvre l'ensemble des activités opérationnelles du CHU à travers 6 pôles interconnectés :</p>
+
+  <div class="pole-grid">
+    <div class="pole-card">
+      <div class="pole-icon" style="background:#28a745;"><i class="fas fa-boxes"></i></div>
+      <div class="pole-info">
+        <h4>📦 Stock & Logistique</h4>
+        <p>Gestion complète du magasin central : entrées, sorties, transferts inter-magasins, retours services/fournisseurs, livraisons, réceptions de commandes, inventaires tournants, suivi des lots et péremptions.</p>
+      </div>
+    </div>
+    <div class="pole-card">
+      <div class="pole-icon" style="background:#20c997;"><i class="fas fa-tools"></i></div>
+      <div class="pole-info">
+        <h4>🏗️ Patrimoine & SAV</h4>
+        <p>Registre du matériel médical, immatriculation, tickets SAV, interventions techniques, dispatch des pannes, contrats de maintenance, échéancier, rebuts et équipements perdus.</p>
+      </div>
+    </div>
+    <div class="pole-card">
+      <div class="pole-icon" style="background:#e74c3c;"><i class="fas fa-car"></i></div>
+      <div class="pole-info">
+        <h4>🚗 Véhicules & Salles</h4>
+        <p>Parc automobile, demandes et validations de véhicules, salles de conférence, réservations avec calendrier, gestion des disponibilités et validation par les responsables.</p>
+      </div>
+    </div>
+    <div class="pole-card">
+      <div class="pole-icon" style="background:#17a2b8;"><i class="fas fa-clipboard-list"></i></div>
+      <div class="pole-info">
+        <h4>📋 Demandes & Validation</h4>
+        <p>Circuit complet de demandes entre services : création, suivi, validation multi-niveaux, traitements par guichet, historique et notifications en temps réel.</p>
+      </div>
+    </div>
+    <div class="pole-card">
+      <div class="pole-icon" style="background:#ffc107;"><i class="fas fa-shopping-cart"></i></div>
+      <div class="pole-info">
+        <h4>🛒 Achats & Catalogue</h4>
+        <p>Commandes fournisseurs, suggestions de réapprovisionnement, catalogue articles, familles d'articles, export de données et rapports de consommation par service.</p>
+      </div>
+    </div>
+    <div class="pole-card">
+      <div class="pole-icon" style="background:#0d47a1;"><i class="fas fa-shield-alt"></i></div>
+      <div class="pole-info">
+        <h4>🔒 Sécurité & Administration</h4>
+        <p>Gestion des utilisateurs, rôles et permissions, circuits de validation, journal d'audit, supervision système, sauvegardes automatiques et configuration des notifications.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FONCTIONNALITÉS ═══ -->
+<div class="about-section">
+  <h3><i class="fas fa-star"></i> Fonctionnalités clés</h3>
+  <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px;">
+    <div style="display:flex; gap:10px; align-items:start;">
+      <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
+      <div><strong>Gestion multi-magasins</strong><br><span style="font-size:12px;color:var(--text-light);">Plusieurs magasins avec switch instantané</span></div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:start;">
+      <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
+      <div><strong>Barcodes & QR Codes</strong><br><span style="font-size:12px;color:var(--text-light);">Scan articles, équipements et immobilisations</span></div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:start;">
+      <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
+      <div><strong>PDF personnalisables</strong><br><span style="font-size:12px;color:var(--text-light);">Bons de sortie, commande, retour avec logos CHU</span></div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:start;">
+      <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
+      <div><strong>Sauvegardes auto</strong><br><span style="font-size:12px;color:var(--text-light);">pg_dump + rétention graduée + copie réseau</span></div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:start;">
+      <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
+      <div><strong>Notifications temps réel</strong><br><span style="font-size:12px;color:var(--text-light);">Alertes validations, demandes, péremptions</span></div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:start;">
+      <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
+      <div><strong>Mode sombre / clair</strong><br><span style="font-size:12px;color:var(--text-light);">Thème adaptable à chaque utilisateur</span></div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:start;">
+      <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
+      <div><strong>Rôles & Permissions</strong><br><span style="font-size:12px;color:var(--text-light);">Accès granulaire par module et par magasin</span></div>
+    </div>
+    <div style="display:flex; gap:10px; align-items:start;">
+      <i class="fas fa-check-circle" style="color:#28a745; margin-top:3px;"></i>
+      <div><strong>Responsive</strong><br><span style="font-size:12px;color:var(--text-light);">Adapté mobile, tablette et desktop</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STACK TECHNIQUE ═══ -->
+<div class="about-section">
+  <h3><i class="fas fa-code"></i> Stack technique</h3>
+  <div class="tech-grid">
+    <div class="tech-item">
+      <i class="fab fa-python"></i>
+      <div class="tech-name">Django 4.2</div>
+      <div class="tech-desc">Backend Python</div>
+    </div>
+    <div class="tech-item">
+      <i class="fas fa-database"></i>
+      <div class="tech-name">PostgreSQL</div>
+      <div class="tech-desc">Base de données</div>
+    </div>
+    <div class="tech-item">
+      <i class="fab fa-html5"></i>
+      <div class="tech-name">HTML5 / CSS3</div>
+      <div class="tech-desc">Templates Django</div>
+    </div>
+    <div class="tech-item">
+      <i class="fab fa-js-square"></i>
+      <div class="tech-name">JavaScript</div>
+      <div class="tech-desc">Interactivité & AJAX</div>
+    </div>
+    <div class="tech-item">
+      <i class="fas fa-file-pdf"></i>
+      <div class="tech-name">WeasyPrint</div>
+      <div class="tech-desc">Génération PDF</div>
+    </div>
+    <div class="tech-item">
+      <i class="fas fa-server"></i>
+      <div class="tech-name">Gunicorn</div>
+      <div class="tech-desc">Serveur WSGI</div>
+    </div>
+    <div class="tech-item">
+      <i class="fas fa-shield-alt"></i>
+      <div class="tech-name">SweetAlert2</div>
+      <div class="tech-desc">Modales de confirmation</div>
+    </div>
+    <div class="tech-item">
+      <i class="fas fa-chart-bar"></i>
+      <div class="tech-name">Chart.js</div>
+      <div class="tech-desc">Graphiques & stats</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ÉQUIPE ═══ -->
+<div class="about-section">
+  <h3><i class="fas fa-users"></i> Équipe & Crédits</h3>
+  <p>
+    NexusERP est développé pour le <strong>CHU d'Angré</strong> (Centre Hospitalier Universitaire)
+    situé en Côte d'Ivoire. L'application est conçue pour répondre aux besoins spécifiques de la
+    gestion hospitalière avec un focus sur la <strong>magasin central</strong> du département de
+    la logistique.
+  </p>
+  <p>
+    <strong>Technologies utilisées :</strong> Django, PostgreSQL, Python, JavaScript, HTML/CSS, WeasyPrint, Gunicorn.
+  </p>
+  <p>
+    <strong>Version :</strong> 2.0 — Dernière mise à jour : Août 2026
+  </p>
+</div>
+
+<!-- ═══ FOOTER ═══ -->
+<div class="about-footer">
+  <div style="margin-bottom:8px;">
+    <i class="fas fa-link" style="color:var(--primary-blue);"></i>
+    NexusERP — <em>« Tout connecté, tout maîtrisé. »</em>
+  </div>
+  <div>Suite de Gestion Intégrée — CHU Angré, Côte d'Ivoire</div>
+  <div style="margin-top:4px;">© 2026 NexusERP. Tous droits réservés.</div>
+</div>
+
+{% endblock %}

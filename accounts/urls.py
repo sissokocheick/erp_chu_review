@@ -18,9 +18,11 @@ urlpatterns = [
     # Étape 2 via le lien envoyé par email (token dans l'URL)
     path('reinitialisation/<str:token>/', views_reset.reinitialiser_mot_de_passe, name='reinitialiser_mot_de_passe_lien'),
 
-    # Accueil
+    # Accueil & A propos
     path('', views.accueil_personnalise, name='accueil_personnalise'),
     path('accueil/', views.accueil_personnalise, name='accueil'),
+    path('about/', views.about, name='about'),
+    path('a-propos/', views.about, name='a_propos'),
 
     # Utilisateurs
     path('utilisateurs/', views.page_utilisateurs, name='page_utilisateurs'),
