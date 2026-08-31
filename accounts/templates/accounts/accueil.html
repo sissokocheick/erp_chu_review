@@ -31,6 +31,36 @@
   .kpi-val { font-size: 26px; font-weight: 800; line-height: 1; }
   .kpi-label { font-size: 12px; color: var(--text-light); margin-top: 2px; }
 
+  /* ── Acces rapide ── */
+  .recent-section { margin-bottom: 22px; }
+  .recent-title {
+    font-size: 12px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--text-light); margin-bottom: 10px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .recent-row {
+    display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px;
+  }
+  .recent-row::-webkit-scrollbar { height: 4px; }
+  .recent-row::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 4px; }
+  .recent-chip {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--bg-card); border: 1px solid var(--border-light);
+    border-radius: 20px; padding: 8px 16px 8px 10px;
+    text-decoration: none; color: var(--text-dark);
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+    transition: all .2s; flex-shrink: 0;
+  }
+  .recent-chip:hover {
+    border-color: var(--primary-blue); background: rgba(28,91,150,.05);
+    transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  }
+  .recent-chip-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #fff; flex-shrink: 0;
+  }
+
   .search-box { position: relative; margin-bottom: 20px; }
   .search-box input {
     width: 100%; padding: 12px 16px 12px 44px;
@@ -142,6 +172,20 @@
     </div>
   </a>
 </div>
+
+{% if recent_modules %}
+<div class="recent-section">
+  <div class="recent-title"><i class="fas fa-history"></i> Accès rapide</div>
+  <div class="recent-row">
+    {% for m in recent_modules %}
+    <a href="{{ m.url }}" class="recent-chip">
+      <div class="recent-chip-icon" style="background:{{ m.color }};"><i class="fas {{ m.icon }}"></i></div>
+      {{ m.label }}
+    </a>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <div class="search-box">
   <i class="fas fa-search"></i>

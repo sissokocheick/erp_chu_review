@@ -87,7 +87,8 @@ MIDDLEWARE = [
     'accounts.middleware.AntiSpamMiddleware',
     'accounts.middleware.PasswordChangeMiddleware',
     'accounts.middleware.ThemeMiddleware',
-    'accounts.middleware.MagasinAutoSelectMiddleware',  
+    'accounts.middleware.MagasinAutoSelectMiddleware',
+    'accounts.middleware.RecentModulesMiddleware',
 ]
 
 ROOT_URLCONF = 'config.urls'

@@ -822,6 +822,17 @@ def accueil_personnalise(request):
     except Exception:
         pass
 
+    # ── Modules recents (session) ──
+    recent_codes = request.session.get('_recent_modules', [])
+    recent_modules = []
+    seen = set()
+    for code in recent_codes:
+        if code in MODULES and code not in seen:
+            recent_modules.append({**MODULES[code], 'codename': code})
+            seen.add(code)
+        if len(recent_modules) >= 5:
+            break
+
     return render(request, 'accounts/accueil.html', {
         'modules': modules_accessibles,
         'categories': ordered_categories,
@@ -830,6 +841,7 @@ def accueil_personnalise(request):
         'kpi_demandes_salles': kpi_demandes_salles,
         'kpi_tickets_ouverts': kpi_tickets_ouverts,
         'kpi_mouvements_semaine': kpi_mouvements_semaine,
+        'recent_modules': recent_modules,
     })
 
 

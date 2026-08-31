@@ -159,3 +159,45 @@ class MagasinAutoSelectMiddleware:
                 pass
 
         return self.get_response(request)
+
+
+class RecentModulesMiddleware:
+    """
+    Track les 20 derniers modules visites par utilisateur en session.
+    Utilise pour la section "Acces rapide" sur la page d'accueil.
+    """
+    _URL_TO_CODENAME = None
+
+    @classmethod
+    def _build_map(cls):
+        if cls._URL_TO_CODENAME is not None:
+            return cls._URL_TO_CODENAME
+        import re
+        cls._URL_TO_CODENAME = {}
+        try:
+            import os
+            view_path = os.path.join(os.path.dirname(__file__), 'views.py')
+            with open(view_path, encoding='utf-8') as f:
+                source = f.read()
+            for m in re.finditer(r"'(menu_\w+)':\s*\{'url':\s*'([^']+)',", source):
+                codename, url = m.group(1), m.group(2)
+                cls._URL_TO_CODENAME[url.rstrip('/')] = codename
+        except Exception:
+            pass
+        return cls._URL_TO_CODENAME
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+        if request.user.is_authenticated and request.method == 'GET':
+            path = request.path.rstrip('/')
+            url_map = self._build_map()
+            codename = url_map.get(path)
+            if codename:
+                recent = request.session.get('_recent_modules', [])
+                recent = [r for r in recent if r != codename]
+                recent.insert(0, codename)
+                request.session['_recent_modules'] = recent[:20]
+        return response
