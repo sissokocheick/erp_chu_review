@@ -14,24 +14,24 @@
   .res-chip-total { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); }
   .res-chip-ok { background: rgba(34,197,94,0.3); border: 1px solid rgba(34,197,94,0.4); }
   .res-chip-wait { background: rgba(251,191,36,0.3); border: 1px solid rgba(251,191,36,0.4); }
-  .btn-h { background: white; color: #0e7490; border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-decoration: none; }
+  .btn-h { background: var(--bg-card); color: #0e7490; border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-decoration: none; }
   .btn-h:hover { background: #ecfeff; transform: translateY(-2px); }
   .btn-add { background: linear-gradient(135deg, #0891b2, #06b6d4); color: white; border: none; padding: 10px 20px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; text-decoration: none; box-shadow: 0 4px 12px rgba(6,182,212,0.3); }
   .btn-add:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(6,182,212,0.4); color: white; }
-  .filter-bar { background: white; border-radius: var(--rad); padding: 15px 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; margin-bottom: 18px; }
-  .filter-bar select, .filter-bar input { padding: 10px 14px; border: 1.5px solid #e2e8f0; border-radius: var(--rad-sm); font-size: 13px; background: #f8fafc; transition: 0.2s; }
+  .filter-bar { background: var(--bg-card); border-radius: var(--rad); padding: 15px 20px; box-shadow: 0 2px 10px var(--shadow); border: 1px solid var(--border-light); margin-bottom: 18px; }
+  .filter-bar select, .filter-bar input { padding: 10px 14px; border: 1.5px solid var(--border-light); border-radius: var(--rad-sm); font-size: 13px; background: var(--bg-hover); transition: 0.2s; }
   .filter-bar select:focus, .filter-bar input:focus { outline: none; border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.1); }
-  .cal-table { width: 100%; border-collapse: separate; border-spacing: 0; background: white; border-radius: var(--rad); overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; }
-  .cal-table thead th { background: linear-gradient(135deg, #f1f5f9, #e2e8f0); padding: 14px 16px; font-size: 12px; font-weight: 800; text-transform: uppercase; color: #475569; letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
+  .cal-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--bg-card); border-radius: var(--rad); overflow: hidden; box-shadow: 0 2px 12px var(--shadow); border: 1px solid var(--border-light); }
+  .cal-table thead th { background: linear-gradient(135deg, #f1f5f9, #e2e8f0); padding: 14px 16px; font-size: 12px; font-weight: 800; text-transform: uppercase; color: var(--text-medium); letter-spacing: 0.5px; border-bottom: 2px solid #e2e8f0; }
   .cal-table tbody td { padding: 12px 16px; border-bottom: 1px solid #f1f5f9; font-size: 13px; color: #334155; vertical-align: middle; }
-  .cal-table tbody tr:hover { background: #f8fafc; }
+  .cal-table tbody tr:hover { background: var(--bg-hover); }
   .cal-table tbody tr:last-child td { border-bottom: none; }
   .badge-st { padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; gap: 5px; }
   .badge-conf { background: #f0fdf4; color: #166534; }
   .badge-wait { background: #fffbeb; color: #92400e; }
   .badge-cancel { background: #fef2f2; color: #991b1b; }
-  .badge-done { background: #f1f5f9; color: #475569; }
-  .empty-state { text-align: center; padding: 60px 20px; background: white; border-radius: var(--rad); box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; }
+  .badge-done { background: var(--bg-hover); color: var(--text-medium); }
+  .empty-state { text-align: center; padding: 60px 20px; background: var(--bg-card); border-radius: var(--rad); box-shadow: 0 2px 10px var(--shadow); border: 1px solid var(--border-light); }
 </style>
 
 <!-- Header -->
@@ -79,20 +79,20 @@
   <table style="width:100%;border-collapse:collapse;">
     <thead>
       <tr>
-        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">SALLE</th>
-        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">OBJET</th>
-        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">DATE / HEURE</th>
-        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">DURÉE</th>
-        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">DEMANDEUR</th>
-        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">STATUT</th>
-        <th style="padding:14px 16px;text-align:center;font-size:12px;font-weight:800;text-transform:uppercase;color:#475569;background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">ACTIONS</th>
+        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color: var(--text-medium);background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">SALLE</th>
+        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color: var(--text-medium);background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">OBJET</th>
+        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color: var(--text-medium);background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">DATE / HEURE</th>
+        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color: var(--text-medium);background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">DURÉE</th>
+        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color: var(--text-medium);background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">DEMANDEUR</th>
+        <th style="padding:14px 16px;text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;color: var(--text-medium);background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">STATUT</th>
+        <th style="padding:14px 16px;text-align:center;font-size:12px;font-weight:800;text-transform:uppercase;color: var(--text-medium);background:linear-gradient(135deg,#f1f5f9,#e2e8f0);border-bottom:2px solid #e2e8f0;">ACTIONS</th>
       </tr>
     </thead>
     <tbody>
       {% for r in reservations %}
       <tr>
         <td><span style="display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:#ecfeff;border-radius:20px;font-size:12px;font-weight:700;color:#0e7490;"><i class="fas fa-door-open"></i> {{ r.salle.nom }}</span></td>
-        <td><a href="{% url 'patrimoine_reservation_detail' r.pk %}" style="color:#1e293b;text-decoration:none;font-weight:600;">{{ r.objet|truncatechars:35 }}</a></td>
+        <td><a href="{% url 'patrimoine_reservation_detail' r.pk %}" style="color: var(--text-dark);text-decoration:none;font-weight:600;">{{ r.objet|truncatechars:35 }}</a></td>
         <td>
           <div style="font-weight:600;">{{ r.date_debut|date:"d/m/Y" }}</div>
           <div style="font-size:11px;color:#94a3b8;">{{ r.date_debut|date:"H:i" }} — {{ r.date_fin|date:"H:i" }}</div>
@@ -121,7 +121,7 @@
         <td colspan="7">
           <div class="empty-state">
             <i class="fas fa-calendar-times" style="font-size:48px;color:#cbd5e0;display:block;margin-bottom:16px;"></i>
-            <h5 style="color:#475569;margin-bottom:8px;">Aucune réservation</h5>
+            <h5 style="color: var(--text-medium);margin-bottom:8px;">Aucune réservation</h5>
             <p style="color:#94a3b8;margin-bottom:16px;font-size:14px;">Aucune réservation ne correspond à vos filtres.</p>
             <a href="{% url 'patrimoine_reservation_creer' %}" class="btn-add"><i class="fas fa-plus"></i> Créer une réservation</a>
           </div>

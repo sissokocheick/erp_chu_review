@@ -24,7 +24,7 @@
     <div class="nx-card" style="border-radius:14px;">
       <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
         <div style="width:32px;height:32px;background:linear-gradient(135deg,#cffafe,#a5f3fc);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-clipboard-list" style="color:#0891b2;font-size:14px;"></i></div>
-        <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Résumé de la demande</h3>
+        <h3 style="margin:0;font-size:15px;font-weight:700;color: var(--text-dark);">Résumé de la demande</h3>
       </div>
       <div style="padding:20px 22px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -68,8 +68,8 @@
 
           <!-- Sélection salle -->
           <div style="margin-bottom:16px;">
-            <label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-door-open me-1"></i> Salle disponible</label>
-            <select name="salle" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;background:#fff;" required>
+            <label style="display:block;font-size:11px;font-weight:700;color: var(--text-medium);text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-door-open me-1"></i> Salle disponible</label>
+            <select name="salle" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border: 1px solid var(--border-light);font-size:13px;background: var(--bg-card);" required>
               <option value="">-- Sélectionner une salle --</option>
               {% for s in salles_libres %}
               <option value="{{ s.pk }}" {% if demande.salle_preferee_id == s.pk %}selected{% endif %}>
@@ -79,7 +79,7 @@
               </option>
               {% endfor %}
             </select>
-            <div style="margin-top:6px;font-size:12px;color:#64748b;">
+            <div style="margin-top:6px;font-size:12px;color: var(--text-medium);">
               <i class="fas fa-info-circle me-1"></i> {{ salles_libres|length }} salle(s) disponible(s) sur cette période
             </div>
           </div>
@@ -98,7 +98,7 @@
           </a>
         </div>
 
-        <a href="{% url 'patrimoine_detail_demande_salle' demande.pk %}" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;margin-top:10px;border-radius:10px;background:#f1f5f9;color:#475569;font-weight:600;font-size:13px;text-decoration:none;">
+        <a href="{% url 'patrimoine_detail_demande_salle' demande.pk %}" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;margin-top:10px;border-radius:10px;background: var(--bg-hover);color: var(--text-medium);font-weight:600;font-size:13px;text-decoration:none;">
           <i class="fas fa-eye"></i> Voir le détail
         </a>
       </div>
@@ -110,6 +110,6 @@
   .vr { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f8fafc; }
   .vr:last-child { border-bottom:none; }
   .vl { font-size:12px; color:#94a3b8; font-weight:600; }
-  .vv { font-size:13px; color:#1e293b; }
+  .vv { font-size:13px; color: var(--text-dark); }
 </style>
 {% endblock %}

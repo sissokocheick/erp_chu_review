@@ -40,19 +40,19 @@
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
         <div class="nx-card" style="text-align:center;padding:16px;border-radius:12px;">
           <div style="font-size:22px;font-weight:800;color:#0891b2;">{{ demande.nb_participants }}</div>
-          <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Participants</div>
+          <div style="font-size:11px;color: var(--text-medium);margin-top:4px;text-transform:uppercase;font-weight:700;">Participants</div>
         </div>
         <div class="nx-card" style="text-align:center;padding:16px;border-radius:12px;">
           <div style="font-size:22px;font-weight:800;color:#2563eb;">{{ demande.duree_heures }}h</div>
-          <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Durée</div>
+          <div style="font-size:11px;color: var(--text-medium);margin-top:4px;text-transform:uppercase;font-weight:700;">Durée</div>
         </div>
         <div class="nx-card" style="text-align:center;padding:16px;border-radius:12px;">
-          <div style="font-size:13px;font-weight:700;color:#1e293b;">{{ demande.date_debut|date:"d/m" }}</div>
-          <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Début</div>
+          <div style="font-size:13px;font-weight:700;color: var(--text-dark);">{{ demande.date_debut|date:"d/m" }}</div>
+          <div style="font-size:11px;color: var(--text-medium);margin-top:4px;text-transform:uppercase;font-weight:700;">Début</div>
         </div>
         <div class="nx-card" style="text-align:center;padding:16px;border-radius:12px;">
-          <div style="font-size:13px;font-weight:700;color:#1e293b;">{{ demande.date_fin|date:"d/m" }}</div>
-          <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Fin</div>
+          <div style="font-size:13px;font-weight:700;color: var(--text-dark);">{{ demande.date_fin|date:"d/m" }}</div>
+          <div style="font-size:11px;color: var(--text-medium);margin-top:4px;text-transform:uppercase;font-weight:700;">Fin</div>
         </div>
       </div>
 
@@ -60,7 +60,7 @@
       <div class="nx-card" style="border-radius:14px;">
         <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
           <div style="width:32px;height:32px;background:linear-gradient(135deg,#cffafe,#a5f3fc);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-clipboard-list" style="color:#0891b2;font-size:14px;"></i></div>
-          <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Détails de la demande</h3>
+          <h3 style="margin:0;font-size:15px;font-weight:700;color: var(--text-dark);">Détails de la demande</h3>
         </div>
         <div style="padding:20px 22px;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -116,8 +116,8 @@
           </div>
 
           {% if demande.description %}
-          <div style="margin-top:16px;padding:14px;background:#f8fafc;border-radius:10px;border-left:3px solid #0891b2;">
-            <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Description</div>
+          <div style="margin-top:16px;padding:14px;background: var(--bg-hover);border-radius:10px;border-left:3px solid #0891b2;">
+            <div style="font-size:11px;color: var(--text-medium);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Description</div>
             <div style="font-size:13px;color:#334155;">{{ demande.description }}</div>
           </div>
           {% endif %}
@@ -129,7 +129,7 @@
       <div class="nx-card" style="border-radius:14px;border:2px solid #bbf7d0;">
         <div style="padding:18px 22px;border-bottom:1px solid #f0fdf4;display:flex;align-items:center;gap:10px;">
           <div style="width:32px;height:32px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-door-open" style="color:#16a34a;font-size:14px;"></i></div>
-          <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Salle attribuée</h3>
+          <h3 style="margin:0;font-size:15px;font-weight:700;color: var(--text-dark);">Salle attribuée</h3>
         </div>
         <div style="padding:20px 22px;">
           <div style="display:flex;align-items:center;gap:16px;">
@@ -137,8 +137,8 @@
               <i class="fas fa-door-open" style="color:#16a34a;font-size:24px;"></i>
             </div>
             <div>
-              <div style="font-size:16px;font-weight:800;color:#1e293b;">{{ demande.salle_attribuee.nom }}</div>
-              <div style="font-size:12px;color:#64748b;margin-top:2px;">{{ demande.salle_attribuee.capacite }} places · {{ demande.salle_attribuee.code }}</div>
+              <div style="font-size:16px;font-weight:800;color: var(--text-dark);">{{ demande.salle_attribuee.nom }}</div>
+              <div style="font-size:12px;color: var(--text-medium);margin-top:2px;">{{ demande.salle_attribuee.capacite }} places · {{ demande.salle_attribuee.code }}</div>
             </div>
           </div>
         </div>
@@ -150,7 +150,7 @@
       <div class="nx-card" style="border-radius:14px;">
         <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
           <div style="width:32px;height:32px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-check-double" style="color:#2563eb;font-size:14px;"></i></div>
-          <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Validation</h3>
+          <h3 style="margin:0;font-size:15px;font-weight:700;color: var(--text-dark);">Validation</h3>
         </div>
         <div style="padding:20px 22px;">
           <div class="detail-row">
@@ -185,12 +185,12 @@
           </a>
           {% endif %}
 
-          <button onclick="window.print()" class="nx-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;cursor:pointer;width:100%;">
+          <button onclick="window.print()" class="nx-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;background: var(--bg-hover);color: var(--text-medium);border: 1px solid var(--border-light);cursor:pointer;width:100%;">
             <i class="fas fa-print"></i> Imprimer / PDF
           </button>
 
           {% if demande.statut == 'VALIDEE' and demande.salle_attribuee %}
-          <a href="{% url 'patrimoine_salle_detail' demande.salle_attribuee.pk %}" class="nx-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;background:#f1f5f9;color:#475569;">
+          <a href="{% url 'patrimoine_salle_detail' demande.salle_attribuee.pk %}" class="nx-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;background: var(--bg-hover);color: var(--text-medium);">
             <i class="fas fa-door-open"></i> Voir la salle
           </a>
           {% endif %}
@@ -200,7 +200,7 @@
       <!-- Timeline -->
       <div class="nx-card" style="border-radius:14px;">
         <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;">
-          <h4 style="margin:0;font-size:14px;font-weight:700;color:#475569;"><i class="fas fa-history me-1"></i> Chronologie</h4>
+          <h4 style="margin:0;font-size:14px;font-weight:700;color: var(--text-medium);"><i class="fas fa-history me-1"></i> Chronologie</h4>
         </div>
         <div style="padding:16px 20px;">
           <div style="position:relative;padding-left:24px;">
@@ -208,14 +208,14 @@
 
             <div style="position:relative;margin-bottom:16px;">
               <div style="position:absolute;left:-20px;top:2px;width:12px;height:12px;border-radius:50%;background:#0891b2;border:2px solid #fff;box-shadow:0 0 0 2px #0891b2;"></div>
-              <div style="font-size:12px;font-weight:700;color:#1e293b;">Demande créée</div>
+              <div style="font-size:12px;font-weight:700;color: var(--text-dark);">Demande créée</div>
               <div style="font-size:11px;color:#94a3b8;">{{ demande.date_demande|date:"d/m/Y H:i" }}</div>
             </div>
 
             {% if demande.valide_par %}
             <div style="position:relative;">
               <div style="position:absolute;left:-20px;top:2px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid #fff;box-shadow:0 0 0 2px #22c55e;"></div>
-              <div style="font-size:12px;font-weight:700;color:#1e293b;">Validée par {{ demande.valide_par.get_full_name }}</div>
+              <div style="font-size:12px;font-weight:700;color: var(--text-dark);">Validée par {{ demande.valide_par.get_full_name }}</div>
               <div style="font-size:11px;color:#94a3b8;">{{ demande.date_validation|date:"d/m/Y H:i" }}</div>
             </div>
             {% endif %}
@@ -230,7 +230,7 @@
   .detail-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f8fafc; }
   .detail-row:last-child { border-bottom:none; }
   .detail-label { font-size:12px; color:#94a3b8; font-weight:600; }
-  .detail-value { font-size:13px; color:#1e293b; }
+  .detail-value { font-size:13px; color: var(--text-dark); }
   .nx-btn { display:inline-flex; align-items:center; justify-content:center; padding:10px 16px; border-radius:8px; font-weight:600; font-size:13px; text-decoration:none; transition:all 0.2s; }
   .nx-btn-danger { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
   .nx-btn-danger:hover { background:#fee2e2; }

@@ -8,27 +8,27 @@
   .res-ph-icon { background: rgba(255,255,255,0.15); width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
   .res-ph h4 { margin: 0; font-size: 22px; font-weight: 800; color: white; }
   .res-ph small { opacity: 0.85; font-size: 13px; color: white; }
-  .res-card { background: white; border-radius: var(--rad); box-shadow: 0 2px 12px rgba(0,0,0,0.06); border: 1px solid #e2e8f0; overflow: hidden; }
+  .res-card { background: var(--bg-card); border-radius: var(--rad); box-shadow: 0 2px 12px var(--shadow); border: 1px solid var(--border-light); overflow: hidden; }
   .res-card-head { padding: 16px 22px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
   .res-card-head-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
-  .res-card-head h5 { margin: 0; font-size: 15px; font-weight: 700; color: #1e293b; }
+  .res-card-head h5 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text-dark); }
   .res-card-body { padding: 22px; }
-  .res-label { font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 0.3px; }
-  .res-input { width: 100%; padding: 11px 14px; border: 1.5px solid #e2e8f0; border-radius: var(--rad-sm); font-size: 14px; background: #f8fafc; transition: 0.2s; }
-  .res-input:focus { outline: none; border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.1); background: white; }
+  .res-label { font-size: 12px; font-weight: 700; color: var(--text-medium); text-transform: uppercase; margin-bottom: 6px; display: block; letter-spacing: 0.3px; }
+  .res-input { width: 100%; padding: 11px 14px; border: 1.5px solid var(--border-light); border-radius: var(--rad-sm); font-size: 14px; background: var(--bg-hover); transition: 0.2s; }
+  .res-input:focus { outline: none; border-color: #06b6d4; box-shadow: 0 0 0 3px rgba(6,182,212,0.1); background: var(--bg-card); }
   .res-input::placeholder { color: #94a3b8; }
-  .res-check { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: var(--rad-sm); cursor: pointer; transition: 0.2s; }
+  .res-check { display: flex; align-items: center; gap: 10px; padding: 12px 16px; background: var(--bg-hover); border: 1.5px solid var(--border-light); border-radius: var(--rad-sm); cursor: pointer; transition: 0.2s; }
   .res-check:hover { border-color: #06b6d4; background: #ecfeff; }
   .res-check input:checked + span { color: #0e7490; font-weight: 700; }
   .btn-submit { background: linear-gradient(135deg, #0891b2, #06b6d4); color: white; border: none; padding: 14px 24px; border-radius: var(--rad-sm); font-weight: 800; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: 0.2s; box-shadow: 0 4px 12px rgba(6,182,212,0.3); }
   .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 16px rgba(6,182,212,0.4); }
-  .btn-cancel { background: white; color: #475569; border: 1.5px solid #e2e8f0; padding: 14px 24px; border-radius: var(--rad-sm); font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: 0.2s; text-decoration: none; }
-  .btn-cancel:hover { background: #f1f5f9; border-color: #cbd5e1; }
+  .btn-cancel { background: var(--bg-card); color: var(--text-medium); border: 1.5px solid var(--border-light); padding: 14px 24px; border-radius: var(--rad-sm); font-weight: 700; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: 0.2s; text-decoration: none; }
+  .btn-cancel:hover { background: var(--bg-hover); border-color: var(--border-color); }
   .btn-back { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; }
   .btn-back:hover { color: white; }
   .dispo-ok { background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: var(--rad-sm); padding: 20px; text-align: center; color: #166534; }
   .dispo-ko { background: #fef2f2; border: 1.5px solid #fecaca; border-radius: var(--rad-sm); padding: 20px; text-align: center; color: #991b1b; }
-  .dispo-wait { background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: var(--rad-sm); padding: 20px; text-align: center; color: #64748b; }
+  .dispo-wait { background: var(--bg-hover); border: 1.5px solid var(--border-light); border-radius: var(--rad-sm); padding: 20px; text-align: center; color: var(--text-medium); }
 </style>
 
 <div style="display:grid;grid-template-columns:1fr 340px;gap:24px;align-items:start;">
@@ -162,7 +162,7 @@
     <!-- Vérification disponibilité -->
     <div class="res-card" id="dispo_card" style="display:none;">
       <div class="res-card-head" style="background:linear-gradient(135deg,#ecfeff,#cffafe);">
-        <div class="res-card-head-icon" style="background:white;"><i class="fas fa-check-circle" style="color:#06b6d4;font-size:14px;"></i></div>
+        <div class="res-card-head-icon" style="background: var(--bg-card);"><i class="fas fa-check-circle" style="color:#06b6d4;font-size:14px;"></i></div>
         <h5>Disponibilité</h5>
       </div>
       <div class="res-card-body" id="dispo_body">
@@ -176,7 +176,7 @@
     <!-- Actions -->
     <div class="res-card">
       <div class="res-card-head" style="background:linear-gradient(135deg,#ecfeff,#cffafe);">
-        <div class="res-card-head-icon" style="background:white;"><i class="fas fa-bolt" style="color:#0e7490;font-size:14px;"></i></div>
+        <div class="res-card-head-icon" style="background: var(--bg-card);"><i class="fas fa-bolt" style="color:#0e7490;font-size:14px;"></i></div>
         <h5>Actions</h5>
       </div>
       <div class="res-card-body" style="display:flex;flex-direction:column;gap:10px;">

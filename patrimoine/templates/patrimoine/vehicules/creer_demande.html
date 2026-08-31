@@ -8,15 +8,15 @@
   .ph-left-icon { background: rgba(255,255,255,0.15); width: 56px; height: 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; color: white; }
   .ph h4 { margin: 0; font-size: 22px; font-weight: 800; color: white; }
   .ph small { opacity: 0.85; font-size: 13px; color: white; display: block; margin-top: 2px; }
-  .btn-h { background: white; color: var(--pb); border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; text-decoration: none; }
+  .btn-h { background: var(--bg-card); color: var(--pb); border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; text-decoration: none; }
   .btn-h:hover { background: #faf5ff; transform: translateY(-2px); }
-  .form-card { background: white; border-radius: var(--rad); box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eef0f3; }
-  .form-card .card-head { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 14px; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+  .form-card { background: var(--bg-card); border-radius: var(--rad); box-shadow: 0 2px 10px var(--shadow); border: 1px solid var(--border-light); }
+  .form-card .card-head { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 800; font-size: 14px; color: var(--text-dark); display: flex; align-items: center; gap: 8px; }
   .form-card .card-body { padding: 24px; }
   .form-group { margin-bottom: 18px; }
-  .form-group label { display: block; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 6px; }
-  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 11px 14px; border: 1px solid #cbd5e0; border-radius: var(--rad-sm); font-size: 14px; color: #1e293b; outline: none; transition: 0.2s; background: #f8fafc; }
-  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--pb2); background: white; box-shadow: 0 0 0 3px rgba(147,51,234,0.12); }
+  .form-group label { display: block; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-medium); margin-bottom: 6px; }
+  .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 11px 14px; border: 1px solid var(--border-color); border-radius: var(--rad-sm); font-size: 14px; color: var(--text-dark); outline: none; transition: 0.2s; background: var(--bg-hover); }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--pb2); background: var(--bg-card); box-shadow: 0 0 0 3px rgba(147,51,234,0.12); }
   .help-card { background: linear-gradient(135deg, #faf5ff, #f3e8ff); border-radius: var(--rad); border: 1px solid #e9d5ff; padding: 20px; }
   .help-card h6 { color: var(--pb); font-weight: 800; margin-bottom: 10px; }
   .help-card ol { font-size: 13px; color: #6b21a8; margin: 0; padding-left: 18px; }
@@ -54,7 +54,7 @@
           </div>
           <div class="form-group"><label>Motif détaillé</label><textarea name="motif" rows="3" placeholder="Décrivez le besoin..."></textarea></div>
           <div style="display:flex;justify-content:flex-end;gap:10px;">
-            <a href="{% url 'patrimoine_mes_demandes_vehicule' %}" class="btn-h" style="background:#f1f5f9;color:#475569;">Annuler</a>
+            <a href="{% url 'patrimoine_mes_demandes_vehicule' %}" class="btn-h" style="background: var(--bg-hover);color: var(--text-medium);">Annuler</a>
             <button type="submit" class="btn-h" style="background:var(--pb);color:white;box-shadow:0 4px 12px rgba(147,51,234,0.3);"><i class="fas fa-paper-plane"></i> Envoyer la demande</button>
           </div>
         </form>

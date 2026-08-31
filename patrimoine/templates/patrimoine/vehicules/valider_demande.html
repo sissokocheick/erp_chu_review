@@ -24,7 +24,7 @@
     <div class="nx-card" style="border-radius:14px;">
       <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
         <div style="width:32px;height:32px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-clipboard-list" style="color:#7c3aed;font-size:14px;"></i></div>
-        <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Résumé de la demande</h3>
+        <h3 style="margin:0;font-size:15px;font-weight:700;color: var(--text-dark);">Résumé de la demande</h3>
       </div>
       <div style="padding:20px 22px;">
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -42,8 +42,8 @@
           </div>
         </div>
         {% if demande.motif %}
-        <div style="margin-top:14px;padding:12px;background:#f8fafc;border-radius:8px;border-left:3px solid #7c3aed;">
-          <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Motif</div>
+        <div style="margin-top:14px;padding:12px;background: var(--bg-hover);border-radius:8px;border-left:3px solid #7c3aed;">
+          <div style="font-size:11px;color: var(--text-medium);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Motif</div>
           <div style="font-size:13px;color:#334155;">{{ demande.motif }}</div>
         </div>
         {% endif %}
@@ -62,8 +62,8 @@
 
           <!-- Sélection véhicule -->
           <div style="margin-bottom:16px;">
-            <label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-car me-1"></i> Véhicule à affecter</label>
-            <select name="vehicule" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;background:#fff;" required>
+            <label style="display:block;font-size:11px;font-weight:700;color: var(--text-medium);text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-car me-1"></i> Véhicule à affecter</label>
+            <select name="vehicule" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border: 1px solid var(--border-light);font-size:13px;background: var(--bg-card);" required>
               <option value="">-- Sélectionner un véhicule disponible --</option>
               {% for v in vehicules_dispo %}
               <option value="{{ v.pk }}">{{ v.immatriculation }} — {{ v.marque|default:v.type_vehicule }} ({{ v.kilometrage|default:0 }} km)</option>
@@ -73,14 +73,14 @@
 
           <!-- KM départ -->
           <div style="margin-bottom:16px;">
-            <label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-tachometer-alt me-1"></i> KM au départ</label>
-            <input type="number" name="km_depart" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;" placeholder="Kilométrage actuel" required>
+            <label style="display:block;font-size:11px;font-weight:700;color: var(--text-medium);text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-tachometer-alt me-1"></i> KM au départ</label>
+            <input type="number" name="km_depart" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border: 1px solid var(--border-light);font-size:13px;" placeholder="Kilométrage actuel" required>
           </div>
 
           <!-- Commentaire -->
           <div style="margin-bottom:20px;">
-            <label style="display:block;font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-comment me-1"></i> Commentaire</label>
-            <textarea name="commentaire_valider" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid #e2e8f0;font-size:13px;resize:vertical;" rows="2" placeholder="Instructions au chauffeur..."></textarea>
+            <label style="display:block;font-size:11px;font-weight:700;color: var(--text-medium);text-transform:uppercase;margin-bottom:6px;"><i class="fas fa-comment me-1"></i> Commentaire</label>
+            <textarea name="commentaire_valider" class="nx-input" style="width:100%;padding:12px 14px;border-radius:10px;border: 1px solid var(--border-light);font-size:13px;resize:vertical;" rows="2" placeholder="Instructions au chauffeur..."></textarea>
           </div>
 
           <!-- Boutons -->
@@ -105,6 +105,6 @@
   .vr { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f8fafc; }
   .vr:last-child { border-bottom:none; }
   .vl { font-size:12px; color:#94a3b8; font-weight:600; }
-  .vv { font-size:13px; color:#1e293b; }
+  .vv { font-size:13px; color: var(--text-dark); }
 </style>
 {% endblock %}

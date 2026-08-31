@@ -42,15 +42,15 @@
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;">
         <div class="nx-card" style="text-align:center;padding:16px;border-radius:12px;">
           <div style="font-size:22px;font-weight:800;color:#7c3aed;">{{ demande.nb_passagers }}</div>
-          <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Passagers</div>
+          <div style="font-size:11px;color: var(--text-medium);margin-top:4px;text-transform:uppercase;font-weight:700;">Passagers</div>
         </div>
         <div class="nx-card" style="text-align:center;padding:16px;border-radius:12px;">
           <div style="font-size:22px;font-weight:800;color:#2563eb;">{{ demande.duree_heures }}h</div>
-          <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Durée</div>
+          <div style="font-size:11px;color: var(--text-medium);margin-top:4px;text-transform:uppercase;font-weight:700;">Durée</div>
         </div>
         <div class="nx-card" style="text-align:center;padding:16px;border-radius:12px;">
           <div style="font-size:22px;font-weight:800;color:#0891b2;">{{ demande.destination }}</div>
-          <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">Destination</div>
+          <div style="font-size:11px;color: var(--text-medium);margin-top:4px;text-transform:uppercase;font-weight:700;">Destination</div>
         </div>
         <div class="nx-card" style="text-align:center;padding:16px;border-radius:12px;">
           {% if demande.urgence == 'CRITIQUE' %}
@@ -60,7 +60,7 @@
           {% else %}
             <div style="font-size:22px;font-weight:800;color:#22c55e;">🟢</div>
           {% endif %}
-          <div style="font-size:11px;color:#64748b;margin-top:4px;text-transform:uppercase;font-weight:700;">{{ demande.urgence }}</div>
+          <div style="font-size:11px;color: var(--text-medium);margin-top:4px;text-transform:uppercase;font-weight:700;">{{ demande.urgence }}</div>
         </div>
       </div>
 
@@ -68,7 +68,7 @@
       <div class="nx-card" style="border-radius:14px;">
         <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
           <div style="width:32px;height:32px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-clipboard-list" style="color:#7c3aed;font-size:14px;"></i></div>
-          <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Détails de la demande</h3>
+          <h3 style="margin:0;font-size:15px;font-weight:700;color: var(--text-dark);">Détails de la demande</h3>
         </div>
         <div style="padding:20px 22px;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -118,8 +118,8 @@
             </div>
           </div>
           {% if demande.motif %}
-          <div style="margin-top:16px;padding:14px;background:#f8fafc;border-radius:10px;border-left:3px solid #7c3aed;">
-            <div style="font-size:11px;color:#64748b;text-transform:uppercase;font-weight:700;margin-bottom:4px;">Motif</div>
+          <div style="margin-top:16px;padding:14px;background: var(--bg-hover);border-radius:10px;border-left:3px solid #7c3aed;">
+            <div style="font-size:11px;color: var(--text-medium);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Motif</div>
             <div style="font-size:13px;color:#334155;">{{ demande.motif }}</div>
           </div>
           {% endif %}
@@ -131,7 +131,7 @@
       <div class="nx-card" style="border-radius:14px;border:2px solid #bbf7d0;">
         <div style="padding:18px 22px;border-bottom:1px solid #f0fdf4;display:flex;align-items:center;gap:10px;">
           <div style="width:32px;height:32px;background:linear-gradient(135deg,#dcfce7,#bbf7d0);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-car" style="color:#16a34a;font-size:14px;"></i></div>
-          <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Véhicule affecté</h3>
+          <h3 style="margin:0;font-size:15px;font-weight:700;color: var(--text-dark);">Véhicule affecté</h3>
         </div>
         <div style="padding:20px 22px;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -175,7 +175,7 @@
       <div class="nx-card" style="border-radius:14px;">
         <div style="padding:18px 22px;border-bottom:1px solid #f1f5f9;display:flex;align-items:center;gap:10px;">
           <div style="width:32px;height:32px;background:linear-gradient(135deg,#dbeafe,#bfdbfe);border-radius:8px;display:flex;align-items:center;justify-content:center;"><i class="fas fa-check-double" style="color:#2563eb;font-size:14px;"></i></div>
-          <h3 style="margin:0;font-size:15px;font-weight:700;color:#1e293b;">Validation</h3>
+          <h3 style="margin:0;font-size:15px;font-weight:700;color: var(--text-dark);">Validation</h3>
         </div>
         <div style="padding:20px 22px;">
           <div class="detail-row">
@@ -220,12 +220,12 @@
             {% csrf_token %}
             <input type="hidden" name="action" value="retour">
             <div style="margin-bottom:10px;">
-              <label style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;display:block;">KM au retour</label>
-              <input type="number" name="km_retour" class="nx-input" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;" value="{{ demande.vehicule.kilometrage|default:'' }}">
+              <label style="font-size:11px;font-weight:700;color: var(--text-medium);text-transform:uppercase;margin-bottom:4px;display:block;">KM au retour</label>
+              <input type="number" name="km_retour" class="nx-input" style="width:100%;padding:10px 14px;border-radius:8px;border: 1px solid var(--border-light);font-size:13px;" value="{{ demande.vehicule.kilometrage|default:'' }}">
             </div>
             <div style="margin-bottom:12px;">
-              <label style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;margin-bottom:4px;display:block;">Observation</label>
-              <textarea name="observation_retour" class="nx-input" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid #e2e8f0;font-size:13px;resize:vertical;" rows="2" placeholder="État du véhicule..."></textarea>
+              <label style="font-size:11px;font-weight:700;color: var(--text-medium);text-transform:uppercase;margin-bottom:4px;display:block;">Observation</label>
+              <textarea name="observation_retour" class="nx-input" style="width:100%;padding:10px 14px;border-radius:8px;border: 1px solid var(--border-light);font-size:13px;resize:vertical;" rows="2" placeholder="État du véhicule..."></textarea>
             </div>
             <button type="submit" class="nx-btn nx-btn-info" style="width:100%;padding:12px;border-radius:10px;font-weight:700;font-size:13px;border:none;cursor:pointer;">
               <i class="fas fa-undo me-1"></i> Rendre le véhicule
@@ -233,12 +233,12 @@
           </form>
           {% endif %}
 
-          <button onclick="window.print()" class="nx-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;cursor:pointer;width:100%;">
+          <button onclick="window.print()" class="nx-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;background: var(--bg-hover);color: var(--text-medium);border: 1px solid var(--border-light);cursor:pointer;width:100%;">
             <i class="fas fa-print"></i> Imprimer / PDF
           </button>
 
           {% if demande.statut == 'VALIDEE' and demande.vehicule %}
-          <a href="{% url 'patrimoine_vehicule_detail' demande.vehicule.pk %}" class="nx-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;background:#f1f5f9;color:#475569;">
+          <a href="{% url 'patrimoine_vehicule_detail' demande.vehicule.pk %}" class="nx-btn" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px;border-radius:10px;text-decoration:none;font-weight:700;font-size:13px;background: var(--bg-hover);color: var(--text-medium);">
             <i class="fas fa-car"></i> Voir le véhicule
           </a>
           {% endif %}
@@ -255,7 +255,7 @@
       <!-- Timeline -->
       <div class="nx-card" style="border-radius:14px;">
         <div style="padding:16px 20px;border-bottom:1px solid #f1f5f9;">
-          <h4 style="margin:0;font-size:14px;font-weight:700;color:#475569;"><i class="fas fa-history me-1"></i> Chronologie</h4>
+          <h4 style="margin:0;font-size:14px;font-weight:700;color: var(--text-medium);"><i class="fas fa-history me-1"></i> Chronologie</h4>
         </div>
         <div style="padding:16px 20px;">
           <div style="position:relative;padding-left:24px;">
@@ -265,14 +265,14 @@
             <!-- Créée -->
             <div style="position:relative;margin-bottom:16px;">
               <div style="position:absolute;left:-20px;top:2px;width:12px;height:12px;border-radius:50%;background:#7c3aed;border:2px solid #fff;box-shadow:0 0 0 2px #7c3aed;"></div>
-              <div style="font-size:12px;font-weight:700;color:#1e293b;">Demande créée</div>
+              <div style="font-size:12px;font-weight:700;color: var(--text-dark);">Demande créée</div>
               <div style="font-size:11px;color:#94a3b8;">{{ demande.date_demande|date:"d/m/Y H:i" }}</div>
             </div>
 
             {% if demande.valide_par %}
             <div style="position:relative;margin-bottom:16px;">
               <div style="position:absolute;left:-20px;top:2px;width:12px;height:12px;border-radius:50%;background:#22c55e;border:2px solid #fff;box-shadow:0 0 0 2px #22c55e;"></div>
-              <div style="font-size:12px;font-weight:700;color:#1e293b;">Validée par {{ demande.valide_par.get_full_name }}</div>
+              <div style="font-size:12px;font-weight:700;color: var(--text-dark);">Validée par {{ demande.valide_par.get_full_name }}</div>
               <div style="font-size:11px;color:#94a3b8;">{{ demande.date_validation|date:"d/m/Y H:i" }}</div>
             </div>
             {% endif %}
@@ -280,7 +280,7 @@
             {% if demande.km_retour %}
             <div style="position:relative;">
               <div style="position:absolute;left:-20px;top:2px;width:12px;height:12px;border-radius:50%;background:#0ea5e9;border:2px solid #fff;box-shadow:0 0 0 2px #0ea5e9;"></div>
-              <div style="font-size:12px;font-weight:700;color:#1e293b;">Véhicule rendu</div>
+              <div style="font-size:12px;font-weight:700;color: var(--text-dark);">Véhicule rendu</div>
               <div style="font-size:11px;color:#94a3b8;">{{ demande.km_parcourus }} km parcourus</div>
             </div>
             {% endif %}
@@ -295,7 +295,7 @@
   .detail-row { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f8fafc; }
   .detail-row:last-child { border-bottom:none; }
   .detail-label { font-size:12px; color:#94a3b8; font-weight:600; }
-  .detail-value { font-size:13px; color:#1e293b; }
+  .detail-value { font-size:13px; color: var(--text-dark); }
   .nx-btn { display:inline-flex; align-items:center; justify-content:center; padding:10px 16px; border-radius:8px; font-weight:600; font-size:13px; text-decoration:none; transition:all 0.2s; }
   .nx-btn-danger { background:#fef2f2; color:#dc2626; border:1px solid #fecaca; }
   .nx-btn-danger:hover { background:#fee2e2; }
