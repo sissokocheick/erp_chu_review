@@ -6,10 +6,10 @@
   .imp-header { background:linear-gradient(135deg,#1c5b96,#0d47a1); color:white; border-radius:10px; padding:20px 26px; margin-bottom:20px; display:flex; align-items:center; justify-content:space-between; box-shadow:0 4px 18px rgba(28,91,150,.3); flex-wrap:wrap; gap:14px; }
   .imp-header h4 { margin:0; font-size:20px; font-weight:700; }
   .imp-header small { opacity:.85; font-size:12px; }
-  .card { background:white; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); padding:24px; margin-bottom:20px; }
-  .card h5 { margin:0 0 18px; font-size:15px; font-weight:700; color:#333; border-bottom:2px solid #f0f3f7; padding-bottom:10px; }
+  .card { background: var(--bg-card); border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,.07); padding:24px; margin-bottom:20px; }
+  .card h5 { margin:0 0 18px; font-size:15px; font-weight:700; color: var(--text-dark); border-bottom:2px solid #f0f3f7; padding-bottom:10px; }
   .fg { margin-bottom:16px; }
-  .fg label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:#495057; margin-bottom:5px; }
+  .fg label { display:block; font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; color:var(--text-medium); margin-bottom:5px; }
   .fg select, .fg input { width:100%; padding:10px 12px; border:1px solid #dde3ea; border-radius:7px; font-size:13px; outline:none; box-sizing:border-box; }
   .fg select:focus, .fg input:focus { border-color:#1c5b96; box-shadow:0 0 0 3px rgba(28,91,150,.1); }
   .types-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:12px; margin-bottom:20px; }
@@ -17,12 +17,12 @@
   .type-card:hover { border-color:#1c5b96; background:#f0f6ff; }
   .type-card.selected { border-color:#1c5b96; background:#e8f0fe; }
   .type-icon { width:36px; height:36px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; background:#e8f0fe; flex-shrink:0; }
-  .type-nom { font-weight:700; font-size:13px; color:#333; }
+  .type-nom { font-weight:700; font-size:13px; color: var(--text-dark); }
   .type-cat { font-size:11px; color:#888; }
   .drop-zone { border:2px dashed #dde3ea; border-radius:10px; padding:40px; text-align:center; cursor:pointer; transition:.2s; }
   .drop-zone:hover, .drop-zone.dragover { border-color:#1c5b96; background:#f0f6ff; }
-  .drop-zone i { font-size:40px; color:#adb5bd; display:block; margin-bottom:12px; }
-  .btn-dl { background:#f0f3f7; color:#495057; border:1px solid #dde3ea; padding:9px 16px; border-radius:7px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; text-decoration:none; transition:.2s; }
+  .drop-zone i { font-size:40px; color: var(--text-medium); display:block; margin-bottom:12px; }
+  .btn-dl { background:#f0f3f7; color:var(--text-medium); border:1px solid #dde3ea; padding:9px 16px; border-radius:7px; font-size:13px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px; text-decoration:none; transition:.2s; }
   .btn-dl:hover { background:#e2e6ea; }
   .btn-submit { background:#1c5b96; color:white; border:none; padding:12px 28px; border-radius:7px; font-size:14px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:7px; transition:.2s; }
   .btn-submit:hover { background:#0d47a1; }

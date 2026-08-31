@@ -3,24 +3,24 @@
 
 {% block contenu %}
 <style>
-    .progress-container { background: #e2e8f0; border-radius: 20px; height: 12px; width: 100%; overflow: hidden; margin: 10px 0; }
+    .progress-container { background: var(--bg-hover); border-radius: 20px; height: 12px; width: 100%; overflow: hidden; margin: 10px 0; }
     .progress-bar { background: linear-gradient(90deg, #0f766e, #2dd4bf); height: 100%; transition: width 0.5s ease; }
-    .stat-card { background: white; padding: 15px 20px; border-radius: 12px; border: 1px solid #eef0f3; flex: 1; min-width: 150px; }
-    .stat-val { font-size: 20px; font-weight: 800; color: #1e293b; display: block; }
-    .stat-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+    .stat-card { background: var(--bg-card); padding: 15px 20px; border-radius: 12px; border: 1px solid var(--border-light); flex: 1; min-width: 150px; }
+    .stat-val { font-size: 20px; font-weight: 800; color: var(--text-dark); display: block; }
+    .stat-label { font-size: 11px; font-weight: 700; color: var(--text-medium); text-transform: uppercase; }
     .badge-etat { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
     .badge-present { background: #d1fae5; color: #065f46; }
     .badge-deplace { background: #fef3c7; color: #92400e; }
     .badge-manquant { background: #fee2e2; color: #991b1b; }
-    .badge-attente { background: #f1f5f9; color: #64748b; }
+    .badge-attente { background: var(--bg-hover); color: var(--text-medium); }
     .search-magic { position: relative; width: 300px; }
-    .search-magic i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #adb5bd; }
+    .search-magic i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-medium); }
     .search-magic input { width: 100%; padding: 8px 12px 8px 35px; border: 1px solid #dde3ea; border-radius: 20px; font-size: 13px; outline: none; }
 </style>
 
 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px;">
     <div>
-        <a href="{% url 'patrimoine_campagnes_inventaire' %}" style="text-decoration: none; color: #64748b; font-size: 13px; font-weight: 600;">
+        <a href="{% url 'patrimoine_campagnes_inventaire' %}" style="text-decoration: none; color: var(--text-medium); font-size: 13px; font-weight: 600;">
             <i class="fas fa-arrow-left"></i> Retour aux campagnes
         </a>
         <h4 style="margin: 5px 0 0; font-weight: 800; color: #0f766e; font-size: 22px;">{{ campagne.titre }}</h4>
@@ -41,7 +41,7 @@
     <div style="display: flex; gap: 10px;">
         {% if campagne.statut == 'BROUILLON' %}
             <form method="POST"> {% csrf_token %}
-                <button type="submit" name="action" value="generer_lignes" class="btn-edit" style="background: #f1f5f9; color: #1e293b; padding: 10px 18px;">
+                <button type="submit" name="action" value="generer_lignes" class="btn-edit" style="background: var(--bg-hover); color: var(--text-dark); padding: 10px 18px;">
                     <i class="fas fa-sync-alt"></i> Actualiser Snapshot
                 </button>
             </form>
@@ -62,7 +62,7 @@
                     {% endif %}
                 </button>
             </form>
-            <button type="button" onclick="document.getElementById('mo-pdf').style.display='flex'" style="background: white; color: #1e293b; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">
+            <button type="button" onclick="document.getElementById('mo-pdf').style.display='flex'" style="background: var(--bg-card); color: var(--text-dark); border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;">
                 <i class="fas fa-file-pdf"></i> Fiche PDF
             </button>
             <a href="{% url 'patrimoine_audit_scan' campagne.id %}" style="background: #f59e0b; color: white; padding: 10px 20px; border-radius: 8px; font-weight: bold; text-decoration: none;">
@@ -81,9 +81,9 @@
     </div>
 </div>
 
-<div style="background: white; padding: 25px; border-radius: 12px; border: 1px solid #eef0f3; margin-bottom: 25px;">
+<div style="background: var(--bg-card); padding: 25px; border-radius: 12px; border: 1px solid var(--border-light); margin-bottom: 25px;">
     <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-        <span style="font-weight: 800; font-size: 14px; color: #475569;">Progression de l'audit</span>
+        <span style="font-weight: 800; font-size: 14px; color: var(--text-medium);">Progression de l'audit</span>
         <span style="font-weight: 800; color: #0f766e;">{{ stats.progression }}%</span>
     </div>
     <div class="progress-container"><div class="progress-bar" style="width: {{ stats.progression }}%;"></div></div>
@@ -108,23 +108,23 @@
             {% for l in lignes %}{% if l.etat_constate == 'DEPLACE' %}<li>{{ l.immobilisation.code_patrimoine }} -> {{ l.bureau_constate.nom }}</li>{% endif %}{% endfor %}
         </ul>
     </div>
-    <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 15px; border-radius: 10px;">
-        <h6 style="color: #475569; margin: 0 0 10px; font-weight: 800;"><i class="fas fa-trash-alt"></i> Rebuts ({{ stats.rebuts }})</h6>
-        <ul style="font-size: 11px; color: #64748b; padding-left: 15px; margin: 0;">
+    <div style="background: var(--bg-hover); border: 1px solid #cbd5e1; padding: 15px; border-radius: 10px;">
+        <h6 style="color: var(--text-medium); margin: 0 0 10px; font-weight: 800;"><i class="fas fa-trash-alt"></i> Rebuts ({{ stats.rebuts }})</h6>
+        <ul style="font-size: 11px; color: var(--text-medium); padding-left: 15px; margin: 0;">
             {% for l in lignes %}{% if l.etat_constate == 'A_REFORMER' %}<li>{{ l.immobilisation.code_patrimoine }}</li>{% endif %}{% endfor %}
         </ul>
     </div>
 </div>
 {% endif %}
 
-<div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid #eef0f3; overflow: hidden;">
-    <div style="padding: 15px 20px; border-bottom: 1px solid #eef0f3; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
+<div style="background: var(--bg-card); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); border: 1px solid var(--border-light); overflow: hidden;">
+    <div style="padding: 15px 20px; border-bottom: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; background: var(--bg-hover);">
         <strong style="font-size: 14px;">Lignes d'inventaire</strong>
         <div class="search-magic"><i class="fas fa-search"></i><input type="text" class="live-search" data-target="tbody-lignes" placeholder="Chercher un équipement..."></div>
     </div>
     <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 12px;">
         <thead>
-            <tr style="background: #f8fafc; border-bottom: 2px solid #eef0f3;">
+            <tr style="background: var(--bg-hover); border-bottom: 2px solid var(--border-light);">
                 <th style="padding: 12px 20px;">ÉQUIPEMENT</th>
                 <th style="padding: 12px 20px;">BUREAU THÉORIQUE</th>
                 <th style="padding: 12px 20px;">ÉTAT CONSTATÉ</th>
@@ -133,7 +133,7 @@
         </thead>
         <tbody id="tbody-lignes">
             {% for ligne in lignes %}
-            <tr style="border-bottom: 1px solid #f1f5f9;">
+            <tr style="border-bottom: 1px solid var(--border-light);">
                 <td style="padding: 12px 20px;">
                     <div style="font-weight: 700;">{{ ligne.immobilisation.nom_affichage }}</div>
                     <code style="color:#0f766e;">{{ ligne.immobilisation.code_patrimoine }}</code>
@@ -144,7 +144,7 @@
                     {% elif ligne.etat_constate == 'PRESENT' %}<span class="badge-etat badge-present">Présent</span>
                     {% elif ligne.etat_constate == 'DEPLACE' %}<span class="badge-etat badge-deplace">Déplacé ({{ ligne.bureau_constate.nom }})</span>
                     {% elif ligne.etat_constate == 'MANQUANT' %}<span class="badge-etat badge-manquant">Manquant</span>
-                    {% elif ligne.etat_constate == 'A_REFORMER' %}<span class="badge-etat" style="background:#e2e8f0; color:#475569;">À Réformer</span>
+                    {% elif ligne.etat_constate == 'A_REFORMER' %}<span class="badge-etat" style="background:var(--bg-hover); color: var(--text-medium);">À Réformer</span>
                     {% endif %}
                 </td>
                 <td style="padding: 12px 20px; color: #94a3b8; font-size: 11px;">
@@ -157,16 +157,16 @@
 </div>
 
 <div id="mo-pdf" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(4px);" onclick="if(event.target===this)this.style.display='none'">
-    <div style="background: #fff; width: 95%; max-width: 1000px; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;" onclick="event.stopPropagation()">
+    <div style="background: var(--bg-card); width: 95%; max-width: 1000px; height: 90vh; border-radius: 12px; display: flex; flex-direction: column; overflow: hidden;" onclick="event.stopPropagation()">
         <div style="padding: 15px 25px; background: #1e293b; color: #fff; display: flex; justify-content: space-between; align-items: center;">
             <h5 style="margin: 0;"><i class="fas fa-file-pdf"></i> Aperçu de la fiche</h5>
             <button onclick="document.getElementById('mo-pdf').style.display='none'" style="background: none; border: none; color: white; font-size: 20px; cursor: pointer;"><i class="fas fa-times"></i></button>
         </div>
         <div style="flex: 1; background: #525659; padding: 10px;">
-            <iframe id="pdf-frame" src="{% url 'imprimer_fiche_comptage' campagne.id %}" style="width: 100%; height: 100%; border: none; background: white;"></iframe>
+            <iframe id="pdf-frame" src="{% url 'imprimer_fiche_comptage' campagne.id %}" style="width: 100%; height: 100%; border: none; background: var(--bg-card);"></iframe>
         </div>
-        <div style="padding: 15px 25px; background: #f8fafc; display: flex; justify-content: flex-end;">
-            <button onclick="document.getElementById('mo-pdf').style.display='none'" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #cbd5e1; background: white; cursor: pointer; font-weight: bold;">Fermer</button>
+        <div style="padding: 15px 25px; background: var(--bg-hover); display: flex; justify-content: flex-end;">
+            <button onclick="document.getElementById('mo-pdf').style.display='none'" style="padding: 10px 20px; border-radius: 8px; border: 1px solid #cbd5e1; background: var(--bg-card); cursor: pointer; font-weight: bold;">Fermer</button>
         </div>
     </div>
 </div><script>

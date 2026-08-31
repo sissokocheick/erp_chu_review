@@ -131,7 +131,7 @@
   .pl-table tbody tr:hover { background: var(--bg-hover); }
   .pl-badge { display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
   .pl-badge-actif { background: rgba(40,167,69,.15); color: #155724; }
-  .pl-badge-pause { background: rgba(108,117,125,.15); color: #495057; }
+  .pl-badge-pause { background: rgba(108,117,125,.15); color: var(--text-medium); }
   .pl-badge-due { background: rgba(220,53,69,.15); color: #721c24; }
   .pl-badge-ok { background: rgba(23,162,184,.15); color: #0c5460; }
   .pl-btn-ghost {
@@ -924,7 +924,7 @@
           <label>Magasin *</label>
           {% if magasin_actif %}
 <input type="hidden" name="magasin_id" value="{{ magasin_actif.id }}">
-<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
+<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
 {% else %}
 <select name="magasin_id" required>
             {% for m in magasins %}

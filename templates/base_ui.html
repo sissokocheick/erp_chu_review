@@ -97,7 +97,7 @@
             --text-medium: #94a3b8;
             --text-light: #64748b;
             --text-white: #f1f5f9;
-            --border-color: #475569;
+            --border-color: var(--text-medium);
             --border-light: #334155;
             --shadow: rgba(0,0,0,0.3);
             --shadow-lg: rgba(0,0,0,0.5);
@@ -190,7 +190,7 @@
         .nx-btn-primary { background: var(--primary-blue); color: white; }
         .nx-btn-success { background: #28a745; color: white; }
         .nx-btn-danger  { background: #dc3545; color: white; }
-        .nx-btn-warning { background: #ffc107; color: #333; }
+        .nx-btn-warning { background: #ffc107; color: var(--text-dark); }
         .nx-btn-info    { background: #17a2b8; color: white; }
         .nx-btn-dark    { background: #343a40; color: white; }
         .nx-btn-light   { background: var(--bg-hover); color: var(--text-medium); border: 1px solid var(--border-color); }
@@ -354,7 +354,7 @@
         @media print {
             .no-print, .sidebar, .topbar, .nx-toolbar, .nx-pag { display: none !important; }
             .nx-card { box-shadow: none; border: 1px solid #ccc; }
-            body { background: white; }
+            body { background: var(--bg-card); }
         }
 
         /* â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -519,7 +519,7 @@
 
         
         .selector-magasin {
-            background: white !important;
+            background: var(--bg-card) !important;
             padding: 6px 16px !important;
             border-radius: 20px !important;
             border: 1.5px solid #1c5b96 !important;
@@ -848,8 +848,8 @@
             <a href="{% url 'patrimoine_demandes_salle_valider' %}" class="menu-item" data-title="Valider demandes salle"><i class="fas fa-clipboard-check nav-icon" style="color:#3498db;"></i><span class="nav-text">Valider salles</span></a>
             <div style="border-top:1px solid rgba(255,255,255,0.08);margin:4px 15px;"></div>
             <div style="padding:4px 14px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.35);font-weight:700;">Administration</div>
-            <a href="{% url 'patrimoine_vehicules' %}" class="menu-item" data-title="Parc vehicules"><i class="fas fa-cogs nav-icon" style="color:#64748b;"></i><span class="nav-text">Parc vehicules</span></a>
-            <a href="{% url 'patrimoine_salles' %}" class="menu-item" data-title="Salles conf."><i class="fas fa-building nav-icon" style="color:#64748b;"></i><span class="nav-text">Salles conf.</span></a>
+            <a href="{% url 'patrimoine_vehicules' %}" class="menu-item" data-title="Parc vehicules"><i class="fas fa-cogs nav-icon" style="color: var(--text-medium);"></i><span class="nav-text">Parc vehicules</span></a>
+            <a href="{% url 'patrimoine_salles' %}" class="menu-item" data-title="Salles conf."><i class="fas fa-building nav-icon" style="color: var(--text-medium);"></i><span class="nav-text">Salles conf.</span></a>
             <a href="{% url 'patrimoine_calendrier' %}" class="menu-item" data-title="Calendrier"><i class="fas fa-calendar-alt nav-icon" style="color:#9b59b6;"></i><span class="nav-text">Calendrier Resa</span></a>
         </div>
         {% endif %}

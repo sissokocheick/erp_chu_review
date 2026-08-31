@@ -6,7 +6,7 @@
   /* En-tête */
   .ih{background:linear-gradient(135deg,#6f42c1,#563d7c);color:white;border-radius:12px;padding:20px 26px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 18px rgba(111,66,193,.3);flex-wrap:wrap;gap:14px;}
   .ih h4{margin:0;font-size:22px;font-weight:800;}
-  .card-detail{background:white;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.04);padding:25px;margin-bottom:20px; border: 1px solid #eef0f3;}
+  .card-detail{background: var(--bg-card);border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.04);padding:25px;margin-bottom:20px; border: 1px solid var(--border-light);}
   
   /* Badges Statuts */
   .badge{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:800; text-transform:uppercase; letter-spacing: 0.5px;}
@@ -21,7 +21,7 @@
   /* Infos */
   .info-group{margin-bottom:15px;}
   .info-label{font-size:11px;color:#888;text-transform:uppercase;font-weight:800;letter-spacing:0.5px;margin-bottom:6px;display:block;}
-  .info-value{font-size:14px;color:#333;font-weight:600;}
+  .info-value{font-size:14px;color: var(--text-dark);font-weight:600;}
   
   /* Boutons */
   .btn-action{padding:12px 20px;border-radius:8px;font-weight:800;font-size:14px;border:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:0.2s;width:100%;justify-content:center;margin-bottom:12px;}
@@ -29,27 +29,27 @@
   .btn-primary{background:#6f42c1;color:white;}
   .btn-success{background:#28a745;color:white;}
   .btn-info{background:#17a2b8;color:white;}
-  .form-control{width:100%;padding:12px;border:1px solid #cbd5e0;border-radius:8px;font-size:14px;margin-bottom:15px; background: #f8fafc; outline: none; transition: 0.2s; box-sizing: border-box;}
-  .form-control:focus {border-color: #6f42c1; background: white;}
+  .form-control{width:100%;padding:12px;border: 1px solid var(--border-color);border-radius:8px;font-size:14px;margin-bottom:15px; background: var(--bg-hover); outline: none; transition: 0.2s; box-sizing: border-box;}
+  .form-control:focus {border-color: #6f42c1; background: var(--bg-card);}
   .grid-container {display: grid; grid-template-columns: 2fr 1fr; gap: 25px;}
   @media (max-width: 1024px) { .grid-container { grid-template-columns: 1fr; } }
 
   /* 🛒 Panier de pièces */
-  .commande-list { border: 1px solid #eef0f3; border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
-  .commande-item { display: flex; align-items: center; padding: 10px 15px; background: white; border-bottom: 1px solid #f8fafc; gap: 15px; }
+  .commande-list { border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; margin-bottom: 15px; }
+  .commande-item { display: flex; align-items: center; padding: 10px 15px; background: var(--bg-card); border-bottom: 1px solid #f8fafc; gap: 15px; }
   .commande-item .btn-remove { color: #dc3545; background: #fff5f5; border: 1px solid #ffdbdb; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
-  .commande-item .item-name { flex-grow: 1; font-weight: 700; font-size: 13px; color: #333; }
-  .commande-item .item-qty { width: 70px; text-align: center; font-weight: bold; border: 1px solid #cbd5e0; border-radius: 6px; padding: 6px; outline: none;}
+  .commande-item .item-name { flex-grow: 1; font-weight: 700; font-size: 13px; color: var(--text-dark); }
+  .commande-item .item-qty { width: 70px; text-align: center; font-weight: bold; border: 1px solid var(--border-color); border-radius: 6px; padding: 6px; outline: none;}
 
   /* ⏱️ TIMELINE MTTR */
   .timeline-mttr { display: flex; justify-content: space-between; margin-bottom: 10px; position: relative; padding: 0 10px; }
   .timeline-mttr::before { content: ""; position: absolute; top: 18px; left: 0; right: 0; height: 4px; background: #eef0f3; z-index: 1; }
   .tl-step { position: relative; z-index: 2; text-align: center; width: 25%; }
-  .tl-icon { width: 40px; height: 40px; background: white; border: 4px solid #eef0f3; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #cbd5e0; font-size: 16px; font-weight: bold; transition:0.3s; }
+  .tl-icon { width: 40px; height: 40px; background: var(--bg-card); border: 4px solid #eef0f3; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; color: #cbd5e0; font-size: 16px; font-weight: bold; transition:0.3s; }
   .tl-step.active .tl-icon { border-color: #6f42c1; color: #6f42c1; box-shadow: 0 0 0 6px rgba(111,66,193,0.1); }
   .tl-step.completed .tl-icon { background: #6f42c1; border-color: #6f42c1; color: white; }
-  .tl-label { font-size: 12px; font-weight: 800; color: #475569; text-transform: uppercase; }
-  .tl-date { font-size: 11px; color: #64748b; margin-top: 6px; font-weight: 700; background: #f8fafc; display: inline-block; padding: 4px 8px; border-radius: 6px; border: 1px solid #eef0f3; }
+  .tl-label { font-size: 12px; font-weight: 800; color: var(--text-medium); text-transform: uppercase; }
+  .tl-date { font-size: 11px; color: var(--text-medium); margin-top: 6px; font-weight: 700; background: var(--bg-hover); display: inline-block; padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-light); }
   .tl-step.completed .tl-date { color: #6f42c1; border-color: #d8b4fe; background: #f3e8ff; }
 
   /* 🚨 Alertes et Cartes Spéciales */
@@ -61,11 +61,11 @@
   /* ── MODAL ── */
   .mo { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
   .mo.open { display: flex; }
-  .mb { background: white; border-radius: 16px; max-width: 550px; width: 95%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3); overflow: hidden; }
+  .mb { background: var(--bg-card); border-radius: 16px; max-width: 550px; width: 95%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3); overflow: hidden; }
   .mh { padding: 20px 25px; display: flex; align-items: center; justify-content: space-between; }
   .mh h5 { margin: 0; font-size: 18px; font-weight: 800; color: white;}
   .mbody { padding: 25px; }
-  .mfoot { padding: 16px 25px; background: #f8fafc; border-top: 1px solid #eef0f3; display: flex; justify-content: flex-end; gap: 10px; }
+  .mfoot { padding: 16px 25px; background: var(--bg-hover); border-top: 1px solid #eef0f3; display: flex; justify-content: flex-end; gap: 10px; }
 </style>
 
 <div class="ih no-print">
@@ -129,7 +129,7 @@
   
   <div>
     <div class="card-detail">
-      <h5 style="color:#1e293b;margin-top:0;margin-bottom:20px;font-weight:800;border-bottom:2px solid #f1f5f9;padding-bottom:12px;">
+      <h5 style="color: var(--text-dark);margin-top:0;margin-bottom:20px;font-weight:800;border-bottom:2px solid #f1f5f9;padding-bottom:12px;">
         <i class="fas fa-info-circle" style="color:#3b82f6;"></i> Informations sur la demande
       </h5>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
@@ -143,17 +143,17 @@
         </div>
         <div class="info-group">
             <span class="info-label">Équipement concerné</span>
-            <span class="info-value" style="font-family: monospace; background: #f8fafc; padding: 4px 8px; border-radius: 6px; border: 1px solid #e2e8f0;">{{ intervention.immobilisation.code_patrimoine }}</span>
+            <span class="info-value" style="font-family: monospace; background: var(--bg-hover); padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-light);">{{ intervention.immobilisation.code_patrimoine }}</span>
         </div>
         <div class="info-group">
           <span class="info-label">Intervenant assigné</span>
           <span class="info-value">
             {% if intervention.intervenant %}
-                <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #eef0f3;">
+                <div style="display: flex; align-items: center; gap: 12px; margin-top: 6px; background: var(--bg-hover); padding: 10px; border-radius: 8px; border: 1px solid var(--border-light);">
                     <div style="width: 36px; height: 36px; background: #6f42c1; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 16px;">
                         {{ intervention.intervenant.first_name|first|default:"T" }}
                     </div>
-                    <div style="font-weight: 700; color: #1e293b; font-size: 14px;">{{ intervention.intervenant.get_full_name|default:intervention.intervenant.username }}</div>
+                    <div style="font-weight: 700; color: var(--text-dark); font-size: 14px;">{{ intervention.intervenant.get_full_name|default:intervention.intervenant.username }}</div>
                 </div>
             {% else %}
                 <span style="color:#ef4444; font-weight: 700;"><i class="fas fa-exclamation-triangle"></i> Non assigné</span>
@@ -161,7 +161,7 @@
           </span>
         </div>
       </div>
-      <div class="info-group" style="margin-top:20px; background:#f8fafc; padding:20px; border-radius:12px; border-left:4px solid #3b82f6;">
+      <div class="info-group" style="margin-top:20px; background: var(--bg-hover); padding:20px; border-radius:12px; border-left:4px solid #3b82f6;">
         <span class="info-label">Description du problème</span>
         <span class="info-value" style="font-size:14px;line-height:1.6;">{{ intervention.description_probleme|default:"Aucune description fournie."|linebreaksbr }}</span>
       </div>
@@ -181,7 +181,7 @@
                 <div class="devis-box">
                     <div style="font-size: 12px; font-weight: 800; color: #b45309; text-transform: uppercase;">Avenant / Devis Hors Contrat</div>
                     <div style="font-size: 22px; font-weight: 800; color: #d97706; margin: 8px 0;">{{ intervention.frais_hors_contrat|floatformat:0 }} FCFA</div>
-                    <p style="font-size: 14px; color: #92400e; margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px;"><b>Motif :</b> {{ intervention.motif_frais_hors_contrat }}</p>
+                    <p style="font-size: 14px; color: #92400e; margin-bottom: 15px; background: var(--bg-card); padding: 10px; border-radius: 8px;"><b>Motif :</b> {{ intervention.motif_frais_hors_contrat }}</p>
                     
                     {% if intervention.devis_accepte == True %}
                         <span class="badge" style="background:#d1fae5; color:#065f46; font-size: 13px;"><i class="fas fa-check"></i> Devis Accepté</span>
@@ -208,14 +208,14 @@
                 </div>
             {% elif intervention.statut == 'EN_COURS' and not intervention.devis_accepte %}
                 
-                <form method="POST" style="margin-top: 15px; background: white; padding: 20px; border-radius: 12px; border: 1px dashed #cbd5e0;">
+                <form method="POST" style="margin-top: 15px; background: var(--bg-card); padding: 20px; border-radius: 12px; border: 1px dashed #cbd5e0;">
                     {% csrf_token %}
                     <input type="hidden" name="action" value="soumettre_devis">
-                    <h6 style="margin:0 0 15px 0; color: #334155; font-size: 14px; font-weight: 800;">Soumettre des frais supplémentaires</h6>
+                    <h6 style="margin:0 0 15px 0; color: var(--text-dark); font-size: 14px; font-weight: 800;">Soumettre des frais supplémentaires</h6>
                     <input type="number" name="montant_devis" class="form-control" placeholder="Montant du devis (FCFA)" required>
                     <textarea name="motif_devis" class="form-control" rows="2" placeholder="Justification détaillée (Ex: Remplacement carte mère hors garantie...)" required></textarea>
                     
-                    <label style="font-size: 11px; font-weight: 800; color: #475569; display: block; margin-bottom: 5px;">Transmettre pour validation à :</label>
+                    <label style="font-size: 11px; font-weight: 800; color: var(--text-medium); display: block; margin-bottom: 5px;">Transmettre pour validation à :</label>
                     <input type="text" name="valideur" class="form-control" placeholder="Nom du responsable (Ex: M. Le Directeur)" required>
 
                     <button type="submit" class="btn-action" style="background: #f59e0b; color: white; margin: 0;"><i class="fas fa-paper-plane"></i> Soumettre pour accord</button>
@@ -223,8 +223,8 @@
             {% endif %}
 
         {% else %}
-            <div style="font-size: 24px; font-weight: 800; color: #1e293b;">{{ intervention.cout_total|floatformat:0 }} FCFA</div>
-            <small style="color:#64748b; font-weight: 600;">(Main d'œuvre + Pièces + Déplacement)</small>
+            <div style="font-size: 24px; font-weight: 800; color: var(--text-dark);">{{ intervention.cout_total|floatformat:0 }} FCFA</div>
+            <small style="color: var(--text-medium); font-weight: 600;">(Main d'œuvre + Pièces + Déplacement)</small>
         {% endif %}
     </div>
 
@@ -235,22 +235,22 @@
         {% if intervention.diagnostic %}
         <div style="margin-bottom: 15px;">
             <span class="info-label" style="color:#b45309;"><i class="fas fa-stethoscope"></i> Diagnostic (Cause identifiée)</span>
-            <div style="font-size:14px; color:#1e293b; font-weight:600; background:#fffbeb; padding:10px; border-radius:6px; border:1px solid #fef3c7;">{{ intervention.diagnostic }}</div>
+            <div style="font-size:14px; color: var(--text-dark); font-weight:600; background:#fffbeb; padding:10px; border-radius:6px; border:1px solid #fef3c7;">{{ intervention.diagnostic }}</div>
         </div>
         {% endif %}
 
         {% if intervention.actions_effectuees %}
         <span class="info-label" style="color:#10b981;"><i class="fas fa-tools"></i> Actions menées</span>
-        <p style="font-size:14px;color:#334155;line-height:1.6;margin:0; background: #f8fafc; padding: 15px; border-radius: 8px;">{{ intervention.actions_effectuees|linebreaksbr }}</p>
+        <p style="font-size:14px;color:var(--text-dark);line-height:1.6;margin:0; background: var(--bg-hover); padding: 15px; border-radius: 8px;">{{ intervention.actions_effectuees|linebreaksbr }}</p>
         {% endif %}
 
         {% if intervention.rapport_prestataire_scan or intervention.bon_sortie_signe_scan %}
         <div style="margin-top: 15px; border-top: 1px dashed #cbd5e0; padding-top: 15px; display: flex; gap: 15px;">
             {% if intervention.rapport_prestataire_scan %}
-            <a href="{{ intervention.rapport_prestataire_scan.url }}" target="_blank" style="background: #f1f5f9; padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: #475569; text-decoration: none; border: 1px solid #cbd5e0;"><i class="fas fa-file-pdf" style="color: #ef4444; margin-right: 5px;"></i> Voir Rapport Scanné</a>
+            <a href="{{ intervention.rapport_prestataire_scan.url }}" target="_blank" style="background: var(--bg-hover); padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: var(--text-medium); text-decoration: none; border: 1px solid var(--border-color);"><i class="fas fa-file-pdf" style="color: #ef4444; margin-right: 5px;"></i> Voir Rapport Scanné</a>
             {% endif %}
             {% if intervention.bon_sortie_signe_scan %}
-            <a href="{{ intervention.bon_sortie_signe_scan.url }}" target="_blank" style="background: #f1f5f9; padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: #475569; text-decoration: none; border: 1px solid #cbd5e0;"><i class="fas fa-file-signature" style="color: #3b82f6; margin-right: 5px;"></i> Voir Bon Signé</a>
+            <a href="{{ intervention.bon_sortie_signe_scan.url }}" target="_blank" style="background: var(--bg-hover); padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: var(--text-medium); text-decoration: none; border: 1px solid var(--border-color);"><i class="fas fa-file-signature" style="color: #3b82f6; margin-right: 5px;"></i> Voir Bon Signé</a>
             {% endif %}
         </div>
         {% endif %}
@@ -259,8 +259,8 @@
   </div>
 
   <div>
-    <div class="card-detail" style="background:#f8fafc; border:2px solid #e2e8f0;">
-      <h5 style="color:#1e293b;margin-top:0;margin-bottom:20px;font-weight:800;text-align:center;"><i class="fas fa-cogs"></i> Espace d'Action Technique</h5>
+    <div class="card-detail" style="background: var(--bg-hover); border: 2px solid var(--border-light);">
+      <h5 style="color: var(--text-dark);margin-top:0;margin-bottom:20px;font-weight:800;text-align:center;"><i class="fas fa-cogs"></i> Espace d'Action Technique</h5>
 
       {% if intervention.statut == 'PLANIFIEE' or intervention.statut == 'NOUVELLE' %}
         <div style="display: flex; flex-direction: column; gap: 12px;">
@@ -275,7 +275,7 @@
                 <i class="fas fa-truck"></i> Déléguer au Prestataire
             </button>
             {% else %}
-            <div style="background: #f8fafc; padding: 10px; border-radius: 8px; font-size: 11px; color: #94a3b8; text-align: center; border: 1px dashed #cbd5e0;">
+            <div style="background: var(--bg-hover); padding: 10px; border-radius: 8px; font-size: 11px; color: #94a3b8; text-align: center; border: 1px dashed #cbd5e0;">
                 <i class="fas fa-info-circle"></i> Matériel hors contrat. Délégation externe impossible.
             </div>
             {% endif %}
@@ -298,7 +298,7 @@
               <div class="mbody">
                   <div class="form-group">
                       <label>Entreprise Prestataire (Liée au contrat)</label>
-                      <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; border: 1px solid #cbd5e0; font-weight: 800; color: #1e293b; font-size: 14px;">
+                      <div style="background: var(--bg-hover); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); font-weight: 800; color: var(--text-dark); font-size: 14px;">
                           <i class="fas fa-lock" style="color: #94a3b8; margin-right: 8px;"></i>
                           {{ intervention.immobilisation.contrat_maintenance.prestataire.raison_sociale }}
                       </div>
@@ -325,7 +325,7 @@
                   </div>
               </div>
               <div class="mfoot">
-                  <button type="button" onclick="document.getElementById('modal-delegation').classList.remove('open')" style="background: white; border: 1px solid #cbd5e0; padding: 10px 20px; border-radius: 8px; cursor: pointer; color: #475569; font-weight: 800;">Annuler</button>
+                  <button type="button" onclick="document.getElementById('modal-delegation').classList.remove('open')" style="background: var(--bg-card); border: 1px solid var(--border-color); padding: 10px 20px; border-radius: 8px; cursor: pointer; color: var(--text-medium); font-weight: 800;">Annuler</button>
                   <button type="submit" style="background: #d97706; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; color: white; font-weight: 800;"><i class="fas fa-paper-plane"></i> Valider la délégation</button>
               </div>
           </form>
@@ -336,7 +336,7 @@
       {% if intervention.prestataire_concerne and intervention.statut == 'EN_COURS' %}
         <div style="background: #fffbeb; padding: 20px; border-radius: 12px; border: 1px solid #fbd38d; margin-bottom: 20px;">
             <h6 style="color: #b45309; margin-top: 0; font-size: 14px; font-weight: 800; text-transform: uppercase;"><i class="fas fa-hard-hat"></i> Gestion Externe</h6>
-            <div style="font-size: 14px; color: #92400e; margin-bottom: 15px; background: white; padding: 10px; border-radius: 8px;">
+            <div style="font-size: 14px; color: #92400e; margin-bottom: 15px; background: var(--bg-card); padding: 10px; border-radius: 8px;">
                 <strong>Entreprise :</strong> {{ intervention.prestataire_concerne.raison_sociale }}<br>
                 <strong>Contacté :</strong> {{ intervention.technicien_appele.nom|default:"Non spécifié" }}
             </div>
@@ -359,11 +359,11 @@
                 <textarea name="rapport" class="form-control" rows="3" placeholder="Saisissez un résumé..." required></textarea>
                 
                 <label style="font-size: 12px; font-weight: 800; color: #92400e;"><i class="fas fa-upload"></i> Scan du rapport (PDF/Image)</label>
-                <input type="file" name="rapport_scan" class="form-control" style="padding: 8px; background: white;">
+                <input type="file" name="rapport_scan" class="form-control" style="padding: 8px; background: var(--bg-card);">
                 
                 {% if intervention.necessite_sortie_reparation %}
                 <label style="font-size: 12px; font-weight: 800; color: #92400e; margin-top: 10px;"><i class="fas fa-upload"></i> Bon de Sortie Signé *</label>
-                <input type="file" name="bon_signe" class="form-control" style="padding: 8px; background: white;" required>
+                <input type="file" name="bon_signe" class="form-control" style="padding: 8px; background: var(--bg-card);" required>
                 {% endif %}
 
                 <button type="submit" class="btn-action" style="background: #b45309; color: white; margin-top: 10px;"><i class="fas fa-check-circle"></i> Enregistrer le Retour</button>
@@ -372,7 +372,7 @@
       
       {% elif intervention.statut == 'EN_COURS' or intervention.statut == 'EN_ATTENTE_PIECES' %}
         
-        <div style="background:white; padding:20px; border-radius:12px; border:1px solid #17a2b8; margin-bottom:20px; box-shadow: 0 4px 15px rgba(23,162,184,0.1);">
+        <div style="background: var(--bg-card); padding:20px; border-radius:12px; border:1px solid #17a2b8; margin-bottom:20px; box-shadow: 0 4px 15px rgba(23,162,184,0.1);">
           <h6 style="color:#17a2b8; margin-top:0; font-weight:800; font-size: 14px;"><i class="fas fa-shopping-cart"></i> Demander des pièces</h6>
           <div class="info-group">
             <select id="select-article-picker" class="form-control" style="margin-bottom: 10px;" onchange="ajouterAuPanier(this)">
@@ -403,7 +403,7 @@
           <label style="font-size: 12px; font-weight: 800; color: #b45309; display: block; margin-bottom: 8px;"><i class="fas fa-stethoscope"></i> Diagnostic (Cause identifiée) *</label>
           <textarea name="diagnostic" class="form-control" rows="2" placeholder="Quelle était la vraie cause de la panne ?" required>{{ intervention.diagnostic|default:"" }}</textarea>
 
-          <label style="font-size: 12px; font-weight: 800; color: #475569; display: block; margin-bottom: 8px; margin-top:10px;"><i class="fas fa-tools"></i> Rapport d'intervention (Travail effectué) *</label>
+          <label style="font-size: 12px; font-weight: 800; color: var(--text-medium); display: block; margin-bottom: 8px; margin-top:10px;"><i class="fas fa-tools"></i> Rapport d'intervention (Travail effectué) *</label>
           <textarea name="rapport" class="form-control" rows="4" placeholder="Détaillez le travail effectué..." required>{{ intervention.actions_effectuees|default:"" }}</textarea>
           
           <button type="submit" class="btn-action btn-success" style="margin-bottom: 0;"><i class="fas fa-check-double"></i> Terminer l'intervention</button>

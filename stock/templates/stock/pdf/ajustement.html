@@ -29,8 +29,8 @@
             height: 100%;
             font-family: 'Times New Roman', Times, serif;
             font-size: 11pt;
-            color: #000;
-            background: #fff;
+            color: var(--text-dark);
+            background: var(--bg-card);
         }
 
         .page-table {
@@ -141,7 +141,7 @@
         }
         .label {
             font-weight: bold;
-            color: #333;
+            color: var(--text-dark);
             font-size: 9pt;
             text-transform: uppercase;
             display: block;
@@ -252,7 +252,7 @@
                 <tr>
                     <td>
                         <span class="label">Magasin</span>
-                        <span style="font-size:13px; font-weight:bold; color:#333;">{{ ajustement.magasin.nom }}</span>
+                        <span style="font-size:13px; font-weight:bold; color: var(--text-dark);">{{ ajustement.magasin.nom }}</span>
                     </td>
                     <td>
                         <span class="label">Motif de l'ajustement</span>
@@ -266,7 +266,7 @@
                     </td>
                     <td>
                         <span class="label">Auteur de la saisie</span>
-                        <span style="font-size:13px; font-weight:bold; color:#333;">{{ ajustement.cree_par.get_full_name|default:ajustement.cree_par.username }}</span>
+                        <span style="font-size:13px; font-weight:bold; color: var(--text-dark);">{{ ajustement.cree_par.get_full_name|default:ajustement.cree_par.username }}</span>
                     </td>
                 </tr>
                 <tr>

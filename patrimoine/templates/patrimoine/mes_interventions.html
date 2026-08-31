@@ -8,9 +8,9 @@
   .tech-header h3 { margin: 0; font-size: 24px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
   
   /* ── ONGLETS ── */
-  .tech-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #eef0f3; padding-bottom: 10px; overflow-x: auto; }
-  .t-tab { background: transparent; border: none; padding: 10px 20px; font-size: 15px; font-weight: 800; color: #64748b; cursor: pointer; border-radius: 8px; transition: 0.2s; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-  .t-tab:hover { background: #f1f5f9; color: #1e293b; }
+  .tech-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-light); padding-bottom: 10px; overflow-x: auto; }
+  .t-tab { background: transparent; border: none; padding: 10px 20px; font-size: 15px; font-weight: 800; color: var(--text-medium); cursor: pointer; border-radius: 8px; transition: 0.2s; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .t-tab:hover { background: var(--bg-hover); color: var(--text-dark); }
   .t-tab.active { background: #3b82f6; color: white; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
   .t-tab .badge-count { background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; font-size: 12px; }
 
@@ -20,25 +20,25 @@
   @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
   /* ── BARRE D'OUTILS (Recherche & Filtres) ── */
-  .toolbar-magique { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; background: white; padding: 10px 15px; border-radius: 10px; border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+  .toolbar-magique { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 15px; background: var(--bg-card); padding: 10px 15px; border-radius: 10px; border: 1px solid var(--border-light); box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
   
   .search-magic { position: relative; width: 100%; max-width: 350px; transition: all 0.3s ease; }
   .search-magic:focus-within { max-width: 450px; }
-  .search-magic i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #adb5bd; transition: 0.3s; }
+  .search-magic i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-medium); transition: 0.3s; }
   .search-magic:focus-within i { color: #3b82f6; }
-  .search-magic input { width: 100%; padding: 10px 14px 10px 38px; border: 1px solid #dde3ea; border-radius: 20px; font-size: 13px; outline: none; background: #f8fafc; transition: 0.3s; box-sizing: border-box;}
-  .search-magic input:focus { background: white; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
+  .search-magic input { width: 100%; padding: 10px 14px 10px 38px; border: 1px solid #dde3ea; border-radius: 20px; font-size: 13px; outline: none; background: var(--bg-hover); transition: 0.3s; box-sizing: border-box;}
+  .search-magic input:focus { background: var(--bg-card); border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.15); }
 
   /* ── CARTES ── */
   .grid-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; margin-bottom: 20px;}
-  .ticket-card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; display: flex; flex-direction: column; cursor: pointer; }
+  .ticket-card { background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-light); padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: 0.2s; display: flex; flex-direction: column; cursor: pointer; }
   .ticket-card:hover { transform: translateY(-3px); box-shadow: 0 8px 15px rgba(0,0,0,0.05); }
-  .tc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
-  .tc-equip { font-size: 16px; font-weight: 800; color: #1e293b; line-height: 1.2; margin-bottom: 4px; }
-  .tc-code { font-family: monospace; font-size: 12px; color: #64748b; background: #f1f5f9; padding: 3px 6px; border-radius: 4px; }
-  .tc-body { flex: 1; font-size: 13px; color: #475569; line-height: 1.5; margin-bottom: 15px; }
+  .tc-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid var(--border-light); padding-bottom: 10px; }
+  .tc-equip { font-size: 16px; font-weight: 800; color: var(--text-dark); line-height: 1.2; margin-bottom: 4px; }
+  .tc-code { font-family: monospace; font-size: 12px; color: var(--text-medium); background: var(--bg-hover); padding: 3px 6px; border-radius: 4px; }
+  .tc-body { flex: 1; font-size: 13px; color: var(--text-medium); line-height: 1.5; margin-bottom: 15px; }
   .tc-foot { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
-  .btn-open { background: #f1f5f9; color: #3b82f6; padding: 8px 15px; border-radius: 6px; font-weight: 800; font-size: 12px; text-decoration: none; transition: 0.2s; display: inline-block; }
+  .btn-open { background: var(--bg-hover); color: #3b82f6; padding: 8px 15px; border-radius: 6px; font-weight: 800; font-size: 12px; text-decoration: none; transition: 0.2s; display: inline-block; }
   .ticket-card:hover .btn-open { background: #3b82f6; color: white; }
 
   /* États masqués pour le JS */
@@ -46,13 +46,13 @@
   .type-hidden { display: none !important; }
 
   /* ── PAGINATION ── */
-  .pagination-container { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: white; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 10px; }
-  .pagination-info { font-size: 13px; color: #64748b; font-weight: 600; }
+  .pagination-container { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: var(--bg-card); border-radius: 10px; border: 1px solid var(--border-light); margin-top: 10px; }
+  .pagination-info { font-size: 13px; color: var(--text-medium); font-weight: 600; }
   .pagination-buttons { display: flex; gap: 6px; }
-  .page-btn { padding: 6px 12px; border: 1px solid #dde3ea; background: white; color: #475569; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; transition: 0.2s; }
-  .page-btn:hover:not(:disabled) { background: #f1f5f9; border-color: #cbd5e0; }
+  .page-btn { padding: 6px 12px; border: 1px solid #dde3ea; background: var(--bg-card); color: var(--text-medium); border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 700; transition: 0.2s; }
+  .page-btn:hover:not(:disabled) { background: var(--bg-hover); border-color: var(--border-color); }
   .page-btn.active { background: #3b82f6; color: white; border-color: #3b82f6; box-shadow: 0 2px 6px rgba(59,130,246,0.3); }
-  .page-btn:disabled { color: #cbd5e0; cursor: not-allowed; background: #f8fafc; }
+  .page-btn:disabled { color: #cbd5e0; cursor: not-allowed; background: var(--bg-hover); }
 </style>
 
 <div class="tech-header">
@@ -102,7 +102,7 @@
             </div>
             <div class="tc-body">
                 <strong>Problème:</strong> {{ ticket.description_probleme|truncatechars:80 }}<br><br>
-                <span style="font-size:11px; color:#64748b;"><i class="fas fa-map-marker-alt"></i> {{ ticket.immobilisation.service_affectation.nom|default:"Service non précisé" }}</span>
+                <span style="font-size:11px; color: var(--text-medium);"><i class="fas fa-map-marker-alt"></i> {{ ticket.immobilisation.service_affectation.nom|default:"Service non précisé" }}</span>
             </div>
             <div class="tc-foot">
                 <span style="font-size:11px; color:#94a3b8;"><i class="far fa-clock"></i> {{ ticket.date_signalement|date:"d/m à H:i" }}</span>
@@ -119,7 +119,7 @@
             </div>
             <div class="tc-body">
                 Prise en charge depuis le {{ ticket.date_debut_intervention|date:"d/m/Y" }}<br><br>
-                <span style="font-size:11px; color:#64748b;"><i class="fas fa-map-marker-alt"></i> {{ ticket.immobilisation.service_affectation.nom|default:"Service non précisé" }}</span>
+                <span style="font-size:11px; color: var(--text-medium);"><i class="fas fa-map-marker-alt"></i> {{ ticket.immobilisation.service_affectation.nom|default:"Service non précisé" }}</span>
             </div>
             <div class="tc-foot">
                 <span style="font-size:11px; color:#94a3b8; font-weight:bold;"><i class="fas fa-tools"></i> En atelier</span>
@@ -129,17 +129,17 @@
         {% endfor %}
 
         {% for ticket in a_valider %}
-        <div class="ticket-card" style="border-left: 4px solid #3b82f6; background: #f8fafc;" onclick="window.location.href='{% url 'detail_intervention' ticket.id %}'">
+        <div class="ticket-card" style="border-left: 4px solid #3b82f6; background: var(--bg-hover);" onclick="window.location.href='{% url 'detail_intervention' ticket.id %}'">
             <div class="tc-head">
                 <div><div class="tc-equip">{{ ticket.immobilisation.nom_affichage }}</div><div class="tc-code">{{ ticket.immobilisation.code_patrimoine }}</div></div>
                 <span style="font-size:10px; font-weight:bold; background:#e0f2fe; color:#0369a1; padding:4px 8px; border-radius:10px;">ATTENTE CHEF</span>
             </div>
             <div class="tc-body">
                 Travail terminé. En attente de la validation finale.<br><br>
-                <span style="font-size:11px; color:#64748b;"><i class="fas fa-check-circle"></i> Fini le {{ ticket.date_fin_intervention|date:"d/m/Y" }}</span>
+                <span style="font-size:11px; color: var(--text-medium);"><i class="fas fa-check-circle"></i> Fini le {{ ticket.date_fin_intervention|date:"d/m/Y" }}</span>
             </div>
             <div class="tc-foot">
-                <span class="btn-open" style="background:white; border:1px solid #cbd5e0; color:#475569;">Consulter</span>
+                <span class="btn-open" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-medium);">Consulter</span>
             </div>
         </div>
         {% endfor %}
@@ -157,8 +157,8 @@
             <input type="text" class="live-search" data-target="grid-libres" placeholder="Rechercher une panne libre...">
         </div>
         <div style="display:flex; align-items:center; gap:10px;">
-            <label style="font-size:12px; font-weight:800; color:#475569;"><i class="fas fa-filter"></i> Type d'équipement</label>
-            <select id="filtre-type-equip" onchange="appliquerFiltreType('grid-libres')" style="padding:8px 12px; border:1px solid #cbd5e0; border-radius:8px; outline:none; font-size:13px; background:#f8fafc;">
+            <label style="font-size:12px; font-weight:800; color: var(--text-medium);"><i class="fas fa-filter"></i> Type d'équipement</label>
+            <select id="filtre-type-equip" onchange="appliquerFiltreType('grid-libres')" style="padding:8px 12px; border: 1px solid var(--border-color); border-radius:8px; outline:none; font-size:13px; background: var(--bg-hover);">
                 <option value="ALL">Tous les types</option>
                 {% for type in types_equipements %}
                 <option value="{{ type.id }}">{{ type.nom }}</option>
@@ -177,7 +177,7 @@
             <div class="tc-body">
                 <strong>Signalé par:</strong> {{ ticket.cree_par.get_full_name }}<br>
                 <strong>Problème:</strong> {{ ticket.description_probleme|truncatechars:80 }}<br><br>
-                <span style="font-size:11px; background:#f1f5f9; padding:4px 8px; border-radius:6px;"><i class="fas fa-map-marker-alt"></i> Bât. {{ ticket.immobilisation.bureau.batiment.code|default:"?" }} - Bur. {{ ticket.immobilisation.bureau.nom|default:"?" }}</span>
+                <span style="font-size:11px; background: var(--bg-hover); padding:4px 8px; border-radius:6px;"><i class="fas fa-map-marker-alt"></i> Bât. {{ ticket.immobilisation.bureau.batiment.code|default:"?" }} - Bur. {{ ticket.immobilisation.bureau.nom|default:"?" }}</span>
             </div>
             <div class="tc-foot">
                 <span style="font-size:11px; color:#94a3b8; font-weight:bold;">{{ ticket.date_signalement|timesince }}</span>
@@ -202,20 +202,20 @@
 
     <div class="grid-cards" id="grid-historique" data-current-page="1">
         {% for ticket in historique_perso %}
-        <div class="ticket-card" style="border-left: 4px solid #10b981; background: #f8fafc;" onclick="window.location.href='{% url 'detail_intervention' ticket.id %}'">
+        <div class="ticket-card" style="border-left: 4px solid #10b981; background: var(--bg-hover);" onclick="window.location.href='{% url 'detail_intervention' ticket.id %}'">
             <div class="tc-head">
-                <div><div class="tc-equip" style="color:#475569;">{{ ticket.immobilisation.nom_affichage }}</div><div class="tc-code">{{ ticket.immobilisation.code_patrimoine }}</div></div>
+                <div><div class="tc-equip" style="color: var(--text-medium);">{{ ticket.immobilisation.nom_affichage }}</div><div class="tc-code">{{ ticket.immobilisation.code_patrimoine }}</div></div>
                 <span style="font-size:10px; font-weight:bold; background:#d1fae5; color:#065f46; padding:4px 8px; border-radius:10px;"><i class="fas fa-check-circle"></i> {{ ticket.get_statut_display }}</span>
             </div>
             <div class="tc-body" style="font-size:12px;">
                 <strong>Diagnostic identifié :</strong><br>
-                <div style="background:white; border:1px solid #e2e8f0; padding:8px; border-radius:6px; margin-top:5px; margin-bottom:10px; color:#1e293b;">
+                <div style="background: var(--bg-card); border: 1px solid var(--border-light); padding:8px; border-radius:6px; margin-top:5px; margin-bottom:10px; color: var(--text-dark);">
                     {{ ticket.diagnostic|default:"Aucun diagnostic renseigné"|truncatechars:60 }}
                 </div>
-                <span style="color:#64748b;"><i class="far fa-calendar-check"></i> Clôturé le {{ ticket.date_fin_intervention|date:"d/m/Y à H:i" }}</span>
+                <span style="color: var(--text-medium);"><i class="far fa-calendar-check"></i> Clôturé le {{ ticket.date_fin_intervention|date:"d/m/Y à H:i" }}</span>
             </div>
             <div class="tc-foot">
-                <span class="btn-open" style="background:white; border:1px solid #cbd5e0; color:#475569;">Voir l'archive</span>
+                <span class="btn-open" style="background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-medium);">Voir l'archive</span>
             </div>
         </div>
         {% endfor %}
@@ -275,7 +275,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         if (visibleCards.length === 0) {
             pagWrapper.innerHTML = `
-            <div style="text-align: center; padding: 40px; color: #94a3b8; background: white; border-radius: 12px; width: 100%; border: 1px dashed #cbd5e0;">
+            <div style="text-align: center; padding: 40px; color: #94a3b8; background: var(--bg-card); border-radius: 12px; width: 100%; border: 1px dashed #cbd5e0;">
                 <i class="fas fa-ghost fa-3x" style="margin-bottom: 15px; opacity:0.3;"></i><br>
                 Aucun résultat trouvé pour votre recherche.
             </div>`;
@@ -296,7 +296,7 @@ document.addEventListener('DOMContentLoaded', function() {
             if (i === 1 || i === totalPages || (i >= currentPage - 1 && i <= currentPage + 1)) {
                 html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="changerPage('${gridId}', ${i})">${i}</button>`;
             } else if (i === currentPage - 2 || i === currentPage + 2) {
-                if (!html.endsWith('...</span>')) html += `<span style="padding: 5px 2px; color: #adb5bd; font-size:10px;">...</span>`;
+                if (!html.endsWith('...</span>')) html += `<span style="padding: 5px 2px; color: var(--text-medium); font-size:10px;">...</span>`;
             }
         }
         

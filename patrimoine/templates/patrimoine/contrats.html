@@ -10,7 +10,7 @@
   .s-warn{background:rgba(241,196,15,.3);color:#fef9e7;}
   .s-err{background:rgba(231,76,60,.3);color:#fadbd8;}
   .cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;}
-  .ct-card{background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;border-left:4px solid #dde3ea;transition:.2s;}
+  .ct-card{background: var(--bg-card);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);overflow:hidden;border-left:4px solid #dde3ea;transition:.2s;}
   .ct-card:hover{box-shadow:0 6px 24px rgba(0,0,0,.12);transform:translateY(-2px);}
   .ct-card.actif{border-left-color:#28a745;}
   .ct-card.expire{border-left-color:#dc3545;}
@@ -21,8 +21,8 @@
   .ct-body{padding:14px 18px;}
   .ct-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid #f9f9f9;}
   .ct-lbl{color:#888;}
-  .ct-val{font-weight:600;color:#333;text-align:right;}
-  .ct-foot{padding:10px 18px;background:#f8f9fa;display:flex;align-items:center;justify-content:space-between;}
+  .ct-val{font-weight:600;color: var(--text-dark);text-align:right;}
+  .ct-foot{padding:10px 18px;background: var(--bg-hover);display:flex;align-items:center;justify-content:space-between;}
   .badge{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
   .badge-actif{background:#d4edda;color:#155724;}
   .badge-expire{background:#f8d7da;color:#721c24;}
@@ -30,20 +30,20 @@
   .jours-bar{height:4px;background:#f0f3f7;border-radius:2px;margin-top:6px;overflow:hidden;}
   .jours-fill{height:100%;border-radius:2px;}
   .empty-state{text-align:center;padding:60px;color:#bbb;}
-  .btn-new{background:white;color:#2c3e50;border:none;padding:9px 16px;border-radius:7px;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.2s;box-shadow:0 2px 8px rgba(0,0,0,.15);text-decoration:none;}
+  .btn-new{background: var(--bg-card);color:#2c3e50;border:none;padding:9px 16px;border-radius:7px;font-weight:700;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;transition:.2s;box-shadow:0 2px 8px rgba(0,0,0,.15);text-decoration:none;}
   .btn-new:hover{background:#f0f3f7;}
 
   /* ── MODAL CRÉATION ── */
   .mo { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
   .mo.open { display: flex; }
-  .mb { background: white; border-radius: 12px; max-width: 500px; width: 95%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; }
+  .mb { background: var(--bg-card); border-radius: 12px; max-width: 500px; width: 95%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); overflow: hidden; }
   .mh { background: linear-gradient(135deg, #2c3e50, #34495e); color: white; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; }
   .mh h5 { margin: 0; font-size: 16px; font-weight: 800; }
   .mbody { padding: 24px; max-height: 70vh; overflow-y: auto; }
-  .mfoot { padding: 16px 24px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; }
+  .mfoot { padding: 16px 24px; background: var(--bg-hover); border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; }
   .form-group { margin-bottom: 15px; }
-  .form-group label { display: block; font-size: 12px; font-weight: 800; color: #475569; margin-bottom: 6px; }
-  .form-control { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: 8px; font-size: 14px; outline: none; background: #f8fafc; transition: 0.2s; box-sizing: border-box; }
+  .form-group label { display: block; font-size: 12px; font-weight: 800; color: var(--text-medium); margin-bottom: 6px; }
+  .form-control { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 14px; outline: none; background: var(--bg-hover); transition: 0.2s; box-sizing: border-box; }
 </style>
 
 <div class="ch">
@@ -63,7 +63,7 @@
 </div>
 
 {% if not contrats %}
-<div class="empty-state" style="background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);">
+<div class="empty-state" style="background: var(--bg-card);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);">
   <i class="fas fa-file-contract" style="font-size:40px;display:block;margin-bottom:12px;color:#ddd;"></i>
   <div style="font-size:15px;color:#888;margin-bottom:8px;">Aucun contrat enregistré</div>
   <div style="font-size:13px;color:#bbb;">Cliquez sur "Nouveau Contrat" en haut à droite pour commencer.</div>
@@ -173,7 +173,7 @@
         </div>
         
         <div class="mfoot">
-            <button type="button" onclick="document.getElementById('modal-new-contrat').classList.remove('open')" style="background: white; border: 1px solid #ccc; padding: 8px 15px; border-radius: 6px; cursor: pointer; color: #555; font-weight: bold;">Annuler</button>
+            <button type="button" onclick="document.getElementById('modal-new-contrat').classList.remove('open')" style="background: var(--bg-card); border: 1px solid #ccc; padding: 8px 15px; border-radius: 6px; cursor: pointer; color: #555; font-weight: bold;">Annuler</button>
             <button type="submit" style="background: #28a745; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; color: white; font-weight: bold;"><i class="fas fa-check"></i> Enregistrer le contrat</button>
         </div>
     </form>

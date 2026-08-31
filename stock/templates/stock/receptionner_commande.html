@@ -114,7 +114,7 @@
         {% else %}
           {% if magasin_actif %}
 <input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="sel-magasin">
-<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
+<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
 {% else %}
 <select name="magasin" id="sel-magasin" required class="finput">
             <option value="">— Choisir le magasin —</option>

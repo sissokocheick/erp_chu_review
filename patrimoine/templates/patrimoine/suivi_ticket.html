@@ -4,13 +4,13 @@
 {% block contenu %}
 <style>
   .client-header { background: linear-gradient(135deg, #17a2b8, #117a8b); color: white; border-radius: 10px; padding: 25px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(23, 162, 184, 0.3); }
-  .card-detail { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 25px; margin-bottom: 20px; }
+  .card-detail { background: var(--bg-card); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 25px; margin-bottom: 20px; }
   
   /* Stepper avec Dates */
   .stepper { display: flex; justify-content: space-between; margin-bottom: 40px; position: relative; padding: 0 10px; }
   .stepper::before { content: ""; position: absolute; top: 15px; left: 0; right: 0; height: 2px; background: #eef0f3; z-index: 1; }
   .step { position: relative; z-index: 2; text-align: center; width: 25%; }
-  .step-icon { width: 32px; height: 32px; background: white; border: 2px solid #eef0f3; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; color: #ccc; font-size: 12px; transition: 0.3s; font-weight: bold; }
+  .step-icon { width: 32px; height: 32px; background: var(--bg-card); border: 2px solid #eef0f3; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 8px; color: #ccc; font-size: 12px; transition: 0.3s; font-weight: bold; }
   .step.active .step-icon { border-color: #17a2b8; color: #17a2b8; box-shadow: 0 0 0 4px rgba(23, 162, 184, 0.1); }
   .step.completed .step-icon { background: #17a2b8; border-color: #17a2b8; color: white; }
   .step-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; }
@@ -23,9 +23,9 @@
   .b-resolue { background: #d4edda; color: #155724; }
   
   .info-label { font-size: 11px; color: #888; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 5px; display: block; }
-  .info-value { font-size: 14px; color: #333; font-weight: 600; display: block; }
+  .info-value { font-size: 14px; color: var(--text-dark); font-weight: 600; display: block; }
   .takeover-box { background: #e8f7f9; border: 1px solid #b6e4eb; color: #0c5460; padding: 15px; border-radius: 8px; display: flex; align-items: center; gap: 12px; margin-top: 15px; }
-  .machine-box { border: 1px solid #eef0f3; background: #fafbfc; padding: 15px; border-radius: 8px; margin-top: 10px; }
+  .machine-box { border: 1px solid var(--border-light); background: #fafbfc; padding: 15px; border-radius: 8px; margin-top: 10px; }
 </style>
 
 <div class="client-header">
@@ -73,7 +73,7 @@
                 <span class="info-value">{{ intervention.cree_par.get_full_name|default:intervention.cree_par.username }}</span>
                 
                 <span class="info-label" style="margin-top:10px;">Machine</span>
-                <strong style="color:#333;">{{ intervention.immobilisation.nom_affichage }}</strong>
+                <strong style="color: var(--text-dark);">{{ intervention.immobilisation.nom_affichage }}</strong>
                 <div style="font-size:12px; color:#666;">Code: {{ intervention.immobilisation.code_patrimoine }}</div>
 
                 <span class="info-label" style="margin-top:10px;">Niveau d'Urgence</span>

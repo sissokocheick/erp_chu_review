@@ -14,7 +14,7 @@
   .page-header small { opacity:.85; font-size: 12px; }
 
   /* ── CARTES ET SECTIONS ── */
-  .section-card { background: white; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow-x:auto; }
+  .section-card { background: var(--bg-card); border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow-x:auto; }
   .section-title { margin: 0 0 15px; color: #117a8b; font-size: 15px; text-transform: uppercase; font-weight: 700; border-bottom: 2px solid #f0f3f7; padding-bottom: 10px; }
 
   /* ── TABLEAUX ── */
@@ -34,7 +34,7 @@
 
   /* ── BOUTONS ACTIONS ── */
   .btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; text-decoration: none; border: none; }
-  .btn-retour { background: #f0f3f7; color: #495057; }
+  .btn-retour { background: #f0f3f7; color: var(--text-medium); }
   .btn-retour:hover { background: #e2e6ea; }
   .btn-print { background: #17a2b8; color: white; }
   .btn-print:hover { background: #138496; }
@@ -88,19 +88,19 @@
 {# ── RÉSUMÉ DE LA DEMANDE ── #}
 <div class="section-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
     <div>
-        <h5 style="margin: 0 0 5px; color: #495057; font-size: 13px;">Service Demandeur</h5>
-        <strong style="font-size: 15px; color: #333;">{{ demande.service_demandeur.nom|upper }}</strong>
+        <h5 style="margin: 0 0 5px; color: var(--text-medium); font-size: 13px;">Service Demandeur</h5>
+        <strong style="font-size: 15px; color: var(--text-dark);">{{ demande.service_demandeur.nom|upper }}</strong>
     </div>
     <div>
-        <h5 style="margin: 0 0 5px; color: #495057; font-size: 13px;">Date de demande</h5>
-        <strong style="font-size: 15px; color: #333;">{{ demande.date_demande|date:"d/m/Y à H:i" }}</strong>
+        <h5 style="margin: 0 0 5px; color: var(--text-medium); font-size: 13px;">Date de demande</h5>
+        <strong style="font-size: 15px; color: var(--text-dark);">{{ demande.date_demande|date:"d/m/Y à H:i" }}</strong>
     </div>
     <div>
-        <h5 style="margin: 0 0 5px; color: #495057; font-size: 13px;">Demandeur</h5>
-        <strong style="font-size: 15px; color: #333;">{{ demande.demandeur.get_full_name|default:demande.demandeur.username|title }}</strong>
+        <h5 style="margin: 0 0 5px; color: var(--text-medium); font-size: 13px;">Demandeur</h5>
+        <strong style="font-size: 15px; color: var(--text-dark);">{{ demande.demandeur.get_full_name|default:demande.demandeur.username|title }}</strong>
     </div>
     <div>
-        <h5 style="margin: 0 0 5px; color: #495057; font-size: 13px;">Statut actuel</h5>
+        <h5 style="margin: 0 0 5px; color: var(--text-medium); font-size: 13px;">Statut actuel</h5>
         {% if demande.statut == 'EN_ATTENTE' or demande.statut == 'EN_COURS' %}<span class="badge b-attente"><i class="fas fa-clock"></i> À Traiter</span>
         {% elif demande.statut == 'LIVRAISON_PARTIELLE' %}<span class="badge b-partiel"><i class="fas fa-box-open"></i> Partielle</span>
         {% elif demande.statut == 'LIVREE' %}<span class="badge b-livree"><i class="fas fa-truck"></i> Livrée</span>
@@ -154,7 +154,7 @@
                 <div>
                     <strong style="color: #117a8b; font-size: 15px; margin-right: 10px;">{{ liv.numero_livraison }}</strong>
                     <span style="color: #6c757d; margin-right: 15px;"><i class="fas fa-calendar-day"></i> {{ liv.date_livraison|date:"d/m/Y H:i" }}</span>
-                    <span style="font-weight: bold; color: #333;">Quantité totale livrée : {{ liv.quantite_livree }} u.</span>
+                    <span style="font-weight: bold; color: var(--text-dark);">Quantité totale livrée : {{ liv.quantite_livree }} u.</span>
                 </div>
                 <div style="display: flex; gap: 10px;">
                     {% if liv.bon_sortie %}
@@ -194,7 +194,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" style="text-align: center; color: #adb5bd; padding: 15px;">
+                            <td colspan="5" style="text-align: center; color: var(--text-medium); padding: 15px;">
                                 Aucune ligne de livraison enregistrée.
                             </td>
                         </tr>
@@ -214,7 +214,7 @@
         {% endwith %}
         {% endfor %}
     {% else %}
-        <div style="text-align: center; padding: 40px; color: #adb5bd;">
+        <div style="text-align: center; padding: 40px; color: var(--text-medium);">
             <i class="fas fa-box-open" style="font-size: 40px; margin-bottom: 15px; display: block;"></i>
             Aucune livraison n'a encore été effectuée pour cette demande.
         </div>

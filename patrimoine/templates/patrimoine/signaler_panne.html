@@ -8,15 +8,15 @@
     <link rel="stylesheet" href="{% static 'vendor/fontawesome/css/all.min.css' %}">
     <style>
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f3f7; margin: 0; padding: 20px; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
-        .card { background: white; width: 100%; max-width: 400px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
+        .card { background: var(--bg-card); width: 100%; max-width: 400px; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; }
         .icon-box { width: 70px; height: 70px; background: #e8f0fe; color: #1c5b96; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 15px; }
-        h2 { margin: 0 0 5px; color: #333; font-size: 20px; }
+        h2 { margin: 0 0 5px; color: var(--text-dark); font-size: 20px; }
         p { color: #666; font-size: 14px; margin-bottom: 25px; line-height: 1.5; }
         .machine-badge { background: #f8f0ff; color: #6f42c1; padding: 10px; border-radius: 8px; font-weight: bold; border: 1px dashed #6f42c1; margin-bottom: 20px; font-size: 13px; }
         textarea { width: 100%; padding: 15px; border: 2px solid #eef0f3; border-radius: 10px; font-family: inherit; font-size: 14px; box-sizing: border-box; resize: none; margin-bottom: 15px; outline: none; }
         textarea:focus { border-color: #6f42c1; }
         /* Style magique pour le bouton photo */
-        .file-upload { background: #f8f9fa; border: 2px dashed #ccc; padding: 15px; border-radius: 10px; cursor: pointer; color: #555; font-size: 13px; font-weight: bold; display: block; margin-bottom: 25px; transition: 0.2s; }
+        .file-upload { background: var(--bg-hover); border: 2px dashed #ccc; padding: 15px; border-radius: 10px; cursor: pointer; color: #555; font-size: 13px; font-weight: bold; display: block; margin-bottom: 25px; transition: 0.2s; }
         .file-upload:hover { border-color: #6f42c1; color: #6f42c1; background: #faf8ff; }
         .btn-submit { background: #6f42c1; color: white; border: none; padding: 15px; width: 100%; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; box-shadow: 0 4px 15px rgba(111,66,193,0.3); }
     </style>

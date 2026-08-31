@@ -282,9 +282,9 @@
                     {% endif %}
                 </td>
             </tr>
-            <tr id="detail-{{ t.id }}" style="display: none; background: #f8fafc;">
+            <tr id="detail-{{ t.id }}" style="display: none; background: var(--bg-hover);">
                 <td colspan="7" style="padding: 15px; border-bottom: 2px solid var(--border-color);">
-                    <div style="background: white; border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                         <table style="width: 100%; border-collapse: collapse;">
                             <thead style="background: var(--bg-hover);">
                                 <tr>
@@ -371,7 +371,7 @@
                             <label class="vd-label">Magasin source *</label>
                             {% if magasin_actif %}
 <input type="hidden" name="magasin_source" value="{{ magasin_actif.id }}">
-<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
+<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
 {% else %}
 <select name="magasin_source" class="vd-input select2" required>
                                 {% for m in magasins_sources %}

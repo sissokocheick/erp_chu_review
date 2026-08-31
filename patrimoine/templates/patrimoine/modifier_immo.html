@@ -6,13 +6,13 @@
   .vs-header{background:linear-gradient(135deg,#6f42c1,#563d7c);color:white;border-radius:10px;padding:20px 26px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 4px 18px rgba(111,66,193,.3);flex-wrap:wrap;gap:14px;}
   .vs-header h4{margin:0;font-size:20px;font-weight:700;}
   .vs-header small{opacity:.85;font-size:12px;}
-  .card{background:white;border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:24px;margin-bottom:18px;}
-  .card h5{margin:0 0 18px;font-size:14px;font-weight:700;color:#333;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #f0f3f7;padding-bottom:10px;display:flex;align-items:center;gap:8px;}
+  .card{background: var(--bg-card);border-radius:10px;box-shadow:0 2px 8px rgba(0,0,0,.07);padding:24px;margin-bottom:18px;}
+  .card h5{margin:0 0 18px;font-size:14px;font-weight:700;color: var(--text-dark);text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #f0f3f7;padding-bottom:10px;display:flex;align-items:center;gap:8px;}
   .card h5 i{color:#6f42c1;}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
   .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;}
   .fg{margin-bottom:14px;}
-  .fg label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#495057;margin-bottom:5px;}
+  .fg label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-medium);margin-bottom:5px;}
   .fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1px solid #dde3ea;border-radius:7px;font-size:13px;outline:none;box-sizing:border-box;transition:.2s;}
   .fg input:focus,.fg select:focus,.fg textarea:focus{border-color:#6f42c1;box-shadow:0 0 0 3px rgba(111,66,193,.1);}
   .btn-save{background:#6f42c1;color:white;border:none;padding:12px 28px;border-radius:7px;font-size:14px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.2s;}
@@ -101,7 +101,7 @@
       </select>
     </div>
     
-    <div style="background:#f8f9fa; border:1px solid #dde3ea; border-radius:8px; padding:15px; grid-column:1/-1;">
+    <div style="background: var(--bg-hover); border:1px solid #dde3ea; border-radius:8px; padding:15px; grid-column:1/-1;">
         <div class="grid3">
             <div class="fg">
                 <label>Bâtiment</label>

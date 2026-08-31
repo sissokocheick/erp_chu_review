@@ -120,7 +120,7 @@
           {% if demande.motif %}
           <div style="margin-top:16px;padding:14px;background: var(--bg-hover);border-radius:10px;border-left:3px solid #7c3aed;">
             <div style="font-size:11px;color: var(--text-medium);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Motif</div>
-            <div style="font-size:13px;color:#334155;">{{ demande.motif }}</div>
+            <div style="font-size:13px;color:var(--text-dark);">{{ demande.motif }}</div>
           </div>
           {% endif %}
         </div>
@@ -188,7 +188,7 @@
           </div>
           {% if demande.commentaire_valider %}
           <div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;border-left:3px solid #22c55e;">
-            <div style="font-size:12px;color:#334155;">{{ demande.commentaire_valider }}</div>
+            <div style="font-size:12px;color:var(--text-dark);">{{ demande.commentaire_valider }}</div>
           </div>
           {% endif %}
           {% if demande.motif_refus %}
@@ -260,7 +260,7 @@
         <div style="padding:16px 20px;">
           <div style="position:relative;padding-left:24px;">
             <!-- Ligne verticale -->
-            <div style="position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:#e2e8f0;"></div>
+            <div style="position:absolute;left:8px;top:4px;bottom:4px;width:2px;background:var(--bg-hover);"></div>
 
             <!-- Créée -->
             <div style="position:relative;margin-bottom:16px;">

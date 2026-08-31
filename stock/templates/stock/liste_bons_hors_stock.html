@@ -281,7 +281,7 @@
     {# Aucun magasin actif → l'utilisateur doit choisir #}
     {% if magasin_actif %}
 <input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="select-magasin-bon">
-<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: #495057; cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
+<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
 {% else %}
 <select name="magasin" id="select-magasin-bon" class="vd-input select2" required style="width: 100%;">
       <option value="">-- Choisir un magasin --</option>
@@ -373,7 +373,7 @@
       </div>
       <iframe id="pdf-iframe" style="display:none;width:100%;height:72vh;border:none;border-radius:0 0 8px 8px;"></iframe>
     </div>
-    <div class="mfoot" style="background:white;">
+    <div class="mfoot" style="background: var(--bg-card);">
       <button class="btn-nok" data-action="fermer-pdf">Fermer</button>
       <button class="btn-ok" data-action="imprimer-pdf">
         <i class="fas fa-print me-1"></i> Imprimer

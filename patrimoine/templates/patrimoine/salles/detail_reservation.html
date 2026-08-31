@@ -11,7 +11,7 @@
   .det-ph small { opacity: 0.85; font-size: 13px; color: white; }
   .det-chip { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; color: white; border: none; }
   .det-card { background: var(--bg-card); border-radius: var(--rad); box-shadow: 0 2px 12px var(--shadow); border: 1px solid var(--border-light); overflow: hidden; }
-  .det-card-head { padding: 16px 22px; border-bottom: 1px solid #f1f5f9; display: flex; align-items: center; gap: 10px; }
+  .det-card-head { padding: 16px 22px; border-bottom: 1px solid var(--border-light); display: flex; align-items: center; gap: 10px; }
   .det-card-head-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; }
   .det-card-head h5 { margin: 0; font-size: 15px; font-weight: 700; color: var(--text-dark); }
   .det-card-body { padding: 22px; }
@@ -105,7 +105,7 @@
             {% if reservation.description %}
             <div style="margin-top:12px;padding:12px;background: var(--bg-hover);border-radius:8px;border-left:3px solid #0891b2;">
               <div style="font-size:11px;color: var(--text-medium);text-transform:uppercase;font-weight:700;margin-bottom:4px;">Description</div>
-              <div style="font-size:13px;color:#334155;">{{ reservation.description }}</div>
+              <div style="font-size:13px;color:var(--text-dark);">{{ reservation.description }}</div>
             </div>
             {% endif %}
           </div>

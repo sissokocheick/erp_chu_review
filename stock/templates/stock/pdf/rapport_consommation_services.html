@@ -28,15 +28,15 @@
             height: 100%;
             font-family: 'Times New Roman', Times, serif;
             font-size: 10pt;
-            color: #000;
-            background: #fff;
+            color: var(--text-dark);
+            background: var(--bg-card);
         }
         .page-table { width: 100%; height: 100%; border-collapse: collapse; }
         .cell-content { vertical-align: top; }
 
         .top-header { width: 100%; border-bottom: 2px solid #1c5b96; padding-bottom: 4px; margin-bottom: 6px; }
         .top-header-left { display: inline-block; font-size: 9pt; font-weight: bold; color: #1c5b96; }
-        .top-header-right { display: inline-block; float: right; text-align: right; font-size: 8pt; color: #333; }
+        .top-header-right { display: inline-block; float: right; text-align: right; font-size: 8pt; color: var(--text-dark); }
         .top-header-right .republic { font-weight: bold; font-size: 9pt; }
         .top-header-right .motto { font-style: italic; font-size: 8pt; color: #555; }
 
@@ -62,7 +62,7 @@
         }
         .cart-col-title .process { font-size: 8pt; color: #555; }
         .cart-col-title .doc-title { font-size: 16pt; font-weight: bold; color: #1c5b96; letter-spacing: 1px; }
-        .cart-col-title .doc-subtitle { font-size: 9pt; color: #333; }
+        .cart-col-title .doc-subtitle { font-size: 9pt; color: var(--text-dark); }
         .cart-col-quality {
             display: table-cell; vertical-align: middle;
             width: 25%; padding: 6px 8px; font-size: 8pt; text-align: left;
@@ -72,7 +72,7 @@
 
         .info-box {
             margin-bottom: 8px; padding: 6px 8px;
-            background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 3px;
+            background: var(--bg-hover); border: 1px solid #dee2e6; border-radius: 3px;
             font-size: 9pt;
         }
         .info-row { margin-bottom: 3px; }
@@ -83,7 +83,7 @@
         }
         .summary-cell {
             display: table-cell; width: 25%; text-align: center;
-            border: 1px solid #dee2e6; padding: 6px 8px; background: #f8f9fa;
+            border: 1px solid #dee2e6; padding: 6px 8px; background: var(--bg-hover);
         }
         .summary-cell .s-label { font-size: 8pt; text-transform: uppercase; color: #666; }
         .summary-cell .s-value { font-size: 13pt; font-weight: bold; color: #1c5b96; }

@@ -32,8 +32,8 @@
   .s-panne { background: #f8d7da; color: #721c24; box-shadow: 0 4px 10px rgba(220,53,69,0.2); }
   .s-sas { background: #fff3cd; color: #856404; box-shadow: 0 4px 10px rgba(255,193,7,0.2); }
   
-  .btn-header { background: white; color: var(--pb); border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-decoration: none; }
-  .btn-header:hover { background: #f8fafc; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
+  .btn-header { background: var(--bg-card); color: var(--pb); border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; box-shadow: 0 4px 10px var(--shadow); text-decoration: none; }
+  .btn-header:hover { background: var(--bg-hover); transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); }
 
   /* ── Bandeau Sas ── */
   .sas-banner { background: #fffbeb; border: 1px solid #fbd38d; border-radius: var(--rad-sm); padding: 12px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 600; color: #dd6b20; box-shadow: 0 2px 5px rgba(221,107,32,0.1); }
@@ -42,7 +42,7 @@
 
   /* ── Layout sidebar + contenu ── */
   .reg-layout { display: flex; gap: 20px; align-items: flex-start; }
-  .reg-sidebar { width: 260px; flex-shrink: 0; background: white; border-radius: var(--rad); box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eef0f3; overflow: hidden; transition: 0.3s; }
+  .reg-sidebar { width: 260px; flex-shrink: 0; background: var(--bg-card); border-radius: var(--rad); box-shadow: 0 2px 10px var(--shadow); border: 1px solid var(--border-light); overflow: hidden; transition: 0.3s; }
   .reg-sidebar.collapsed { width: 50px; }
   .reg-main { flex: 1; min-width: 0; overflow-x: auto; }
 
@@ -54,15 +54,15 @@
   }
 
   /* ── Sidebar filtres ── */
-  .sb-head { padding: 15px 18px; background: #f8fafc; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-bottom: 1px solid #e2e8f0; }
-  .sb-head h6 { margin: 0; font-size: 14px; font-weight: 800; color: #334155; white-space: nowrap; overflow: hidden; }
-  .sb-toggle { background: #e2e8f0; border: none; cursor: pointer; color: #475569; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; transition: 0.2s; }
+  .sb-head { padding: 15px 18px; background: var(--bg-hover); display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-bottom: 1px solid #e2e8f0; }
+  .sb-head h6 { margin: 0; font-size: 14px; font-weight: 800; color: var(--text-dark); white-space: nowrap; overflow: hidden; }
+  .sb-toggle { background: var(--bg-hover); border: none; cursor: pointer; color: var(--text-medium); width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; transition: 0.2s; }
   .sb-toggle:hover { background: #cbd5e0; }
   .sb-body { padding: 18px; }
   .sb-section { margin-bottom: 18px; }
-  .sb-section label.sb-lbl { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 6px; }
-  .sb-input { width: 100%; padding: 10px 12px; border: 1px solid #cbd5e0; border-radius: var(--rad-sm); font-size: 13px; font-weight: 500; color: #1e293b; outline: none; box-sizing: border-box; background: #f8fafc; transition: 0.2s; }
-  .sb-input:focus { border-color: var(--pb2); background: white; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
+  .sb-section label.sb-lbl { display: block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-medium); margin-bottom: 6px; }
+  .sb-input { width: 100%; padding: 10px 12px; border: 1px solid var(--border-color); border-radius: var(--rad-sm); font-size: 13px; font-weight: 500; color: var(--text-dark); outline: none; box-sizing: border-box; background: var(--bg-hover); transition: 0.2s; }
+  .sb-input:focus { border-color: var(--pb2); background: var(--bg-card); box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15); }
   .sb-reset { width: 100%; padding: 10px; background: #fee2e2; color: #dc2626; border: none; border-radius: var(--rad-sm); font-size: 13px; font-weight: 800; cursor: pointer; margin-top: 5px; display: flex; justify-content: center; align-items: center; gap: 6px; transition: 0.2s; text-decoration: none; }
   .sb-reset:hover { background: #fecaca; }
   
@@ -71,42 +71,42 @@
   .nb-filtres { background: #ef4444; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 11px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
 
   /* ── Toolbar ── */
-  .tb-wrap { background: white; border-radius: var(--rad); padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px rgba(0,0,0,0.04); border: 1px solid #eef0f3; margin-bottom: 18px; gap: 10px; flex-wrap: wrap; }
+  .tb-wrap { background: var(--bg-card); border-radius: var(--rad); padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 10px var(--shadow); border: 1px solid var(--border-light); margin-bottom: 18px; gap: 10px; flex-wrap: wrap; }
   .tb-left, .tb-right { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-  .tb-info { font-size: 13px; color: #64748b; font-weight: 600; }
-  .tb-btn { border: 1px solid #cbd5e0; background: white; padding: 8px 14px; border-radius: var(--rad-sm); font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; color: #475569; }
-  .tb-btn:hover { background: #f8fafc; border-color: #94a3b8; }
+  .tb-info { font-size: 13px; color: var(--text-medium); font-weight: 600; }
+  .tb-btn { border: 1px solid var(--border-color); background: var(--bg-card); padding: 8px 14px; border-radius: var(--rad-sm); font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; color: var(--text-medium); }
+  .tb-btn:hover { background: var(--bg-hover); border-color: #94a3b8; }
   .tb-btn.active { background: var(--pb); color: white; border-color: var(--pb); box-shadow: 0 2px 6px rgba(30, 58, 138, 0.3); }
   
   .btn-col-cfg { position: relative; }
-  .col-dropdown { position: absolute; top: 110%; left: 0; background: white; border-radius: var(--rad); box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; padding: 15px; min-width: 230px; z-index: 9999; display: none; }
+  .col-dropdown { position: absolute; top: 110%; left: 0; background: var(--bg-card); border-radius: var(--rad); box-shadow: 0 10px 30px rgba(0,0,0,0.15); border: 1px solid var(--border-light); padding: 15px; min-width: 230px; z-index: 9999; display: none; }
   .col-dropdown.open { display: block; }
-  .col-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; font-weight: 500; cursor: pointer; color: #334155; }
+  .col-item { display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--text-dark); }
   .col-item input { cursor: pointer; width: 16px; height: 16px; accent-color: var(--pb2); }
 
   /* ── Table (Modernisée) ── */
-  .card-table { background: white; border-radius: var(--rad); box-shadow: 0 2px 10px rgba(0,0,0,0.04); overflow: hidden; border: 1px solid #eef0f3; }
+  .card-table { background: var(--bg-card); border-radius: var(--rad); box-shadow: 0 2px 10px var(--shadow); overflow: hidden; border: 1px solid var(--border-light); }
   .pt { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .pt thead tr { background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
-  .pt thead th { padding: 16px 18px; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; border-bottom: none; white-space: nowrap; cursor: pointer; user-select: none; text-align: left; }
-  .pt thead th:hover { background: #f1f5f9; color: #334155; }
+  .pt thead tr { background: var(--bg-hover); border-bottom: 2px solid var(--border-light); }
+  .pt thead th { padding: 16px 18px; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-medium); border-bottom: none; white-space: nowrap; cursor: pointer; user-select: none; text-align: left; }
+  .pt thead th:hover { background: var(--bg-hover); color: var(--text-dark); }
   .pt thead th.c { text-align: center; }
-  .pt tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
-  .pt tbody tr:hover { background: #f8fafc; }
+  .pt tbody tr { border-bottom: 1px solid var(--border-light); transition: background 0.15s; }
+  .pt tbody tr:hover { background: var(--bg-hover); }
   .pt tbody td { padding: 16px 18px; vertical-align: middle; }
   .pt tbody td.c { text-align: center; }
   .empty-row td { text-align: center; padding: 60px; color: #94a3b8; font-size: 15px; }
 
   /* ── Cellules & Typographie ── */
-  .code-tag { font-family: monospace; background: #f1f5f9; padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; color: #334155; display: inline-block; border: 1px solid #e2e8f0; }
-  .nom-bien { font-weight: 800; color: #1e293b; font-size: 15px; line-height: 1.4; margin-bottom: 4px; }
-  .sub-info { font-size: 12px; color: #64748b; margin-top: 4px; font-weight: 500; }
+  .code-tag { font-family: monospace; background: var(--bg-hover); padding: 4px 10px; border-radius: 6px; font-size: 13px; font-weight: 700; color: var(--text-dark); display: inline-block; border: 1px solid var(--border-light); }
+  .nom-bien { font-weight: 800; color: var(--text-dark); font-size: 15px; line-height: 1.4; margin-bottom: 4px; }
+  .sub-info { font-size: 12px; color: var(--text-medium); margin-top: 4px; font-weight: 500; }
   .cat-tag { padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; white-space: nowrap; }
-  .svc-tag { background: #e2e8f0; color: #334155; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; white-space: nowrap; }
+  .svc-tag { background: var(--bg-hover); color: var(--text-dark); padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 700; display: inline-block; white-space: nowrap; }
 
   /* ── Statut badge (Nowrap) ── */
   .st-badge { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border: 1px solid transparent; transition: 0.2s; }
-  .st-clickable:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.1); filter: brightness(0.95); cursor: pointer; }
+  .st-clickable:hover { transform: scale(1.05); box-shadow: 0 4px 10px var(--shadow); filter: brightness(0.95); cursor: pointer; }
   .st-ACTIF   { background: #d4edda; color: #155724; border-color: #c3e6cb; }
   .st-EN_PANNE{ background: #f8d7da; color: #721c24; border-color: #f5c6cb; }
   .st-REFORME { background: #e2e3e5; color: #383d41; border-color: #d6d8db; }
@@ -114,35 +114,35 @@
 
   /* ── Action badge (Nowrap) ── */
   .ac-badge { padding: 6px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px; border: 1px solid transparent; white-space: nowrap; transition: 0.2s; }
-  .ac-clickable:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(0,0,0,0.1); filter: brightness(0.95); cursor: pointer; }
+  .ac-clickable:hover { transform: scale(1.05); box-shadow: 0 4px 10px var(--shadow); filter: brightness(0.95); cursor: pointer; }
   .ac-RAS         { background: #f0fdf4; color: #166534; border-color: #bbf7d0; }
   .ac-MAINTENANCE { background: #fffbeb; color: #b45309; border-color: #fef08a; }
   .ac-REPARATION  { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
   .ac-REMPLACEMENT{ background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
-  .ac-REFORME     { background: #f8fafc; color: #475569; border-color: #e2e8f0; }
+  .ac-REFORME     { background: var(--bg-hover); color: var(--text-medium); border-color: var(--border-light); }
   .ac-INVENTAIRE  { background: #faf5ff; color: #4338ca; border-color: #e9d5ff; }
 
   /* ── VNC bar ── */
   .vnc-wrap { display: flex; align-items: center; gap: 8px; }
-  .vnc-bar { width: 80px; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+  .vnc-bar { width: 80px; height: 8px; background: var(--bg-hover); border-radius: 4px; overflow: hidden; flex-shrink: 0; }
   .vnc-fill { height: 100%; border-radius: 4px; transition: 0.3s; }
-  .vnc-txt { font-size: 12px; color: #475569; font-weight: 700; white-space: nowrap; }
+  .vnc-txt { font-size: 12px; color: var(--text-medium); font-weight: 700; white-space: nowrap; }
 
   /* ── Modal quick-edit ── */
   .mo { display: none; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.6); z-index: 99999; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
   .mo.open { display: flex; }
-  .mb { background: white; border-radius: var(--rad); max-width: 420px; width: 95%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: si 0.3s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden; }
+  .mb { background: var(--bg-card); border-radius: var(--rad); max-width: 420px; width: 95%; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); animation: si 0.3s cubic-bezier(0.16, 1, 0.3, 1); overflow: hidden; }
   @keyframes si { from { transform: translateY(-20px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
   .mh { background: linear-gradient(135deg, var(--pb), var(--pb2)); color: white; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; }
   .mh h5 { margin: 0; font-size: 16px; font-weight: 800; }
   .mc { background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; transition: 0.2s; }
   .mc:hover { background: rgba(255,255,255,0.4); transform: rotate(90deg); }
   .mbody { padding: 24px; }
-  .mfoot { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; background: #f8fafc; }
+  .mfoot { padding: 16px 24px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px; background: var(--bg-hover); }
   .btn-ok { background: var(--pb2); color: white; border: none; padding: 10px 24px; border-radius: var(--rad-sm); font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(59, 130, 246, 0.3); }
   .btn-ok:hover { background: var(--pb); transform: translateY(-2px); }
-  .btn-nok { background: white; color: #475569; border: 1px solid #cbd5e0; padding: 10px 18px; border-radius: var(--rad-sm); font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
-  .btn-nok:hover { background: #f1f5f9; }
+  .btn-nok { background: var(--bg-card); color: var(--text-medium); border: 1px solid var(--border-color); padding: 10px 18px; border-radius: var(--rad-sm); font-size: 14px; font-weight: 700; cursor: pointer; transition: 0.2s; }
+  .btn-nok:hover { background: var(--bg-hover); }
 </style>
 
 <div class="ph">
@@ -296,8 +296,8 @@
       </div>
       <div class="tb-right">
         <div style="display:flex; align-items:center; gap:8px;">
-          <span style="font-size:12px; color:#64748b; font-weight:700;">Afficher :</span>
-          <select onchange="changerPerPage(this.value)" style="padding:7px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:13px; font-weight:600; outline:none; cursor:pointer;">
+          <span style="font-size:12px; color: var(--text-medium); font-weight:700;">Afficher :</span>
+          <select onchange="changerPerPage(this.value)" style="padding:7px 12px; border: 1px solid var(--border-color); border-radius:6px; font-size:13px; font-weight:600; outline:none; cursor:pointer;">
             <option value="20"  {% if per_page == '20'  or not per_page %}selected{% endif %}>20 lignes</option>
             <option value="50"  {% if per_page == '50'  %}selected{% endif %}>50 lignes</option>
             <option value="100" {% if per_page == '100' %}selected{% endif %}>100 lignes</option>
@@ -351,12 +351,12 @@
 
                 <td class="col-nom">
                   <div class="nom-bien">{{ immo.nom_affichage|default:immo.code_patrimoine|default:"—" }}</div>
-                  {% if immo.marque %}<div class="sub-info" style="color:#475569; font-weight:600;">{{ immo.marque.nom }}{% if immo.modele %} {{ immo.modele.nom }}{% endif %}</div>{% endif %}
+                  {% if immo.marque %}<div class="sub-info" style="color: var(--text-medium); font-weight:600;">{{ immo.marque.nom }}{% if immo.modele %} {{ immo.modele.nom }}{% endif %}</div>{% endif %}
                   
                   {% if immo.specs_techniques %}
                       <div style="margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px;">
                           {% for cle, valeur in immo.specs_techniques.items %}
-                              <span title="{{ cle }}" style="background: #f1f5f9; color: #475569; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; border: 1px solid #e2e8f0;">
+                              <span title="{{ cle }}" style="background: var(--bg-hover); color: var(--text-medium); padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; border: 1px solid var(--border-light);">
                                   {{ valeur }}
                               </span>
                           {% endfor %}
@@ -380,10 +380,10 @@
                 <td class="col-lieu" style="font-size:13px;">
                   {% if immo.bureau %}
                   <i class="fas fa-map-marker-alt" style="color:#ef4444;margin-right:4px;"></i>
-                  <span style="font-weight:700; color:#334155;">Bât. {{ immo.bureau.batiment.code }}</span> / {{ immo.bureau.etage.nom }}
+                  <span style="font-weight:700; color:var(--text-dark);">Bât. {{ immo.bureau.batiment.code }}</span> / {{ immo.bureau.etage.nom }}
                   <div class="sub-info">{{ immo.bureau.nom }}</div>
                   {% elif immo.emplacement_exact %}
-                  <span style="color:#64748b; font-weight:500;">{{ immo.emplacement_exact|truncatechars:30 }}</span>
+                  <span style="color: var(--text-medium); font-weight:500;">{{ immo.emplacement_exact|truncatechars:30 }}</span>
                   {% else %}—{% endif %}
                 </td>
 
@@ -395,7 +395,7 @@
                     </div>
                     <span class="vnc-txt">{{ pct }}%</span>
                   </div>
-                  <div style="font-size:12px;color:#64748b;font-weight:700;margin-top:4px;">{{ immo.vnc|floatformat:0 }} FCFA</div>
+                  <div style="font-size:12px;color: var(--text-medium);font-weight:700;margin-top:4px;">{{ immo.vnc|floatformat:0 }} FCFA</div>
                   {% endwith %}
                 </td>
 
@@ -427,7 +427,7 @@
                   </div>
                 </td>
 
-                <td class="col-date" style="font-size:13px;color:#64748b; font-weight:600; display:none;">
+                <td class="col-date" style="font-size:13px;color: var(--text-medium); font-weight:600; display:none;">
                   {% if immo.date_acquisition %}
                   <div><i class="fas fa-shopping-cart" style="width:16px;"></i> {{ immo.date_acquisition|date:"d/m/Y" }}</div>
                   {% endif %}
@@ -439,14 +439,14 @@
                 </td>
 
                 <td class="col-trac c" style="display:none;">
-                  <div style="font-size:12px;color:#475569;line-height:1.7;text-align:left;">
+                  <div style="font-size:12px;color: var(--text-medium);line-height:1.7;text-align:left;">
                     <div><i class="fas fa-user-plus" style="color:#10b981;width:16px;"></i>
-                      <strong style="color:#1e293b;">{% if immo.cree_par %}{{ immo.cree_par.get_full_name|default:immo.cree_par.username }}{% else %}Système (Import){% endif %}</strong>
+                      <strong style="color: var(--text-dark);">{% if immo.cree_par %}{{ immo.cree_par.get_full_name|default:immo.cree_par.username }}{% else %}Système (Import){% endif %}</strong>
                       <br><span style="color:#94a3b8;">{{ immo.date_creation|date:"d/m/y H:i" }}</span>
                     </div>
                     {% if immo.modifie_par %}
                     <div style="margin-top:6px;"><i class="fas fa-user-edit" style="color:#3b82f6;width:16px;"></i>
-                      <strong style="color:#1e293b;">{{ immo.modifie_par.get_full_name|default:immo.modifie_par.username }}</strong>
+                      <strong style="color: var(--text-dark);">{{ immo.modifie_par.get_full_name|default:immo.modifie_par.username }}</strong>
                       <br><span style="color:#94a3b8;">{{ immo.date_modification|date:"d/m/y H:i" }}</span>
                     </div>
                     {% endif %}
@@ -455,7 +455,7 @@
 
                 <td class="c">
                   <a href="{% url 'patrimoine_detail' immo.id %}"
-                     style="background:#f1f5f9;color:#475569;padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;transition:0.2s; border:1px solid #cbd5e0; font-weight:700;">
+                     style="background: var(--bg-hover);color: var(--text-medium);padding:6px 12px;border-radius:6px;font-size:13px;text-decoration:none;display:inline-flex;align-items:center;transition:0.2s; border: 1px solid var(--border-color); font-weight:700;">
                     Dossier
                   </a>
                 </td>
@@ -467,28 +467,28 @@
 
         {% if not immos.object_list %}
         <div class="empty-row" style="text-align:center; padding:60px; color:#94a3b8; font-size:15px;">
-          <div style="background: #f8fafc; display: inline-flex; padding: 25px; border-radius: 50%; margin-bottom: 15px;">
+          <div style="background: var(--bg-hover); display: inline-flex; padding: 25px; border-radius: 50%; margin-bottom: 15px;">
               <i class="fas fa-boxes" style="font-size:35px; color:#cbd5e0;"></i>
           </div>
-          <div style="font-size: 16px; font-weight: 800; color: #475569;">Aucun bien trouvé.</div>
+          <div style="font-size: 16px; font-weight: 800; color: var(--text-medium);">Aucun bien trouvé.</div>
           <div style="font-size: 14px; font-weight: 500; color: #94a3b8; margin-top: 5px;">Essayez de modifier vos filtres de recherche.</div>
         </div>
         {% endif %}
 
         {% if immos.has_other_pages %}
-        <div style="padding: 16px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
-          <span style="font-size:13px; color:#64748b; font-weight: 600;">Lignes {{ immos.start_index }} à {{ immos.end_index }}</span>
+        <div style="padding: 16px 20px; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: var(--bg-hover);">
+          <span style="font-size:13px; color: var(--text-medium); font-weight: 600;">Lignes {{ immos.start_index }} à {{ immos.end_index }}</span>
           <div style="display:flex; gap:6px;">
             {% if immos.has_previous %}
-            <a href="?{% url_replace page=1 %}" style="padding:8px 14px; border:1px solid #cbd5e0; border-radius:6px; font-size:13px; text-decoration:none; color:#475569; font-weight:700; background: white;">&laquo;</a>
-            <a href="?{% url_replace page=immos.previous_page_number %}" style="padding:8px 14px; border:1px solid #cbd5e0; border-radius:6px; font-size:13px; text-decoration:none; color:#475569; font-weight:700; background: white;">‹ Précédent</a>
+            <a href="?{% url_replace page=1 %}" style="padding:8px 14px; border: 1px solid var(--border-color); border-radius:6px; font-size:13px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-card);">&laquo;</a>
+            <a href="?{% url_replace page=immos.previous_page_number %}" style="padding:8px 14px; border: 1px solid var(--border-color); border-radius:6px; font-size:13px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-card);">‹ Précédent</a>
             {% endif %}
             
             <span style="padding:8px 16px; border-radius:6px; font-size:13px; font-weight:800; color:white; background:var(--pb); box-shadow: 0 2px 4px rgba(30,58,138,0.2);">Page {{ immos.number }} / {{ immos.paginator.num_pages }}</span>
             
             {% if immos.has_next %}
-            <a href="?{% url_replace page=immos.next_page_number %}" style="padding:8px 14px; border:1px solid #cbd5e0; border-radius:6px; font-size:13px; text-decoration:none; color:#475569; font-weight:700; background: white;">Suivant ›</a>
-            <a href="?{% url_replace page=immos.paginator.num_pages %}" style="padding:8px 14px; border:1px solid #cbd5e0; border-radius:6px; font-size:13px; text-decoration:none; color:#475569; font-weight:700; background: white;">&raquo;</a>
+            <a href="?{% url_replace page=immos.next_page_number %}" style="padding:8px 14px; border: 1px solid var(--border-color); border-radius:6px; font-size:13px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-card);">Suivant ›</a>
+            <a href="?{% url_replace page=immos.paginator.num_pages %}" style="padding:8px 14px; border: 1px solid var(--border-color); border-radius:6px; font-size:13px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-card);">&raquo;</a>
             {% endif %}
           </div>
         </div>
@@ -499,11 +499,11 @@
     <div id="vue-cartes" {% if request.GET.vue != 'cartes' %}style="display:none;"{% endif %}>
       <div style="display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:20px;">
         {% for immo in immos %}
-        <div style="background:white; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.04); border:1px solid #eef0f3; overflow:hidden; transition:0.3s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.borderColor='#bfdbfe';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#eef0f3';">
+        <div style="background: var(--bg-card); border-radius:12px; box-shadow: 0 2px 10px var(--shadow); border: 1px solid var(--border-light); overflow:hidden; transition:0.3s;" onmouseover="this.style.transform='translateY(-4px)'; this.style.borderColor='#bfdbfe';" onmouseout="this.style.transform='translateY(0)'; this.style.borderColor='#eef0f3';">
           <div style="padding:18px; display:flex; align-items:flex-start; justify-content:space-between; border-bottom:1px solid #f1f5f9;">
             <div>
-              <div style="font-family:monospace; font-size:13px; font-weight:700; color:#64748b; margin-bottom:6px;"><i class="fas fa-barcode"></i> {{ immo.code_patrimoine|default:"Non immatriculé" }}</div>
-              <div style="font-weight:800; color:#1e293b; font-size:16px; line-height:1.3;">{{ immo.nom_affichage|default:immo.type_equipement.nom }}</div>
+              <div style="font-family:monospace; font-size:13px; font-weight:700; color: var(--text-medium); margin-bottom:6px;"><i class="fas fa-barcode"></i> {{ immo.code_patrimoine|default:"Non immatriculé" }}</div>
+              <div style="font-weight:800; color: var(--text-dark); font-size:16px; line-height:1.3;">{{ immo.nom_affichage|default:immo.type_equipement.nom }}</div>
             </div>
             <div style="width:45px; height:45px; border-radius:12px; background:{{ immo.type_equipement.categorie.couleur|default:'#e2e8f0' }}22; display:flex; align-items:center; justify-content:center; font-size:20px; color:{{ immo.type_equipement.categorie.couleur|default:'#64748b' }}; flex-shrink:0;">
               <i class="{{ immo.type_equipement.categorie.icone|default:'fas fa-box' }}"></i>
@@ -511,30 +511,30 @@
           </div>
           <div style="padding:15px 18px;">
             <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid #f8fafc;">
-              <span style="color:#64748b; font-weight:600;">Type</span>
-              <span style="font-weight:700; color:#334155; text-align:right;">{{ immo.type_equipement.nom }}</span>
+              <span style="color: var(--text-medium); font-weight:600;">Type</span>
+              <span style="font-weight:700; color:var(--text-dark); text-align:right;">{{ immo.type_equipement.nom }}</span>
             </div>
             {% if immo.service_affectation %}
             <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid #f8fafc;">
-              <span style="color:#64748b; font-weight:600;">Service</span>
-              <span style="font-weight:700; color:#334155; text-align:right;">{{ immo.service_affectation.nom|truncatechars:22 }}</span>
+              <span style="color: var(--text-medium); font-weight:600;">Service</span>
+              <span style="font-weight:700; color:var(--text-dark); text-align:right;">{{ immo.service_affectation.nom|truncatechars:22 }}</span>
             </div>
             {% endif %}
             {% if immo.bureau %}
             <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0; border-bottom:1px solid #f8fafc;">
-              <span style="color:#64748b; font-weight:600;">Lieu</span>
-              <span style="font-weight:700; color:#334155; text-align:right;">Bât.{{ immo.bureau.batiment.code }} / {{ immo.bureau.nom|truncatechars:15 }}</span>
+              <span style="color: var(--text-medium); font-weight:600;">Lieu</span>
+              <span style="font-weight:700; color:var(--text-dark); text-align:right;">Bât.{{ immo.bureau.batiment.code }} / {{ immo.bureau.nom|truncatechars:15 }}</span>
             </div>
             {% endif %}
             <div style="display:flex; justify-content:space-between; font-size:13px; padding:6px 0;">
-              <span style="color:#64748b; font-weight:600;">VNC</span>
+              <span style="color: var(--text-medium); font-weight:600;">VNC</span>
               <span style="font-weight:800; color:{% if immo.taux_amorti_pct < 40 %}#10b981{% elif immo.taux_amorti_pct < 75 %}#f59e0b{% else %}#ef4444{% endif %}; text-align:right;">
                 {{ immo.vnc|floatformat:0 }} F ({{ immo.taux_amorti_pct }}%)
               </span>
             </div>
           </div>
           
-          <div style="padding:14px 18px; background:#f8fafc; border-top:1px solid #eef0f3; display:flex; align-items:center; justify-content:space-between;">
+          <div style="padding:14px 18px; background: var(--bg-hover); border-top:1px solid #eef0f3; display:flex; align-items:center; justify-content:space-between;">
             <div class="qe-wrap" id="qe-st-card-{{ immo.id }}">
                 {% if request.user.is_superuser %}
                 <span class="st-badge st-clickable st-{{ immo.statut }}" onclick="ouvrirQE({{ immo.id }},'statut')" title="Forcer le statut">
@@ -553,7 +553,7 @@
           </div>
         </div>
         {% empty %}
-        <div style="grid-column:1/-1; text-align:center; padding:60px; color:#94a3b8; background:white; border-radius:12px; border:1px solid #eef0f3;">
+        <div style="grid-column:1/-1; text-align:center; padding:60px; color:#94a3b8; background: var(--bg-card); border-radius:12px; border: 1px solid var(--border-light);">
           <i class="fas fa-boxes" style="font-size:40px; display:block; margin-bottom:15px; color:#cbd5e0;"></i>
           <div style="font-size:16px; font-weight:800;">Aucun bien trouvé.</div>
         </div>
@@ -561,19 +561,19 @@
       </div>
       
       {% if immos.has_other_pages %}
-      <div style="padding: 16px 20px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: white; border-radius:12px; margin-top:20px;">
-        <span style="font-size:13px; color:#64748b; font-weight: 600;">Lignes {{ immos.start_index }} à {{ immos.end_index }}</span>
+      <div style="padding: 16px 20px; border: 1px solid var(--border-light); display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); border-radius:12px; margin-top:20px;">
+        <span style="font-size:13px; color: var(--text-medium); font-weight: 600;">Lignes {{ immos.start_index }} à {{ immos.end_index }}</span>
         <div style="display:flex; gap:6px;">
           {% if immos.has_previous %}
-          <a href="?{% url_replace page=1 %}&vue=cartes" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:12px; text-decoration:none; color:#475569; font-weight:700; background: #f8fafc;">&laquo;</a>
-          <a href="?{% url_replace page=immos.previous_page_number %}&vue=cartes" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:12px; text-decoration:none; color:#475569; font-weight:700; background: #f8fafc;">‹ Précédent</a>
+          <a href="?{% url_replace page=1 %}&vue=cartes" style="padding:6px 12px; border: 1px solid var(--border-color); border-radius:6px; font-size:12px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-hover);">&laquo;</a>
+          <a href="?{% url_replace page=immos.previous_page_number %}&vue=cartes" style="padding:6px 12px; border: 1px solid var(--border-color); border-radius:6px; font-size:12px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-hover);">‹ Précédent</a>
           {% endif %}
           
           <span style="padding:6px 14px; border-radius:6px; font-size:12px; font-weight:800; color:white; background:var(--pb); box-shadow: 0 2px 4px rgba(30,58,138,0.2);">Page {{ immos.number }} / {{ immos.paginator.num_pages }}</span>
           
           {% if immos.has_next %}
-          <a href="?{% url_replace page=immos.next_page_number %}&vue=cartes" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:12px; text-decoration:none; color:#475569; font-weight:700; background: #f8fafc;">Suivant ›</a>
-          <a href="?{% url_replace page=immos.paginator.num_pages %}&vue=cartes" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:12px; text-decoration:none; color:#475569; font-weight:700; background: #f8fafc;">&raquo;</a>
+          <a href="?{% url_replace page=immos.next_page_number %}&vue=cartes" style="padding:6px 12px; border: 1px solid var(--border-color); border-radius:6px; font-size:12px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-hover);">Suivant ›</a>
+          <a href="?{% url_replace page=immos.paginator.num_pages %}&vue=cartes" style="padding:6px 12px; border: 1px solid var(--border-color); border-radius:6px; font-size:12px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-hover);">&raquo;</a>
           {% endif %}
         </div>
       </div>
@@ -590,7 +590,7 @@
     </div>
     <div class="mbody">
       <div class="fg">
-        <label id="qe-label" style="font-size: 13px; color:#475569;">Sélectionner une nouvelle valeur</label>
+        <label id="qe-label" style="font-size: 13px; color: var(--text-medium);">Sélectionner une nouvelle valeur</label>
         <select id="qe-select" class="sb-input" style="padding: 12px; font-size: 14px; margin-top: 8px;">
           <option value="">Choisir…</option>
         </select>

@@ -8,12 +8,12 @@
   .tab-link { padding: 10px 20px; font-weight: 700; font-size: 14px; text-decoration: none; color: #6c757d; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: .2s; }
   .tab-link:hover { color: #117a8b; }
   .tab-link.active { color: #117a8b; border-bottom-color: #117a8b; }
-  .filtres-card { background: white; border-radius: 10px; padding: 14px 20px; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .filtres-card { background: var(--bg-card); border-radius: 10px; padding: 14px 20px; margin-bottom: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .filtres-card input { border: 1px solid #dde3ea; border-radius: 7px; padding: 8px 12px; font-size: 13px; outline: none; transition:.2s; width: 280px; }
   .filtres-card input:focus { border-color:#117a8b; box-shadow:0 0 0 3px rgba(23,162,184,0.1); }
   .filtres-card select { border: 1px solid #dde3ea; border-radius: 7px; padding: 8px 12px; font-size: 13px; outline: none; cursor: pointer; }
   
-  .table-card { background:white; border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow:hidden; overflow-x:auto; }
+  .table-card { background: var(--bg-card); border-radius:10px; box-shadow:0 2px 8px rgba(0,0,0,0.07); overflow:hidden; overflow-x:auto; }
   .table-card table { width:100%; border-collapse:collapse; font-size:13px; }
   .table-card thead tr { background: #117a8b; color: white; }
   .table-card thead th { padding:13px 14px; font-weight:700; font-size:11px; text-transform:uppercase; letter-spacing:.5px; border:none; white-space:nowrap; text-align: left; }
@@ -30,8 +30,8 @@
   .b-cloturee { background:#fce4ec; color:#880e4f; }
   .b-refusee  { background:#f8d7da; color:#721c24; }
 
-  .inner-table { width:100%; border-collapse:collapse; font-size:13px; border: 1px solid #dee2e6; background:white;}
-  .inner-table thead th { background:#f8f9fa; color:#495057; padding:10px; font-size:11px; text-transform:uppercase; font-weight:700; border-bottom:2px solid #dee2e6; }
+  .inner-table { width:100%; border-collapse:collapse; font-size:13px; border: 1px solid #dee2e6; background: var(--bg-card);}
+  .inner-table thead th { background: var(--bg-hover); color:var(--text-medium); padding:10px; font-size:11px; text-transform:uppercase; font-weight:700; border-bottom:2px solid #dee2e6; }
   .inner-table tbody td { padding:10px; border-bottom:1px solid #eee; }
 
   .pag { display:flex; gap:5px; justify-content:center; }
@@ -47,7 +47,7 @@
     <h4><i class="fas fa-user-check me-2"></i>Validation des Demandes</h4>
     <small>Examinez et validez les demandes de matériel de votre équipe</small>
   </div>
-  <div style="background: white; color: #117a8b; padding: 8px 15px; border-radius: 8px; font-weight: 700; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+  <div style="background: var(--bg-card); color: #117a8b; padding: 8px 15px; border-radius: 8px; font-weight: 700; font-size: 13px; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
     <i class="fas fa-clinic-medical"></i> {{ service_chef.nom|upper }}
   </div>
 </div>
@@ -127,14 +127,14 @@
                     <td><strong style="color:#117a8b; font-family:monospace; font-size: 14px;">{{ d.numero_demande }}</strong></td>
                     
                     <td style="white-space:nowrap;">
-                        <div style="font-weight: bold; color: #333;">{{ d.date_demande|date:"d/m/Y" }}</div>
+                        <div style="font-weight: bold; color: var(--text-dark);">{{ d.date_demande|date:"d/m/Y" }}</div>
                         <div style="font-size:11px;color:#999;">{{ d.date_demande|date:"H:i" }}</div>
                     </td>
 
-                    <td><div style="font-weight: 600; color: #495057;">{{ d.demandeur.get_full_name|default:d.demandeur.username|title }}</div></td>
+                    <td><div style="font-weight: 600; color: var(--text-medium);">{{ d.demandeur.get_full_name|default:d.demandeur.username|title }}</div></td>
 
                     <td style="font-weight: 600; color: #555;">
-                        <i class="fas fa-warehouse" style="color:#adb5bd; margin-right:4px;"></i> {{ d.magasin_cible.nom }}
+                        <i class="fas fa-warehouse" style="color: var(--text-medium); margin-right:4px;"></i> {{ d.magasin_cible.nom }}
                     </td>
 
                     <td style="text-align:center; font-weight: bold; color: #117a8b;">
@@ -164,7 +164,7 @@
                 <tr id="detail-{{ d.id }}" style="display: none; background: #fdfdfd; cursor: default;" onclick="event.stopPropagation();">
                     <td colspan="8" style="padding: 15px 30px 25px 60px; border-bottom: 2px solid #117a8b;">
                         
-                        <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
+                        <div style="background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
                             <h5 style="margin: 0 0 15px; color: #117a8b; font-size: 14px;"><i class="fas fa-box-open"></i> Détail de la demande</h5>
                             
                             {% if d.commentaire %}
@@ -208,7 +208,7 @@
                 </tr>
                 {% empty %}
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 50px; color: #adb5bd;">
+                    <td colspan="8" style="text-align: center; padding: 50px; color: var(--text-medium);">
                         <i class="fas fa-thumbs-up" style="font-size: 40px; margin-bottom: 15px; display: block; color: #28a745;"></i>
                         Votre équipe est à jour !
                     </td>
@@ -219,7 +219,7 @@
     </div>
 </form>
 
-<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px; padding: 15px; background: var(--bg-card); border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #eee;">
     <div style="font-size: 13px; display: flex; gap: 15px;">
         <span style="background: #fff3cd; color: #856404; padding: 6px 12px; border-radius: 12px; font-weight: bold; border: 1px solid #ffeeba;">
             <i class="fas fa-hourglass-half"></i> {{ counts.a_valider }} en attente

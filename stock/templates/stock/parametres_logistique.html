@@ -35,7 +35,7 @@
   .acc-motifs .acc-head h5     { color: #dc3545; }
   .acc-benef .acc-head      { border-left-color: #6f42c1; }
   .acc-benef .acc-head h5   { color: #6f42c1; }
-  body.dark-mode .acc-config .acc-head h5 { color: #adb5bd; }
+  body.dark-mode .acc-config .acc-head h5 { color: var(--text-medium); }
   body.dark-mode .acc-magasins .acc-head h5 { color: #ffda6a; }
   body.dark-mode .acc-fourn .acc-head h5 { color: #74b9ff; }
   body.dark-mode .acc-motifs .acc-head h5 { color: #ff9e9e; }
@@ -149,7 +149,7 @@
   }
   .toggle-switch .slider::before {
     position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px;
-    background: white; border-radius: 50%; transition: .3s;
+    background: var(--bg-card); border-radius: 50%; transition: .3s;
   }
   .toggle-switch input:checked + .slider { background: #28a745; }
   .toggle-switch input:checked + .slider::before { transform: translateX(20px); }

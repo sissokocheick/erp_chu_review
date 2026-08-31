@@ -30,9 +30,9 @@
         padding: 0;
         font-family: 'Helvetica', 'Arial', sans-serif;
         font-size: 10.5pt;
-        color: #000;
+        color: var(--text-dark);
         line-height: 1.25;
-        background: #fff;
+        background: var(--bg-card);
     }
 
     .etat-header { width: 100%; border-collapse: collapse; margin-bottom: 6px; text-align: center; font-size: 9.5px; }
@@ -185,7 +185,7 @@
                     <div class="sig-name">
                         {% if campagne.cree_par %}{{ campagne.cree_par.get_full_name|default:campagne.cree_par.username|upper }}{% else %}..................................{% endif %}
                     </div>
-                    {% if campagne.date_creation %}<div style="font-size:8px; color:#333;">{{ campagne.date_creation|date:"d/m/Y" }}</div>{% endif %}
+                    {% if campagne.date_creation %}<div style="font-size:8px; color: var(--text-dark);">{{ campagne.date_creation|date:"d/m/Y" }}</div>{% endif %}
                 </td>
                 <td>
                     <strong>LE VÉRIFICATEUR</strong>
@@ -209,9 +209,9 @@
                         {% endif %}
                     </div>
                     {% if campagne.statut == 'VALIDE' and campagne.valide_par %}
-                        <div style="font-size:8px; color:#333;">{{ campagne.date_validation|date:"d/m/Y" }}</div>
+                        <div style="font-size:8px; color: var(--text-dark);">{{ campagne.date_validation|date:"d/m/Y" }}</div>
                     {% else %}
-                        <div style="font-size:8px; color:#333;">Date : ....../....../......</div>
+                        <div style="font-size:8px; color: var(--text-dark);">Date : ....../....../......</div>
                     {% endif %}
                     {% if campagne.statut == 'VALIDE' and campagne.valide_par and campagne.valide_par.profil %}
                         <div style="font-weight:normal; color:#555; font-size:7px;">{{ campagne.valide_par.profil.get_fonction_display }}</div>

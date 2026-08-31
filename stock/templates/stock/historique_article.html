@@ -11,7 +11,7 @@
     .page-header-bar h2 { color: var(--text-dark); margin: 0; font-size: 20px; }
 
     .btn-print {
-        background: #e2e8f0; color: #1c5b96; border: none;
+        background: var(--bg-hover); color: #1c5b96; border: none;
         padding: 10px 16px; border-radius: 8px; font-weight: 700; font-size: 14px;
         cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
         transition: .2s; border: 1px solid #cbd5e1;
@@ -97,7 +97,7 @@
     /* DARK MODE */
     body.dark-mode .page-header-bar { border-bottom-color: var(--border-light); }
     body.dark-mode .page-header-bar h2 { color: var(--text-light, #f1f5f9); }
-    body.dark-mode .btn-print { background: #334155; color: #e2e8f0; border-color: #475569; }
+    body.dark-mode .btn-print { background: #334155; color: #e2e8f0; border-color: var(--text-medium); }
     body.dark-mode .btn-print:hover { background: #17a2b8; color: white; }
     body.dark-mode .info-card { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
     body.dark-mode .table-card { background: var(--bg-card, #1e293b); border-color: var(--border-light, #475569); }
@@ -116,9 +116,9 @@
         display: inline-flex; align-items: center; gap: 6px;
         transition: .2s;
     }
-    .btn-retour:hover { background-color: #495057; }
-    body.dark-mode .btn-retour { background-color: #495057; }
-    body.dark-mode .btn-retour:hover { background-color: #334155; }
+    .btn-retour:hover { background-color: var(--text-medium); }
+    body.dark-mode .btn-retour { background-color: var(--text-medium); }
+    body.dark-mode .btn-retour:hover { background-color: var(--text-dark); }
 
 </style>
 

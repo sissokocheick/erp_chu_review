@@ -5,7 +5,7 @@
 <div style="max-width: 500px; margin: 0 auto;">
     
     <div style="margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between;">
-        <a href="{% url 'patrimoine_detail_campagne' campagne.id %}" style="text-decoration: none; color: #64748b; font-weight: bold; font-size: 14px; transition: 0.2s;" onmouseover="this.style.color='#0f766e'" onmouseout="this.style.color='#64748b'">
+        <a href="{% url 'patrimoine_detail_campagne' campagne.id %}" style="text-decoration: none; color: var(--text-medium); font-weight: bold; font-size: 14px; transition: 0.2s;" onmouseover="this.style.color='#0f766e'" onmouseout="this.style.color='#64748b'">
             <i class="fas fa-arrow-left"></i> Quitter le mode scan
         </a>
         <span style="background: #0f766e; color: white; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; box-shadow: 0 2px 5px rgba(15, 118, 110, 0.3);">
@@ -13,12 +13,12 @@
         </span>
     </div>
 
-    <div style="background: white; padding: 35px 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; border: 2px dashed #cbd5e1;">
+    <div style="background: var(--bg-card); padding: 35px 25px; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); text-align: center; border: 2px dashed #cbd5e1;">
         <div style="font-size: 45px; color: #0f766e; margin-bottom: 15px; opacity: 0.8;">
             <i class="fas fa-barcode"></i>
         </div>
-        <h5 style="margin: 0 0 10px; font-weight: 800; color: #1e293b; font-size: 20px;">Prêt à scanner</h5>
-        <p style="font-size: 13px; color: #64748b; margin-bottom: 25px;">Scannez l'étiquette de l'équipement ou tapez son code ci-dessous.</p>
+        <h5 style="margin: 0 0 10px; font-weight: 800; color: var(--text-dark); font-size: 20px;">Prêt à scanner</h5>
+        <p style="font-size: 13px; color: var(--text-medium); margin-bottom: 25px;">Scannez l'étiquette de l'équipement ou tapez son code ci-dessous.</p>
 
         <form method="POST" id="scan-form">
             {% csrf_token %}
@@ -36,32 +36,32 @@
 {% if ligne_trouvee %}
 <div id="mo-validation" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); z-index: 99999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
     
-    <div style="background: white; width: 92%; max-width: 480px; border-radius: 20px; padding: 30px; animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
+    <div style="background: var(--bg-card); width: 92%; max-width: 480px; border-radius: 20px; padding: 30px; animation: zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 20px 50px rgba(0,0,0,0.3);">
         
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; border-bottom: 1px solid var(--border-light); padding-bottom: 15px;">
             <div>
-                <h4 style="margin: 0; font-weight: 800; color: #1e293b; font-size: 20px;">{{ ligne_trouvee.immobilisation.nom_affichage }}</h4>
+                <h4 style="margin: 0; font-weight: 800; color: var(--text-dark); font-size: 20px;">{{ ligne_trouvee.immobilisation.nom_affichage }}</h4>
                 <div style="margin-top: 8px;">
                     <code style="font-size: 13px; color: #0f766e; font-weight: 800; background: #f0fdf4; padding: 4px 10px; border-radius: 6px; border: 1px solid #a7f3d0;">
                         <i class="fas fa-tag"></i> {{ ligne_trouvee.immobilisation.code_patrimoine }}
                     </code>
                 </div>
             </div>
-            <a href="{% url 'patrimoine_audit_scan' campagne.id %}" style="background: #f8fafc; color: #64748b; width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: 0.2s;" onmouseover="this.style.background='#e2e8f0'">
+            <a href="{% url 'patrimoine_audit_scan' campagne.id %}" style="background: var(--bg-hover); color: var(--text-medium); width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; text-decoration: none; transition: 0.2s;" onmouseover="this.style.background='var(--bg-hover)'">
                 <i class="fas fa-times"></i>
             </a>
         </div>
 
-        <div style="background: #f8fafc; border-left: 4px solid #0f766e; padding: 12px 15px; border-radius: 8px; margin-bottom: 25px; font-size: 13px; color: #475569;">
+        <div style="background: var(--bg-hover); border-left: 4px solid #0f766e; padding: 12px 15px; border-radius: 8px; margin-bottom: 25px; font-size: 13px; color: var(--text-medium);">
             <i class="fas fa-map-marker-alt" style="color: #0f766e; margin-right: 5px;"></i> 
-            Emplacement théorique : <strong style="color: #1e293b;">{{ ligne_trouvee.immobilisation.bureau.nom|default:"Non renseigné" }}</strong>
+            Emplacement théorique : <strong style="color: var(--text-dark);">{{ ligne_trouvee.immobilisation.bureau.nom|default:"Non renseigné" }}</strong>
         </div>
 
         <form method="POST">
             {% csrf_token %}
             <input type="hidden" name="ligne_id" value="{{ ligne_trouvee.id }}">
             
-            <label style="font-size: 12px; font-weight: 800; color: #64748b; display: block; margin-bottom: 12px; text-transform: uppercase;">État constaté sur place :</label>
+            <label style="font-size: 12px; font-weight: 800; color: var(--text-medium); display: block; margin-bottom: 12px; text-transform: uppercase;">État constaté sur place :</label>
             
             <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 25px;">
                 
@@ -116,14 +116,14 @@
     .btn-check input { display: none; }
     
     .check-box { 
-        background: #f8fafc; 
-        color: #64748b; 
+        background: var(--bg-hover); 
+        color: var(--text-medium); 
         padding: 18px 10px; 
         border-radius: 12px; 
         text-align: center; 
         font-weight: 700; 
         font-size: 12px; 
-        border: 2px solid #e2e8f0; 
+        border: 2px solid var(--border-light); 
         transition: all 0.2s ease; 
     }
     
@@ -132,7 +132,7 @@
     .btn-check input:checked + .deplace-box { background: #fffbeb; color: #d97706; border-color: #f59e0b; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2); }
     .btn-check input:checked + .reforme-box { background: #fef2f2; color: #dc2626; border-color: #ef4444; box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2); }
     
-    .check-box:hover:not(.btn-check input:checked + .check-box) { background: #f1f5f9; border-color: #cbd5e1; }
+    .check-box:hover:not(.btn-check input:checked + .check-box) { background: var(--bg-hover); border-color: var(--border-color); }
 </style>
 
 <script>

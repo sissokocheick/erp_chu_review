@@ -11,27 +11,27 @@
   .s-chip { padding: 8px 16px; border-radius: 20px; font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.2); color: white; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(255,255,255,0.3); }
 
   /* ── TABLEAU ── */
-  .card-table { background: white; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #eef0f3; }
+  .card-table { background: var(--bg-card); border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid var(--border-light); }
   .pt { width: 100%; border-collapse: collapse; font-size: 13px; }
   .pt thead tr { background: #fffbeb; border-bottom: 2px solid #fde68a; }
   .pt thead th { padding: 15px 18px; font-weight: 800; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #b45309; text-align: left; }
-  .pt tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.2s ease; }
+  .pt tbody tr { border-bottom: 1px solid var(--border-light); transition: background 0.2s ease; }
   .pt tbody tr:hover { background: #fffdf5; transform: translateX(2px); }
   .pt tbody td { padding: 15px 18px; vertical-align: middle; }
 
   /* ── TYPOGRAPHIE ── */
   .item-name { font-weight: 800; color: #d97706; font-size: 14px; line-height: 1.3; }
-  .info-bon { font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 600; }
+  .info-bon { font-size: 11px; color: var(--text-medium); margin-top: 4px; font-weight: 600; }
   
   .type-badge { background: #fef3c7; color: #b45309; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; display: inline-block; border: 1px solid #fde68a; }
-  .svc-badge { background: #f1f5f9; color: #475569; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; display: inline-block; border: 1px solid #e2e8f0; }
+  .svc-badge { background: var(--bg-hover); color: var(--text-medium); padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; display: inline-block; border: 1px solid var(--border-light); }
 
   /* ── BOUTONS ACTIONS ── */
   .action-wrap { display: flex; gap: 8px; justify-content: center; }
   .btn-val { background: #10b981; color: white; border: none; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3); }
   .btn-val:hover { background: #059669; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(16, 185, 129, 0.4); }
   
-  .btn-scinder { background: white; color: #d97706; border: 1px solid #fcd34d; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+  .btn-scinder { background: var(--bg-card); color: #d97706; border: 1px solid #fcd34d; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; transition: 0.2s; display: inline-flex; align-items: center; gap: 6px; }
   .btn-scinder:hover { background: #fffbeb; border-color: #f59e0b; transform: translateY(-1px); }
 
   .empty-row td { text-align: center; padding: 60px 20px; color: #94a3b8; font-size: 15px; }
@@ -55,16 +55,16 @@
       
       <form method="POST" action="{% url 'patrimoine_direct' %}" style="display:inline;margin:0;" id="form-sas-direct">
           {% csrf_token %}
-          <button type="button" style="background: white; color: #d97706; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 800; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: 0.2s; border:none; cursor:pointer;" onclick="confirmerSweetAlert('Créer un bien Saisie Directe ?', 'Un nouveau bien sera ajouté au parc.', 'question', 'Créer', '#d97706', function(){document.getElementById('form-sas-direct').submit();})">
+          <button type="button" style="background: var(--bg-card); color: #d97706; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-size: 13px; font-weight: 800; box-shadow: 0 4px 10px var(--shadow); transition: 0.2s; border:none; cursor:pointer;" onclick="confirmerSweetAlert('Créer un bien Saisie Directe ?', 'Un nouveau bien sera ajouté au parc.', 'question', 'Créer', '#d97706', function(){document.getElementById('form-sas-direct').submit();})">
               <i class="fas fa-bolt" style="color: #f59e0b; margin-right: 6px;"></i> Saisie Directe
           </button>
       </form>
   </div>
 </div>
 
-<div class="no-print" style="margin-bottom: 20px; background: white; padding: 15px 25px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); display: flex; align-items: center; gap: 15px; border: 1px solid #eef0f3; transition: all 0.3s;" onfocusin="this.style.borderColor='#f59e0b'; this.style.boxShadow='0 4px 15px rgba(245,158,11,0.15)';" onfocusout="this.style.borderColor='#eef0f3'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.04)';">
+<div class="no-print" style="margin-bottom: 20px; background: var(--bg-card); padding: 15px 25px; border-radius: 12px; box-shadow: 0 2px 10px var(--shadow); display: flex; align-items: center; gap: 15px; border: 1px solid var(--border-light); transition: all 0.3s;" onfocusin="this.style.borderColor='#f59e0b'; this.style.boxShadow='0 4px 15px rgba(245,158,11,0.15)';" onfocusout="this.style.borderColor='#eef0f3'; this.style.boxShadow='0 2px 10px rgba(0,0,0,0.04)';">
     <i class="fas fa-search" style="color: #cbd5e0; font-size: 18px;"></i>
-    <input type="text" id="magic-search" placeholder="Rechercher une désignation, un article, un bon de sortie..." style="border: none; outline: none; width: 100%; font-size: 14px; color: #1e293b; background: transparent; font-weight: 500;">
+    <input type="text" id="magic-search" placeholder="Rechercher une désignation, un article, un bon de sortie..." style="border: none; outline: none; width: 100%; font-size: 14px; color: var(--text-dark); background: transparent; font-weight: 500;">
 </div>
 
 <div class="card-table">
@@ -106,7 +106,7 @@
           
           <td>
             {% if immo.bon_sortie_origine %}
-            <div style="font-family:monospace; font-size:13px; font-weight:700; color:#334155; background:#f1f5f9; padding:2px 8px; border-radius:6px; display:inline-block;">
+            <div style="font-family:monospace; font-size:13px; font-weight:700; color:var(--text-dark); background: var(--bg-hover); padding:2px 8px; border-radius:6px; display:inline-block;">
                 <i class="fas fa-file-invoice" style="margin-right:4px; color:#94a3b8;"></i>{{ immo.bon_sortie_origine.numero_bon }}
             </div>
             <div class="info-bon">{{ immo.bon_sortie_origine.date_bon|date:"d/m/Y" }}</div>
@@ -114,14 +114,14 @@
           </td>
           
           <td>
-            <div style="font-weight:800; color:#1e293b; font-size:14px;">{{ immo.valeur_acquisition|floatformat:0 }} FCFA</div>
+            <div style="font-weight:800; color: var(--text-dark); font-size:14px;">{{ immo.valeur_acquisition|floatformat:0 }} FCFA</div>
             {% if immo.prix_depuis_stock %}
             <div class="info-bon" style="color:#10b981;"><i class="fas fa-check-circle" style="margin-right:2px;"></i> Depuis le stock</div>
             {% endif %}
           </td>
           
           <td>
-            <div style="font-weight:700; color:#475569;">{{ immo.date_creation|date:"d/m/Y" }}</div>
+            <div style="font-weight:700; color: var(--text-medium);">{{ immo.date_creation|date:"d/m/Y" }}</div>
             <div class="info-bon"><i class="far fa-clock"></i> {{ immo.date_creation|date:"H:i" }}</div>
           </td>
           
@@ -140,11 +140,11 @@
         {% empty %}
         <tr class="empty-row">
           <td colspan="7">
-            <div style="background: #f8fafc; display: inline-block; padding: 25px; border-radius: 50%; margin-bottom: 15px;">
+            <div style="background: var(--bg-hover); display: inline-block; padding: 25px; border-radius: 50%; margin-bottom: 15px;">
                 <i class="fas fa-check-circle" style="font-size:40px; color:#10b981;"></i>
             </div>
             <div style="font-size: 18px; font-weight: 800; color: #10b981;">Le Sas est totalement vide !</div>
-            <div style="color: #64748b; margin-top: 5px;">Tous les biens sortis du stock ont été correctement immatriculés.</div>
+            <div style="color: var(--text-medium); margin-top: 5px;">Tous les biens sortis du stock ont été correctement immatriculés.</div>
           </td>
         </tr>
         {% endfor %}
@@ -153,17 +153,17 @@
   </div>
   
   {% if immos.has_other_pages %}
-  <div style="padding:15px 20px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background: #f8fafc;">
-    <span style="font-size:13px; color:#64748b; font-weight:600;">Lignes {{ immos.start_index }} à {{ immos.end_index }} sur {{ immos.paginator.count }}</span>
+  <div style="padding:15px 20px; border-top:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background: var(--bg-hover);">
+    <span style="font-size:13px; color: var(--text-medium); font-weight:600;">Lignes {{ immos.start_index }} à {{ immos.end_index }} sur {{ immos.paginator.count }}</span>
     <div style="display:flex; gap:6px;">
       {% if immos.has_previous %}
-      <a href="?page={{ immos.previous_page_number }}" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:12px; text-decoration:none; color:#475569; font-weight:700; background:white; transition:0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='white'">‹ Précédent</a>
+      <a href="?page={{ immos.previous_page_number }}" style="padding:6px 12px; border: 1px solid var(--border-color); border-radius:6px; font-size:12px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-card); transition:0.2s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">‹ Précédent</a>
       {% endif %}
       
       <span style="padding:6px 14px; border-radius:6px; font-size:12px; font-weight:800; color:white; background:#d97706; box-shadow: 0 2px 4px rgba(217,119,6,0.3);">Page {{ immos.number }} / {{ immos.paginator.num_pages }}</span>
       
       {% if immos.has_next %}
-      <a href="?page={{ immos.next_page_number }}" style="padding:6px 12px; border:1px solid #cbd5e0; border-radius:6px; font-size:12px; text-decoration:none; color:#475569; font-weight:700; background:white; transition:0.2s;" onmouseover="this.style.background='#e2e8f0'" onmouseout="this.style.background='white'">Suivant ›</a>
+      <a href="?page={{ immos.next_page_number }}" style="padding:6px 12px; border: 1px solid var(--border-color); border-radius:6px; font-size:12px; text-decoration:none; color: var(--text-medium); font-weight:700; background: var(--bg-card); transition:0.2s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">Suivant ›</a>
       {% endif %}
     </div>
   </div>
@@ -213,14 +213,14 @@ function eclaterBien(id, nom) {
     }
 
     htmlContent += `
-        <div style="text-align: left; margin-top: 15px; background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0;">
-            <label style="font-weight: 800; font-size: 12px; color: #475569; text-transform: uppercase;">Mode de scindage :</label>
+        <div style="text-align: left; margin-top: 15px; background: var(--bg-hover); padding: 15px; border-radius: 8px; border: 1px solid var(--border-light);">
+            <label style="font-weight: 800; font-size: 12px; color: var(--text-medium); text-transform: uppercase;">Mode de scindage :</label>
             <select id="swal-mode" class="form-control" style="width: 100%; font-size: 14px; margin-top: 8px; display: block; border-radius: 6px; padding: 8px;" onchange="toggleManual()">
                 ${optionsSelect}
             </select>
             
             <div id="swal-manual-div" style="margin-top: 15px; display: ${modeleDetecte ? 'none' : 'block'};">
-                <label style="font-weight: 800; font-size: 12px; color: #475569; text-transform: uppercase;">Nombre de parts :</label>
+                <label style="font-weight: 800; font-size: 12px; color: var(--text-medium); text-transform: uppercase;">Nombre de parts :</label>
                 <input id="swal-nombre" type="number" class="form-control" value="2" min="2" max="15" style="margin-top: 8px; width: 100%; border-radius: 6px; padding: 8px;">
             </div>
         </div>

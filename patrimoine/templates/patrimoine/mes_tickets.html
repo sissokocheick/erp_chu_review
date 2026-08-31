@@ -8,19 +8,19 @@
   .th-header h4 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
   .th-header small { opacity: 0.85; font-size: 13px; font-weight: 400; }
   
-  .btn-new-ticket { background: white; color: #117a8b; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); transition: 0.2s; text-decoration: none;}
+  .btn-new-ticket { background: var(--bg-card); color: #117a8b; border: none; padding: 10px 20px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; box-shadow: 0 4px 10px var(--shadow); transition: 0.2s; text-decoration: none;}
   .btn-new-ticket:hover { transform: translateY(-2px); box-shadow: 0 6px 15px rgba(0,0,0,0.15); color: #117a8b;}
 
   /* Filtres / Onglets fluides */
-  .ticket-filters { display: flex; gap: 10px; margin-bottom: 20px; background: white; padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+  .ticket-filters { display: flex; gap: 10px; margin-bottom: 20px; background: var(--bg-card); padding: 10px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
   .t-filter { padding: 10px 20px; border-radius: 7px; font-size: 13px; font-weight: 700; cursor: pointer; transition: 0.2s; border: none; background: transparent; color: #6c757d; display: flex; align-items: center; gap: 8px; text-decoration: none;}
-  .t-filter:hover { background: #f0f3f7; color: #333; }
+  .t-filter:hover { background: #f0f3f7; color: var(--text-dark); }
   .t-filter.active { background: #17a2b8; color: white; box-shadow: 0 4px 10px rgba(23,162,184,0.2); }
 
   /* Table des tickets modernisée */
-  .card-table { background: white; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; }
+  .card-table { background: var(--bg-card); border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); overflow: hidden; }
   .tk-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .tk-table thead tr { background: #f8f9fa; border-bottom: 2px solid #eef0f3; }
+  .tk-table thead tr { background: var(--bg-hover); border-bottom: 2px solid var(--border-light); }
   .tk-table thead th { padding: 14px 18px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: #6c757d; text-align: left; }
   .tk-table tbody tr { border-bottom: 1px solid #f0f3f7; transition: all 0.2s ease; cursor: pointer; }
   .tk-table tbody tr:hover { background: #f4fbff; transform: translateX(2px); }
@@ -56,14 +56,14 @@
   .mc { background: rgba(255,255,255,0.25); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 15px; transition: 0.2s;}
   .mc:hover { background: rgba(255,255,255,0.4); transform: scale(1.1); }
   .mbody { overflow-y: auto; padding: 20px; }
-  .mfoot { padding: 15px 25px; border-top: 1px solid #eef0f3; display: flex; justify-content: flex-end; gap: 10px; background: white; }
+  .mfoot { padding: 15px 25px; border-top: 1px solid #eef0f3; display: flex; justify-content: flex-end; gap: 10px; background: var(--bg-card); }
   .btn-ok { background: #28a745; color: white; border: none; padding: 10px 24px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px; transition: 0.2s;}
   .btn-ok:hover { background: #218838; transform: translateY(-2px); }
   .btn-nok { background: #e2e3e5; color: #383d41; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 14px; transition: 0.2s;}
   .btn-nok:hover { background: #d6d8db; }
 
   /* 📄 STYLE FORMAT A4 ISO POUR LE PDF */
-  .pdf-page { background: white; width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm; box-shadow: 0 0 15px rgba(0,0,0,0.1); font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11px; color: #000; box-sizing: border-box; }
+  .pdf-page { background: var(--bg-card); width: 100%; max-width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm; box-shadow: 0 0 15px rgba(0,0,0,0.1); font-family: 'Helvetica', 'Arial', sans-serif; font-size: 11px; color: var(--text-dark); box-sizing: border-box; }
   .etat-header { width: 100%; border-collapse: collapse; margin-bottom: 10px; text-align: center; font-size: 10px; }
   .etat-header td { vertical-align: top; }
   .etat-gauche, .etat-droite { width: 40%; font-weight: bold; }
@@ -92,7 +92,7 @@
       body * { visibility: hidden; }
       #mo-rapport, #mo-rapport * { visibility: visible; }
       #mo-rapport { position: absolute; left: 0; top: 0; width: 100%; background: none; display: block; z-index: 999999; }
-      .mb { box-shadow: none; border-radius: 0; width: 100%; max-width: 100%; margin: 0; padding: 0; background: white; max-height: none; }
+      .mb { box-shadow: none; border-radius: 0; width: 100%; max-width: 100%; margin: 0; padding: 0; background: var(--bg-card); max-height: none; }
       .pdf-page { width: 100%; min-height: auto; padding: 0; margin: 0; box-shadow: none; }
       .no-print { display: none !important; }
       .mbody { padding: 0; overflow: visible; }
@@ -124,9 +124,9 @@
   </a>
 </div>
 
-<div class="no-print" style="margin-bottom: 20px; background: white; padding: 14px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 12px; border: 1px solid #eef0f3; transition: all 0.2s;" onfocusin="this.style.borderColor='#17a2b8'; this.style.boxShadow='0 4px 12px rgba(23,162,184,0.15)';" onfocusout="this.style.borderColor='#eef0f3'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)';">
-    <i class="fas fa-search" style="color: #adb5bd; font-size: 18px;"></i>
-    <input type="text" id="magic-search" placeholder="Rechercher un ticket, une machine, un statut, une date..." style="border: none; outline: none; width: 100%; font-size: 14px; color: #333; background: transparent;">
+<div class="no-print" style="margin-bottom: 20px; background: var(--bg-card); padding: 14px 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 12px; border: 1px solid var(--border-light); transition: all 0.2s;" onfocusin="this.style.borderColor='#17a2b8'; this.style.boxShadow='0 4px 12px rgba(23,162,184,0.15)';" onfocusout="this.style.borderColor='#eef0f3'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.05)';">
+    <i class="fas fa-search" style="color: var(--text-medium); font-size: 18px;"></i>
+    <input type="text" id="magic-search" placeholder="Rechercher un ticket, une machine, un statut, une date..." style="border: none; outline: none; width: 100%; font-size: 14px; color: var(--text-dark); background: transparent;">
 </div>
 
 <div class="card-table no-print">
@@ -154,7 +154,7 @@
           </td>
           
           <td>
-            <div style="font-weight:700; color:#333; font-size: 14px;">{{ ticket.immobilisation.nom_affichage }}</div>
+            <div style="font-weight:700; color: var(--text-dark); font-size: 14px;">{{ ticket.immobilisation.nom_affichage }}</div>
 <div style="font-size:11px; color:#888; margin-top: 3px;">
     <i class="fas fa-barcode"></i> {{ ticket.immobilisation.code_patrimoine }} 
 
@@ -229,14 +229,14 @@
         {% empty %}
         <tr class="empty-row">
           <td colspan="6">
-            <div style="background: #f8f9fa; display: inline-block; padding: 30px; border-radius: 50%; margin-bottom: 20px;">
+            <div style="background: var(--bg-hover); display: inline-block; padding: 30px; border-radius: 50%; margin-bottom: 20px;">
                 {% if current_tab == 'historique' %}
                     <i class="fas fa-history" style="font-size:40px; color:#6c757d;"></i>
                 {% else %}
                     <i class="fas fa-shield-check" style="font-size:40px; color:#28a745;"></i>
                 {% endif %}
             </div>
-            <div style="font-size: 16px; font-weight: bold; color: #333;">
+            <div style="font-size: 16px; font-weight: bold; color: var(--text-dark);">
                 {% if current_tab == 'historique' %}Aucun historique.{% else %}Aucune panne à l'horizon !{% endif %}
             </div>
             <div style="color: #888; margin-top: 5px;">
@@ -250,7 +250,7 @@
   </div>
   
   {% if tickets.has_other_pages or tickets.paginator.count > 0 %}
-  <div style="padding:14px 18px; border-top:1px solid #f0f3f7; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; background: white;">
+  <div style="padding:14px 18px; border-top:1px solid #f0f3f7; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; background: var(--bg-card);">
     <form method="GET" style="margin: 0; display: flex; align-items: center; gap: 8px;">
         <input type="hidden" name="tab" value="{{ current_tab }}">
         <span style="font-size:12px; color:#6c757d; font-weight:600;">Afficher :</span>
@@ -260,19 +260,19 @@
             <option value="100" {% if per_page == '100' %}selected{% endif %}>100</option>
             <option value="all" {% if per_page == 'all' %}selected{% endif %}>Tous</option>
         </select>
-        <span style="font-size:12px; color:#adb5bd; margin-left: 5px;">| Total : {{ tickets.paginator.count }} ticket{% if tickets.paginator.count > 1 %}s{% endif %}</span>
+        <span style="font-size:12px; color: var(--text-medium); margin-left: 5px;">| Total : {{ tickets.paginator.count }} ticket{% if tickets.paginator.count > 1 %}s{% endif %}</span>
     </form>
 
     {% if tickets.has_other_pages %}
     <div style="display:flex; gap:4px;">
       {% if tickets.has_previous %}
-      <a href="?page={{ tickets.previous_page_number }}&per_page={{ per_page }}&tab={{ current_tab }}" style="padding:6px 12px; border:1px solid #dde3ea; border-radius:5px; font-size:12px; text-decoration:none; color:#495057; font-weight:600; transition:0.2s;" onmouseover="this.style.background='#f0f3f7'" onmouseout="this.style.background='white'">‹ Précédent</a>
+      <a href="?page={{ tickets.previous_page_number }}&per_page={{ per_page }}&tab={{ current_tab }}" style="padding:6px 12px; border:1px solid #dde3ea; border-radius:5px; font-size:12px; text-decoration:none; color:var(--text-medium); font-weight:600; transition:0.2s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">‹ Précédent</a>
       {% endif %}
       
       <span style="padding:6px 14px; border-radius:5px; font-size:12px; font-weight:700; color:white; background:#17a2b8; box-shadow: 0 2px 5px rgba(23,162,184,0.3);">{{ tickets.number }} / {{ tickets.paginator.num_pages }}</span>
       
       {% if tickets.has_next %}
-      <a href="?page={{ tickets.next_page_number }}&per_page={{ per_page }}&tab={{ current_tab }}" style="padding:6px 12px; border:1px solid #dde3ea; border-radius:5px; font-size:12px; text-decoration:none; color:#495057; font-weight:600; transition:0.2s;" onmouseover="this.style.background='#f0f3f7'" onmouseout="this.style.background='white'">Suivant ›</a>
+      <a href="?page={{ tickets.next_page_number }}&per_page={{ per_page }}&tab={{ current_tab }}" style="padding:6px 12px; border:1px solid #dde3ea; border-radius:5px; font-size:12px; text-decoration:none; color:var(--text-medium); font-weight:600; transition:0.2s;" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">Suivant ›</a>
       {% endif %}
     </div>
     {% endif %}
@@ -355,7 +355,7 @@
 
             <div class="box-text">
                 <div class="box-title" style="color: #dc3545;"><i class="fas fa-exclamation-triangle"></i> Problème signalé (Symptômes)</div>
-                <div id="r-panne" style="color: #333;"></div>
+                <div id="r-panne" style="color: var(--text-dark);"></div>
             </div>
 
             <div class="box-text">

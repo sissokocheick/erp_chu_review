@@ -17,13 +17,13 @@
   .s-service { background: #cce5ff; color: #004085; }
   .s-panne { background: #f8d7da; color: #721c24; }
   .s-alert { background: #fff3cd; color: #856404; }
-  .btn-h { background: var(--bg-card); color: #dc2626; border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); text-decoration: none; }
+  .btn-h { background: var(--bg-card); color: #dc2626; border: none; padding: 10px 18px; border-radius: var(--rad-sm); font-weight: 800; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; transition: 0.2s; box-shadow: 0 4px 10px var(--shadow); text-decoration: none; }
   .btn-h:hover { background: #fef2f2; transform: translateY(-2px); }
   .card-tbl { background: var(--bg-card); border-radius: var(--rad); box-shadow: 0 2px 10px var(--shadow); overflow: hidden; border: 1px solid var(--border-light); }
   .tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
-  .tbl thead tr { background: var(--bg-hover); border-bottom: 2px solid #e2e8f0; }
+  .tbl thead tr { background: var(--bg-hover); border-bottom: 2px solid var(--border-light); }
   .tbl thead th { padding: 14px 16px; font-weight: 800; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-medium); border-bottom: none; white-space: nowrap; text-align: left; }
-  .tbl tbody tr { border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+  .tbl tbody tr { border-bottom: 1px solid var(--border-light); transition: background 0.15s; }
   .tbl tbody tr:hover { background: var(--bg-hover); }
   .tbl tbody td { padding: 14px 16px; vertical-align: middle; }
   .empty-row td { text-align: center; padding: 60px; color: #94a3b8; font-size: 15px; }
@@ -92,7 +92,7 @@
       {% for v in vehicules %}
       <tr>
         <td><a href="{% url 'patrimoine_vehicule_detail' v.pk %}" class="code-link">{{ v.immatriculation }}</a></td>
-        <td><span style="background:#e2e8f0;color:#334155;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;">{{ v.get_type_vehicule_display }}</span></td>
+        <td><span style="background:var(--bg-hover);color:var(--text-dark);padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;">{{ v.get_type_vehicule_display }}</span></td>
         <td><span style="font-weight:600;">{{ v.marque|default:"—" }}</span> {{ v.modele|default:"" }}</td>
         <td style="font-family:monospace;font-weight:700;">{{ v.kilometrage|floatformat:0 }} km</td>
         <td>{{ v.conducteur_titulaire.get_full_name|default:"—" }}</td>

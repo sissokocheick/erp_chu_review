@@ -6,21 +6,21 @@
   .page-header h3 { margin: 0; color: #117a8b; font-weight: 800; font-size: 24px; }
   .page-header p { color: #6c757d; font-size: 14px; margin-top: 5px; }
 
-  .card-form { background: white; border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,.05); padding: 35px; max-width: 750px; margin: 0 auto; border-top: 5px solid #17a2b8; }
+  .card-form { background: var(--bg-card); border-radius: 12px; box-shadow: 0 5px 20px rgba(0,0,0,.05); padding: 35px; max-width: 750px; margin: 0 auto; border-top: 5px solid #17a2b8; }
   
   .form-group { margin-bottom: 25px; }
-  .form-label { display: block; font-size: 12px; font-weight: 700; color: #495057; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .form-label { display: block; font-size: 12px; font-weight: 700; color: var(--text-medium); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
   
-  .form-control { width: 100%; padding: 14px; border: 2px solid #eef0f3; border-radius: 8px; font-size: 14px; box-sizing: border-box; transition: 0.2s; background: #f8f9fa; }
-  .form-control:focus { outline: none; border-color: #17a2b8; background: white; box-shadow: 0 0 0 4px rgba(23,162,184,.1); }
+  .form-control { width: 100%; padding: 14px; border: 2px solid #eef0f3; border-radius: 8px; font-size: 14px; box-sizing: border-box; transition: 0.2s; background: var(--bg-hover); }
+  .form-control:focus { outline: none; border-color: #17a2b8; background: var(--bg-card); box-shadow: 0 0 0 4px rgba(23,162,184,.1); }
   
   /* Cartes d'Urgence */
   .urgency-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
-  .urg-card { border: 2px solid #eef0f3; border-radius: 8px; padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.2s; background: white; }
+  .urg-card { border: 2px solid #eef0f3; border-radius: 8px; padding: 15px 10px; text-align: center; cursor: pointer; transition: 0.2s; background: var(--bg-card); }
   .urg-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
   .urg-card input[type="radio"] { display: none; }
   .urg-icon { font-size: 24px; margin-bottom: 8px; display: block; }
-  .urg-title { font-size: 13px; font-weight: 700; color: #495057; }
+  .urg-title { font-size: 13px; font-weight: 700; color: var(--text-medium); }
   
   /* Couleurs actives des urgences */
   .urg-card.active-faible { border-color: #28a745; background: #f0fdf4; }
@@ -105,7 +105,7 @@
 
         <div class="form-group">
             <label class="form-label"><i class="fas fa-camera" style="color:#17a2b8; margin-right:5px;"></i> 4. Joindre une photo (Optionnel)</label>
-            <input type="file" name="photo" class="form-control" style="background: white;" accept="image/*">
+            <input type="file" name="photo" class="form-control" style="background: var(--bg-card);" accept="image/*">
             <small style="color:#888; font-size:11px; display:block; margin-top:5px;">Une photo de l'écran d'erreur ou du problème physique aide le technicien à anticiper.</small>
         </div>
 
