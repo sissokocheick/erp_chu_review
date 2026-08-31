@@ -13,14 +13,22 @@
   
   .modules-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 18px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 14px;
   }
+  .cat-title {
+    font-size: 13px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 1px; color: var(--text-medium);
+    margin: 24px 0 12px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--border-light);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cat-title:first-child { margin-top: 0; }
   .mod-card {
     background: var(--bg-card); border-radius: 10px;
     border: 1px solid var(--border-light);
-    box-shadow: 0 2px 8px var(--shadow);
-    padding: 24px 20px; text-align: center;
+    box-shadow: 0 2px 6px var(--shadow);
+    padding: 18px 14px; text-align: center;
     transition: all .2s ease; cursor: pointer;
     text-decoration: none; color: var(--text-dark);
     display: flex; flex-direction: column; align-items: center;
@@ -31,9 +39,9 @@
     border-color: var(--primary-blue);
   }
   .mod-icon {
-    width: 56px; height: 56px; border-radius: 14px;
+    width: 48px; height: 48px; border-radius: 12px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 24px; color: white; margin-bottom: 14px;
+    font-size: 20px; color: white; margin-bottom: 10px;
   }
   .mod-label { font-weight: 700; font-size: 14px; }
   .mod-hint { font-size: 12px; color: var(--text-light); margin-top: 4px; }
@@ -50,21 +58,28 @@
 </div>
 
 {% if modules %}
-  <div style="margin-bottom:14px; font-size:13px; color:var(--text-medium);">
-    <i class="fas fa-key" style="margin-right:6px;"></i> {{ total_modules }} module{{ total_modules|pluralize }} accessible{{ total_modules|pluralize }}
+  <div style="margin-bottom:14px; font-size:13px; color:var(--text-medium); display:flex; align-items:center; justify-content:space-between;">
+    <span><i class="fas fa-key" style="margin-right:6px;"></i> {{ total_modules }} module{{ total_modules|pluralize }} accessible{{ total_modules|pluralize }}</span>
   </div>
-  
+
+  {% for cat in categories %}
+  <div class="cat-title">
+    <i class="fas fa-folder-open" style="color:var(--primary-blue);"></i>
+    {{ cat.name }}
+    <span style="font-size:11px; font-weight:400; color:var(--text-light);">({{ cat.modules|length }})</span>
+  </div>
   <div class="modules-grid">
-    {% for m in modules %}
+    {% for m in cat.modules %}
     <a href="{{ m.url }}" class="mod-card">
       <div class="mod-icon" style="background: {{ m.color }};">
         <i class="fas {{ m.icon }}"></i>
       </div>
       <div class="mod-label">{{ m.label }}</div>
-      <div class="mod-hint">Cliquez pour ouvrir</div>
     </a>
     {% endfor %}
   </div>
+  {% endfor %}
+
 {% else %}
   <div class="empty-accueil">
     <i class="fas fa-lock"></i>

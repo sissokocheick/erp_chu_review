@@ -671,104 +671,127 @@ def changer_mdp_obligatoire(request):
 
 
 def accueil_personnalise(request):
+    """Page d'accueil avec TOUS les modules auxquels l'utilisateur a acces."""
 
-
+    # (permission_codename -> {url, icon, color, label, category})
     MODULES = {
+        # ── Acces rapide ──
+        'menu_accueil':             {'url': '/accueil/', 'icon': 'fa-th-large', 'color': '#ffc107', 'label': 'Accueil', 'category': 'Navigation'},
+        'menu_dashboard':           {'url': '/', 'icon': 'fa-chart-line', 'color': '#1c5b96', 'label': 'Tableau de bord', 'category': 'Navigation'},
 
+        # ── Demandes ──
+        'menu_demandes':            {'url': '/mes-demandes/', 'icon': 'fa-clipboard-list', 'color': '#17a2b8', 'label': 'Mes Demandes', 'category': 'Demandes'},
+        'menu_guichet':             {'url': '/gestion-demandes/', 'icon': 'fa-desktop', 'color': '#6f42c1', 'label': 'Traiter Demandes', 'category': 'Demandes'},
+        'menu_valider_demandes':    {'url': '/valider-demandes/', 'icon': 'fa-clipboard-check', 'color': '#ffc107', 'label': 'A Valider', 'category': 'Demandes'},
 
-        'menu_demandes':        {'url': '/mes-demandes/', 'icon': 'fa-clipboard-list', 'color': '#17a2b8', 'label': 'Mes Demandes'},
+        # ── Mouvements de stock ──
+        'menu_entrees':             {'url': '/entrees/', 'icon': 'fa-arrow-down', 'color': '#28a745', 'label': 'Entrees en Stock', 'category': 'Mouvements de Stock'},
+        'menu_sorties':             {'url': '/sorties/', 'icon': 'fa-sign-out-alt', 'color': '#dc3545', 'label': 'Bons de Sortie', 'category': 'Mouvements de Stock'},
+        'menu_sorties_hors_stock':  {'url': '/bons/hors-stock/', 'icon': 'fa-external-link-alt', 'color': '#e83e8c', 'label': 'Sorties Hors Stock', 'category': 'Mouvements de Stock'},
+        'menu_retours_services':    {'url': '/stock/retours-services/', 'icon': 'fa-undo', 'color': '#20c997', 'label': 'Retours Services', 'category': 'Mouvements de Stock'},
+        'menu_retours_fournisseurs': {'url': '/stock/retours-fournisseurs/', 'icon': 'fa-truck-ramp-box', 'color': '#e74c3c', 'label': 'Retours Fournisseurs', 'category': 'Mouvements de Stock'},
+        'menu_transferts':          {'url': '/transferts/', 'icon': 'fa-arrows-alt-h', 'color': '#ffc107', 'label': 'Transferts inter-Magasins', 'category': 'Mouvements de Stock'},
+        'menu_livraisons':          {'url': '/livraisons/', 'icon': 'fa-dolly', 'color': '#fd7e14', 'label': 'Livraisons', 'category': 'Mouvements de Stock'},
+        'menu_reception_commande':  {'url': '/receptions/', 'icon': 'fa-truck-loading', 'color': '#28a745', 'label': 'Receptions Commandes', 'category': 'Mouvements de Stock'},
 
+        # ── Gestion des stocks ──
+        'menu_stock':               {'url': '/etat-stock/', 'icon': 'fa-boxes', 'color': '#1c5b96', 'label': 'Etat du Stock', 'category': 'Gestion des Stocks'},
+        'menu_ajustements':         {'url': '/ajustements/', 'icon': 'fa-balance-scale', 'color': '#6f42c1', 'label': 'Ajustements Manuels', 'category': 'Gestion des Stocks'},
+        'menu_inventaires':         {'url': '/inventaires/', 'icon': 'fa-clipboard-check', 'color': '#28a745', 'label': 'Inventaires', 'category': 'Gestion des Stocks'},
+        'menu_lots':                {'url': '/lots/', 'icon': 'fa-boxes', 'color': '#ffc107', 'label': 'Gestion des Lots', 'category': 'Gestion des Stocks'},
+        'menu_peremptions':         {'url': '/stock/peremptions/', 'icon': 'fa-calendar-times', 'color': '#ffc107', 'label': 'Suivi Peremptions', 'category': 'Gestion des Stocks'},
+        'menu_historique':          {'url': '/stock/peremptions/historique/', 'icon': 'fa-history', 'color': '#b6c2c9', 'label': 'Historique Mouvements', 'category': 'Gestion des Stocks'},
 
-        'menu_guichet':         {'url': '/gestion-demandes/', 'icon': 'fa-desktop', 'color': '#6f42c1', 'label': 'Traiter Demandes'},
+        # ── Achats & Catalogue ──
+        'menu_commandes':           {'url': '/commandes/', 'icon': 'fa-shopping-cart', 'color': '#e83e8c', 'label': 'Commandes Fourn.', 'category': 'Achats & Catalogue'},
+        'menu_articles':            {'url': '/articles/', 'icon': 'fa-barcode', 'color': '#0d47a1', 'label': 'Catalogue Articles', 'category': 'Achats & Catalogue'},
+        'menu_familles':            {'url': '/familles/', 'icon': 'fa-folder-open', 'color': '#fd7e14', 'label': 'Familles d Articles', 'category': 'Achats & Catalogue'},
 
+        # ── Patrimoine & SAV ──
+        'menu_pat_tickets':         {'url': '/patrimoine/mes-tickets/', 'icon': 'fa-ticket-alt', 'color': '#20c997', 'label': 'Tickets SAV', 'category': 'Patrimoine & SAV'},
+        'menu_pat_tech':            {'url': '/patrimoine/mes-interventions/', 'icon': 'fa-clipboard-list', 'color': '#6f42c1', 'label': 'Espace Tech', 'category': 'Patrimoine & SAV'},
+        'menu_pat_dispatch':        {'url': '/patrimoine/interventions/dispatch/', 'icon': 'fa-satellite-dish', 'color': '#fd7e14', 'label': 'Dispatch Pannes', 'category': 'Patrimoine & SAV'},
+        'menu_pat_historique':      {'url': '/patrimoine/interventions/', 'icon': 'fa-history', 'color': '#b6c2c9', 'label': 'Historique Global', 'category': 'Patrimoine & SAV'},
+        'menu_pat_registre':        {'url': '/patrimoine/portail/', 'icon': 'fa-layer-group', 'color': '#17a2b8', 'label': 'Registre Materiel', 'category': 'Patrimoine & SAV'},
+        'menu_pat_sas':             {'url': '/patrimoine/sas/', 'icon': 'fa-clock', 'color': '#ffc107', 'label': 'Sas Immatriculation', 'category': 'Patrimoine & SAV'},
+        'menu_pat_contrats':        {'url': '/patrimoine/contrats/', 'icon': 'fa-file-contract', 'color': '#17a2b8', 'label': 'Contrats', 'category': 'Patrimoine & SAV'},
+        'menu_pat_import':          {'url': '/patrimoine/import/', 'icon': 'fa-file-import', 'color': '#28a745', 'label': 'Import Excel', 'category': 'Patrimoine & SAV'},
+        'menu_pat_inventaire':      {'url': '/patrimoine/inventaires/', 'icon': 'fa-barcode', 'color': '#28a745', 'label': 'Inventaire Parc', 'category': 'Patrimoine & SAV'},
+        'menu_pat_rebuts':          {'url': '/patrimoine/rebuts/', 'icon': 'fa-trash-alt', 'color': '#ef4444', 'label': 'Registre Rebuts', 'category': 'Patrimoine & SAV'},
+        'menu_pat_pertes':          {'url': '/patrimoine/pertes/', 'icon': 'fa-search-minus', 'color': '#f59e0b', 'label': 'Equipements Perdus', 'category': 'Patrimoine & SAV'},
+        'menu_pat_parametres':      {'url': '/patrimoine/parametres/', 'icon': 'fa-sliders-h', 'color': '#ffda6a', 'label': 'Parametres Patrimoine', 'category': 'Patrimoine & SAV'},
 
-        'menu_entrees':         {'url': '/entrees/', 'icon': 'fa-arrow-down', 'color': '#28a745', 'label': 'Entrees Stock'},
+        # ── Vehicules & Salles ──
+        'menu_vehicules':           {'url': '/patrimoine/vehicules/', 'icon': 'fa-car', 'color': '#e74c3c', 'label': 'Parc Vehicules', 'category': 'Vehicules & Salles'},
+        'menu_demandes_vehicule':   {'url': '/patrimoine/demandes-vehicule/creer/', 'icon': 'fa-car', 'color': '#e74c3c', 'label': 'Demander Vehicule', 'category': 'Vehicules & Salles'},
+        'menu_valider_vehicules':   {'url': '/patrimoine/demandes-vehicule/valider/', 'icon': 'fa-clipboard-check', 'color': '#e74c3c', 'label': 'Valider Vehicules', 'category': 'Vehicules & Salles'},
+        'menu_salles':              {'url': '/patrimoine/salles/', 'icon': 'fa-door-open', 'color': '#3498db', 'label': 'Salles de Conference', 'category': 'Vehicules & Salles'},
+        'menu_demandes_salle':      {'url': '/patrimoine/demandes-salle/creer/', 'icon': 'fa-door-open', 'color': '#3498db', 'label': 'Demander Salle', 'category': 'Vehicules & Salles'},
+        'menu_valider_salles':      {'url': '/patrimoine/demandes-salle/valider/', 'icon': 'fa-clipboard-check', 'color': '#3498db', 'label': 'Valider Salles', 'category': 'Vehicules & Salles'},
+        'menu_calendrier':          {'url': '/patrimoine/salles/calendrier/', 'icon': 'fa-calendar-alt', 'color': '#9b59b6', 'label': 'Calendrier Reservations', 'category': 'Vehicules & Salles'},
 
+        # ── Rapports & Exports ──
+        'menu_rapports':            {'url': '/rapports/', 'icon': 'fa-chart-line', 'color': '#28a745', 'label': 'Exports CSV / PDF', 'category': 'Rapports & Exports'},
+        'menu_rapport_conso_service': {'url': '/rapports/consommation-services/', 'icon': 'fa-chart-line', 'color': '#fd7e14', 'label': 'Conso par Service', 'category': 'Rapports & Exports'},
+        'menu_stats_demandes':      {'url': '/stats/demandes/', 'icon': 'fa-chart-bar', 'color': '#0d6efd', 'label': 'Stats Demandes', 'category': 'Rapports & Exports'},
+        'menu_stats_sondages':      {'url': '/stats/sondages/', 'icon': 'fa-smile', 'color': '#198754', 'label': 'Stats Sondages', 'category': 'Rapports & Exports'},
+        'menu_stats_satisfaction':  {'url': '/stats/satisfaction-services/', 'icon': 'fa-star-half-alt', 'color': '#6f42c1', 'label': 'Stats Satisfaction', 'category': 'Rapports & Exports'},
 
-        'menu_reception_commande': {'url': '/receptions/', 'icon': 'fa-truck-loading', 'color': '#28a745', 'label': 'Receptions'},
+        # ── Parametres ──
+        'menu_param_admin':         {'url': '/parametres/administratifs/', 'icon': 'fa-hospital-user', 'color': '#1c5b96', 'label': 'Parametres Admin', 'category': 'Parametres'},
+        'menu_param_logistique':    {'url': '/parametres/logistique/', 'icon': 'fa-truck', 'color': '#fd7e14', 'label': 'Param. Logistique', 'category': 'Parametres'},
+        'menu_modeles_pdf':         {'url': '/parametres/logistique/', 'icon': 'fa-file-pdf', 'color': '#dc3545', 'label': 'Modeles PDF', 'category': 'Parametres'},
+        'menu_notifications_config': {'url': '/parametres/notifications/', 'icon': 'fa-bell', 'color': '#ffc107', 'label': 'Notifications Config', 'category': 'Parametres'},
 
-
-        'menu_sorties':         {'url': '/sorties/', 'icon': 'fa-arrow-up', 'color': '#dc3545', 'label': 'Bons de Sortie'},
-
-
-        'menu_livraisons':      {'url': '/livraisons/', 'icon': 'fa-truck', 'color': '#fd7e14', 'label': 'Livraisons'},
-
-
-        'menu_sorties_hors_stock': {'url': '/bons/hors-stock/', 'icon': 'fa-external-link-alt', 'color': '#e83e8c', 'label': 'Sorties Hors Stock'},
-
-
-        'menu_retours_services': {'url': '/stock/retours-services/', 'icon': 'fa-undo', 'color': '#20c997', 'label': 'Retours Services'},
-
-
-        'menu_retours_fournisseurs': {'url': '/stock/retours-fournisseurs/', 'icon': 'fa-truck-ramp-box', 'color': '#e74c3c', 'label': 'Retours Fournisseurs'},
-
-
-        'menu_stock':           {'url': '/etat-stock/', 'icon': 'fa-boxes', 'color': '#1c5b96', 'label': 'État du Stock'},
-
-
-        'menu_peremptions':     {'url': '/stock/peremptions/', 'icon': 'fa-calendar-times', 'color': '#ffc107', 'label': 'Peremptions'},
-
-
-        'menu_articles':        {'url': '/articles/', 'icon': 'fa-barcode', 'color': '#0d47a1', 'label': 'Catalogue Articles'},
-
-
-        'menu_familles':        {'url': '/familles/', 'icon': 'fa-folder-open', 'color': '#fd7e14', 'label': 'Familles'},
-
-
-        'menu_commandes':       {'url': '/commandes/', 'icon': 'fa-shopping-cart', 'color': '#e83e8c', 'label': 'Commandes'},
-
-
-        'menu_rapports':        {'url': '/rapports/', 'icon': 'fa-chart-line', 'color': '#28a745', 'label': 'Rapports'},
-
-
-        'menu_utilisateurs':    {'url': '/auth/utilisateurs/', 'icon': 'fa-users', 'color': '#1c5b96', 'label': 'Utilisateurs'},
-
-
-        'menu_roles':           {'url': '/auth/roles/', 'icon': 'fa-user-shield', 'color': '#0d47a1', 'label': 'Roles & Acces'},
-
-
-        'menu_param_admin':     {'url': '/parametres/administratifs/', 'icon': 'fa-building', 'color': '#1c5b96', 'label': 'Parametres Admin'},
-
-
-        'menu_param_logistique': {'url': '/parametres/logistique/', 'icon': 'fa-cogs', 'color': '#6c757d', 'label': 'Param. Logistique'},
-
-
+        # ── Securite & Acces ──
+        'menu_utilisateurs':        {'url': '/auth/utilisateurs/', 'icon': 'fa-users', 'color': '#1c5b96', 'label': 'Utilisateurs', 'category': 'Securite & Acces'},
+        'menu_roles':               {'url': '/auth/roles/', 'icon': 'fa-user-shield', 'color': '#0d47a1', 'label': 'Roles & Permissions', 'category': 'Securite & Acces'},
+        'menu_circuits_validation': {'url': '/auth/circuits-validation/', 'icon': 'fa-project-diagram', 'color': '#6f42c1', 'label': 'Circuits Validation', 'category': 'Securite & Acces'},
+        'menu_journal_audit':       {'url': '/auth/journal-audit/', 'icon': 'fa-user-secret', 'color': '#6c757d', 'label': 'Journal & Audit', 'category': 'Securite & Acces'},
+        'menu_securite_mdp':        {'url': '/auth/securite/mots-de-passe/', 'icon': 'fa-key', 'color': '#dc3545', 'label': 'Securite Mots de Passe', 'category': 'Securite & Acces'},
+        # Supervision & Sauvegardes = superuser uniquement (pas de permission menu_)
     }
 
-
     if request.user.is_superuser:
-
-
         perms_menu = list(MODULES.keys())
-
-
+        # Ajouter les pages superuser uniquement
+        MODULES['_superuser_supervision'] = {'url': '/supervision/', 'icon': 'fa-heartbeat', 'color': '#28a745', 'label': 'Supervision', 'category': 'Securite & Acces'}
+        MODULES['_superuser_sauvegardes'] = {'url': '/parametres/sauvegardes/', 'icon': 'fa-database', 'color': '#fd7e14', 'label': 'Sauvegardes', 'category': 'Securite & Acces'}
+        perms_menu = list(MODULES.keys())
     else:
-
-
         perms_user = request.user.get_all_permissions()
-
-
-        perms_menu = [p.split('.')[-1] for p in perms_user if p.startswith('accounts.menu_') or p.startswith('stock.menu_')]
-
+        perms_menu = [p.split('.')[-1] for p in perms_user
+                      if p.startswith('accounts.menu_') or p.startswith('stock.menu_')]
 
     modules_accessibles = []
-
-
     for codename in perms_menu:
-
-
         if codename in MODULES:
-
-
             modules_accessibles.append({**MODULES[codename], 'codename': codename})
 
+    # Grouper par categorie
+    categories = {}
+    for m in modules_accessibles:
+        cat = m.get('category', 'Autres')
+        categories.setdefault(cat, []).append(m)
+
+    # Ordre d'affichage des categories
+    cat_order = [
+        'Navigation', 'Demandes', 'Mouvements de Stock', 'Gestion des Stocks',
+        'Achats & Catalogue', 'Patrimoine & SAV', 'Vehicules & Salles',
+        'Rapports & Exports', 'Parametres', 'Securite & Acces', 'Autres',
+    ]
+    ordered_categories = []
+    for cat in cat_order:
+        if cat in categories:
+            ordered_categories.append({'name': cat, 'modules': categories[cat]})
+    # Categories non prevues
+    for cat, mods in categories.items():
+        if cat not in cat_order:
+            ordered_categories.append({'name': cat, 'modules': mods})
 
     return render(request, 'accounts/accueil.html', {
-
-
         'modules': modules_accessibles,
-
-
+        'categories': ordered_categories,
         'total_modules': len(modules_accessibles),
 
 
