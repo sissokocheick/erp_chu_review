@@ -32,17 +32,14 @@ logger = logging.getLogger(__name__)
 
 
 def _user_peut_configurer_magasin(user, magasin):
-    """Vérifie que l'utilisateur a le droit de configurer ce magasin."""
+    """Vérifie que l'utilisateur a le droit de configurer les modèles PDF.
+    
+    Tout utilisateur avec la permission menu_modeles_pdf peut configurer
+    n'importe quel magasin. Les superusers ont toujours accès.
+    """
     if user.is_superuser:
         return True
-    if not user.has_perm('accounts.menu_modeles_pdf'):
-        return False
-    if magasin.responsable == user:
-        return True
-    profil = getattr(user, 'profil', None)
-    if profil and profil.magasins_autorises.filter(pk=magasin.pk).exists():
-        return True
-    return False
+    return user.has_perm('accounts.menu_modeles_pdf')
 
 
 def _colonnes_par_type(type_doc):
