@@ -794,12 +794,42 @@ def accueil_personnalise(request):
         if cat not in cat_order:
             ordered_categories.append({'name': cat, 'modules': mods})
 
+    # ── KPI accueil (compteurs dynamiques) ──
+    from django.db.models import Count, Q
+    from datetime import timedelta
+    from django.utils import timezone
+    kpi_demandes_vehicules = 0
+    kpi_demandes_salles = 0
+    kpi_tickets_ouverts = 0
+    kpi_mouvements_semaine = 0
+    try:
+        from patrimoine.models import DemandeVehicule, DemandeSalle
+        kpi_demandes_vehicules = DemandeVehicule.objects.filter(statut='en_attente').count()
+        kpi_demandes_salles = DemandeSalle.objects.filter(statut='en_attente').count()
+    except Exception:
+        pass
+    try:
+        from patrimoine.models import TicketSAV
+        kpi_tickets_ouverts = TicketSAV.objects.exclude(statut='cloture').count()
+    except Exception:
+        pass
+    try:
+        from django.db import connection
+        if connection.vendor == 'postgresql':
+            from stock.models import MouvementStock
+            semaine = timezone.now() - timedelta(days=7)
+            kpi_mouvements_semaine = MouvementStock.objects.filter(date__gte=semaine).count()
+    except Exception:
+        pass
+
     return render(request, 'accounts/accueil.html', {
         'modules': modules_accessibles,
         'categories': ordered_categories,
         'total_modules': len(modules_accessibles),
-
-
+        'kpi_demandes_vehicules': kpi_demandes_vehicules,
+        'kpi_demandes_salles': kpi_demandes_salles,
+        'kpi_tickets_ouverts': kpi_tickets_ouverts,
+        'kpi_mouvements_semaine': kpi_mouvements_semaine,
     })
 
 

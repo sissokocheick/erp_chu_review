@@ -3,26 +3,77 @@
 
 {% block contenu %}
 <style>
-  .welcome-banner {
+  .welcome-hero {
     background: linear-gradient(135deg, var(--primary-blue), #0d47a1);
-    color: white; border-radius: 12px; padding: 28px 32px; margin-bottom: 24px;
-    box-shadow: 0 4px 15px rgba(28,91,150,.25);
+    color: #fff; border-radius: 14px; padding: 28px 32px; margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(28,91,150,.3);
+    display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;
   }
-  .welcome-banner h2 { margin: 0 0 6px; font-size: 22px; font-weight: 700; }
-  .welcome-banner p { margin: 0; opacity: .85; font-size: 14px; }
+  .welcome-hero h2 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
+  .welcome-hero p { margin: 0; opacity: .85; font-size: 13px; }
 
-  /* ── Modules grid ── */
-  .modules-grid {
+  .kpi-row {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 14px;
+    gap: 14px; margin-bottom: 22px;
+  }
+  .kpi-card {
+    background: var(--bg-card); border-radius: 10px; padding: 16px 18px;
+    border: 1px solid var(--border-light); display: flex; align-items: center; gap: 14px;
+    transition: all .2s; cursor: pointer; text-decoration: none; color: var(--text-dark);
+  }
+  .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 6px 18px rgba(0,0,0,.1); }
+  .kpi-icon {
+    width: 44px; height: 44px; border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: #fff; flex-shrink: 0;
+  }
+  .kpi-val { font-size: 26px; font-weight: 800; line-height: 1; }
+  .kpi-label { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+
+  .search-box { position: relative; margin-bottom: 20px; }
+  .search-box input {
+    width: 100%; padding: 12px 16px 12px 44px;
+    border: 2px solid var(--border-light); border-radius: 10px;
+    font-size: 14px; background: var(--bg-card); color: var(--text-dark);
+    transition: border-color .2s; outline: none;
+  }
+  .search-box input:focus { border-color: var(--primary-blue); }
+  .search-box i {
+    position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+    color: var(--text-light); font-size: 16px;
   }
 
+  .cat-section { margin-bottom: 24px; }
+  .cat-header {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 0; margin-bottom: 12px;
+    border-bottom: 2px solid var(--border-light);
+    cursor: pointer; user-select: none;
+  }
+  .cat-header:hover { border-bottom-color: var(--primary-blue); }
+  .cat-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .cat-name {
+    font-size: 13px; font-weight: 800; text-transform: uppercase;
+    letter-spacing: .8px; color: var(--text-medium); flex: 1;
+  }
+  .cat-count {
+    background: var(--bg-secondary, #f0f2f5); border-radius: 12px;
+    padding: 2px 10px; font-size: 11px; font-weight: 700; color: var(--text-light);
+  }
+  .cat-toggle { color: var(--text-light); font-size: 12px; transition: transform .2s; }
+  .cat-toggle.collapsed { transform: rotate(-90deg); }
+
+  .modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
   .mod-card {
     background: var(--bg-card); border-radius: 10px;
     border: 1px solid var(--border-light);
     box-shadow: 0 2px 6px var(--shadow);
-    padding: 18px 14px; text-align: center;
+    padding: 16px 12px; text-align: center;
     transition: all .2s ease; cursor: pointer;
     text-decoration: none; color: var(--text-dark);
     display: flex; flex-direction: column; align-items: center;
@@ -33,36 +84,95 @@
     border-color: var(--primary-blue);
   }
   .mod-icon {
-    width: 48px; height: 48px; border-radius: 12px;
+    width: 44px; height: 44px; border-radius: 11px;
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px; color: white; margin-bottom: 10px;
+    font-size: 18px; color: #fff; margin-bottom: 8px;
   }
-  .mod-label { font-weight: 700; font-size: 14px; }
-  .mod-hint { font-size: 12px; color: var(--text-light); margin-top: 4px; }
-  .empty-accueil {
-    text-align: center; padding: 60px 20px; color: var(--text-light);
-  }
+  .mod-label { font-weight: 700; font-size: 13px; line-height: 1.3; }
+
+  .no-results { text-align: center; padding: 40px; color: var(--text-light); font-size: 14px; display: none; }
+  .empty-accueil { text-align: center; padding: 60px 20px; color: var(--text-light); }
   .empty-accueil i { font-size: 48px; margin-bottom: 16px; opacity: .4; }
 
+  @media (max-width: 640px) {
+    .welcome-hero { flex-direction: column; text-align: center; padding: 20px; }
+    .kpi-row { grid-template-columns: 1fr 1fr; }
+    .modules-grid { grid-template-columns: 1fr 1fr; }
+  }
 </style>
 
-<div class="welcome-banner">
-  <h2><i class="fas fa-th-large" style="margin-right:10px;"></i> Bienvenue, {{ request.user.first_name|default:request.user.username }}</h2>
-  <p>Sélectionnez un module pour commencer.</p>
+<div class="welcome-hero">
+  <div>
+    <h2><i class="fas fa-th-large" style="margin-right:8px;"></i> Bienvenue, {{ request.user.first_name|default:request.user.username }}</h2>
+    <p>Sélectionnez un module pour commencer.</p>
+  </div>
+  <div style="text-align:right;">
+    <div style="font-size:28px;font-weight:800;">{{ total_modules }}</div>
+    <div style="font-size:11px;opacity:.7;">modules accessibles</div>
+  </div>
+</div>
+
+<div class="kpi-row">
+  <a href="/patrimoine/demandes-vehicule/valider/" class="kpi-card">
+    <div class="kpi-icon" style="background:#e74c3c;"><i class="fas fa-car"></i></div>
+    <div>
+      <div class="kpi-val">{{ kpi_demandes_vehicules }}</div>
+      <div class="kpi-label">Véhicules en attente</div>
+    </div>
+  </a>
+  <a href="/patrimoine/demandes-salle/valider/" class="kpi-card">
+    <div class="kpi-icon" style="background:#3498db;"><i class="fas fa-door-open"></i></div>
+    <div>
+      <div class="kpi-val">{{ kpi_demandes_salles }}</div>
+      <div class="kpi-label">Salles en attente</div>
+    </div>
+  </a>
+  <a href="/patrimoine/mes-tickets/" class="kpi-card">
+    <div class="kpi-icon" style="background:#f59e0b;"><i class="fas fa-ticket-alt"></i></div>
+    <div>
+      <div class="kpi-val">{{ kpi_tickets_ouverts }}</div>
+      <div class="kpi-label">Tickets SAV ouverts</div>
+    </div>
+  </a>
+  <a href="/etat-stock/" class="kpi-card">
+    <div class="kpi-icon" style="background:#28a745;"><i class="fas fa-exchange-alt"></i></div>
+    <div>
+      <div class="kpi-val">{{ kpi_mouvements_semaine }}</div>
+      <div class="kpi-label">Mouvements cette semaine</div>
+    </div>
+  </a>
+</div>
+
+<div class="search-box">
+  <i class="fas fa-search"></i>
+  <input type="text" id="moduleSearch" placeholder="Rechercher un module..." autocomplete="off" autofocus>
+</div>
+
+<div class="no-results" id="noResults">
+  <i class="fas fa-search" style="font-size:32px;margin-bottom:12px;opacity:.3;"></i>
+  <div>Aucun module ne correspond à votre recherche.</div>
 </div>
 
 {% if modules %}
 
   {% for cat in categories %}
-  <div class="modules-grid">
-    {% for m in cat.modules %}
-    <a href="{{ m.url }}" class="mod-card">
-      <div class="mod-icon" style="background: {{ m.color }};">
-        <i class="fas {{ m.icon }}"></i>
-      </div>
-      <div class="mod-label">{{ m.label }}</div>
-    </a>
-    {% endfor %}
+  <div class="cat-section" data-category="{{ cat.name }}">
+    <div class="cat-header" onclick="toggleCategory(this)">
+      <div class="cat-dot" style="background:{% if forloop.counter == 1 %}#ffc107{% elif forloop.counter == 2 %}#17a2b8{% elif forloop.counter == 3 %}#28a745{% elif forloop.counter == 4 %}#1c5b96{% elif forloop.counter == 5 %}#e83e8c{% elif forloop.counter == 6 %}#6f42c1{% elif forloop.counter == 7 %}#e74c3c{% elif forloop.counter == 8 %}#fd7e14{% elif forloop.counter == 9 %}#0d47a1{% else %}#6c757d{% endif %};"></div>
+      <div class="cat-name">{{ cat.name }}</div>
+      <div class="cat-count">{{ cat.modules|length }}</div>
+      <div class="cat-toggle"><i class="fas fa-chevron-down"></i></div>
+    </div>
+    <div class="modules-grid cat-grid">
+      {% for m in cat.modules %}
+      <a href="{{ m.url }}" class="mod-card" data-search="{{ m.label|lower }} {{ m.codename }}">
+        <div class="mod-icon" style="background:{{ m.color }};">
+          <i class="fas {{ m.icon }}"></i>
+        </div>
+        <div class="mod-label">{{ m.label }}</div>
+      </a>
+      {% endfor %}
+    </div>
   </div>
   {% endfor %}
 
@@ -73,4 +183,40 @@
     <p style="margin:0;">Contactez votre administrateur pour obtenir des permissions.</p>
   </div>
 {% endif %}
+
+<script>
+document.getElementById('moduleSearch').addEventListener('input', function() {
+  var q = this.value.toLowerCase().trim();
+  var cards = document.querySelectorAll('.mod-card');
+  var sections = document.querySelectorAll('.cat-section');
+  var noResults = document.getElementById('noResults');
+  var totalVisible = 0;
+
+  cards.forEach(function(c) {
+    var match = !q || c.dataset.search.includes(q);
+    c.style.display = match ? '' : 'none';
+    if (match) totalVisible++;
+  });
+
+  sections.forEach(function(s) {
+    var visibles = s.querySelectorAll('.mod-card:not([style*="display: none"])');
+    s.style.display = visibles.length ? '' : 'none';
+  });
+
+  noResults.style.display = totalVisible === 0 && q ? 'block' : 'none';
+});
+
+function toggleCategory(header) {
+  var grid = header.nextElementSibling;
+  var icon = header.querySelector('.cat-toggle');
+  if (grid.style.display === 'none') {
+    grid.style.display = '';
+    icon.classList.remove('collapsed');
+  } else {
+    grid.style.display = 'none';
+    icon.classList.add('collapsed');
+  }
+}
+</script>
+
 {% endblock %}
