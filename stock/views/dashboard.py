@@ -392,22 +392,8 @@ def dashboard_directeur(request):
         magasin_id__in=magasins_ids
     ).select_related('article', 'utilisateur').order_by('-date_mouvement')[:8]
 
-    # 💾 Alerte sauvegarde manquante (> 24 h, local OU copie distante) —
-    # superutilisateurs uniquement. Ne doit JAMAIS faire planter le dashboard :
-    # tout est englobé dans try/except.
+    # Alerte sauvegarde — masquee du dashboard (visible dans /parametres/sauvegardes/)
     alerte_backup = None
-    if request.user.is_superuser:
-        try:
-            from core.backups import etat_sauvegardes, notifier_retard_backup
-            etat_bk = etat_sauvegardes()
-            distant_statut = (etat_bk.get('distant') or {}).get('statut', 'non_configure')
-            probleme_local = etat_bk['statut'] != 'ok'
-            probleme_distant = distant_statut in ('alerte', 'critique', 'indisponible')
-            if probleme_local or probleme_distant:
-                alerte_backup = etat_bk
-                notifier_retard_backup(request.user)
-        except Exception:  # noqa: BLE001
-            alerte_backup = None
 
     context = {
         'total_articles': kpis['total_articles'],
