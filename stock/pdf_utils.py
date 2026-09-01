@@ -500,7 +500,14 @@ def _role_utilisateur(doc, role):
     if role == 'magasinier':
         return cree_par
     if role in ('responsable', 'sous_directeur', 'chef_service'):
-        return valide_par # ONLY the validator, do not fallback to the creator
+        # Si valide_par existe, on l'utilise (c'est le validateur)
+        # Sinon, fallback sur le responsable du magasin (info affichee meme sans validation)
+        if valide_par:
+            return valide_par
+        magasin = getattr(doc, 'magasin', None)
+        if magasin:
+            return getattr(magasin, 'responsable', None)
+        return None
     if role == 'receptionnaire':
         # currently no reception tracking on BonMouvement, so we leave it empty for manual signing
         return getattr(doc, 'receptionnaire', None)
@@ -535,6 +542,13 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
             elif fonction:
                 # Format internal codes like 'sous_directeur' to 'Sous-directeur'
                 fonction = fonction.replace('_', ' ').capitalize()
+            # Pour le role responsable : utiliser le titre_responsable du magasin
+            # (surtout si c'est le fallback magasin et non le validateur)
+            if role in ('responsable', 'sous_directeur', 'chef_service') and bon is not None:
+                magasin = getattr(bon, 'magasin', None)
+                titre_resp = getattr(magasin, 'titre_responsable', None) if magasin else None
+                if titre_resp:
+                    fonction = titre_resp
             valide_par = getattr(bon, 'valide_par', None)
             date = (getattr(bon, 'date_validation', None)
                     if user == valide_par

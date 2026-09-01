@@ -56,28 +56,14 @@
 
             <div style="background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px var(--shadow); border-top: 4px solid #28a745;">
                 <h4 style="color: var(--text-primary); margin-top: 0; margin-bottom: 15px; font-size: 16px;">
-                    <i class="fas fa-certificate"></i> Paramètres Qualité ISO
+                    <i class="fas fa-info-circle"></i> Informations
                 </h4>
-
-                <div style="margin-bottom: 15px;">
-                    <label style="font-weight: bold; font-size: 13px; color: var(--text-secondary);">Code Bon de Sortie</label>
-                    {{ form.code_bon_sortie }}
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label style="font-weight: bold; font-size: 13px; color: var(--text-secondary);">Code Bon d'Entrée</label>
-                    {{ form.code_bon_entree }}
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label style="font-weight: bold; font-size: 13px; color: var(--text-secondary);">Code Bon de Retour</label>
-                    {{ form.code_bon_retour }}
-                </div>
-
-                <div style="margin-bottom: 15px;">
-                    <label style="font-weight: bold; font-size: 13px; color: var(--text-secondary);">Code Sortie Hors Stock</label>
-                    {{ form.code_bon_hors_stock }}
-                </div>
+                <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin: 0;">
+                    Le <strong>responsable</strong> sélectionné ci-dessous sera affiché sur les bons de stock
+                    avec son nom, sa fonction et sa signature numérique.<br><br>
+                    Si un bon est <strong>validé</strong> par un autre utilisateur, c'est le nom et la fonction
+                    du validateur qui apparaîtront à la place.
+                </p>
             </div>
 
         </div>
