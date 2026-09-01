@@ -434,6 +434,14 @@
             });
         }
 
+        // Initialiser Select2 avec tags pour categorie et ligne_budgetaire
+        $('select.select2-tags').select2({
+            tags: true,
+            tokenSeparators: [',', ' '],
+            placeholder: '-- Choisir ou taper --',
+            allowClear: true
+        });
+
         let urlParams = new URLSearchParams(window.location.search);
         let hasErrors = {% if form.errors %}true{% else %}false{% endif %};
         if (urlParams.has('edit_famille') || hasErrors || urlParams.has('new')) {

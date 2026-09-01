@@ -229,7 +229,15 @@ def liste_familles(request):
     instance_f = get_object_or_404(
         FamilleArticle, id=edit_famille_id
     ) if edit_famille_id else None
-    form = FamilleArticleForm(instance=instance_f)
+
+    # Valeurs uniques pour les selects avec ajout
+    categories_existantes = sorted(FamilleArticle.objects.exclude(categorie__isnull=True).exclude(categorie='').values_list('categorie', flat=True).distinct())
+    lignes_budgetaires_existantes = sorted(FamilleArticle.objects.exclude(ligne_budgetaire__isnull=True).exclude(ligne_budgetaire='').values_list('ligne_budgetaire', flat=True).distinct())
+    form = FamilleArticleForm(
+        instance=instance_f,
+        categories=categories_existantes,
+        lignes_budgetaires=lignes_budgetaires_existantes,
+    )
 
     if request.method == 'POST':
         if instance_f is None:

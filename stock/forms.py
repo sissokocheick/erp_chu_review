@@ -299,13 +299,11 @@ class FamilleArticleForm(forms.ModelForm):
             'methode_valorisation': forms.Select(attrs={
                 'class': 'form-control'
             }),
-            'categorie': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Ex: Médical, Administratif, Technique...'
+            'categorie': forms.Select(attrs={
+                'class': 'form-control select2-tags'
             }),
-            'ligne_budgetaire': forms.TextInput(attrs={   # <-- AJOUT ICI
-                'class': 'form-control',
-                'placeholder': 'Ex: 6011 - Achats médicaux'
+            'ligne_budgetaire': forms.Select(attrs={
+                'class': 'form-control select2-tags'
             }),
             
             # --- Checkboxes stylisées ---
@@ -330,7 +328,12 @@ class FamilleArticleForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        categories = kwargs.pop('categories', [])
+        lignes_budgetaires = kwargs.pop('lignes_budgetaires', [])
         super().__init__(*args, **kwargs)
+        # Peupler les choix pour categorie et ligne_budgetaire
+        self.fields['categorie'].choices = [('', '-- Choisir ou taper --')] + [(c, c) for c in categories]
+        self.fields['ligne_budgetaire'].choices = [('', '-- Choisir ou taper --')] + [(l, l) for l in lignes_budgetaires]
 
     def save(self, commit=True):
         instance = super().save(commit=False)

@@ -88,7 +88,15 @@ def _handle_get(request):
 
     edit_famille_id = request.GET.get('edit_famille', '').strip()
     instance_famille = get_object_or_404(FamilleArticle, id=edit_famille_id) if edit_famille_id else None
-    form_famille = FamilleArticleForm(instance=instance_famille)
+    form_famille = FamilleArticleForm(
+        instance=instance_famille,
+        categories=categories_existantes,
+        lignes_budgetaires=lignes_budgetaires_existantes,
+    )
+
+    # Valeurs uniques pour les selects avec ajout
+    categories_existantes = sorted(FamilleArticle.objects.exclude(categorie__isnull=True).exclude(categorie='').values_list('categorie', flat=True).distinct())
+    lignes_budgetaires_existantes = sorted(FamilleArticle.objects.exclude(ligne_budgetaire__isnull=True).exclude(ligne_budgetaire='').values_list('ligne_budgetaire', flat=True).distinct())
 
     edit_fournisseur_id = request.GET.get('edit_fournisseur', '').strip()
     instance_fournisseur = get_object_or_404(Fournisseur, id=edit_fournisseur_id) if edit_fournisseur_id else None
@@ -133,6 +141,8 @@ def _handle_get(request):
         'peut_annuler_magasins': request.user.has_perm('accounts.menu_magasins') or request.user.is_superuser,
         'peut_annuler_motifs': request.user.has_perm('accounts.menu_motifs_annulation') or request.user.is_superuser,
         'peut_annuler_beneficiaires': request.user.has_perm('accounts.menu_param_logistique') or request.user.is_superuser,
+        'categories_existantes': categories_existantes,
+        'lignes_budgetaires_existantes': lignes_budgetaires_existantes,
     }
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
