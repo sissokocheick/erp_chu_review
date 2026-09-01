@@ -1,3 +1,4 @@
+import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
@@ -150,12 +151,22 @@ def liste_articles(request):
         ids_lies |= set(LigneBon.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
         ids_lies |= set(LigneCommande.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
 
+    # Donnees famille pour auto-check dans le formulaire article
+    familles_data = {
+        str(f.id): {
+            'gere_lots_peremption': f.gere_lots_peremption,
+            'est_immobilisable': f.est_immobilisable,
+        }
+        for f in familles
+    }
+
     context = {
         'articles': articles_pagines,
         'q_article': query,
         'form': form,
         'per_page': per_page,
         'familles': familles,
+        'familles_data_json': json.dumps(familles_data),
         'famille_id': famille_id,
         'articles_lies': ids_lies,
         'tri': tri,

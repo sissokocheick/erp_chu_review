@@ -566,5 +566,19 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
             });
         }
     });
+
+    // Auto-check peremption/patrimoine quand on selectionne une famille
+    const famillesData = {{ familles_data_json|safe }};
+    document.addEventListener('change', function(e) {
+        const sel = e.target.closest('select[name="famille"]');
+        if (!sel) return;
+        const familleId = sel.value;
+        if (!familleId || !famillesData[familleId]) return;
+        const data = famillesData[familleId];
+        const peremCb = document.querySelector('input[name="gere_lots_peremption"]');
+        const patrimCb = document.querySelector('input[name="est_immobilisable"]');
+        if (peremCb && data.gere_lots_peremption) peremCb.checked = true;
+        if (patrimCb && data.est_immobilisable) patrimCb.checked = true;
+    });
 </script>
 {% endblock %}
