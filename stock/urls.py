@@ -288,4 +288,10 @@ urlpatterns = [
     path('accueil/', RedirectView.as_view(url=reverse_lazy('accounts:accueil_personnalise')), name='accueil_personnalise'),
 
     path('', include('stock.urls_pdf_config')),
+
+    # Ancienne route des modèles PDF (déplacée vers /magasin/<id>/modele-pdf/)
+    path('core/parametres/documents-pdf/',
+         RedirectView.as_view(url=reverse_lazy('accounts:accueil_personnalise'),
+                              permanent=False),
+         name='compat_documents_pdf'),
 ]

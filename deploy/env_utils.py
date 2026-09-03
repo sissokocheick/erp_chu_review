@@ -2,26 +2,49 @@
 """
 Utilitaire de déploiement NexusERP — empêche les CRLF dans .env.
 
-Usage:
+⚠️ SÉCURITÉ : aucun identifiant n'est stocké dans ce fichier.
+Les credentials proviennent de variables d'environnement locales :
+
+    NEXUSERP_PROD_HOST     (défaut : 192.168.0.29)
+    NEXUSERP_PROD_USER     (défaut : chuangre)
+    NEXUSERP_PROD_PASSWORD (obligatoire — jamais de défaut)
+    NEXUSERP_SUDO_PASSWORD (défaut : NEXUSERP_PROD_PASSWORD)
+    NEXUSERP_PROD_ENV      (défaut : /opt/erp_chu_review/.env)
+
+Usage :
     from deploy.env_utils import write_env_remote, ssh_connect
 
-    ssh = ssh_connect()
-    write_env_remote(ssh, {
-        'DJANGO_DEBUG': 'False',
-        'DB_PASSWORD': 'postgres',
-        ...
-    })
+    ssh = ssh_connect()   # lève RuntimeError si NEXUSERP_PROD_PASSWORD est absent
+    write_env_remote(ssh, {...})
 """
-import paramiko, sys, io, time, os
+import os
+import time
 
-PROD_HOST = '192.168.0.29'
-PROD_USER = 'chuangre'
-PROD_PASS = 'Chu@angre2026'
-PROD_ENV = '/opt/erp_chu_review/.env'
+import paramiko
+
+PROD_ENV = os.environ.get('NEXUSERP_PROD_ENV', '/opt/erp_chu_review/.env')
 
 
-def ssh_connect(host=PROD_HOST, user=PROD_USER, password=PROD_PASS):
-    """Connecte en SSH au serveur de prod."""
+def _credential(nom_var, defaut=''):
+    """Lit une credential depuis l'environnement. Jamais de secret dans le code."""
+    valeur = os.environ.get(nom_var, defaut)
+    if not valeur:
+        raise RuntimeError(
+            f"Variable d'environnement {nom_var} manquante — "
+            f"les identifiants de production ne sont plus stockés dans le code. "
+            f"Définissez-la avant d'utiliser ce module."
+        )
+    return valeur
+
+
+def ssh_connect(host=None, user=None, password=None):
+    """Connecte en SSH au serveur de prod (identifiants via l'environnement)."""
+    host = host or os.environ.get('NEXUSERP_PROD_HOST', '192.168.0.29')
+    user = user or os.environ.get('NEXUSERP_PROD_USER', 'chuangre')
+    password = password or os.environ.get('NEXUSERP_PROD_PASSWORD', '')
+    if not password:
+        raise RuntimeError("NEXUSERP_PROD_PASSWORD manquant — connexion refusée.")
+
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(host, username=user, password=password, timeout=15)
@@ -46,13 +69,16 @@ def write_env_local(filepath, vars_dict):
     return filepath
 
 
-def write_env_remote(ssh, vars_dict, sudo_password=PROD_PASS):
+def write_env_remote(ssh, vars_dict, sudo_password=None):
     """Écrit le .env sur le serveur distant (via SFTP binaire + sudo cp).
-    
+
     Garantit des line endings Unix (LF) quelle que soit la plateforme locale.
     """
+    sudo_password = sudo_password or os.environ.get(
+        'NEXUSERP_SUDO_PASSWORD',
+        os.environ.get('NEXUSERP_PROD_PASSWORD', ''))
+
     content = _build_env_content(vars_dict)
-    # Encode en bytes Latin-1 pour éviter toute conversion CRLF
     content_bytes = content.encode('utf-8')
 
     # 1) Upload via SFTP en mode binaire
@@ -64,34 +90,38 @@ def write_env_remote(ssh, vars_dict, sudo_password=PROD_PASS):
 
     # 2) Vérifier qu'il n'y a pas de \r
     stdin, stdout, stderr = ssh.exec_command(
-        f'file {remote_tmp} && grep -cP "\\r" {remote_tmp} && echo "CRLF_FOUND" || echo "LF_OK"'
+        f'file {remote_tmp} && grep -cP "\\\\r" {remote_tmp} && echo "CRLF_FOUND" || echo "LF_OK"'
     )
     check = stdout.read().decode('utf-8', errors='replace')
     if 'CRLF_FOUND' in check:
-        print(f"  WARNING: CRLF detected, fixing...")
-        # Fallback: strip \r with sed
-        _sudo_cmd(ssh, f'sed -i "s/\\r$//" {remote_tmp}', sudo_password)
+        print("  WARNING: CRLF detected, fixing...")
+        _sudo_cmd(ssh, f'sed -i "s/\\\\r$//" {remote_tmp}', sudo_password)
 
     # 3) Copier avec sudo
     _sudo_cmd(ssh,
-        f'cp {remote_tmp} {PROD_ENV} && '
-        f'chown nexuserp:nexuserp {PROD_ENV} && '
-        f'chmod 640 {PROD_ENV} && '
-        f'echo ENV_OK',
-        sudo_password
-    )
+              f'cp {remote_tmp} {PROD_ENV} && '
+              f'chown nexuserp:nexuserp {PROD_ENV} && '
+              f'chmod 640 {PROD_ENV} && '
+              f'echo ENV_OK',
+              sudo_password)
     print(f"  .env written: {len(vars_dict)} vars, LF guaranteed")
 
 
-def fix_crlf_remote(ssh, sudo_password=PROD_PASS):
-    """Supprime les \\r du .env existant sur le serveur (réparation d'urgence)."""
-    _sudo_cmd(ssh, f'sed -i "s/\\r$//" {PROD_ENV}', sudo_password)
+def fix_crlf_remote(ssh, sudo_password=None):
+    """Supprime les \r du .env existant sur le serveur (réparation d'urgence)."""
+    sudo_password = sudo_password or os.environ.get(
+        'NEXUSERP_SUDO_PASSWORD',
+        os.environ.get('NEXUSERP_PROD_PASSWORD', ''))
+    _sudo_cmd(ssh, f'sed -i "s/\\\\r$//" {PROD_ENV}', sudo_password)
     _sudo_cmd(ssh, f'chown nexuserp:nexuserp {PROD_ENV}', sudo_password)
     print("  CRLF fixed in remote .env")
 
 
-def restart_service(ssh, sudo_password=PROD_PASS):
+def restart_service(ssh, sudo_password=None):
     """Redémarre le service nexuserp."""
+    sudo_password = sudo_password or os.environ.get(
+        'NEXUSERP_SUDO_PASSWORD',
+        os.environ.get('NEXUSERP_PROD_PASSWORD', ''))
     _sudo_cmd(ssh, 'systemctl restart nexuserp', sudo_password)
     time.sleep(5)
     # Health check
@@ -102,13 +132,18 @@ def restart_service(ssh, sudo_password=PROD_PASS):
 
 
 def _sudo_cmd(ssh, cmd, password):
-    """Exécute une commande sudo via PTY."""
+    """Exécute une commande sudo via PTY (mot de passe via stdin, jamais en argv)."""
     chan = ssh.get_transport().open_session()
     chan.get_pty()
-    chan.exec_command(f'echo "{password}" | sudo -S bash -c "{cmd}" 2>&1')
-    time.sleep(2)
+    chan.exec_command('sudo -S -p "" bash -c ' + _quote(cmd))
+    time.sleep(1)
     chan.sendall(f'{password}\n'.encode())
     time.sleep(3)
     out = chan.recv(65536).decode('utf-8', errors='replace')
     chan.close()
     return out
+
+
+def _quote(cmd):
+    """Quote une commande pour bash -c (guillemets doubles échappés)."""
+    return "'" + cmd.replace("'", "'\\''") + "'"

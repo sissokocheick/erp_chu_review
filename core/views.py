@@ -258,20 +258,33 @@ def tester_connectivite_ajax(request):
     # 3. Test authentification + accès au dossier
     if type_distant == 'smb':
         try:
-            import paramiko
-            # Pour SMB, on utilise net use via cmd
+            # Pour SMB, on attache le partage via le chemin UNC et l'API Windows
+            # (via cmdkey pour la credential, JAMAIS le mot de passe en argv).
             share_path = f'\\\\{host}\\{remote_dir}' if remote_dir else f'\\\\{host}'
-            test_cmd = f'net use {share_path} /user:{user} {password} 2>&1'
+            unc_root = f'\\\\{host}'
+
+            # a) Si un mot de passe est configuré, l'enregistrer via cmdkey
+            #    (le mot de passe est transmis par stdin, pas en ligne de commande,
+            #    pour éviter toute fuite dans la liste des processus).
+            if password:
+                cred_proc = subprocess.run(
+                    ['cmdkey', f'/generic:{unc_root}', f'/user:{user}', '/pass:STDIN'],
+                    capture_output=True, text=True, timeout=10,
+                    input=f'{password}\n',
+                    encoding='utf-8', errors='replace')
+
+            # b) Attacher le partage — net use sans mot de passe visible
+            test_cmd = f'net use "{share_path}" 2>&1'
             r = subprocess.run(
                 ['cmd', '/c', test_cmd],
                 capture_output=True, text=True, timeout=15,
                 encoding='utf-8', errors='replace'
             )
             output = (r.stdout + r.stderr).strip()
-            if 'ok' in output.lower() or 'réussie' in output.lower() or r.returncode == 0:
+            if r.returncode == 0 or 'ok' in output.lower() or 'réussie' in output.lower():
                 details.append({'test': 'Authentification SMB', 'ok': True, 'detail': f'Connexion réussie vers {share_path}'})
                 # Test listing
-                list_cmd = f'dir {share_path} /b 2>&1'
+                list_cmd = f'dir "{share_path}" /b 2>&1'
                 r2 = subprocess.run(
                     ['cmd', '/c', list_cmd],
                     capture_output=True, text=True, timeout=10,
@@ -281,9 +294,12 @@ def tester_connectivite_ajax(request):
                 backups = [f for f in files if f.endswith('.backup')]
                 details.append({'test': 'Listage fichiers', 'ok': True, 'detail': f'{len(backups)} backup(s) trouvé(s) sur {len(files)} fichier(s)'})
                 # Disconnect
-                subprocess.run(['cmd', '/c', f'net use {share_path} /delete 2>nul'], capture_output=True, timeout=5)
+                subprocess.run(['cmd', '/c', f'net use "{share_path}" /delete /y 2>nul'], capture_output=True, timeout=5)
             else:
                 details.append({'test': 'Authentification SMB', 'ok': False, 'detail': output[:200]})
+            # c) Nettoyage de la credential générique de test
+            if password:
+                subprocess.run(['cmdkey', f'/delete:{unc_root}'], capture_output=True, timeout=5)
         except Exception as e:
             details.append({'test': 'Authentification SMB', 'ok': False, 'detail': f'Erreur : {e}'})
 
@@ -294,9 +310,11 @@ def tester_connectivite_ajax(request):
             client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
             client.connect(host, username=user, password=password, timeout=10)
             details.append({'test': 'Authentification SSH', 'ok': True, 'detail': f'Connecté en tant que {user}@{host}'})
-            # Test listing
+            # Test listing — chemin validé par shlex.quote pour éviter
+            # toute injection de commande côté serveur distant.
+            import shlex
             remote_path = remote_dir if remote_dir else '.'
-            stdin, stdout, stderr = client.exec_command(f'ls -la {remote_path} 2>&1')
+            stdin, stdout, stderr = client.exec_command(f'ls -la {shlex.quote(remote_path)} 2>&1')
             output = stdout.read().decode('utf-8', errors='replace')
             files = [l.strip().split()[-1] for l in output.strip().split('\n') if '.backup' in l]
             details.append({'test': 'Listage fichiers', 'ok': True, 'detail': f'{len(files)} backup(s) trouvé(s) dans {remote_path}'})

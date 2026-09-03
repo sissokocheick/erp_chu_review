@@ -350,7 +350,11 @@ def creer_reservation(request):
             date_debut = datetime.strptime(request.POST.get('date_debut'), '%Y-%m-%dT%H:%M')
             date_fin = datetime.strptime(request.POST.get('date_fin'), '%Y-%m-%dT%H:%M')
 
-            # Vérifier les conflits
+            # Vérifier les conflits — BLOQUANT : impossible de réserver une salle
+            # déjà occupée sur la période (EN_ATTENTE ou CONFIRMEE).
+            if date_fin <= date_debut:
+                messages.error(request, '❌ La date de fin doit être postérieure à la date de début.')
+                return redirect('patrimoine_creer_reservation')
             conflits = ReservationSalle.objects.filter(
                 salle=salle,
                 statut__in=['EN_ATTENTE', 'CONFIRMEE'],
@@ -358,7 +362,14 @@ def creer_reservation(request):
                 date_fin__gt=date_debut
             )
             if conflits.exists():
-                messages.warning(request, f'⚠️ Attention : {conflits.count()} réservation(s) en conflit détectée(s) !')
+                premiere = conflits.order_by('date_debut').first()
+                messages.error(
+                    request,
+                    f'⛔ Salle déjà réservée sur cette période : « {premiere.objet} » '
+                    f'du {premiere.date_debut.strftime("%d/%m/%Y %H:%M")} '
+                    f'au {premiere.date_fin.strftime("%d/%m/%Y %H:%M")}. '
+                    f'Choisissez un autre créneau ou une autre salle.')
+                return redirect('patrimoine_creer_reservation')
 
             service_id = request.POST.get('service_demandeur') or None
             reservation = ReservationSalle.objects.create(
@@ -432,20 +443,23 @@ def valider_reservation(request, pk):
 
 @verifier_permission_salle("accounts.menu_pat_salles")
 def annuler_reservation(request, pk):
-    """Annuler une réservation."""
+    """Annuler une réservation (POST uniquement — action destructrice)."""
+    if request.method != 'POST':
+        messages.error(request, "⛔ Action autorisée uniquement via le formulaire de confirmation.")
+        return redirect('patrimoine_reservations')
     reservation = get_object_or_404(ReservationSalle, pk=pk)
-    
-    if request.method in ('POST', 'GET'):
-        reservation.statut = 'ANNULEE'
-        reservation.save()
-        messages.warning(request, f'🚫 Réservation annulée : {reservation.objet}')
-    
+    reservation.statut = 'ANNULEE'
+    reservation.save()
+    messages.warning(request, f'🚫 Réservation annulée : {reservation.objet}')
     return redirect('patrimoine_reservations')
 
 
 @verifier_permission_salle("accounts.menu_pat_salles")
 def supprimer_reservation(request, pk):
-    """Supprimer une réservation."""
+    """Supprimer une réservation (POST uniquement — action destructrice)."""
+    if request.method != 'POST':
+        messages.error(request, "⛔ Action autorisée uniquement via le formulaire de confirmation.")
+        return redirect('patrimoine_reservations')
     reservation = get_object_or_404(ReservationSalle, pk=pk)
     reservation.delete()
     messages.warning(request, '🗑️ Réservation supprimée.')
@@ -455,6 +469,7 @@ def supprimer_reservation(request, pk):
 # ── AJAX endpoints ──
 
 @login_required
+@patrimoine_required
 def ajax_etages(request):
     """Retourne les étages d'un bâtiment (JSON)."""
     batiment_id = request.GET.get('batiment_id')
@@ -467,6 +482,7 @@ def ajax_etages(request):
 
 
 @login_required
+@patrimoine_required
 def ajax_bureaux(request):
     """Retourne les bureaux d'un étage (JSON)."""
     etage_id = request.GET.get('etage_id')
@@ -485,7 +501,10 @@ calendrier_reservations = calendrier_salles
 
 @verifier_permission_salle("accounts.menu_pat_salles")
 def supprimer_salle(request, pk):
-    """Supprimer une salle de conférence."""
+    """Supprimer une salle de conférence (POST uniquement — action destructrice)."""
+    if request.method != 'POST':
+        messages.error(request, "⛔ Action autorisée uniquement via le formulaire de confirmation.")
+        return redirect('patrimoine_salles')
     salle = get_object_or_404(SalleConference, pk=pk)
     salle.delete()
     messages.warning(request, '🗑️ Salle supprimée.')
@@ -493,6 +512,7 @@ def supprimer_salle(request, pk):
 
 
 @login_required
+@patrimoine_required
 def ajax_disponibilite_salle(request):
     """Vérifie la disponibilité d'une salle sur une période (JSON)."""
     salle_id = request.GET.get('salle_id')
@@ -513,6 +533,7 @@ def ajax_disponibilite_salle(request):
 
 
 @login_required
+@patrimoine_required
 def ajax_reservations_salle(request):
     """Retourne les réservations d'une salle pour FullCalendar (JSON)."""
     salle_id = request.GET.get('salle_id')

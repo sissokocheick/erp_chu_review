@@ -27,7 +27,23 @@ function confirmerAnnulation(url, type) {
         focusCancel: true
     }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = url;
+            // Soumission en POST (les actions destructrices refusent le GET)
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = url;
+
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+                              document.cookie.match(/csrftoken=([^;]+)/)?.[1];
+            if (csrfToken) {
+                const csrfInput = document.createElement('input');
+                csrfInput.type = 'hidden';
+                csrfInput.name = 'csrfmiddlewaretoken';
+                csrfInput.value = csrfToken;
+                form.appendChild(csrfInput);
+            }
+
+            document.body.appendChild(form);
+            form.submit();
         }
     });
     return false;

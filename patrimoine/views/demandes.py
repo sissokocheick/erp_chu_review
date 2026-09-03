@@ -4,6 +4,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Q, Count
 from django.core.paginator import Paginator
 
@@ -113,6 +114,10 @@ def annuler_demande_vehicule(request, pk):
 @patrimoine_required
 def demandes_vehicule_a_valider(request):
     """Liste des demandes de véhicule en attente de validation (validateurs)."""
+    if not (request.user.is_superuser or request.user.is_staff
+            or request.user.has_perm('accounts.menu_pat_vehicules_valider')):
+        messages.error(request, "⛔ Accès non autorisé.")
+        return redirect('patrimoine_vehicules')
     demandes = DemandeVehicule.objects.filter(
         statut='EN_ATTENTE'
     ).select_related('demandeur', 'service_demandeur')
@@ -130,6 +135,10 @@ def demandes_vehicule_a_valider(request):
 @patrimoine_required
 def valider_demande_vehicule(request, pk):
     """Valider ou refuser une demande de véhicule."""
+    if not (request.user.is_superuser or request.user.is_staff
+            or request.user.has_perm('accounts.menu_pat_vehicules_valider')):
+        messages.error(request, "⛔ Accès non autorisé — permission de validation requise.")
+        return redirect('patrimoine_vehicules')
     demande = get_object_or_404(DemandeVehicule, pk=pk)
 
     if request.method == 'POST':
@@ -292,6 +301,10 @@ def annuler_demande_salle(request, pk):
 @patrimoine_required
 def demandes_salle_a_valider(request):
     """Liste des demandes de salle en attente de validation."""
+    if not (request.user.is_superuser or request.user.is_staff
+            or request.user.has_perm('accounts.menu_pat_salles_valider')):
+        messages.error(request, "⛔ Accès non autorisé.")
+        return redirect('patrimoine_salles')
     demandes = DemandeSalle.objects.filter(
         statut='EN_ATTENTE'
     ).select_related('demandeur', 'service_demandeur', 'salle_preferee')
@@ -309,6 +322,10 @@ def demandes_salle_a_valider(request):
 @patrimoine_required
 def valider_demande_salle(request, pk):
     """Valider ou refuser une demande de salle → crée une réservation."""
+    if not (request.user.is_superuser or request.user.is_staff
+            or request.user.has_perm('accounts.menu_pat_salles_valider')):
+        messages.error(request, "⛔ Accès non autorisé — permission de validation requise.")
+        return redirect('patrimoine_salles')
     demande = get_object_or_404(DemandeSalle, pk=pk)
 
     if request.method == 'POST':
@@ -321,32 +338,50 @@ def valider_demande_salle(request, pk):
                 return redirect('patrimoine_valider_demande_salle', pk=pk)
 
             salle = get_object_or_404(SalleConference, pk=salle_id)
-            demande.salle_attribuee = salle
-            demande.statut = 'VALIDEE'
-            demande.valide_par = request.user
-            demande.date_validation = timezone.now()
-            demande.save()
 
-            # Créer automatiquement la réservation
-            ReservationSalle.objects.create(
-                salle=salle,
-                demandeur=demande.demandeur,
-                service_demandeur=demande.service_demandeur,
-                objet=demande.objet,
-                description=demande.description,
-                nb_participants=demande.nb_participants,
-                date_debut=demande.date_debut,
-                date_fin=demande.date_fin,
-                statut='CONFIRMEE',
-                valide_par=request.user,
-                date_validation=timezone.now(),
-                cree_par=request.user,
-                modifie_par=request.user,
-                besoin_videoconf=demande.besoin_videoconf,
-                besoin_video=demande.besoin_video,
-                besoin_son=demande.besoin_son,
-                notes_equipement=demande.notes_equipement,
-            )
+            # Transaction atomique : la demande ET la réservation sont créées
+            # ensemble, ou rien n'est modifié. Un conflit sur la période bloque
+            # la validation (pas de double réservation).
+            with transaction.atomic():
+                conflit = ReservationSalle.objects.filter(
+                    salle=salle,
+                    statut__in=['EN_ATTENTE', 'CONFIRMEE'],
+                    date_debut__lt=demande.date_fin,
+                    date_fin__gt=demande.date_debut,
+                ).exists()
+                if conflit:
+                    messages.error(
+                        request,
+                        f'⛔ {salle.nom} est déjà réservée sur cette période. '
+                        f'Choisissez une autre salle.')
+                    return redirect('patrimoine_valider_demande_salle', pk=pk)
+
+                demande.salle_attribuee = salle
+                demande.statut = 'VALIDEE'
+                demande.valide_par = request.user
+                demande.date_validation = timezone.now()
+                demande.save()
+
+                # Créer automatiquement la réservation
+                ReservationSalle.objects.create(
+                    salle=salle,
+                    demandeur=demande.demandeur,
+                    service_demandeur=demande.service_demandeur,
+                    objet=demande.objet,
+                    description=demande.description,
+                    nb_participants=demande.nb_participants,
+                    date_debut=demande.date_debut,
+                    date_fin=demande.date_fin,
+                    statut='CONFIRMEE',
+                    valide_par=request.user,
+                    date_validation=timezone.now(),
+                    cree_par=request.user,
+                    modifie_par=request.user,
+                    besoin_videoconf=demande.besoin_videoconf,
+                    besoin_video=demande.besoin_video,
+                    besoin_son=demande.besoin_son,
+                    notes_equipement=demande.notes_equipement,
+                )
             messages.success(request, f'✅ Demande validée — Salle {salle.nom} réservée automatiquement.')
             return redirect('patrimoine_detail_demande_salle', pk=pk)
 

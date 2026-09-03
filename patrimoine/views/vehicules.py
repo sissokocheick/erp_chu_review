@@ -368,6 +368,7 @@ def creer_mission_vehicule(request, vehicule_pk):
 # ─── AJAX ─────────────────────────────────────────────────
 
 @login_required
+@patrimoine_required
 def ajax_modeles_vehicule(request):
     """Retourne les modèles d'une marque (pour le formulaire véhicule)."""
     marque_id = request.GET.get('marque_id')

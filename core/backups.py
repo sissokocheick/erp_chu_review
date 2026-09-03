@@ -125,8 +125,12 @@ def ecrire_config(donnees):
         config['password'] = donnees.get('password', '')
 
     remote_dir = str(donnees.get('remote_dir', '/backups')).strip() or '/backups'
-    if '\\' in remote_dir or '..' in remote_dir:
-        return False, "Dossier distant invalide."
+    # Validation stricte : uniquement lettres, chiffres, / _ - . — aucune injection
+    # possible dans les commandes shell (SSH) ou les chemins UNC (SMB).
+    if not re.match(r'^[A-Za-z0-9/_.-]+$', remote_dir):
+        return False, "Dossier distant invalide (caractères autorisés : lettres, chiffres, / _ - .)."
+    if '..' in remote_dir or '//' in remote_dir:
+        return False, "Dossier distant invalide (traversée de dossier interdite)."
     config['remote_dir'] = remote_dir
 
     for champ in ('keep_days', 'keep_weeks', 'keep_months'):
@@ -1081,6 +1085,17 @@ def restaurer_backup(nom, confirmation):
     chemin = chemin_backup(nom)
     if not chemin:
         return False, "❌ Sauvegarde introuvable ou nom invalide."
+
+    # ── Sauvegarde de sécurité AVANT d'écraser la base ──
+    # Si la restauration échoue, cette pré-sauvegarde permet de revenir
+    # à l'état antérieur (filet de sécurité obligatoire pour une opération
+    # destructrice).
+    ok_pre, msg_pre = lancer_sauvegarde(source='pre-restauration')
+    if not ok_pre:
+        return False, (
+            "❌ Restauration annulée : la sauvegarde de sécurité a échoué.\n"
+            f"Détails :\n{msg_pre[-500:]}"
+        )
 
     sys.path.insert(0, str(BASE_DIR / 'scripts'))
     from backup_db import db_params, find_pg_tool, load_env

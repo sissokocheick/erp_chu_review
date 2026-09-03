@@ -231,11 +231,14 @@ def copy_to_remote(local_path, host, user, remote_dir, quiet, dry_run, password=
         pass
 
     # 2. Fallback : copie locale via montage SMB/UNC (Windows ou Linux)
-    # Stocker les identifiants via cmdkey si mot de passe fourni (Windows)
+    # Stocker les identifiants via cmdkey si mot de passe fourni (Windows).
+    # Le mot de passe est transmis via stdin (jamais en argv) pour éviter
+    # qu'il apparaisse dans la liste des processus.
     if password and sys.platform.startswith('win'):
         try:
-            subprocess.run(['cmdkey', f'/generic:{host}', f'/user:{user}', f'/pass:{password}'],
-                           capture_output=True, timeout=10)
+            subprocess.run(['cmdkey', f'/generic:{host}', f'/user:{user}', '/pass:STDIN'],
+                           capture_output=True, timeout=10,
+                           input=f'{password}\n', encoding='utf-8', errors='replace')
         except Exception:
             pass
     # Construire le chemin UNC pour Windows : //HOST/SHARE/path
