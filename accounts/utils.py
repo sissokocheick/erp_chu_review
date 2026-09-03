@@ -28,11 +28,20 @@ def canaux_notification_actifs():
             and cfg.smtp_user
             and cfg.smtp_password
         )
+        # En mode test, l'URL, la clé et l'expéditeur ne sont pas nécessaires :
+        # le SMS est journalisé localement. Le lien « Mot de passe oublié »
+        # doit donc être visible dès que le canal SMS est activé.
+        sms_mode_test = bool(cfg.sms_provider == 'TEST' or cfg.sms_mode_test)
         sms_ok = bool(
             cfg.activer_sms
-            and cfg.sms_expediteur
-            and cfg.sms_api_url
-            and cfg.sms_api_key
+            and (
+                sms_mode_test
+                or (
+                    cfg.sms_expediteur
+                    and cfg.sms_api_url
+                    and cfg.sms_api_key
+                )
+            )
         )
         return email_ok, sms_ok
     except Exception:

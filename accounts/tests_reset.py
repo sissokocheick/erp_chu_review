@@ -4,6 +4,7 @@ admin (quand un canal email/SMS est configuré) et du SMS réservé aux notifica
 importantes."""
 from datetime import timedelta
 from unittest import mock
+import re
 
 from django.contrib.auth.models import User
 from django.core import mail
@@ -98,8 +99,7 @@ class MotDePasseOublieTest(TestCase):
                 reverse('accounts:mot_de_passe_oublie'),
                 {'canal': 'sms', 'identifiant': '0708091011'},
             )
-        jeton = MotDePasseResetToken.objects.get(user=self.user)
-        self.assertTrue(any(jeton.code in l for l in logs.output))
+        self.assertTrue(any('mot de passe temporaire' in l for l in logs.output))
 
     def test_page_indisponible_sans_canal(self):
         resp = self.client.get(reverse('accounts:mot_de_passe_oublie'))
@@ -128,8 +128,8 @@ class MotDePasseOublieTest(TestCase):
         )
         self.assertIn('Réinitialiser mon mot de passe', html)
 
-    def test_code_envoye_par_sms_avec_numero(self):
-        """L'utilisateur choisit SMS et saisit son numéro → code envoyé."""
+    def test_mot_de_passe_temporaire_envoye_par_sms_avec_numero(self):
+        """SMS : un mot de passe temporaire est envoyé puis doit être changé au login."""
         configurer_sms()
         with self.assertLogs('stock.services', level='INFO') as logs:
             resp = self.client.post(
@@ -137,11 +137,27 @@ class MotDePasseOublieTest(TestCase):
                 {'canal': 'sms', 'identifiant': '0708091011'},
             )
         self.assertEqual(resp.status_code, 302)
-        jeton = MotDePasseResetToken.objects.get(user=self.user)
-        self.assertTrue(any(jeton.code in l for l in logs.output))
+        message_sms = next(l for l in logs.output if 'SMS·TEST' in l)
+        temporaire = re.search(r'est ([A-Za-z0-9]+)\.', message_sms).group(1)
+        self.user.refresh_from_db()
+        self.assertNotEqual(temporaire, self.user.password)
+        self.assertTrue(self.user.check_password(temporaire))
+        self.user.profil.refresh_from_db()
+        self.assertTrue(self.user.profil.doit_changer_mdp)
+        self.assertTrue(self.client.login(username='jean', password=temporaire))
+        response = self.client.get(reverse('accounts:accueil_personnalise'))
+        self.assertRedirects(response, reverse('accounts:changer_mdp_obligatoire'))
+        response = self.client.post(reverse('accounts:changer_mdp_obligatoire'), {
+            'ancien_mdp': temporaire,
+            'nouveau_mdp': 'Nouveau1!',
+            'confirmation': 'Nouveau1!',
+        })
+        self.assertRedirects(response, reverse('accounts:accueil_personnalise'))
+        self.user.profil.refresh_from_db()
+        self.assertFalse(self.user.profil.doit_changer_mdp)
 
-    def test_code_sms_avec_numero_format_international(self):
-        """Un numéro saisi au format +2250708091011 retrouve bien le compte."""
+    def test_mot_de_passe_temporaire_sms_avec_numero_format_international(self):
+        """Un numéro au format international reçoit bien un mot de passe temporaire."""
         configurer_sms()
         with self.assertLogs('stock.services', level='INFO') as logs:
             resp = self.client.post(
@@ -149,8 +165,7 @@ class MotDePasseOublieTest(TestCase):
                 {'canal': 'sms', 'identifiant': '+225 07 08 09 10 11'},
             )
         self.assertEqual(resp.status_code, 302)
-        jeton = MotDePasseResetToken.objects.get(user=self.user)
-        self.assertTrue(any(jeton.code in l for l in logs.output))
+        self.assertTrue(any('mot de passe temporaire' in l for l in logs.output))
 
     def test_contact_stocke_avec_225_retrouve_par_saisie_locale(self):
         """Un contact enregistré au format +225 (13 chiffres) doit être retrouvé
@@ -164,8 +179,7 @@ class MotDePasseOublieTest(TestCase):
                 {'canal': 'sms', 'identifiant': '0708091011'},
             )
         self.assertEqual(resp.status_code, 302)
-        jeton = MotDePasseResetToken.objects.get(user=self.user)
-        self.assertTrue(any(jeton.code in l for l in logs.output))
+        self.assertTrue(any('mot de passe temporaire' in l for l in logs.output))
 
     def test_contact_stocke_avec_225_retrouve_par_saisie_internationale(self):
         """Contact stocké +225 retrouvé par une saisie +225 07 08 09 10 11."""
@@ -178,8 +192,7 @@ class MotDePasseOublieTest(TestCase):
                 {'canal': 'sms', 'identifiant': '+225 07 08 09 10 11'},
             )
         self.assertEqual(resp.status_code, 302)
-        jeton = MotDePasseResetToken.objects.get(user=self.user)
-        self.assertTrue(any(jeton.code in l for l in logs.output))
+        self.assertTrue(any('mot de passe temporaire' in l for l in logs.output))
 
     def test_contact_10_chiffres_retrouve_par_saisie_225(self):
         """Contact stocké en 10 chiffres retrouvé par une saisie +225 (repli)."""
@@ -192,8 +205,7 @@ class MotDePasseOublieTest(TestCase):
                 {'canal': 'sms', 'identifiant': '+2250708091011'},
             )
         self.assertEqual(resp.status_code, 302)
-        jeton = MotDePasseResetToken.objects.get(user=self.user)
-        self.assertTrue(any(jeton.code in l for l in logs.output))
+        self.assertTrue(any('mot de passe temporaire' in l for l in logs.output))
 
     def test_normalisation_contact_stocke_10_chiffres(self):
         """La fonction de normalisation retire l'indicatif +225 au stockage."""
@@ -221,7 +233,7 @@ class MotDePasseOublieTest(TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
     def test_email_ignore_si_canal_sms_choisi_et_sms_ok(self):
-        """Choix SMS → seul le SMS part, pas d'email."""
+        """Choix SMS → seul le SMS avec mot de passe temporaire part, pas d'email."""
         configurer_email()
         configurer_sms()
         with mock.patch(
@@ -232,8 +244,7 @@ class MotDePasseOublieTest(TestCase):
                 {'canal': 'sms', 'identifiant': '0708091011'},
             )
             mock_email.assert_not_called()
-        jeton = MotDePasseResetToken.objects.get(user=self.user)
-        self.assertTrue(any(jeton.code in l for l in logs.output))
+        self.assertTrue(any('mot de passe temporaire' in l for l in logs.output))
 
     def test_sms_choisi_mais_echec_repli_email(self):
         """Si le SMS échoue (ex. Twilio trial), l'email part en repli."""
@@ -264,8 +275,7 @@ class MotDePasseOublieTest(TestCase):
                 reverse('accounts:mot_de_passe_oublie'),
                 {'canal': 'email', 'identifiant': 'jean@chu.ci'},
             )
-        jeton = MotDePasseResetToken.objects.get(user=self.user)
-        self.assertTrue(any(jeton.code in l for l in logs.output))
+        self.assertTrue(any('mot de passe temporaire' in l for l in logs.output))
 
     def test_message_neutre_identifiant_inconnu(self):
         configurer_email()

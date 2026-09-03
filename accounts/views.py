@@ -331,7 +331,10 @@ def custom_login(request):
     # « Mot de passe oublié » visible seulement si un canal email/SMS est livrable
     email_ok, sms_ok = canaux_notification_actifs()
     reinit_mdp_active = bool(email_ok or sms_ok)
-    _login_ctx = {'reinit_mdp_active': reinit_mdp_active}
+    _login_ctx = {
+        'reinit_mdp_active': reinit_mdp_active,
+        'sms_reset_active': sms_ok,
+    }
 
 
     if request.method == 'POST':

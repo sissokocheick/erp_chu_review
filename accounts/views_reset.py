@@ -2,9 +2,9 @@
 """Réinitialisation du mot de passe par l'utilisateur lui-même (« Mot de passe oublié »).
 
 Disponible uniquement si au moins un canal de notification (email ou SMS) est
-configuré. Dans ce cas, la réinitialisation manuelle par l'administrateur est
-désactivée : l'utilisateur reçoit un lien (email) et/ou un code (SMS) et choisit
-lui-même son nouveau mot de passe depuis la page de connexion.
+configuré. Par SMS, l'utilisateur reçoit un mot de passe temporaire, se connecte
+avec celui-ci, puis est redirigé vers le changement obligatoire de mot de passe.
+Par email, il reçoit un lien sécurisé pour choisir directement son nouveau mot de passe.
 """
 import logging
 import secrets
@@ -21,7 +21,11 @@ from django.utils import timezone
 from stock.services import NotificationService
 
 from .models import AuditConnexion, MotDePasseResetToken, Profil
-from .utils import canaux_notification_actifs, valider_mot_de_passe
+from .utils import (
+    canaux_notification_actifs,
+    valider_mot_de_passe,
+    generer_mot_de_passe_aleatoire,
+)
 from .views import get_client_ip, log_audit
 
 logger = logging.getLogger(__name__)
@@ -142,9 +146,37 @@ def _trouver_par_telephone(tel_saisi):
     return None
 
 
+def _envoyer_mot_de_passe_temporaire(user, telephone):
+    """Génère et envoie le mot de passe temporaire du parcours SMS.
+
+    Le mot de passe n'est jamais enregistré en clair : seul son hash Django
+    est conservé. Le compte est marqué « changement obligatoire » uniquement
+    après confirmation de l'envoi par le fournisseur SMS.
+    """
+    if not telephone:
+        return False
+    mot_de_passe = generer_mot_de_passe_aleatoire(12)
+    texte = (
+        f"NexusERP : votre mot de passe temporaire est {mot_de_passe}. "
+        "Connectez-vous avec puis changez-le dès la première connexion."
+    )
+    if not NotificationService.envoyer_sms_direct(telephone, texte):
+        return False
+
+    user.set_password(mot_de_passe)
+    user.save(update_fields=['password'])
+    profil, _ = Profil.objects.get_or_create(user=user)
+    profil.doit_changer_mdp = True
+    profil.save(update_fields=['doit_changer_mdp'])
+    return True
+
+
 def mot_de_passe_oublie(request):
-    """Étape 1 : l'utilisateur choisit son canal (email ou SMS), saisit son
-    email ou son numéro de téléphone → envoi du lien (email) ou du code (SMS)."""
+    """Étape 1 : l'utilisateur choisit son canal et saisit son contact.
+
+    Email : lien sécurisé pour définir le mot de passe.
+    SMS : mot de passe temporaire, puis changement obligatoire au premier login.
+    """
     if request.user.is_authenticated:
         return redirect('accounts:accueil_personnalise')
 
@@ -175,6 +207,14 @@ def mot_de_passe_oublie(request):
         canal = request.POST.get('canal', 'email').strip().lower()
         identifiant = request.POST.get('identifiant', '').strip()
         user = None
+        if canal not in ('email', 'sms'):
+            canal = 'email'
+        if canal == 'sms' and not sms_ok:
+            messages.error(request, "Le canal SMS n'est pas disponible actuellement. Choisissez l'email ou contactez l'administrateur.")
+            return redirect('accounts:mot_de_passe_oublie')
+        if canal == 'email' and not email_ok:
+            messages.error(request, "Le canal email n'est pas disponible actuellement. Choisissez le SMS ou contactez l'administrateur.")
+            return redirect('accounts:mot_de_passe_oublie')
         if identifiant:
             if canal == 'sms':
                 user = _trouver_par_telephone(identifiant)
@@ -216,17 +256,16 @@ def mot_de_passe_oublie(request):
                 envoye_email = False
                 envoye_sms = False
 
-                # Envoi sur le canal choisi par l'utilisateur
+                # Envoi sur le canal choisi par l'utilisateur.
+                # SMS : un mot de passe temporaire est envoyé. Il devient le
+                # nouveau secret du compte uniquement après envoi confirmé,
+                # puis le premier login est bloqué sur le changement obligatoire.
                 if canal == 'sms':
-                    if sms_ok and telephone:
-                        texte = (
-                            f"NexusERP : votre code de réinitialisation est {jeton.code}. "
-                            f"Saisissez-le sur {lien_code} "
-                            f"(valable {DUREE_VALIDITE_MINUTES} minutes)."
-                        )
-                        envoye_sms = NotificationService.envoyer_sms_direct(telephone, texte)
-                    # Repli : si le SMS n'a pas pu partir (ex. compte Twilio trial),
-                    # on tente l'email quand le compte en a un.
+                    envoye_sms = bool(sms_ok and _envoyer_mot_de_passe_temporaire(user, telephone))
+                    if envoye_sms:
+                        jeton.invalider()
+                        request.session.pop('reset_user_id', None)
+                    # Repli : si le SMS ne part pas, on tente l'email sécurisé.
                     if not envoye_sms and email_ok and user.email:
                         envoye_email = _envoyer_lien_reset(request, user, jeton, lien, DUREE_VALIDITE_MINUTES)
                 else:
@@ -234,12 +273,10 @@ def mot_de_passe_oublie(request):
                         envoye_email = _envoyer_lien_reset(request, user, jeton, lien, DUREE_VALIDITE_MINUTES)
                     # Repli : si l'email n'a pas pu partir, on tente le SMS.
                     if not envoye_email and sms_ok and telephone:
-                        texte = (
-                            f"NexusERP : votre code de réinitialisation est {jeton.code}. "
-                            f"Saisissez-le sur {lien_code} "
-                            f"(valable {DUREE_VALIDITE_MINUTES} minutes)."
-                        )
-                        envoye_sms = NotificationService.envoyer_sms_direct(telephone, texte)
+                        envoye_sms = _envoyer_mot_de_passe_temporaire(user, telephone)
+                        if envoye_sms:
+                            jeton.invalider()
+                            request.session.pop('reset_user_id', None)
 
                 log_audit(
                     request,
@@ -260,8 +297,13 @@ def mot_de_passe_oublie(request):
         # Message neutre : ne révèle jamais l'existence d'un compte
         messages.success(
             request,
-            "Si un compte correspond à cet identifiant, un lien (email) ou "
-            "un code (SMS) vous a été envoyé.",
+            (
+                "Si un compte correspond à cet identifiant, un mot de passe "
+                "temporaire (SMS) ou un lien (email) vous a été envoyé."
+                if canal == 'sms'
+                else "Si un compte correspond à cet identifiant, un lien (email) "
+                     "ou un code (SMS) vous a été envoyé."
+            ),
         )
         return redirect('accounts:mot_de_passe_oublie')
 
@@ -294,7 +336,11 @@ def _envoyer_lien_reset(request, user, jeton, lien, duree):
 
 
 def reinitialiser_mot_de_passe(request, token=None):
-    """Étape 2 : nouveau mot de passe après validation du lien (token) ou du code SMS."""
+    """Étape 2 : nouveau mot de passe après validation d'un lien email.
+
+    Le parcours SMS utilise directement le mot de passe temporaire reçu par SMS
+    et passe par ``changer_mdp_obligatoire`` lors de la première connexion.
+    """
     if request.user.is_authenticated:
         return redirect('accounts:accueil_personnalise')
 

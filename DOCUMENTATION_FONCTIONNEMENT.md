@@ -35,7 +35,7 @@
 
 ### 🔔 Notifications
 - **Configuration globale par l'admin** : email (SMTP) et/ou **SMS (Twilio API)**.
-- Canal actif → notifications, mot de passe de création et de reset envoyés automatiquement ; désactivé → tout en local (reset manuel par l'admin).
+- Canal actif → notifications et mots de passe temporaires de création/reset envoyés automatiquement ; par SMS, le premier login impose le changement du mot de passe ; désactivé → tout en local (reset manuel par l'admin).
 - Alertes de santé (uptime) + **alertes CI Slack/webhook**.
 
 ### 🚀 Exploitation

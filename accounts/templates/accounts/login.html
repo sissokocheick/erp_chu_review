@@ -713,7 +713,8 @@
                 {% if reinit_mdp_active %}
                 <div class="forgot-row">
                     <a href="{% url 'accounts:mot_de_passe_oublie' %}" class="forgot-link">
-                        <i class="fas fa-key"></i> Mot de passe oublié ?
+                        <i class="fas fa-key"></i>
+                        {% if sms_reset_active %}Mot de passe oublié ? Recevoir par SMS{% else %}Mot de passe oublié ?{% endif %}
                     </a>
                 </div>
                 {% endif %}

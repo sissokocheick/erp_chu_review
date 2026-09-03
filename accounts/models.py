@@ -496,9 +496,10 @@ class MotDePasseResetToken(models.Model):
     """Jeton à usage unique pour la réinitialisation du mot de passe par l'utilisateur.
 
     Créé quand l'utilisateur clique « Mot de passe oublié » :
-    - le lien complet (token) est envoyé par email,
-    - le code court (6 chiffres) est envoyé par SMS.
-    Les deux mènent au même formulaire de nouveau mot de passe.
+    - par email, le lien complet est envoyé et permet de choisir un nouveau mot de passe ;
+    - par SMS, un mot de passe temporaire est envoyé et le compte est marqué
+      pour imposer son remplacement à la première connexion.
+    Le code court reste conservé pour compatibilité avec l'ancien parcours.
     """
     DUREE_VALIDITE_MINUTES = 30
 

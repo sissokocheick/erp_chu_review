@@ -232,7 +232,7 @@
                 <div class="card-header">
                     <div class="icon-badge"><i class="fas fa-key"></i></div>
                     <h1>Mot de passe oublié</h1>
-                    <p>Choisissez comment recevoir le lien : par email ou par SMS, puis saisissez votre adresse email ou votre numéro de téléphone.</p>
+                    <p>Choisissez le canal configuré pour votre compte. Par SMS, vous recevrez un mot de passe temporaire à utiliser pour vous connecter avant de le remplacer.</p>
                 </div>
 
                 {% if messages %}
@@ -265,7 +265,7 @@
                         <label class="canal-option{% if not email_ok %} selected{% endif %}" id="opt_sms">
                             <input type="radio" name="canal" value="sms"{% if not email_ok %} checked{% endif %}>
                             <i class="fas fa-mobile-alt"></i>
-                            <span>Par SMS</span>
+                            <span>Mot de passe par SMS</span>
                         </label>
                         {% else %}
                         <label class="canal-option disabled">
@@ -288,7 +288,7 @@
                     </p>
 
                     <button type="submit" class="btn-primary">
-                        <i class="fas fa-paper-plane"></i> Envoyer
+                        <i class="fas fa-paper-plane"></i> <span id="submit_label">Envoyer</span>
                     </button>
                 </form>
 
@@ -299,6 +299,7 @@
                         var input = document.getElementById('id_identifiant');
                         var label = document.getElementById('lbl_identifiant');
                         var help = document.getElementById('canal_help');
+                        var submitLabel = document.getElementById('submit_label');
                         function maj() {
                             var sms = optSms && optSms.querySelector('input').checked;
                             if (sms) {
@@ -309,7 +310,8 @@
                                 input.setAttribute('pattern', '[0-9+ ]{10,20}');
                                 input.setAttribute('autocomplete', 'tel');
                                 label.textContent = 'Numéro de téléphone (10 chiffres)';
-                                help.textContent = 'Nous enverrons un code de réinitialisation par SMS à ce numéro (format 07 08 09 10 11).';
+                                help.textContent = 'Nous enverrons un mot de passe temporaire par SMS à ce numéro (format 07 08 09 10 11). Utilisez-le pour vous connecter, puis changez-le immédiatement.';
+                                if (submitLabel) submitLabel.textContent = 'Recevoir le mot de passe temporaire';
                             } else {
                                 if (optSms) optSms.classList.remove('selected');
                                 if (optEmail) optEmail.classList.add('selected');
@@ -319,6 +321,7 @@
                                 input.setAttribute('autocomplete', 'email');
                                 label.textContent = 'Adresse email du compte';
                                 help.textContent = 'Nous enverrons un lien de réinitialisation à cette adresse email.';
+                                if (submitLabel) submitLabel.textContent = 'Recevoir le lien';
                             }
                         }
                         if (optEmail) optEmail.addEventListener('click', maj);
