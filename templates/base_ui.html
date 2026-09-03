@@ -1524,7 +1524,7 @@
 
         // â”€â”€ Select2 global â”€â”€
         $(document).ready(function() {
-            $('select.form-control').select2({ width: '100%', placeholder: "Cliquez et tapez pour rechercher...", allowClear: true });
+            $('select.form-control:not(.select2-tags)').select2({ width: '100%', placeholder: "Cliquez et tapez pour rechercher...", allowClear: true });
         });
     </script>
 

@@ -2,6 +2,7 @@ from core.utils import paginer
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
+from django.db import IntegrityError
 from django.contrib import messages
 
 from accounts.permissions import verifier_permission
@@ -23,9 +24,12 @@ from ...services.parametre_service import (
     save_beneficiaire,
     save_motif,
 )
-from ...models import FamilleArticle, Fournisseur, MotifAnnulation, Magasin, Beneficiaire
+from ...models import (
+    FamilleArticle, FamilleParametre, Fournisseur, MotifAnnulation,
+    Magasin, Beneficiaire,
+)
 from core.models import Service
-from ...forms import FamilleArticleForm, MagasinForm
+from ...forms import FamilleArticleForm, FamilleParametreForm, MagasinForm
 
 
 @login_required(login_url='/auth/login/')
@@ -34,7 +38,8 @@ from ...forms import FamilleArticleForm, MagasinForm
     'accounts.menu_param_logistique',
     'accounts.menu_magasins',
     'accounts.menu_fournisseurs',
-    'accounts.menu_motifs_annulation')
+    'accounts.menu_motifs_annulation',
+    'accounts.menu_familles')
 @catch_errors(redirect_url='/')
 def parametres_logistique(request):
     if request.method == 'POST':
@@ -86,17 +91,21 @@ def _handle_get(request):
     get_dependances_batch(list(motifs_pagines))
     get_dependances_batch(list(familles_paginees))
 
+    # Valeurs uniques pour les selects avec ajout
+    categories_existantes = sorted(FamilleArticle.objects.exclude(categorie__isnull=True).exclude(categorie='').values_list('categorie', flat=True).distinct())
+    lignes_budgetaires_existantes = sorted(FamilleArticle.objects.exclude(ligne_budgetaire__isnull=True).exclude(ligne_budgetaire='').values_list('ligne_budgetaire', flat=True).distinct())
+    types_famille_existantes = sorted(FamilleArticle.objects.exclude(type_famille__isnull=True).exclude(type_famille='').values_list('type_famille', flat=True).distinct())
+    valorisations_existantes = sorted(FamilleArticle.objects.exclude(methode_valorisation__isnull=True).exclude(methode_valorisation='').values_list('methode_valorisation', flat=True).distinct())
+
     edit_famille_id = request.GET.get('edit_famille', '').strip()
     instance_famille = get_object_or_404(FamilleArticle, id=edit_famille_id) if edit_famille_id else None
     form_famille = FamilleArticleForm(
         instance=instance_famille,
         categories=categories_existantes,
         lignes_budgetaires=lignes_budgetaires_existantes,
+        types_famille=types_famille_existantes,
+        valorisations=valorisations_existantes,
     )
-
-    # Valeurs uniques pour les selects avec ajout
-    categories_existantes = sorted(FamilleArticle.objects.exclude(categorie__isnull=True).exclude(categorie='').values_list('categorie', flat=True).distinct())
-    lignes_budgetaires_existantes = sorted(FamilleArticle.objects.exclude(ligne_budgetaire__isnull=True).exclude(ligne_budgetaire='').values_list('ligne_budgetaire', flat=True).distinct())
 
     edit_fournisseur_id = request.GET.get('edit_fournisseur', '').strip()
     instance_fournisseur = get_object_or_404(Fournisseur, id=edit_fournisseur_id) if edit_fournisseur_id else None
@@ -143,6 +152,22 @@ def _handle_get(request):
         'peut_annuler_beneficiaires': request.user.has_perm('accounts.menu_param_logistique') or request.user.is_superuser,
         'categories_existantes': categories_existantes,
         'lignes_budgetaires_existantes': lignes_budgetaires_existantes,
+        'types_famille_existantes': types_famille_existantes,
+        'valorisations_existantes': valorisations_existantes,
+        'params_types_famille': FamilleParametre.objects.filter(
+            type_parametre='TYPE_FAMILLE', actif=True
+        ).order_by('valeur'),
+        'params_valorisation': FamilleParametre.objects.filter(
+            type_parametre='VALORISATION', actif=True
+        ).order_by('valeur'),
+        'params_categories': FamilleParametre.objects.filter(
+            type_parametre='CATEGORIE', actif=True
+        ).order_by('valeur'),
+        'params_lignes_budgetaires': FamilleParametre.objects.filter(
+            type_parametre='LIGNE_BUDGETAIRE', actif=True
+        ).order_by('valeur'),
+        'form_param_famille': FamilleParametreForm(),
+        'perm_familles': request.user.has_perm('accounts.menu_familles') or request.user.is_superuser,
     }
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -158,6 +183,7 @@ def _handle_post(request):
         'enregistrer_beneficiaire': _post_beneficiaire,
         'enregistrer_motif': _post_motif,
         'enregistrer_config': _post_config,
+        'enregistrer_param_famille': _post_param_famille,
     }
     for key, handler in dispatch.items():
         if key in request.POST:
@@ -169,6 +195,8 @@ def _handle_post(request):
     if action == 'toggle_motif':
         return _post_toggle_motif(request)
 
+    if 'supprimer_param_famille' in request.POST:
+        return _post_supprimer_param_famille(request)
     if 'supprimer_famille' in request.POST:
         return _post_supprimer_famille(request)
     if 'supprimer_fournisseur' in request.POST:
@@ -179,6 +207,41 @@ def _handle_post(request):
         return _post_supprimer_beneficiaire(request)
 
     return redirect('parametres_logistique')
+
+
+def _post_param_famille(request):
+    if not request.user.has_perm('accounts.menu_familles') and not request.user.is_superuser:
+        messages.error(request, '⛔ Accès refusé.')
+        return redirect('parametres_logistique')
+
+    param_id = parse_optional_id(request, 'parametre_id')
+    instance = get_object_or_404(FamilleParametre, pk=param_id) if param_id else None
+    data = request.POST.copy()
+    data['type_parametre'] = request.POST.get('type_parametre', '').strip()
+    form = FamilleParametreForm(data, instance=instance)
+    if form.is_valid():
+        try:
+            parametre = form.save()
+            messages.success(
+                request,
+                f"✅ Valeur « {parametre.valeur} » {'modifiée' if instance else 'ajoutée'}.",
+            )
+        except IntegrityError:
+            messages.error(request, '⛔ Cette valeur existe déjà dans ce référentiel.')
+    else:
+        messages.error(request, '❌ ' + ' '.join(form.errors.get('__all__', form.errors.get('valeur', ['Valeur invalide.']))))
+    return redirect(redirect_url_with_tab('parametres_logistique', 'famille-parametres'))
+
+
+def _post_supprimer_param_famille(request):
+    if not request.user.has_perm('accounts.menu_familles') and not request.user.is_superuser:
+        messages.error(request, '⛔ Accès refusé.')
+        return redirect('parametres_logistique')
+    parametre = get_object_or_404(FamilleParametre, pk=request.POST.get('parametre_id'))
+    valeur = parametre.valeur
+    parametre.delete()
+    messages.success(request, f'🗑️ La valeur « {valeur} » a été supprimée du référentiel.')
+    return redirect(redirect_url_with_tab('parametres_logistique', 'famille-parametres'))
 
 
 def _post_famille(request):

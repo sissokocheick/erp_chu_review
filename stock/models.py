@@ -206,7 +206,40 @@ class Fournisseur(TracabiliteModel, SoftDeleteModel):
         ]
 
 # ==========================================================
-# 2. LE CATALOGUE
+# 2. RÉFÉRENTIELS DU CATALOGUE
+# ==========================================================
+class FamilleParametre(models.Model):
+    """Valeur configurable utilisée par les formulaires de familles d'articles."""
+    TYPE_CHOICES = (
+        ('TYPE_FAMILLE', 'Type de famille'),
+        ('VALORISATION', 'Méthode de valorisation'),
+        ('CATEGORIE', 'Catégorie'),
+        ('LIGNE_BUDGETAIRE', 'Ligne budgétaire'),
+    )
+
+    type_parametre = models.CharField(max_length=30, choices=TYPE_CHOICES, db_index=True)
+    valeur = models.CharField(max_length=100)
+    actif = models.BooleanField(default=True, db_index=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Paramètre de famille'
+        verbose_name_plural = 'Paramètres de familles'
+        ordering = ['type_parametre', 'valeur']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['type_parametre', 'valeur'],
+                name='unique_famille_parametre_valeur',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.get_type_parametre_display()} : {self.valeur}'
+
+
+# ==========================================================
+# 3. LE CATALOGUE
 # ==========================================================
 class FamilleArticle(TracabiliteModel, SoftDeleteModel):
     TYPE_FAMILLE_CHOICES = [
@@ -222,8 +255,10 @@ class FamilleArticle(TracabiliteModel, SoftDeleteModel):
     ]
     code = models.CharField(max_length=20, unique=True)
     intitule = models.CharField(max_length=200)
-    type_famille = models.CharField(max_length=10, choices=TYPE_FAMILLE_CHOICES)
-    methode_valorisation = models.CharField(max_length=10, choices=METHODE_VALORISATION_CHOICES, default='CMUP')
+    type_famille = models.CharField(max_length=50, blank=True, null=True, default='MED',
+        help_text="Type de famille (ex: MED, MAT, BUR, TEC ou valeurs personnalisées)")
+    methode_valorisation = models.CharField(max_length=50, blank=True, null=True, default='CMUP',
+        help_text="Méthode de valorisation (ex: CMUP, FIFO, LIFO ou valeurs personnalisées)")
     est_centralise       = models.BooleanField(default=False)
     categorie            = models.CharField(max_length=100, blank=True, null=True)
     ligne_budgetaire = models.CharField(

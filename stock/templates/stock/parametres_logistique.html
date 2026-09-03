@@ -35,6 +35,9 @@
   .acc-motifs .acc-head h5     { color: #dc3545; }
   .acc-benef .acc-head      { border-left-color: #6f42c1; }
   .acc-benef .acc-head h5   { color: #6f42c1; }
+  .acc-ref .acc-head        { border-left-color: #1c5b96; }
+  .acc-ref .acc-head h5     { color: #1c5b96; }
+  body.dark-mode .acc-ref .acc-head h5 { color: #8ecae6; }
   body.dark-mode .acc-config .acc-head h5 { color: var(--text-medium); }
   body.dark-mode .acc-magasins .acc-head h5 { color: #ffda6a; }
   body.dark-mode .acc-fourn .acc-head h5 { color: #74b9ff; }
@@ -62,6 +65,19 @@
   .btn-add-fourn  { background: #17a2b8; color: white; } .btn-add-fourn:hover  { background: #117a8b; }
   .btn-add-motif  { background: #dc3545; color: white; } .btn-add-motif:hover  { background: #b02a37; }
   .btn-add-benef  { background: #6f42c1; color: white; } .btn-add-benef:hover  { background: #59339d; }
+  .btn-add-ref    { background: #1c5b96; color: white; } .btn-add-ref:hover    { background: #0d3b6e; }
+  .ref-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .ref-card { border: 1px solid var(--border-light); border-radius: 9px; overflow: hidden; background: var(--bg-card); }
+  .ref-card-head { padding: 11px 14px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-stripe); border-bottom: 1px solid var(--border-light); }
+  .ref-card-head strong { font-size: 13px; color: var(--text-dark); }
+  .ref-card-body { padding: 10px 14px; }
+  .ref-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-light); color: var(--text-dark); font-size: 13px; }
+  .ref-row:last-child { border-bottom: 0; }
+  .ref-actions { white-space: nowrap; }
+  .ref-actions button { border: 0; background: transparent; cursor: pointer; padding: 4px 6px; }
+  .ref-actions .edit { color: #28a745; } .ref-actions .delete { color: #dc3545; }
+  .ref-empty { color: var(--text-medium); font-size: 12px; font-style: italic; padding: 8px 0; }
+  @media (max-width: 700px) { .ref-grid { grid-template-columns: 1fr; } }
 
   .btn-ed-sm { color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: 5px; transition: .2s; }
   .btn-ed-sm:hover { background: #d4edda; }
@@ -256,6 +272,70 @@
     </div>
   </div>
 
+  {% endif %}{# ── RÉFÉRENTIEL FAMILLES ── #}
+  {% if perm_familles %}
+  <div class="acc-card acc-ref">
+    <div class="acc-head {% if request.GET.open == 'famille-parametres' %}open{% endif %}" onclick="toggleAcc('acc-ref-familles')">
+      <h5><i class="fas fa-list-check"></i> Référentiel des familles d'articles</h5>
+      <i class="fas fa-chevron-down chevron"></i>
+    </div>
+    <div class="acc-body {% if request.GET.open == 'famille-parametres' %}open{% endif %}" id="acc-ref-familles">
+      <div class="sec-bar">
+        <div style="font-size:12px;color:var(--text-medium);">
+          Gérez ici les valeurs proposées dans les formulaires de familles et d'articles.
+        </div>
+        <button class="btn-add btn-add-ref" type="button" onclick="ouvrirModalParamFamille('', 'TYPE_FAMILLE', '')">
+          <i class="fas fa-plus"></i> Ajouter une valeur
+        </button>
+      </div>
+      <div class="ref-grid">
+        {% with ref_type='TYPE_FAMILLE' ref_title='Types de famille' ref_icon='fa-layer-group' %}
+        <div class="ref-card">
+          <div class="ref-card-head"><strong><i class="fas {{ ref_icon }}" style="color:#1c5b96;margin-right:6px;"></i>{{ ref_title }}</strong><span style="font-size:11px;color:var(--text-medium);">{{ params_types_famille|length }}</span></div>
+          <div class="ref-card-body">
+            {% for p in params_types_famille %}
+            <div class="ref-row"><span>{{ p.valeur }}</span><span class="ref-actions"><button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button><button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button></span></div>
+            <form method="POST" id="del-param-{{ p.id }}" style="display:none;">{% csrf_token %}<input type="hidden" name="supprimer_param_famille" value="1"><input type="hidden" name="parametre_id" value="{{ p.id }}"></form>
+            {% empty %}<div class="ref-empty">Aucun type enregistré.</div>{% endfor %}
+          </div>
+        </div>
+        {% endwith %}
+        {% with ref_type='VALORISATION' ref_title='Méthodes de valorisation' ref_icon='fa-calculator' %}
+        <div class="ref-card">
+          <div class="ref-card-head"><strong><i class="fas {{ ref_icon }}" style="color:#0f766e;margin-right:6px;"></i>{{ ref_title }}</strong><span style="font-size:11px;color:var(--text-medium);">{{ params_valorisation|length }}</span></div>
+          <div class="ref-card-body">
+            {% for p in params_valorisation %}
+            <div class="ref-row"><span>{{ p.valeur }}</span><span class="ref-actions"><button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button><button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button></span></div>
+            <form method="POST" id="del-param-{{ p.id }}" style="display:none;">{% csrf_token %}<input type="hidden" name="supprimer_param_famille" value="1"><input type="hidden" name="parametre_id" value="{{ p.id }}"></form>
+            {% empty %}<div class="ref-empty">Aucune méthode enregistrée.</div>{% endfor %}
+          </div>
+        </div>
+        {% endwith %}
+        {% with ref_type='CATEGORIE' ref_title='Catégories' ref_icon='fa-tags' %}
+        <div class="ref-card">
+          <div class="ref-card-head"><strong><i class="fas {{ ref_icon }}" style="color:#fd7e14;margin-right:6px;"></i>{{ ref_title }}</strong><span style="font-size:11px;color:var(--text-medium);">{{ params_categories|length }}</span></div>
+          <div class="ref-card-body">
+            {% for p in params_categories %}
+            <div class="ref-row"><span>{{ p.valeur }}</span><span class="ref-actions"><button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button><button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button></span></div>
+            <form method="POST" id="del-param-{{ p.id }}" style="display:none;">{% csrf_token %}<input type="hidden" name="supprimer_param_famille" value="1"><input type="hidden" name="parametre_id" value="{{ p.id }}"></form>
+            {% empty %}<div class="ref-empty">Aucune catégorie enregistrée.</div>{% endfor %}
+          </div>
+        </div>
+        {% endwith %}
+        {% with ref_type='LIGNE_BUDGETAIRE' ref_title='Lignes budgétaires' ref_icon='fa-coins' %}
+        <div class="ref-card">
+          <div class="ref-card-head"><strong><i class="fas {{ ref_icon }}" style="color:#6f42c1;margin-right:6px;"></i>{{ ref_title }}</strong><span style="font-size:11px;color:var(--text-medium);">{{ params_lignes_budgetaires|length }}</span></div>
+          <div class="ref-card-body">
+            {% for p in params_lignes_budgetaires %}
+            <div class="ref-row"><span>{{ p.valeur }}</span><span class="ref-actions"><button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button><button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button></span></div>
+            <form method="POST" id="del-param-{{ p.id }}" style="display:none;">{% csrf_token %}<input type="hidden" name="supprimer_param_famille" value="1"><input type="hidden" name="parametre_id" value="{{ p.id }}"></form>
+            {% empty %}<div class="ref-empty">Aucune ligne budgétaire enregistrée.</div>{% endfor %}
+          </div>
+        </div>
+        {% endwith %}
+      </div>
+    </div>
+  </div>
   {% endif %}{# ── MAGASINS ── #}
   {% if perm_magasins %}<div class="acc-card acc-magasins">
     <div class="acc-head {% if request.GET.open == 'magasins' or request.GET.edit_magasin or q_magasin %}open{% endif %}" onclick="toggleAcc('acc-magasins')">
@@ -405,10 +485,21 @@ function fermerModal(id) {
 
     // Nettoyer l'URL des paramètres d'édition
     var url = new URL(window.location.href);
-    ['edit_fournisseur', 'edit_magasin', 'edit_famille', 'edit_beneficiaire', 'edit_motif'].forEach(function(p) {
+    ['edit_fournisseur', 'edit_magasin', 'edit_famille', 'edit_beneficiaire', 'edit_motif', 'parametre_id'].forEach(function(p) {
         url.searchParams.delete(p);
     });
     window.history.replaceState({}, '', url.toString());
+}
+
+function ouvrirModalParamFamille(id, typeParametre, valeur) {
+    document.getElementById('param-famille-id').value = id || '';
+    var type = typeParametre || 'TYPE_FAMILLE';
+    document.getElementById('param-famille-type').value = type;
+    document.getElementById('param-famille-type-label').value = type;
+    document.getElementById('param-famille-valeur').value = valeur || '';
+    document.getElementById('titre-modal-param-famille').innerHTML = '<i class="fas fa-list-check me-2"></i>' + (id ? 'Modifier une valeur' : 'Ajouter une valeur');
+    document.getElementById('modal-param-famille').classList.add('open');
+    setTimeout(function(){ document.getElementById('param-famille-valeur').focus(); }, 100);
 }
 
 function ouvrirModalNouveau(id) {
@@ -501,6 +592,14 @@ function formatPhone(input) {
 
 // ── Recherche AJAX ─────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser Select2 avec tags pour type_famille, valorisation, categorie, ligne_budgetaire
+    $('select.select2-tags').select2({
+        tags: true,
+        tokenSeparators: [',', ' '],
+        placeholder: '-- Choisir ou taper --',
+        allowClear: true
+    });
+
     var timer;
     document.querySelectorAll('.input-recherche-auto').forEach(function(input) {
         input.closest('form').addEventListener('submit', function(e){ e.preventDefault(); });
@@ -551,6 +650,41 @@ function updateRadioSelection(radio) {
 {% endblock %}
 
 {% block modals %}
+  {# ── MODAL RÉFÉRENTIEL FAMILLES ── #}
+  <div class="mo" id="modal-param-famille">
+    <div class="mb mb-sm">
+      <div class="mh" style="background:linear-gradient(135deg,#1c5b96,#117a8b);">
+        <h5 id="titre-modal-param-famille"><i class="fas fa-list-check me-2"></i>Ajouter une valeur</h5>
+        <button class="mc" type="button" onclick="fermerModal('modal-param-famille')"><i class="fas fa-times"></i></button>
+      </div>
+      <form method="POST" action="?open=famille-parametres" onsubmit="confirmerEnregistrement(event,this,'enregistrer_param_famille','Enregistrer cette valeur ?')">
+        {% csrf_token %}
+        <input type="hidden" name="parametre_id" id="param-famille-id" value="">
+        <input type="hidden" name="type_parametre" id="param-famille-type" value="TYPE_FAMILLE">
+        <div class="mbody">
+          <div class="fg">
+            <label>Type de référentiel *</label>
+            <select id="param-famille-type-label" class="form-control" onchange="document.getElementById('param-famille-type').value=this.value">
+              <option value="TYPE_FAMILLE">Type de famille</option>
+              <option value="VALORISATION">Valorisation</option>
+              <option value="CATEGORIE">Catégorie</option>
+              <option value="LIGNE_BUDGETAIRE">Ligne budgétaire</option>
+            </select>
+          </div>
+          <div class="fg">
+            <label for="param-famille-valeur">Valeur *</label>
+            <input type="text" name="valeur" id="param-famille-valeur" class="form-control" maxlength="100" required placeholder="Ex. MED, CMUP, Médicaments…">
+          </div>
+          <small style="font-size:11px;color:var(--text-medium);">La modification d'une valeur ne modifie pas les familles déjà enregistrées.</small>
+        </div>
+        <div class="mfoot">
+          <button type="button" class="btn-nok" onclick="fermerModal('modal-param-famille')">Annuler</button>
+          <button type="submit" class="btn-ok" style="background:#1c5b96;"><i class="fas fa-save me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   {# ── MODAL MAGASIN ── #}
   <div class="mo {% if request.GET.edit_magasin %}open{% endif %}" id="modal-magasin">
     <div class="mb mb-sm">

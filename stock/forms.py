@@ -2,7 +2,8 @@ from django import forms
 from django.contrib.auth.models import User
 from .models import (
     Mouvement, Article, Fournisseur, FamilleArticle,
-    Ajustement, Magasin, BonMouvement, Beneficiaire, MotifAnnulation
+    Ajustement, Magasin, BonMouvement, Beneficiaire, MotifAnnulation,
+    FamilleParametre,
 )
 from core.models import Service
 from accounts.models import Specialite, Fonction
@@ -135,10 +136,10 @@ class ArticleForm(forms.ModelForm):
             'designation',
             'famille',
             'unite_distribution',
-            'seuil_minimum',      
-            'seuil_critique',     
-            'seuil_maximum',      
-            'prix_reference', 
+            'seuil_minimum',
+            'seuil_critique',
+            'seuil_maximum',
+            'prix_reference',
             'gere_lots_peremption',
             'est_immobilisable',
         ]
@@ -294,10 +295,10 @@ class FamilleArticleForm(forms.ModelForm):
                 'placeholder': 'Ex: MOBILIER ET MATERIEL DE BUREAU'
             }),
             'type_famille': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control select2-tags'
             }),
             'methode_valorisation': forms.Select(attrs={
-                'class': 'form-control'
+                'class': 'form-control select2-tags'
             }),
             'categorie': forms.Select(attrs={
                 'class': 'form-control select2-tags'
@@ -305,7 +306,7 @@ class FamilleArticleForm(forms.ModelForm):
             'ligne_budgetaire': forms.Select(attrs={
                 'class': 'form-control select2-tags'
             }),
-            
+
             # --- Checkboxes stylisées ---
             'est_centralise': forms.CheckboxInput(attrs={
                 'style': 'width: 20px; height: 20px; cursor: pointer;'
@@ -328,18 +329,102 @@ class FamilleArticleForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
-        categories = kwargs.pop('categories', [])
-        lignes_budgetaires = kwargs.pop('lignes_budgetaires', [])
+        categories = kwargs.pop('categories', None)
+        lignes_budgetaires = kwargs.pop('lignes_budgetaires', None)
+        types_famille = kwargs.pop('types_famille', None)
+        valorisations = kwargs.pop('valorisations', None)
         super().__init__(*args, **kwargs)
-        # Peupler les choix pour categorie et ligne_budgetaire
-        self.fields['categorie'].choices = [('', '-- Choisir ou taper --')] + [(c, c) for c in categories]
-        self.fields['ligne_budgetaire'].choices = [('', '-- Choisir ou taper --')] + [(l, l) for l in lignes_budgetaires]
+
+        # En POST aussi, charger les anciennes valeurs pour que Select2 accepte
+        # une valeur existante même lorsque la vue ne fournit pas les listes.
+        famille_values = FamilleArticle.objects.all()
+        if categories is None:
+            categories = famille_values.exclude(categorie__isnull=True).exclude(categorie='').values_list('categorie', flat=True).distinct()
+        if lignes_budgetaires is None:
+            lignes_budgetaires = famille_values.exclude(ligne_budgetaire__isnull=True).exclude(ligne_budgetaire='').values_list('ligne_budgetaire', flat=True).distinct()
+        if types_famille is None:
+            types_famille = famille_values.exclude(type_famille__isnull=True).exclude(type_famille='').values_list('type_famille', flat=True).distinct()
+        if valorisations is None:
+            valorisations = famille_values.exclude(methode_valorisation__isnull=True).exclude(methode_valorisation='').values_list('methode_valorisation', flat=True).distinct()
+
+        # Peupler les choix dynamiques : référentiel géré + anciennes valeurs
+        managed_types = FamilleParametre.objects.filter(
+            type_parametre='TYPE_FAMILLE', actif=True
+        ).values_list('valeur', flat=True)
+        managed_valos = FamilleParametre.objects.filter(
+            type_parametre='VALORISATION', actif=True
+        ).values_list('valeur', flat=True)
+        managed_categories = FamilleParametre.objects.filter(
+            type_parametre='CATEGORIE', actif=True
+        ).values_list('valeur', flat=True)
+        managed_lignes = FamilleParametre.objects.filter(
+            type_parametre='LIGNE_BUDGETAIRE', actif=True
+        ).values_list('valeur', flat=True)
+
+        all_types = list(dict.fromkeys(list(types_famille) + list(managed_types)))
+        type_choices = [('', '-- Choisir ou taper --')] + [(t, t) for t in all_types]
+        self.fields['type_famille'].choices = type_choices
+        self.fields['type_famille'].widget.choices = type_choices
+
+        all_valos = list(dict.fromkeys(list(valorisations) + list(managed_valos)))
+        valo_choices = [('', '-- Choisir ou taper --')] + [(v, v) for v in all_valos]
+        self.fields['methode_valorisation'].choices = valo_choices
+        self.fields['methode_valorisation'].widget.choices = valo_choices
+
+        cat_choices = [('', '-- Choisir ou taper --')] + [
+            (c, c) for c in list(dict.fromkeys(list(categories) + list(managed_categories)))
+        ]
+        self.fields['categorie'].choices = cat_choices
+        self.fields['categorie'].widget.choices = cat_choices
+
+        lb_choices = [('', '-- Choisir ou taper --')] + [
+            (l, l) for l in list(dict.fromkeys(list(lignes_budgetaires) + list(managed_lignes)))
+        ]
+        self.fields['ligne_budgetaire'].choices = lb_choices
+        self.fields['ligne_budgetaire'].widget.choices = lb_choices
 
     def save(self, commit=True):
         instance = super().save(commit=False)
         if commit:
             instance.save()
         return instance
+
+class FamilleParametreForm(forms.ModelForm):
+    class Meta:
+        model = FamilleParametre
+        fields = ['type_parametre', 'valeur']
+        widgets = {
+            'type_parametre': forms.HiddenInput(),
+            'valeur': forms.TextInput(attrs={
+                'class': 'form-control',
+                'maxlength': 100,
+                'required': True,
+                'placeholder': 'Saisir une valeur…',
+            }),
+        }
+        labels = {'valeur': 'Valeur'}
+
+    def clean_valeur(self):
+        valeur = ' '.join(self.cleaned_data.get('valeur', '').strip().split())
+        if not valeur:
+            raise forms.ValidationError('La valeur est obligatoire.')
+        return valeur
+
+    def clean(self):
+        cleaned = super().clean()
+        type_parametre = cleaned.get('type_parametre')
+        valeur = cleaned.get('valeur')
+        if type_parametre and valeur:
+            qs = FamilleParametre.objects.filter(
+                type_parametre=type_parametre,
+                valeur__iexact=valeur,
+            )
+            if self.instance.pk:
+                qs = qs.exclude(pk=self.instance.pk)
+            if qs.exists():
+                raise forms.ValidationError('Cette valeur existe déjà dans ce référentiel.')
+        return cleaned
+
 
 # ==========================================================
 # AJUSTEMENTS

@@ -13,7 +13,7 @@ import logging
 
 from accounts.permissions import verifier_permission
 from ..models import (
-    Article, Mouvement, FamilleArticle, Magasin,
+    Article, Mouvement, FamilleArticle, FamilleParametre, Magasin,
     StockItem, LigneBon, LigneCommande)
 from ..forms import ArticleForm, FamilleArticleForm
 from ..decorators import magasin_requis, catch_errors
@@ -231,12 +231,16 @@ def liste_familles(request):
     ) if edit_famille_id else None
 
     # Valeurs uniques pour les selects avec ajout
-    categories_existantes = sorted(FamilleArticle.objects.exclude(categorie__isnull=True).exclude(categorie='').values_list('categorie', flat=True).distinct())
-    lignes_budgetaires_existantes = sorted(FamilleArticle.objects.exclude(ligne_budgetaire__isnull=True).exclude(ligne_budgetaire='').values_list('ligne_budgetaire', flat=True).distinct())
+    categories_existantes = sorted(set(FamilleArticle.objects.exclude(categorie__isnull=True).exclude(categorie='').values_list('categorie', flat=True).distinct()) | set(FamilleParametre.objects.filter(type_parametre='CATEGORIE', actif=True).values_list('valeur', flat=True)))
+    lignes_budgetaires_existantes = sorted(set(FamilleArticle.objects.exclude(ligne_budgetaire__isnull=True).exclude(ligne_budgetaire='').values_list('ligne_budgetaire', flat=True).distinct()) | set(FamilleParametre.objects.filter(type_parametre='LIGNE_BUDGETAIRE', actif=True).values_list('valeur', flat=True)))
+    types_famille_existantes = sorted(set(FamilleArticle.objects.exclude(type_famille__isnull=True).exclude(type_famille='').values_list('type_famille', flat=True).distinct()) | set(FamilleParametre.objects.filter(type_parametre='TYPE_FAMILLE', actif=True).values_list('valeur', flat=True)))
+    valorisations_existantes = sorted(set(FamilleArticle.objects.exclude(methode_valorisation__isnull=True).exclude(methode_valorisation='').values_list('methode_valorisation', flat=True).distinct()) | set(FamilleParametre.objects.filter(type_parametre='VALORISATION', actif=True).values_list('valeur', flat=True)))
     form = FamilleArticleForm(
         instance=instance_f,
         categories=categories_existantes,
         lignes_budgetaires=lignes_budgetaires_existantes,
+        types_famille=types_famille_existantes,
+        valorisations=valorisations_existantes,
     )
 
     if request.method == 'POST':
@@ -249,7 +253,14 @@ def liste_familles(request):
                 if instance_f:
                     edit_famille_id = instance_f.id
 
-        form = FamilleArticleForm(request.POST, instance=instance_f)
+        form = FamilleArticleForm(
+            request.POST,
+            instance=instance_f,
+            categories=categories_existantes,
+            lignes_budgetaires=lignes_budgetaires_existantes,
+            types_famille=types_famille_existantes,
+            valorisations=valorisations_existantes,
+        )
         if form.is_valid():
             famille = form.save(commit=False)
             if not famille.pk:
