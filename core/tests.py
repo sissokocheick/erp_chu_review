@@ -136,13 +136,13 @@ class AuditConnexionModelTest(TestCase):
 # ==========================================================
 class MenuAccessModelTest(TestCase):
     def test_creation(self):
-        ma = MenuAccess.objects.create(nom='menu_utilisateurs')
+        ma = MenuAccess.objects.create(nom='Utilisateurs', code='menu_utilisateurs')
         self.assertEqual(str(ma), "Utilisateurs")
 
     def test_unique_nom(self):
-        MenuAccess.objects.create(nom='menu_roles')
+        MenuAccess.objects.create(nom='Rôles', code='menu_roles')
         with self.assertRaises(Exception):
-            MenuAccess.objects.create(nom='menu_roles')
+            MenuAccess.objects.create(nom='Autre libellé', code='menu_roles')
 
 
 # ==========================================================

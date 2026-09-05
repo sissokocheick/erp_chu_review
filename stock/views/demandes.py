@@ -263,7 +263,7 @@ def _creer_ma_demande(request):
             'designation': getattr(ligne.article, 'designation', ''),
             'unite': getattr(ligne.article, 'unite', 'U'),
             'quantite': ligne.quantite_demandee,
-        } for idx, ligne in enumerate(demande.lignes.all(), start=1)]
+        } for idx, ligne in enumerate(demande.lignes_demande.all(), start=1)]
         pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc='DEMANDE')
         pages = [
             {'lignes': page, 'est_derniere_page': i == len(pagination.pages) - 1}
@@ -272,7 +272,7 @@ def _creer_ma_demande(request):
         pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='DEMANDE')
         context = {
             'demande': demande,
-            'lignes': demande.lignes.all(),
+            'lignes': demande.lignes_demande.all(),
             'lignes_data': lignes_data,
             'lignes_pages': pagination.pages,
             'pages': pages,

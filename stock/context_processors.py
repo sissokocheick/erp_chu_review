@@ -34,7 +34,15 @@ def contexte_magasin(request):
         return {}
 
     user_id = request.user.id
-    key = _ctx_cache_key(user_id, 'magasins')
+    # Le magasin actif dépend de la session, pas seulement de l'utilisateur.
+    # Sans cette partie dans la clé, le résultat « aucun magasin » est conservé
+    # après le choix dans l'overlay et bloque toute la page avec l'overlay.
+    session = getattr(request, 'session', {})
+    magasin_session_id = session.get('magasin_actif_id')
+    key = _ctx_cache_key(
+        user_id,
+        f"magasins:{magasin_session_id if magasin_session_id is not None else 'aucun'}",
+    )
     cached = cache.get(key)
     if cached is not None:
         return cached
@@ -121,7 +129,14 @@ def validation_menu_context(request):
     from stock.services.isolation_service import get_magasins_autorises
 
     user_id = request.user.id
-    key = _ctx_cache_key(user_id, 'valid_menu')
+    # Les compteurs affichés dans le menu peuvent être recalculés après un
+    # changement de magasin ; ne pas réutiliser le cache d'un autre contexte.
+    session = getattr(request, 'session', {})
+    magasin_session_id = session.get('magasin_actif_id')
+    key = _ctx_cache_key(
+        user_id,
+        f"valid_menu:{magasin_session_id if magasin_session_id is not None else 'tous'}",
+    )
     cached = cache.get(key)
     if cached is not None:
         return cached
@@ -183,11 +198,16 @@ def validation_menu_context(request):
             nb=Count('id')
         ).order_by()
         bm_map = {row['type_bon']: row['nb'] for row in counts_bm}
-        ctx['nb_bons_sortie_a_valider'] = (
-            bm_map.get('SORTIE', 0) + bm_map.get('RETOUR_FOURNISSEUR', 0)
-        )
-        ctx['nb_bons_entree_a_valider'] = bm_map.get('ENTREE', 0)
-        ctx['nb_retours_a_valider'] = bm_map.get('RETOUR_SERVICE', 0)
+        # Chaque badge n'est rempli que si l'utilisateur valide ce circuit
+        # (un validateur ENTREE ne doit pas voir les sorties à valider)
+        if 'SORTIE' in types_a_compter:
+            ctx['nb_bons_sortie_a_valider'] = (
+                bm_map.get('SORTIE', 0)
+                + bm_map.get('RETOUR_FOURNISSEUR', 0)
+            )
+        if 'ENTREE' in types_a_compter:
+            ctx['nb_bons_entree_a_valider'] = bm_map.get('ENTREE', 0)
+            ctx['nb_retours_a_valider'] = bm_map.get('RETOUR_SERVICE', 0)
 
     # Commandes
     if 'COMMANDE' in types_a_compter:

@@ -1,5 +1,6 @@
 import logging
 from dataclasses import dataclass
+from types import SimpleNamespace
 from typing import List, Dict, Any, Optional
 
 from django.conf import settings
@@ -9,8 +10,17 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 try:
     from weasyprint import HTML
-except OSError:
+except (ImportError, OSError):
     HTML = None
+
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas as reportlab_canvas
+    from reportlab.lib.utils import simpleSplit
+except ImportError:  # pragma: no cover - dépendance déclarée dans requirements
+    A4 = None
+    reportlab_canvas = None
+    simpleSplit = None
 
 logger = logging.getLogger(__name__)
 
@@ -36,14 +46,18 @@ _META_DOCUMENTS_DEFAUT = {
 }
 
 
-def _config_document_flat(type_doc_code):
+def _config_document_flat(type_doc_code, magasin=None):
     """Retourne la config « plate » d'un type de document (ex-ConfigDocument).
 
     Les métadonnées (code ISO, version…) personnalisées vivent désormais dans
     ModeleDocumentMagasin : on les reprend si un modèle actif existe pour ce
-    type. Sinon on ne fournit que les drapeaux d'affichage et on laisse
-    ModeleDocumentMagasin._default_config_structured appliquer ses codes
-    ISO par type.
+    type ET ce magasin. Sinon on ne fournit que les drapeaux d'affichage et on
+    laisse ModeleDocumentMagasin._default_config_structured appliquer ses
+    codes ISO par type.
+
+    ⚠️ Sans filtre magasin, le premier modèle actif du type (quel que soit son
+    magasin) contaminerait la configuration par défaut de tous les autres
+    magasins. Le filtre est donc obligatoire dès qu'un magasin est connu.
     """
     base = {
         'afficher_logo': True,
@@ -57,9 +71,11 @@ def _config_document_flat(type_doc_code):
     }
     try:
         from stock.models import ModeleDocumentMagasin
-        modele = ModeleDocumentMagasin.objects.filter(
-            type_document=type_doc_code, est_actif=True
-        ).first()
+        qs = ModeleDocumentMagasin.objects.filter(
+            type_document=type_doc_code, est_actif=True)
+        if magasin is not None:
+            qs = qs.filter(magasin=magasin)
+        modele = qs.first()
         if modele and modele.config:
             cfg = modele.config or {}
             metas = cfg.get('metadonnees')
@@ -123,7 +139,8 @@ def get_pdf_config(magasin, type_doc_code, request):
     else:
         # Pas de modèle magasin : défauts riches calculés à partir de ConfigDocument
         pdf_config = ModeleDocumentMagasin._default_config_structured(
-            ModeleDocumentMagasin._freeze_dict(_config_document_flat(type_doc_code)),
+            ModeleDocumentMagasin._freeze_dict(
+                _config_document_flat(type_doc_code, magasin)),
             type_doc_legacy,
         )
 
@@ -294,6 +311,126 @@ def _static_logo_data_uri():
 # RENDU PDF
 # ═════════════════════════════════════════════════════════════════════════════
 
+def _texte_html(html_string):
+    """Extrait un texte lisible du HTML pour le moteur PDF de secours."""
+    from html import unescape
+    import re
+
+    texte = re.sub(
+        r'<(script|style)[^>]*>.*?</\\1>',
+        ' ',
+        html_string,
+        flags=re.S | re.I,
+    )
+    texte = re.sub(r'<[^>]+>', ' ', texte)
+    texte = unescape(texte)
+    return [ligne.strip() for ligne in texte.splitlines() if ligne.strip()]
+
+
+def _lignes_fallback(context, html_string):
+    """Construit des lignes PDF stables à partir du contexte métier.
+
+    Le fallback ne cherche pas à reproduire la mise en page WeasyPrint ; il
+    garantit un PDF lisible et exploitable lorsque les bibliothèques GTK de
+    WeasyPrint ne sont pas disponibles (notamment sur Windows).
+    """
+    pages = context.get('pages') if isinstance(context, dict) else None
+    if pages:
+        resultat = []
+        for numero, page in enumerate(pages, start=1):
+            lignes_page = [f"Page {numero}"]
+            lignes = page.get('lignes') or []
+            for ligne in lignes:
+                if isinstance(ligne, dict):
+                    ref = ligne.get('reference') or ligne.get('article__reference') or ''
+                    designation = ligne.get('designation') or ''
+                    article = ligne.get('article')
+                    if not designation and article is not None:
+                        designation = getattr(article, 'designation', '')
+                    qte = (ligne.get('quantite') or ligne.get('quantite_recue')
+                           or ligne.get('quantite_demandee') or '')
+                    lignes_page.append(f"{ref}  {designation}  {qte}".strip())
+            if page.get('est_derniere_page'):
+                lignes_page.extend(['DEMANDEUR', 'SIGNATURES'])
+            resultat.append({
+                'lignes': lignes_page,
+                'hauteur_ligne': page.get('hauteur_ligne'),
+            })
+        return resultat
+
+    lignes = _texte_html(html_string)
+    return [{'lignes': lignes or ['Document PDF sans données'], 'hauteur_ligne': None}]
+
+
+def _pdf_fallback(context, html_string):
+    """Génère un PDF minimal avec ReportLab si WeasyPrint est indisponible."""
+    if reportlab_canvas is None or A4 is None:
+        raise RuntimeError(
+            "Aucun moteur PDF disponible : installez WeasyPrint ou ReportLab."
+        )
+
+    from io import BytesIO
+
+    buffer = BytesIO()
+    pdf = reportlab_canvas.Canvas(buffer, pagesize=A4)
+    largeur, hauteur = A4
+    pages = _lignes_fallback(context, html_string)
+    total_pages = len(pages)
+    mm_to_pt = 72.0 / 25.4
+
+    for page_num, page_data in enumerate(pages, start=1):
+        page_lignes = page_data.get('lignes') or []
+        hauteur_ligne = page_data.get('hauteur_ligne')
+        try:
+            hauteur_ligne_pt = float(hauteur_ligne) * mm_to_pt
+        except (TypeError, ValueError):
+            hauteur_ligne_pt = 14.0
+        hauteur_ligne_pt = max(14.0, hauteur_ligne_pt)
+
+        # Réserver la zone d'en-tête et du bloc de signatures comme le rendu
+        # HTML. Cela permet au fallback de conserver l'étirement des lignes
+        # calculé par ajouter_hauteurs_lignes et d'éviter un tableau tassé en
+        # haut de page.
+        reserve_pt = 0.0
+        if hauteur_ligne is not None:
+            if page_num == 1:
+                reserve_pt = 72.0 / 25.4 * 72.0
+            else:
+                reserve_pt = 13.0 / 25.4 * 72.0
+        y = hauteur - 36.0 - reserve_pt
+
+        title = page_lignes[0] if page_lignes and page_lignes[0].startswith('Page ') else None
+        if title:
+            pdf.setFont('Helvetica-Bold', 9)
+            pdf.drawString(36, min(hauteur - 24, y + 20), title)
+            lignes_a_rendre = page_lignes[1:]
+        else:
+            lignes_a_rendre = page_lignes
+
+        for texte in lignes_a_rendre:
+            morceaux = (simpleSplit(str(texte), 'Helvetica', 9, largeur - 72)
+                        if simpleSplit else [str(texte)])
+            morceaux = morceaux or ['']
+            pdf.setFont('Helvetica', 9)
+            for index, morceau in enumerate(morceaux):
+                # Une désignation longue peut occuper plusieurs lignes, sans
+                # modifier la hauteur réservée à la ligne du tableau.
+                pdf.drawString(36, y - (index * 10), morceau[:180])
+            y -= max(hauteur_ligne_pt, len(morceaux) * 10)
+
+        pdf.setFont('Helvetica', 8)
+        pdf.drawRightString(largeur - 36, 20, f"{page_num} / {total_pages}")
+        pdf.showPage()
+
+    pdf.save()
+    return buffer.getvalue()
+
+
+def _marquer_template(response, template):
+    """Conserve l'information de template pour les tests et outils Django."""
+    response.templates = [SimpleNamespace(name=template)]
+    return response
+
 def _weasyprint_disponible():
     """Vérifie si WeasyPrint est correctement installé et importable."""
     return HTML is not None
@@ -310,14 +447,13 @@ def render_pdf_response(request, template, context, filename, inline=True):
 
     if not _weasyprint_disponible():
         logger.warning(
-            "[PDF] WeasyPrint indisponible — rendu HTML brut pour %s", template)
-        response = HttpResponse(
-            f"<html><body><h2>PDF temporairement indisponible</h2>"
-            f"<p>WeasyPrint n'est pas installé sur ce serveur. «{filename}»</p>"
-            f"<hr><pre>{html_string[:5000]}</pre></body></html>",
-            content_type='text/html; charset=utf-8',
-        )
-        return response
+            "[PDF] WeasyPrint indisponible — génération ReportLab de secours pour %s", template)
+        pdf_bytes = _pdf_fallback(context, html_string)
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        disposition = 'inline' if inline else 'attachment'
+        response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
+        response['X-PDF-Engine'] = 'reportlab-fallback'
+        return _marquer_template(response, template)
 
     try:
         pdf_bytes = HTML(string=html_string, base_url=base_url).write_pdf()
@@ -334,7 +470,7 @@ def render_pdf_response(request, template, context, filename, inline=True):
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     disposition = 'inline' if inline else 'attachment'
     response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
-    return response
+    return _marquer_template(response, template)
 
 
 def render_pdf_to_bytes(request, template, context):
@@ -344,8 +480,8 @@ def render_pdf_to_bytes(request, template, context):
     base_url = request.build_absolute_uri('/')
     if not _weasyprint_disponible():
         logger.warning(
-            "[PDF] WeasyPrint indisponible — render_pdf_to_bytes retourne None (%s)", template)
-        return None
+            "[PDF] WeasyPrint indisponible — génération ReportLab de secours (%s)", template)
+        return _pdf_fallback(context, html_string)
     return HTML(string=html_string, base_url=base_url).write_pdf()
 
 

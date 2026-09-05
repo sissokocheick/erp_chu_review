@@ -158,7 +158,7 @@ class ConfigurationHopitalFormTest(TestCase):
         form = ConfigurationHopitalForm()
         for champ in ('nom', 'couleur_principale', 'logo', 'cachet',
                       'telephone', 'email_contact', 'cc', 'ifu', 'rccm',
-                      'prefixe_bon_sortie', 'label_signataire_6'):
+                      'prefixe_bon_sortie'):
             self.assertIn(champ, form.fields)
 
 

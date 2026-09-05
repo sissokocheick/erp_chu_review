@@ -1,12 +1,12 @@
 """Transferts inter-magasins : service (mouvements liés) et vues.
 
 Couverture :
-- création d'un transfert simple (sans lot) : décrément source,
-  incrément destination, bon + lignes tracés ;
+- création d'un transfert simple (sans lot) : décrément source immédiat,
+  entrée en destination à la réception (flux « En transit »), bon + lignes tracés ;
 - articles gérés en lot : FEFO côté source, lot/péremption conservés ;
 - blocage : mêmes magasins, pas de lignes, stock insuffisant ;
 - annulation : le stock revient au magasin source ;
-- vues : liste, création via POST, annulation, isolation magasins.
+- vues : liste, création via POST, réception via POST, annulation, isolation magasins.
 """
 from datetime import date, timedelta
 from decimal import Decimal
@@ -61,17 +61,27 @@ class TransfertServiceTest(TestCase):
             commentaire="Déplacement vers l'unité de soins",
         )
         self.assertEqual(bon.type_bon, 'TRANSFERT')
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+        # Réception différée : la sortie est immédiate côté source,
+        # l'entrée en destination attend la réception (flux « En transit »)
         self.assertEqual(self._qte(self.article, self.src), 40)
-        self.assertEqual(self._qte(self.article, self.dst), 10)
-        # Deux mouvements liés tracés par le numéro de bon
-        mouvements = Mouvement.objects.filter(
-            reference_document=bon.numero_bon)
+        self.assertEqual(self._qte(self.article, self.dst), 0)
         self.assertEqual(
-            set(mouvements.values_list('type_mouvement', flat=True)),
-            {'TRANSFERT_SORTIE', 'TRANSFERT_ENTREE'})
+            set(Mouvement.objects.filter(
+                reference_document=bon.numero_bon
+            ).values_list('type_mouvement', flat=True)),
+            {'TRANSFERT_SORTIE'})
         self.assertEqual(bon.lignes_bon.count(), 1)
         self.assertEqual(bon.lignes_bon.first().quantite, 10)
-        # Le CMUP est conservé à l'entrée
+        # Réception → l'entrée est créée, le CMUP est conservé
+        TransfertService.receptionner_transfert(bon, self.user)
+        bon.refresh_from_db()
+        self.assertEqual(bon.statut_validation, 'VALIDE')
+        self.assertEqual(
+            set(Mouvement.objects.filter(
+                reference_document=bon.numero_bon
+            ).values_list('type_mouvement', flat=True)),
+            {'TRANSFERT_SORTIE', 'TRANSFERT_ENTREE'})
         self.assertEqual(
             self._qte(self.article, self.dst), 10)
         self.assertEqual(
@@ -89,14 +99,18 @@ class TransfertServiceTest(TestCase):
         # FEFO : LOT-A (10 j) consommé en premier (40), puis LOT-B (10)
         self.assertEqual(self._qte(self.article_lot, self.src, lot="LOT-A"), 0)
         self.assertEqual(self._qte(self.article_lot, self.src, lot="LOT-B"), 50)
-        # Destination : 40 sur LOT-A + 10 sur LOT-B, péremptions conservées
+        # Réception différée : rien n'est encore arrivé en destination
+        self.assertEqual(self._qte(self.article_lot, self.dst, lot="LOT-A"), 0)
+        self.assertEqual(self._qte(self.article_lot, self.dst, lot="LOT-B"), 0)
+        # Deux lignes de bon tracées (une par lot)
+        self.assertEqual(bon.lignes_bon.count(), 2)
+        # Réception → lots conservés à destination avec leurs péremptions
+        TransfertService.receptionner_transfert(bon, self.user)
         self.assertEqual(self._qte(self.article_lot, self.dst, lot="LOT-A"), 40)
         self.assertEqual(self._qte(self.article_lot, self.dst, lot="LOT-B"), 10)
         item_b = StockItem.objects.get(
             article=self.article_lot, magasin=self.dst, batch_number="LOT-B")
         self.assertEqual(item_b.expiry_date, date.today() + timedelta(days=90))
-        # Deux lignes de bon tracées (une par lot)
-        self.assertEqual(bon.lignes_bon.count(), 2)
 
     def test_blocage_lot_perime(self):
         # Un lot périmé est présent dans le magasin source
@@ -147,6 +161,8 @@ class TransfertServiceTest(TestCase):
             magasin_destination=self.dst,
             lignes=[{'article': self.article, 'quantite': 10}],
         )
+        # Transfert reçu puis annulé : les deux magasins retrouvent leur stock
+        TransfertService.receptionner_transfert(bon, self.user)
         TransfertService.annuler_transfert(bon, self.user, motif="Erreur de saisie")
         bon.refresh_from_db()
         self.assertTrue(bon.est_annule)
@@ -210,9 +226,20 @@ class TransfertVuesTest(TestCase):
         # Redirection vers l'impression du bon créé
         self.assertEqual(resp.status_code, 302)
         self.assertTrue(resp['Location'].startswith('/transferts/?print_bon='))
+        # Sortie immédiate côté source ; destination en transit (réception différée)
         self.assertEqual(
             StockItem.objects.get(article=self.article, magasin=self.src,
                                   batch_number__isnull=True).quantite_physique, 25)
+        self.assertFalse(StockItem.objects.filter(
+            article=self.article, magasin=self.dst).exists())
+        bon = BonMouvement.objects.get(type_bon='TRANSFERT')
+        self.assertEqual(bon.statut_validation, 'ATTENTE')
+        # Réception via POST → le stock entre en destination
+        resp = self.client.post(
+            reverse('receptionner_transfert', args=[bon.id]),
+            {'commentaire': 'Reçu'})
+        self.assertRedirects(resp, reverse('liste_transferts'),
+                             fetch_redirect_response=False)
         self.assertEqual(
             StockItem.objects.get(article=self.article, magasin=self.dst,
                                   batch_number__isnull=True).quantite_physique, 5)

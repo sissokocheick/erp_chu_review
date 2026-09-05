@@ -23,6 +23,11 @@ class DashboardBase(TestCase):
     """Base : admin + 2 magasins + articles + mouvements variés."""
 
     def setUp(self):
+        from django.core.cache import cache
+        # Le dashboard met en cache par ids de magasins : ces ids repartent à 1
+        # après chaque flush de base de test, purge obligatoire pour éviter
+        # qu'un test ne lise les données d'un test précédent.
+        cache.clear()
         self.user = User.objects.create_superuser(
             username='dash_admin', password='dashpass2026',
             email='dash@chu.ci')

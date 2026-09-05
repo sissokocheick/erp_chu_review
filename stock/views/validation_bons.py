@@ -54,7 +54,11 @@ def valider_bon(request, bon_id):
         bon = get_object_or_404(
             BonMouvement.objects
                 .select_related('magasin', 'commande_liee', 'cree_par')
-                .select_for_update(),
+                # PostgreSQL refuse FOR UPDATE sur les tables côté nullable
+                # d'un OUTER JOIN (commande_liee/cree_par). On verrouille
+                # explicitement uniquement la ligne du bon ; les relations
+                # restent chargées pour éviter les accès supplémentaires.
+                .select_for_update(of=('self',)),
             id=bon_id)
 
         # Vérifier que le bon n'est pas déjà validé

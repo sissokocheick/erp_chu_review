@@ -66,24 +66,24 @@ class SupervisionViewTest(TestCase):
 
 class SupervisionHelpersTest(TestCase):
     def test_lister_sauvegardes_fichiers_reels(self):
-        dossier = Path(settings.BASE_DIR) / 'backups'
-        dossier.mkdir(parents=True, exist_ok=True)
-        # Deux faux backups (noms attendus par backup_db.py)
-        for nom, contenu in (('chu_angre_db_20260101.backup', b'x' * 2048),
-                             ('chu_angre_db_20260102.backup', b'y' * 1024)):
-            (dossier / nom).write_bytes(contenu)
-            os.utime(dossier / nom, (1700000000, 1700000000))
-        os.utime(dossier / 'chu_angre_db_20260102.backup', (1700000100, 1700000100))
-        try:
-            resultats = lister_sauvegardes(limit=5)
+        # Le dossier local peut déjà contenir des sauvegardes de développement.
+        # On isole le helper sur un dossier temporaire pour tester uniquement
+        # les deux fichiers créés par ce scénario.
+        with tempfile.TemporaryDirectory() as tmp:
+            dossier = Path(tmp) / 'backups'
+            dossier.mkdir()
+            for nom, contenu in (('chu_angre_db_20260101.backup', b'x' * 2048),
+                                 ('chu_angre_db_20260102.backup', b'y' * 1024)):
+                (dossier / nom).write_bytes(contenu)
+                os.utime(dossier / nom, (1700000000, 1700000000))
+            os.utime(dossier / 'chu_angre_db_20260102.backup', (1700000100, 1700000100))
+            with mock.patch.object(settings, 'BASE_DIR', Path(tmp)):
+                resultats = lister_sauvegardes(limit=5)
             self.assertEqual(len(resultats), 2)
             # Le plus récent en premier (date dans le nom 20260102 > 20260101)
             self.assertEqual(resultats[0]['nom'], 'chu_angre_db_20260102.backup')
             self.assertEqual(resultats[0]['taille'], 1024)
             self.assertEqual(resultats[0]['taille_lisible'], '1 Ko')
-        finally:
-            for nom in ('chu_angre_db_20260101.backup', 'chu_angre_db_20260102.backup'):
-                (dossier / nom).unlink(missing_ok=True)
 
     def test_lister_erreurs_logs(self):
         dossier = Path(settings.BASE_DIR) / 'logs'

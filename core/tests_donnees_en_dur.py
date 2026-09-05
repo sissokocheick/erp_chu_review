@@ -71,8 +71,14 @@ VALEURS_INTERFACE = {
     "actif", "inactif", "tous", "ALL",
     "text", "number", "date", "select",
     "manuel",
-    # Paramètres › Sauvegardes : type de destination (core/backups.py)
-    "ssh", "smb", "aucun",
+    # Paramètres › Sauvegardes : type de destination et planification
+    # (core/backups.py). Ces valeurs décrivent le schéma de configuration,
+    # elles ne représentent pas des données d'exploitation.
+    "ssh", "smb", "aucun", "daily", "interval", "weekly", "desactive",
+    # Choix déclarés par les modèles Patrimoine.
+    "HEBDOMADAIRE", "BIMENSUEL", "MENSUEL",
+    "videoconf", "ecran", "wifi", "clim",
+    "ESSENCE", "DIESEL", "HYBRIDE",
 }
 
 RE_CREATION = re.compile(

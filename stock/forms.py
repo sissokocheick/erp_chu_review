@@ -7,6 +7,20 @@ from .models import (
 )
 from core.models import Service
 from accounts.models import Specialite, Fonction
+
+
+def _limiter_choix_article(field, queryset, limite=200):
+    """Limite uniquement les options HTML sans tronquer la validation ORM.
+
+    ``ModelChoiceField`` doit conserver un queryset non découpé : sa validation
+    appelle ``queryset.get(pk=...)`` et Django refuse un queryset déjà slicé.
+    """
+    field.queryset = queryset
+    choix = [('', field.empty_label or '---------')]
+    choix.extend((article.pk, str(article)) for article in queryset[:limite])
+    field.widget.choices = choix
+
+
 # ==========================================================
 # MOUVEMENTS
 # ==========================================================
@@ -39,9 +53,12 @@ class SortieStockForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.utilisateur = kwargs.pop('utilisateur', None)
         super().__init__(*args, **kwargs)
-        self.fields['article'].queryset = Article.objects.filter(
-            stocks__quantite_physique__gt=0
-        ).distinct()[:200]
+        _limiter_choix_article(
+            self.fields['article'],
+            Article.objects.filter(
+                stocks__quantite_physique__gt=0
+            ).distinct(),
+        )
         self.fields['magasin'].queryset = Magasin.objects.all()
         self.fields['service_demandeur'].queryset = Service.objects.all()
         self.fields['service_demandeur'].label = "Service Demandeur"
@@ -111,7 +128,10 @@ class EntreeStockForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.utilisateur = kwargs.pop('utilisateur', None)
         super().__init__(*args, **kwargs)
-        self.fields['article'].queryset = Article.objects.filter(is_deleted=False).order_by('designation')[:200]
+        _limiter_choix_article(
+            self.fields['article'],
+            Article.objects.filter(is_deleted=False).order_by('designation'),
+        )
         self.fields['magasin'].queryset = Magasin.objects.all()
         self.fields['fournisseur'].queryset = Fournisseur.objects.all()
 
@@ -448,7 +468,14 @@ class AjustementForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         self.utilisateur = kwargs.pop('utilisateur', None)
         super().__init__(*args, **kwargs)
-        self.fields['article'].queryset = Article.objects.filter(is_deleted=False).order_by('designation')[:200]
+        # ⚠️ Ne JAMAIS tronquer la queryset d'un ModelChoiceField : Django
+        # valide via queryset.get(pk=...), impossible sur une queryset
+        # déjà découpée ([:200]) → le formulaire devenait invalide pour
+        # TOUS les articles. On garde la base complète pour la validation
+        # et on borne uniquement le <select> rendu côté navigateur.
+        qs_articles = Article.objects.filter(
+            is_deleted=False).order_by('designation')
+        _limiter_choix_article(self.fields['article'], qs_articles)
         self.fields['magasin'].queryset = Magasin.objects.all()
         for champ in ['magasin', 'commentaire', 'motif']:
             if champ in self.fields:

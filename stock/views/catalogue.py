@@ -1,7 +1,7 @@
 import json
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.db.models import Q
+from django.db.models import Q, Exists, OuterRef
 from django.db import IntegrityError
 from django.http import JsonResponse
 from django.core.paginator import Paginator
@@ -101,6 +101,15 @@ def liste_articles(request):
     if query:
         articles = filtrer_texte(articles, query, ['designation', 'reference'])
 
+    # Anti N+1 : les dépendances sont évaluées dans la requête des articles
+    # via EXISTS, au lieu de quatre requêtes globales après pagination.
+    articles = articles.annotate(
+        _a_des_dependances=Exists(Mouvement.objects.filter(article_id=OuterRef('pk')))
+        | Exists(StockItem.objects.filter(article_id=OuterRef('pk')))
+        | Exists(LigneBon.objects.filter(article_id=OuterRef('pk')))
+        | Exists(LigneCommande.objects.filter(article_id=OuterRef('pk')))
+    )
+
     articles_pagines, per_page = paginer(articles, request)
 
     edit_article_id = (
@@ -141,15 +150,11 @@ def liste_articles(request):
 
     familles = FamilleArticle.objects.all().order_by('intitule')
 
-    # Anti N+1 : set d'IDs d'articles ayant des dépendances (pour le bouton
-    # supprimer) calculé en 4 requêtes globales au lieu de 4 requêtes par ligne.
-    ids_page = [a.id for a in articles_pagines]
-    ids_lies = set()
-    if ids_page:
-        ids_lies |= set(Mouvement.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
-        ids_lies |= set(StockItem.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
-        ids_lies |= set(LigneBon.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
-        ids_lies |= set(LigneCommande.objects.filter(article_id__in=ids_page).values_list('article_id', flat=True))
+    # Le statut est déjà annoté dans la requête principale : aucun accès DB
+    # supplémentaire dans la boucle d'affichage.
+    ids_lies = {
+        a.id for a in articles_pagines if getattr(a, '_a_des_dependances', False)
+    }
 
     # Donnees famille pour auto-check dans le formulaire article
     familles_data = {

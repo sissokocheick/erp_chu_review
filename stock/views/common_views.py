@@ -148,20 +148,24 @@ def filtrer_texte(qs, q, champs):
             pass  # chemin inattendu → repli Python (comportement historique)
 
     # Voie Python : listes matérialisées (ou SGBD sans TRANSLATE).
+    # Conserver la queryset d'origine : plusieurs vues enchaînent ensuite
+    # annotate()/order_by(), et un résultat vide doit rester une queryset
+    # (pas une liste Python).
+    qs_original = qs if hasattr(qs, 'all') and getattr(qs, 'model', None) is not None else None
     qs_model = getattr(qs, 'model', None)
-    if hasattr(qs, 'all'):
-        qs = list(qs)
+    if qs_original is not None:
+        qs = list(qs_original)
     resultats = []
     for obj in qs:
         for champ in champs:
             if any(q_norm in normaliser_texte(v) for v in _get_valeurs(obj, champ)):
                 resultats.append(obj)
                 break
-    # Si l'entrée était un QuerySet, retourner un QuerySet filtré
-    # (compatible .filter()/.order_by() en aval).
-    if resultats and qs_model is not None:
+    if qs_original is not None:
         ids = [obj.pk for obj in resultats]
-        return qs_model._default_manager.filter(pk__in=ids)
+        # Le filtre sur la queryset d'origine conserve son order_by() et ses
+        # select_related/prefetch_related, tout en restant chaînable.
+        return qs_original.filter(pk__in=ids)
     return resultats
 
 def get_magasin_actif(request):

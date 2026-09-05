@@ -135,11 +135,9 @@ class E2EBase(LiveServerTestCase):
         select = self.page.locator(
             'form[action*="changer-magasin"] select.nx-select')
         if select.count() and select.is_visible():
+            # L'overlay soumet automatiquement le formulaire au changement
+            # (onchange → submit) : pas de bouton à cliquer.
             select.select_option(str((magasin or self.mag_a).id))
-            self._attendre(200)
-            self.page.locator(
-                'form[action*="changer-magasin"] button[type="submit"]'
-            ).click()
             self._attendre(900)
 
     def _changer_magasin_header(self, magasin):
@@ -234,7 +232,9 @@ class E2EBase(LiveServerTestCase):
         jeton = MotDePasseResetToken.objects.filter(user=cible).first()
         self.assertIsNotNone(
             jeton, "Le compte avec contact +225 doit être retrouvé")
-        self.assertFalse(jeton.utilise)
+        # En mode SMS, le mot de passe temporaire devient le secret de
+        # connexion ; le jeton technique est donc invalidé immédiatement.
+        self.assertTrue(jeton.utilise)
 
         # Le message neutre est affiché (ne révèle pas l'existence du compte)
         body = self.page.inner_text('body')

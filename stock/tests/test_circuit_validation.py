@@ -135,7 +135,7 @@ class CommandeCircuitTest(BaseCircuitTest):
         commande = self._creer_commande('BROUILLON')
 
         self._login(self.validateur)
-        resp = self.client.get(reverse('valider_commande', args=[commande.id]))
+        resp = self.client.post(reverse('valider_commande', args=[commande.id]))
         self.assertEqual(resp.status_code, 302)
 
         commande.refresh_from_db()
@@ -150,7 +150,7 @@ class CommandeCircuitTest(BaseCircuitTest):
         commande = self._creer_commande('BROUILLON')
 
         self._login(self.user)
-        resp = self.client.get(reverse('valider_commande', args=[commande.id]))
+        resp = self.client.post(reverse('valider_commande', args=[commande.id]))
         self.assertEqual(resp.status_code, 302)
 
         commande.refresh_from_db()
@@ -465,7 +465,11 @@ class InventaireCircuitTest(BaseCircuitTest):
 class CompteurMenuValidationTest(BaseCircuitTest):
     def _contexte(self, user):
         from django.test import RequestFactory
+        from django.core.cache import cache
         from stock.context_processors import validation_menu_context
+        # Le cache LocMem persiste entre tests (ids utilisateurs repartent à 1
+        # après chaque flush de base) : purge pour éviter une pollution de compteurs.
+        cache.clear()
         rf = RequestFactory()
         req = rf.get('/')
         req.user = user
@@ -555,7 +559,7 @@ class CompteurMenuValidationTest(BaseCircuitTest):
     def test_compteur_demandes_limite_au_service(self):
         """Le badge A Valider ne compte que les demandes du service du validateur."""
         from core.models import Service
-        from stock.context_processors import menu_validation_context
+        from stock.context_processors import validation_demandes_menu
         from django.test import RequestFactory
 
         service = Service.objects.create(code='SVC2', nom='Pédiatrie')
@@ -579,7 +583,7 @@ class CompteurMenuValidationTest(BaseCircuitTest):
         rf = RequestFactory()
         req = rf.get('/')
         req.user = self.validateur
-        ctx = menu_validation_context(req)
+        ctx = validation_demandes_menu(req)
         self.assertTrue(ctx['peut_valider_demandes'])
         self.assertEqual(ctx['nb_demandes_a_valider'], 1)
 

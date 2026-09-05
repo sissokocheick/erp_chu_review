@@ -208,7 +208,7 @@ class VuesInventaireTournantTest(InventaireTournantBase):
 
     def test_generation_manuelle_redirige_vers_saisie(self):
         plan = self._creer_plan(familles=[self.fam_med])
-        resp = self.client.get(reverse('generer_campagne_tournante', args=[plan.id]))
+        resp = self.client.post(reverse('generer_campagne_tournante', args=[plan.id]))
         self.assertEqual(resp.status_code, 302)
         campagne = CampagneInventaire.objects.latest('id')
         self.assertEqual(campagne.lignes_inventaire.count(), 1)
@@ -217,18 +217,18 @@ class VuesInventaireTournantTest(InventaireTournantBase):
 
     def test_generation_plan_inactif_refusee(self):
         plan = self._creer_plan(familles=[self.fam_med], statut='INACTIF')
-        resp = self.client.get(reverse('generer_campagne_tournante', args=[plan.id]))
+        resp = self.client.post(reverse('generer_campagne_tournante', args=[plan.id]))
         self.assertEqual(resp.status_code, 302)
         self.assertEqual(CampagneInventaire.objects.count(), 0)
 
     def test_bascule_statut_actif_pause(self):
         plan = self._creer_plan(familles=[self.fam_med])
-        resp = self.client.get(reverse('basculer_statut_plan', args=[plan.id]))
+        resp = self.client.post(reverse('basculer_statut_plan', args=[plan.id]))
         self.assertEqual(resp.status_code, 302)
         plan.refresh_from_db()
         self.assertEqual(plan.statut, 'INACTIF')
 
-        resp = self.client.get(reverse('basculer_statut_plan', args=[plan.id]))
+        resp = self.client.post(reverse('basculer_statut_plan', args=[plan.id]))
         plan.refresh_from_db()
         self.assertEqual(plan.statut, 'ACTIF')
 

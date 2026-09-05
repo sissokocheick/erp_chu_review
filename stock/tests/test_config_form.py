@@ -18,6 +18,11 @@ class ConfigurationFormTest(TestCase):
     """Vérifie l'affichage et l'enregistrement de la configuration."""
 
     def setUp(self):
+        from django.core.cache import cache
+        # Le contexte magasin est mis en cache par user_id : les ids repartent
+        # à 1 après chaque flush de base de test, purge obligatoire pour que
+        # chaque test voie ses propres magasins.
+        cache.clear()
         self.superuser = factories.creer_superuser(username="admin_config")
         factories.desactiver_changement_mdp(self.superuser)
         self.client.force_login(self.superuser)
@@ -75,12 +80,6 @@ class ConfigurationFormTest(TestCase):
             'prefixe_bon_retour': 'BRX',
             'prefixe_bon_hors_stock': 'HSX',
             'prefixe_commande': 'BCX',
-            'label_signataire_1': 'S1',
-            'label_signataire_2': 'S2',
-            'label_signataire_3': 'S3',
-            'label_signataire_4': 'S4',
-            'label_signataire_5': 'S5',
-            'label_signataire_6': 'S6',
         }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         self.assertEqual(response.status_code, 200)
         data = response.json()
@@ -89,7 +88,9 @@ class ConfigurationFormTest(TestCase):
         self.assertEqual(self.config.nom, "CHU d'Angré")
         self.assertEqual(self.config.ifu, 'IFU-2026')
         self.assertEqual(self.config.prefixe_bon_sortie, 'BSX')
-        self.assertEqual(self.config.label_signataire_6, 'S6')
+        # Les champs label_signataire_1..6 ont été supprimés (migration vers
+        # ModeleDocumentMagasin) : labels_signatures renvoie les défauts.
+        self.assertEqual(self.config.labels_signatures[5], 'Le Réceptionnaire')
 
     def test_post_config_invalide_retourne_erreur(self):
         response = self.client.post(self.url, {
