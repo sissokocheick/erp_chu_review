@@ -131,6 +131,7 @@ def liste_interventions(request):
 
 @patrimoine_required
 
+@verifier_permission('accounts.menu_pat_intervention_detail', 'accounts.menu_pat_tech')
 def detail_intervention(request, intervention_id):
 
     intervention = get_object_or_404(
@@ -486,7 +487,7 @@ def detail_intervention(request, intervention_id):
 
 
 @login_required(login_url="/auth/login/")
-
+@verifier_permission('accounts.menu_pat_signaler_panne')
 def signaler_panne(request, immo_id):
 
     equipement = get_object_or_404(Immobilisation, id=immo_id)
@@ -677,7 +678,7 @@ def portail_prestataire(request):
 
 
 @login_required(login_url='/auth/login/')
-
+@verifier_permission('accounts.menu_pat_mes_tickets', 'accounts.menu_pat_tickets')
 def mes_tickets(request):
 
     qs = Intervention.objects.filter(cree_par=request.user).select_related(
@@ -914,7 +915,7 @@ def mes_interventions_tech(request):
 
 
 @login_required(login_url='/auth/login/')
-
+@verifier_permission('accounts.menu_pat_suivi_ticket', 'accounts.menu_pat_mes_tickets', 'accounts.menu_pat_tech')
 def suivi_ticket(request, pk):
 
     intervention = get_object_or_404(Intervention, pk=pk)
@@ -929,7 +930,7 @@ def suivi_ticket(request, pk):
 
 
 @login_required(login_url='/auth/login/')
-
+@verifier_permission('accounts.menu_pat_signaler_panne')
 def declarer_panne_pc(request):
 
     if request.method == 'POST':

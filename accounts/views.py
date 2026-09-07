@@ -3122,8 +3122,7 @@ def page_roles(request):
 
 
 @login_required(login_url='/auth/login/')
-
-
+@verifier_permission('accounts.menu_journal_audit')
 def journal_audit(request):
 
 
@@ -3948,7 +3947,7 @@ def save_theme_preference(request):
 @login_required(login_url='/auth/login/')
 
 
-@verifier_permission('accounts.menu_utilisateurs')
+@verifier_permission('accounts.menu_securite_mdp')
 
 
 def parametres_securite(request):

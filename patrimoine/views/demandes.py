@@ -13,6 +13,7 @@ from ..models import (
     DemandeVehicule, DemandeSalle, Vehicule, SalleConference, ReservationSalle
 )
 from ..views.common import patrimoine_required
+from accounts.permissions import verifier_permission
 
 
 # ═══════════════════════════════════════════════════════════
@@ -20,6 +21,7 @@ from ..views.common import patrimoine_required
 # ═══════════════════════════════════════════════════════════
 
 @login_required
+@verifier_permission('accounts.menu_pat_vehicules_demander')
 def mes_demandes_vehicule(request):
     """Mes demandes de véhicule."""
     demandes = DemandeVehicule.objects.filter(demandeur=request.user).select_related(
@@ -49,6 +51,7 @@ def mes_demandes_vehicule(request):
 
 
 @login_required
+@verifier_permission('accounts.menu_pat_vehicules_demander')
 def creer_demande_vehicule(request):
     """Créer une demande de véhicule."""
     if request.method == 'POST':
@@ -81,6 +84,7 @@ def creer_demande_vehicule(request):
 
 
 @login_required
+@verifier_permission('accounts.menu_pat_vehicules_demander', 'accounts.menu_pat_vehicules_valider')
 def detail_demande_vehicule(request, pk):
     """Détail d'une demande de véhicule."""
     demande = get_object_or_404(
@@ -98,6 +102,7 @@ def detail_demande_vehicule(request, pk):
 
 
 @login_required
+@verifier_permission('accounts.menu_pat_vehicules_demander')
 def annuler_demande_vehicule(request, pk):
     """Annuler une demande de véhicule."""
     demande = get_object_or_404(DemandeVehicule, pk=pk, demandeur=request.user)
@@ -112,9 +117,10 @@ def annuler_demande_vehicule(request, pk):
 
 @login_required
 @patrimoine_required
+@verifier_permission('accounts.menu_pat_vehicules_valider')
 def demandes_vehicule_a_valider(request):
     """Liste des demandes de véhicule en attente de validation (validateurs)."""
-    if not (request.user.is_superuser or request.user.is_staff
+    if not (request.user.is_superuser
             or request.user.has_perm('accounts.menu_pat_vehicules_valider')):
         messages.error(request, "⛔ Accès non autorisé.")
         return redirect('patrimoine_vehicules')
@@ -133,9 +139,10 @@ def demandes_vehicule_a_valider(request):
 
 @login_required
 @patrimoine_required
+@verifier_permission('accounts.menu_pat_vehicules_valider')
 def valider_demande_vehicule(request, pk):
     """Valider ou refuser une demande de véhicule."""
-    if not (request.user.is_superuser or request.user.is_staff
+    if not (request.user.is_superuser
             or request.user.has_perm('accounts.menu_pat_vehicules_valider')):
         messages.error(request, "⛔ Accès non autorisé — permission de validation requise.")
         return redirect('patrimoine_vehicules')
@@ -199,6 +206,7 @@ def valider_demande_vehicule(request, pk):
 # ═══════════════════════════════════════════════════════════
 
 @login_required
+@verifier_permission('accounts.menu_pat_salles_demander')
 def mes_demandes_salle(request):
     """Mes demandes de salle."""
     demandes = DemandeSalle.objects.filter(demandeur=request.user).select_related(
@@ -230,6 +238,7 @@ def mes_demandes_salle(request):
 
 
 @login_required
+@verifier_permission('accounts.menu_pat_salles_demander')
 def creer_demande_salle(request):
     """Créer une demande de salle."""
     if request.method == 'POST':
@@ -269,6 +278,7 @@ def creer_demande_salle(request):
 
 
 @login_required
+@verifier_permission('accounts.menu_pat_salles_demander', 'accounts.menu_pat_salles_valider')
 def detail_demande_salle(request, pk):
     """Détail d'une demande de salle."""
     demande = get_object_or_404(
@@ -285,6 +295,7 @@ def detail_demande_salle(request, pk):
 
 
 @login_required
+@verifier_permission('accounts.menu_pat_salles_demander')
 def annuler_demande_salle(request, pk):
     """Annuler une demande de salle."""
     demande = get_object_or_404(DemandeSalle, pk=pk, demandeur=request.user)
@@ -299,9 +310,10 @@ def annuler_demande_salle(request, pk):
 
 @login_required
 @patrimoine_required
+@verifier_permission('accounts.menu_pat_salles_valider')
 def demandes_salle_a_valider(request):
     """Liste des demandes de salle en attente de validation."""
-    if not (request.user.is_superuser or request.user.is_staff
+    if not (request.user.is_superuser
             or request.user.has_perm('accounts.menu_pat_salles_valider')):
         messages.error(request, "⛔ Accès non autorisé.")
         return redirect('patrimoine_salles')
@@ -320,9 +332,10 @@ def demandes_salle_a_valider(request):
 
 @login_required
 @patrimoine_required
+@verifier_permission('accounts.menu_pat_salles_valider')
 def valider_demande_salle(request, pk):
     """Valider ou refuser une demande de salle → crée une réservation."""
-    if not (request.user.is_superuser or request.user.is_staff
+    if not (request.user.is_superuser
             or request.user.has_perm('accounts.menu_pat_salles_valider')):
         messages.error(request, "⛔ Accès non autorisé — permission de validation requise.")
         return redirect('patrimoine_salles')

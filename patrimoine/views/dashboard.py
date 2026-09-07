@@ -5,6 +5,8 @@ from decimal import Decimal
 
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from accounts.permissions import verifier_permission
+from patrimoine.views.common import patrimoine_required
 from django.utils import timezone
 from django.db.models import Count, Q, Sum
 
@@ -16,6 +18,8 @@ from patrimoine.models import (
 
 
 @login_required(login_url='/auth/login/')
+@patrimoine_required
+@verifier_permission('accounts.menu_dashboard')
 def dashboard_patrimoine(request):
     """Dashboard dédié au Gestionnaire Patrimoine avec KPIs patrimoine."""
     aujourdhui = timezone.now().date()

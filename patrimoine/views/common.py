@@ -23,25 +23,16 @@ def patrimoine_required(view_func):
 
             return redirect('/auth/login/')
 
-        # Liste des permissions patrimoine existantes dans MenuAccess
-        perms_pat = [
-            'accounts.menu_pat_tickets', 'accounts.menu_pat_tech', 'accounts.menu_pat_dispatch',
-            'accounts.menu_pat_historique', 'accounts.menu_pat_registre', 'accounts.menu_pat_sas',
-            'accounts.menu_pat_contrats', 'accounts.menu_pat_import', 'accounts.menu_pat_inventaire',
-            'accounts.menu_pat_rebuts', 'accounts.menu_pat_pertes', 'accounts.menu_pat_parametres',
-            # Véhicules
-            'accounts.menu_pat_vehicules', 'accounts.menu_pat_vehicules_demander',
-            'accounts.menu_pat_vehicules_valider', 'accounts.menu_pat_vehicules_missions',
-            'accounts.menu_pat_vehicules_interventions',
-            # Salles
-            'accounts.menu_pat_salles', 'accounts.menu_pat_salles_demander',
-            'accounts.menu_pat_salles_valider', 'accounts.menu_pat_salles_calendrier',
-            'accounts.menu_pat_salles_reservations',
-        ]
+        # Toutes les permissions patrimoine, y compris les sous-pages
+        # véhicules, salles, tickets et demandes, sont attribuables depuis
+        # la page Rôles. On les détecte par préfixe pour ne jamais oublier
+        # une permission ajoutée ultérieurement.
+        has_any = any(
+            permission.startswith('accounts.menu_pat_')
+            for permission in request.user.get_all_permissions()
+        )
 
-        has_any = any(request.user.has_perm(p) for p in perms_pat)
-
-        if not (request.user.is_staff or request.user.is_superuser or has_any):
+        if not (request.user.is_superuser or has_any):
 
             messages.error(request, "⛔ Accès non autorisé au module Patrimoine.")
 

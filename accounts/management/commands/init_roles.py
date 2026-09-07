@@ -96,7 +96,13 @@ class Command(BaseCommand):
         all_menu = Permission.objects.filter(codename__startswith='menu_')
 
         for name, def_ in ROLE_DEFS.items():
-            group, created = Group.objects.get_or_create(name=name)
+            # L'interface des rôles enregistre souvent les noms en majuscules.
+            # Réutiliser un groupe existant sans tenir compte de la casse évite
+            # de créer un doublon « Administrateur » / « ADMINISTRATEUR ».
+            group = Group.objects.filter(name__iexact=name).first()
+            created = group is None
+            if created:
+                group = Group.objects.create(name=name)
             perms_to_add = []
             for prefix in def_['perms']:
                 if prefix == 'menu_':

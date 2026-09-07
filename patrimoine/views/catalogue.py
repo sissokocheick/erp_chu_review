@@ -144,6 +144,12 @@ def registre(request):
 
 @patrimoine_required
 
+@verifier_permission(
+    'accounts.menu_pat_fiche_detail',
+    'accounts.menu_pat_registre',
+    'accounts.menu_pat_tech',
+    'accounts.menu_pat_signaler_panne',
+)
 def fiche_detail(request, pk):
 
     immo = get_object_or_404(
