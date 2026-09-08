@@ -492,6 +492,7 @@ def valider_commande(request, commande_id):
 @login_required(login_url='/auth/login/')
 @verifier_permission('accounts.menu_commandes')
 @magasin_requis
+@require_POST
 @catch_errors(redirect_url='liste_commandes')
 def supprimer_commande(request, commande_id):
     commande = get_object_or_404(

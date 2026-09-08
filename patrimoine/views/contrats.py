@@ -19,6 +19,8 @@ from ..models import (
 )
 from .common import patrimoine_required
 
+from ..audit import audit
+
 logger = logging.getLogger(__name__)
 
 
@@ -57,6 +59,8 @@ def liste_contrats(request):
             )
 
             messages.success(request, "✅ Nouveau contrat créé avec succès.")
+
+            audit(request, 'Création du contrat de maintenance', 'CREATE', modele_concerne='ContratMaintenance', details={'reference': request.POST.get('reference')})
 
         except Exception as e:
 
@@ -183,6 +187,8 @@ def assigner_equipements_contrat(request, contrat_id):
             Immobilisation.objects.filter(id__in=ids_valides).update(contrat_maintenance=contrat)
 
         messages.success(request, "✅ La couverture du contrat a été mise à jour avec succès.")
+
+        audit(request, 'Mise à jour de la couverture du contrat de maintenance', 'UPDATE', instance=contrat)
 
         return redirect('patrimoine_contrats')
 

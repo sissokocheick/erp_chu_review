@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """Vues pour les demandes de véhicules et salles par les utilisateurs."""
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.http import require_POST
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.utils import timezone
@@ -15,6 +16,8 @@ from ..models import (
 from ..views.common import patrimoine_required
 from accounts.permissions import verifier_permission
 
+
+from ..audit import audit
 
 # ═══════════════════════════════════════════════════════════
 # DEMANDES DE VÉHICULES
@@ -73,6 +76,8 @@ def creer_demande_vehicule(request):
                 demande.service_demandeur_id = int(service_id)
             demande.save()
             messages.success(request, '✅ Demande de véhicule envoyée avec succès.')
+            audit(request, "Création d'une demande de véhicule", 'CREATE', instance=demande)
+
             return redirect('patrimoine_mes_demandes_vehicule')
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
@@ -103,12 +108,15 @@ def detail_demande_vehicule(request, pk):
 
 @login_required
 @verifier_permission('accounts.menu_pat_vehicules_demander')
+@require_POST
 def annuler_demande_vehicule(request, pk):
     """Annuler une demande de véhicule."""
     demande = get_object_or_404(DemandeVehicule, pk=pk, demandeur=request.user)
     if demande.statut == 'EN_ATTENTE':
         demande.statut = 'ANNULEE'
         demande.save(update_fields=['statut'])
+        audit(request, "Annulation d'une demande de véhicule", 'UPDATE', instance=demande)
+
         messages.warning(request, '🚫 Demande annulée.')
     else:
         messages.error(request, '❌ Impossible d\'annuler cette demande.')
@@ -172,6 +180,8 @@ def valider_demande_vehicule(request, pk):
             demande.commentaire_valider = request.POST.get('commentaire', '')
             demande.km_depart = int(request.POST['km_depart']) if request.POST.get('km_depart') else None
             demande.save()
+            audit(request, "Validation d'une demande de véhicule", 'UPDATE', instance=demande)
+
             messages.success(request, f'✅ Demande validée — Véhicule {demande.vehicule.immatriculation} affecté.')
             return redirect('patrimoine_detail_demande_vehicule', pk=pk)
 
@@ -181,6 +191,8 @@ def valider_demande_vehicule(request, pk):
             demande.date_validation = timezone.now()
             demande.motif_refus = request.POST.get('motif_refus', '')
             demande.save()
+            audit(request, "Refus d'une demande de véhicule", 'UPDATE', instance=demande)
+
             messages.warning(request, '🚫 Demande refusée.')
             return redirect('patrimoine_detail_demande_vehicule', pk=pk)
 
@@ -190,6 +202,8 @@ def valider_demande_vehicule(request, pk):
             demande.observation_retour = request.POST.get('observation_retour', '')
             demande.modifie_par = request.user
             demande.save()
+            audit(request, 'Clôture de mission — retour du véhicule', 'UPDATE', instance=demande)
+
             messages.success(request, '✅ Véhicule rendu — Mission terminée.')
             return redirect('patrimoine_detail_demande_vehicule', pk=pk)
 
@@ -265,6 +279,8 @@ def creer_demande_salle(request):
                 demande.salle_preferee_id = int(salle_id)
             demande.save()
             messages.success(request, '✅ Demande de salle envoyée avec succès.')
+            audit(request, "Création d'une demande de salle", 'CREATE', instance=demande)
+
             return redirect('patrimoine_mes_demandes_salle')
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
@@ -296,12 +312,15 @@ def detail_demande_salle(request, pk):
 
 @login_required
 @verifier_permission('accounts.menu_pat_salles_demander')
+@require_POST
 def annuler_demande_salle(request, pk):
     """Annuler une demande de salle."""
     demande = get_object_or_404(DemandeSalle, pk=pk, demandeur=request.user)
     if demande.statut == 'EN_ATTENTE':
         demande.statut = 'ANNULEE'
         demande.save(update_fields=['statut'])
+        audit(request, "Annulation d'une demande de salle", 'UPDATE', instance=demande)
+
         messages.warning(request, '🚫 Demande annulée.')
     else:
         messages.error(request, '❌ Impossible d\'annuler cette demande.')
@@ -395,6 +414,8 @@ def valider_demande_salle(request, pk):
                     besoin_son=demande.besoin_son,
                     notes_equipement=demande.notes_equipement,
                 )
+            audit(request, "Validation d'une demande de salle (réservation automatique)", 'UPDATE', instance=demande)
+
             messages.success(request, f'✅ Demande validée — Salle {salle.nom} réservée automatiquement.')
             return redirect('patrimoine_detail_demande_salle', pk=pk)
 
@@ -404,6 +425,8 @@ def valider_demande_salle(request, pk):
             demande.date_validation = timezone.now()
             demande.motif_refus = request.POST.get('motif_refus', '')
             demande.save()
+            audit(request, "Refus d'une demande de salle", 'UPDATE', instance=demande)
+
             messages.warning(request, '🚫 Demande refusée.')
             return redirect('patrimoine_detail_demande_salle', pk=pk)
 

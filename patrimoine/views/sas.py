@@ -23,6 +23,8 @@ from ..models import (
 )
 from .common import patrimoine_required
 
+from ..audit import audit
+
 logger = logging.getLogger(__name__)
 
 
@@ -164,6 +166,8 @@ def valider_sas(request, pk):
 
             messages.success(request, f"✅ Bien immatriculé sous le code {immo.code_patrimoine}.")
 
+            audit(request, 'Validation SAS — immatriculation du bien', 'UPDATE', instance=immo)
+
             return redirect('patrimoine_detail', pk=immo.pk)
 
         except Exception as e:
@@ -247,6 +251,8 @@ def eclater_bien_sas(request):
 
                 )
 
+        audit(request, f"Éclatement du bien SAS n°{immo.pk} en {nombre} composants", 'UPDATE', instance=immo)
+
         return JsonResponse({'success': True})
 
     except Exception as e:
@@ -268,5 +274,7 @@ def creer_immatriculation_directe(request):
         return redirect('patrimoine_sas')
 
     nouvelle_immo = Immobilisation.objects.create(nom_affichage="Nouveau Matériel (Saisie Directe)", statut='EN_ATTENTE', valeur_acquisition=0, cree_par=request.user)
+
+    audit(request, "Création d'une immatriculation directe (SAS)", 'CREATE', instance=nouvelle_immo)
 
     return redirect('patrimoine_valider_sas', pk=nouvelle_immo.id)

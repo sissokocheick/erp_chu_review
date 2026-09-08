@@ -18,6 +18,8 @@ from ..views.common import patrimoine_required
 from functools import wraps
 
 
+from ..audit import audit
+
 def verifier_permission_salle(perm):
     """Decorator: vérifie une permission salle spécifique."""
     def decorator(view_func):
@@ -187,6 +189,8 @@ def creer_salle(request):
                 modifie_par=request.user,
             )
             messages.success(request, f'✅ Salle {salle.nom} créée avec succès.')
+            audit(request, f"Création de la salle {salle.nom}", 'CREATE', instance=salle)
+
             return redirect('patrimoine_salle_detail', pk=salle.pk)
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
@@ -225,6 +229,8 @@ def modifier_salle(request, pk):
             salle.modifie_par = request.user
             salle.save()
             messages.success(request, f'✅ Salle {salle.nom} mise à jour.')
+            audit(request, f"Modification de la salle {salle.nom}", 'UPDATE', instance=salle)
+
             return redirect('patrimoine_salle_detail', pk=salle.pk)
         except Exception as e:
             messages.error(request, f'❌ Erreur : {e}')
@@ -390,6 +396,8 @@ def creer_reservation(request):
                 modifie_par=request.user,
             )
             messages.success(request, f'✅ Réservation créée : {reservation.objet} le {reservation.date_debut.strftime("%d/%m/%Y %H:%M")}')
+            audit(request, "Création d'une réservation de salle", 'CREATE', instance=reservation)
+
             return redirect('patrimoine_reservations')
 
         except Exception as e:
@@ -430,6 +438,8 @@ def valider_reservation(request, pk):
             reservation.date_validation = timezone.now()
             reservation.save()
             messages.success(request, f'✅ Réservation confirmée : {reservation.objet}')
+            audit(request, "Confirmation d'une réservation de salle", 'UPDATE', instance=reservation)
+
         elif action == 'refuser':
             reservation.statut = 'ANNULEE'
             reservation.motif_refus = request.POST.get('motif_refus', '')
@@ -438,6 +448,8 @@ def valider_reservation(request, pk):
             reservation.save()
             messages.warning(request, f'🚫 Réservation refusée : {reservation.objet}')
     
+            audit(request, "Refus d'une réservation de salle", 'UPDATE', instance=reservation)
+
     return redirect('patrimoine_reservation_detail', pk=pk)
 
 
@@ -450,6 +462,8 @@ def annuler_reservation(request, pk):
     reservation = get_object_or_404(ReservationSalle, pk=pk)
     reservation.statut = 'ANNULEE'
     reservation.save()
+    audit(request, "Annulation d'une réservation de salle", 'UPDATE', instance=reservation)
+
     messages.warning(request, f'🚫 Réservation annulée : {reservation.objet}')
     return redirect('patrimoine_reservations')
 
@@ -462,6 +476,8 @@ def supprimer_reservation(request, pk):
         return redirect('patrimoine_reservations')
     reservation = get_object_or_404(ReservationSalle, pk=pk)
     reservation.delete()
+    audit(request, f"Suppression de la réservation {reservation.objet}", 'DELETE', instance=reservation)
+
     messages.warning(request, '🗑️ Réservation supprimée.')
     return redirect('patrimoine_reservations')
 
@@ -507,6 +523,8 @@ def supprimer_salle(request, pk):
         return redirect('patrimoine_salles')
     salle = get_object_or_404(SalleConference, pk=pk)
     salle.delete()
+    audit(request, f"Suppression de la salle {salle.nom}", 'DELETE', instance=salle)
+
     messages.warning(request, '🗑️ Salle supprimée.')
     return redirect('patrimoine_salles')
 

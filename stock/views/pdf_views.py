@@ -15,6 +15,20 @@ from stock.pdf_utils import (
 logger = logging.getLogger(__name__)
 
 
+def _verifier_acces_document(request, instance, champ_magasin="magasin", url_retour="/"):
+    """Refuse (message + redirect) si le document appartient à un magasin non
+    autorisé pour l'utilisateur — même règle qu'imprimer_bon_multi_lignes.
+    Retourne une HttpResponse de refus, ou None si l'accès est autorisé."""
+    from django.contrib import messages
+    from stock.services.isolation_service import get_magasins_autorises
+    magasins = get_magasins_autorises(request)
+    magasin_id = getattr(instance, f"{champ_magasin}_id", None)
+    if magasin_id is None or not magasins.filter(id=magasin_id).exists():
+        messages.error(request, "⛔ Vous n'avez pas accès au magasin de ce document.")
+        return redirect(url_retour)
+    return None
+
+
 # ═════════════════════════════════════════════════════════════════════════════
 # MAPPING : type_bon (modèle) → type_document (ModeleDocumentMagasin)
 # ═════════════════════════════════════════════════════════════════════════════
@@ -201,6 +215,9 @@ def imprimer_commande(request, commande_id):
         Commande.objects.prefetch_related('lignes_commande__article').select_related('fournisseur', 'magasin'),
         id=commande_id
     )
+    reponse_refus = _verifier_acces_document(request, commande, url_retour="liste_commandes")
+    if reponse_refus:
+        return reponse_refus
     pdf_config, logo_url = get_pdf_config(commande.magasin, 'BC', request)
 
     lignes_data = []
@@ -251,6 +268,9 @@ def imprimer_bon_demande(request, demande_id):
         DemandeMateriel.objects.prefetch_related('lignes_demande__article').select_related('magasin_cible', 'service_demandeur'),
         id=demande_id
     )
+    reponse_refus = _verifier_acces_document(request, demande, champ_magasin="magasin_cible", url_retour="mes_demandes")
+    if reponse_refus:
+        return reponse_refus
     pdf_config, logo_url = get_pdf_config(demande.magasin_cible, 'BDM', request)
 
     lignes_data = []
@@ -300,6 +320,9 @@ def imprimer_ajustement(request, ajustement_id):
         Ajustement.objects.select_related('magasin', 'article'),
         id=ajustement_id
     )
+    reponse_refus = _verifier_acces_document(request, ajustement, url_retour="liste_ajustements")
+    if reponse_refus:
+        return reponse_refus
     pdf_config, logo_url = get_pdf_config(ajustement.magasin, 'AJUSTEMENT', request)
 
     lignes_data = [{
@@ -404,6 +427,9 @@ def imprimer_fiche_comptage(request, campagne_id):
         CampagneInventaire.objects.prefetch_related('lignes_inventaire__article').select_related('magasin'),
         id=campagne_id
     )
+    reponse_refus = _verifier_acces_document(request, campagne, url_retour="liste_inventaires")
+    if reponse_refus:
+        return reponse_refus
     pdf_config, logo_url = get_pdf_config(campagne.magasin, 'INVENTAIRE', request)
 
     lignes_data = []
@@ -441,6 +467,9 @@ def imprimer_resultat_inventaire(request, campagne_id):
         CampagneInventaire.objects.prefetch_related('lignes_inventaire__article').select_related('magasin'),
         id=campagne_id
     )
+    reponse_refus = _verifier_acces_document(request, campagne, url_retour="liste_inventaires")
+    if reponse_refus:
+        return reponse_refus
     pdf_config, logo_url = get_pdf_config(campagne.magasin, 'INVENTAIRE', request)
 
     lignes_data = []
@@ -549,6 +578,9 @@ def imprimer_bon_hors_stock(request, bon_id):
         BonMouvement.objects.prefetch_related('lignes_bon__article').select_related('magasin', 'service_demandeur'),
         id=bon_id, type_bon='SORTIE_HORS_STOCK'
     )
+    reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_bons_hors_stock")
+    if reponse_refus:
+        return reponse_refus
     pdf_config, logo_url = get_pdf_config(bon.magasin, 'BSHS', request)
 
     # Construire lignes_data pour le template
@@ -603,4 +635,9 @@ def imprimer_bon_hors_stock(request, bon_id):
 def imprimer_bon_retour_fournisseur_pdf(request, bon_id):
     """PDF du bon de retour fournisseur (mêmes règles de mise en page que les
     bons de mouvement, config modèle 'BR')."""
+    from stock.models import BonMouvement
+    bon = get_object_or_404(BonMouvement, id=bon_id, type_bon="RETOUR_FOURNISSEUR")
+    reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_retours_fournisseurs")
+    if reponse_refus:
+        return reponse_refus
     return _imprimer_bon_multi_lignes(request, bon_id)

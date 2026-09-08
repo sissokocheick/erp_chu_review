@@ -16,6 +16,8 @@ from core.models import Service
 from ..views.common import patrimoine_required
 
 
+from ..audit import audit
+
 def verifier_permission_vehicule(perm):
     """Decorator: vérifie une permission véhicules spécifique."""
     def decorator(view_func):
@@ -157,6 +159,8 @@ def creer_vehicule(request):
             
             vehicule.save()
             messages.success(request, f'✅ Véhicule {vehicule.immatriculation} créé avec succès.')
+            audit(request, f"Création du véhicule {vehicule.immatriculation}", 'CREATE', instance=vehicule)
+
             return redirect('patrimoine_vehicule_detail', pk=vehicule.pk)
             
         except Exception as e:
@@ -215,6 +219,8 @@ def modifier_vehicule(request, pk):
             
             vehicule.save()
             messages.success(request, f'✅ Véhicule {vehicule.immatriculation} mis à jour.')
+            audit(request, f"Modification du véhicule {vehicule.immatriculation}", 'UPDATE', instance=vehicule)
+
             return redirect('patrimoine_vehicule_detail', pk=vehicule.pk)
             
         except Exception as e:
@@ -240,6 +246,8 @@ def supprimer_vehicule(request, pk):
     if request.method == 'POST':
         imm = vehicule.immatriculation
         vehicule.delete()
+        audit(request, f"Suppression du véhicule {imm}", 'DELETE', instance=vehicule)
+
         messages.success(request, f'🗑️ Véhicule {imm} supprimé.')
         return redirect('patrimoine_vehicules')
     return redirect('patrimoine_vehicule_detail', pk=pk)
@@ -293,6 +301,8 @@ def creer_intervention_vehicule(request, vehicule_pk):
                 vehicule.save(update_fields=['kilometrage'])
             
             messages.success(request, f'✅ Intervention créée pour {vehicule.immatriculation}.')
+            audit(request, f"Création d'une intervention sur le véhicule {vehicule.immatriculation}", 'CREATE', instance=intervention)
+
             return redirect('patrimoine_vehicule_interventions', vehicule_pk=vehicule.pk)
             
         except Exception as e:
@@ -355,6 +365,8 @@ def creer_mission_vehicule(request, vehicule_pk):
                 vehicule.save(update_fields=['kilometrage'])
             
             messages.success(request, f'✅ Mission enregistrée pour {vehicule.immatriculation}.')
+            audit(request, f"Création d'une mission pour le véhicule {vehicule.immatriculation}", 'CREATE', instance=mission)
+
             return redirect('patrimoine_vehicule_missions', vehicule_pk=vehicule.pk)
             
         except Exception as e:

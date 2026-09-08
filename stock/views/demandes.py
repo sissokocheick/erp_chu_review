@@ -9,6 +9,7 @@ from django.db import transaction
 from django.db.models import Q, Sum, Prefetch, Exists, OuterRef, Count
 from django.utils import timezone
 from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 from django.urls import reverse
 from datetime import datetime
 
@@ -997,6 +998,7 @@ def demandes_a_valider(request):
     return render(request, 'stock/demandes_a_valider.html', context)
 
 @login_required(login_url='/auth/login/')
+@require_POST
 @catch_errors(redirect_url='mes_demandes')
 def annuler_demande(request, demande_id):
     demande = get_object_or_404(

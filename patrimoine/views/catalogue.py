@@ -26,6 +26,8 @@ from ..models import (
 )
 from .common import patrimoine_required
 
+from ..audit import audit
+
 logger = logging.getLogger(__name__)
 
 
@@ -251,6 +253,8 @@ def modifier_immo(request, pk):
 
             messages.success(request, "✅ Bien mis à jour.")
 
+            audit(request, f"Modification de l'immobilisation {immo.code_patrimoine}", 'UPDATE', instance=immo)
+
             return redirect('patrimoine_detail', pk=immo.pk)
 
         except Exception as e:
@@ -354,6 +358,8 @@ def quick_edit(request, pk):
             motif=f"Forçage manuel du statut par {request.user.get_full_name() or request.user.username}",
             effectue_par=request.user,
         )
+
+    audit(request, f"Forçage manuel {champ} = {val} ({immo.code_patrimoine})", 'UPDATE', instance=immo, details={'champ': champ, 'valeur': val})
 
     return JsonResponse({'success': True, 'valeur': val, 'modifie_par': request.user.get_full_name() or request.user.username})
 

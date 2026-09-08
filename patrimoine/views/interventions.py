@@ -26,6 +26,8 @@ from stock.models import Fournisseur, DemandeMateriel, LigneDemande
 from django.contrib.auth.models import User
 from .common import patrimoine_required
 
+from ..audit import audit
+
 logger = logging.getLogger(__name__)
 
 
@@ -518,6 +520,8 @@ def signaler_panne(request, immo_id):
 
         )
 
+        audit(request, f"Signalement de panne sur {equipement.nom_affichage}", 'CREATE', instance=intervention)
+
         return render(request, 'patrimoine/confirmer_signalement_panne.html', {'intervention': intervention})
 
     return render(request, 'patrimoine/signaler_panne.html', {'equipement': equipement})
@@ -628,6 +632,8 @@ def valider_intervention(request, pk):
             machine.save()
 
         messages.success(request, "✅ Intervention validée et équipement mis à jour.")
+
+        audit(request, "Validation d'une intervention de maintenance", 'UPDATE', instance=inter, details={'statut': statut})
 
     return redirect('patrimoine_detail', pk=inter.immobilisation_id)
 
@@ -793,6 +799,8 @@ def dispatch_interventions(request):
             intervention.save()
 
             messages.success(request, f"✅ Panne assignée à {technicien.get_full_name() or technicien.username}.")
+
+            audit(request, "Dispatch d'une panne à un technicien", 'UPDATE', instance=intervention)
 
         return redirect('patrimoine_dispatch')
 
@@ -965,6 +973,8 @@ def declarer_panne_pc(request):
         equipement.save()
 
         messages.success(request, f"✅ Panne signalée pour {equipement.nom_affichage}.")
+
+        audit(request, f"Signalement de panne sur {equipement.nom_affichage}", 'CREATE', modele_concerne='Intervention', details={'equipement': equipement.nom_affichage})
 
         return redirect('patrimoine_mes_tickets')
 

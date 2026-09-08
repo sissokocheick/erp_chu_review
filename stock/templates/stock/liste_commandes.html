@@ -1331,7 +1331,15 @@
                     allowOutsideClick: false,
                     didOpen: function(){ Swal.showLoading(); }
                 });
-                window.location.href = url;
+                // POST obligatoire (la suppression est refusée en GET — vue @require_POST) :
+                // un simple lien GET déclencherait un 405.
+                var csrfElSuppr = document.querySelector('input[name="csrfmiddlewaretoken"]');
+                var form = document.createElement('form');
+                form.method = 'POST';
+                form.action = url;
+                form.innerHTML = '<input type="hidden" name="csrfmiddlewaretoken" value="' + (csrfElSuppr ? csrfElSuppr.value : '') + '">';
+                document.body.appendChild(form);
+                form.submit();
             }
         });
     };

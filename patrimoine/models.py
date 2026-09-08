@@ -4,7 +4,8 @@ from django.conf import settings
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from decimal import Decimal
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User
+from simple_history.models import HistoricalRecords
 
 
 # ═══════════════════════════════════════════════════════════
@@ -35,6 +36,7 @@ class CategoriePatrimoine(TracabiliteModel):
     Ex : Informatique, Reseau, Biomedical, Mobilier, Électrique, Vehicule...
     Parametrable par l'admin — zero hardcode.
     """
+    history = HistoricalRecords()
     code       = models.CharField(max_length=20, unique=True)
     nom        = models.CharField(max_length=100)
     icone      = models.CharField(max_length=50, blank=True, default='fas fa-box',
@@ -75,6 +77,7 @@ class TypeEquipement(TracabiliteModel):
       {"key": "type_clim",      "label": "Type (Split/Central)", "type": "text",   "required": false}
     ]
     """
+    history = HistoricalRecords()
     MODE_AMORT_CHOICES = [
         ('LINEAIRE',   'Lineaire'),
         ('DEGRESSIF',  'Degressif'),
@@ -122,6 +125,7 @@ class TypeEquipement(TracabiliteModel):
 
 class Batiment(TracabiliteModel):
     # On enleve le default='X' et on met blank=True pour autoriser un champ vide
+    history = HistoricalRecords()
     code = models.CharField(max_length=20, unique=True, blank=True,
                             help_text="Genere automatiquement si vide (ex: BAT-001)")
     nom     = models.CharField(max_length=100)
@@ -161,6 +165,7 @@ class Batiment(TracabiliteModel):
 
 
 class Etage(TracabiliteModel):
+    history = HistoricalRecords()
     batiment = models.ForeignKey(Batiment, on_delete=models.PROTECT, related_name='etages')
     nom      = models.CharField(max_length=50, help_text="Ex: RDC, 1er Étage, Sous-sol")
     ordre    = models.PositiveSmallIntegerField(default=0)
@@ -180,6 +185,7 @@ class Bureau(TracabiliteModel):
     Un bureau peut accueillir plusieurs services (ex: salle de reunion partagee).
     Un service peut avoir des bureaux dans plusieurs bâtiments.
     """
+    history = HistoricalRecords()
     etage    = models.ForeignKey(Etage, on_delete=models.PROTECT, related_name='bureaux')
     nom      = models.CharField(max_length=100)
     services = models.ManyToManyField(
@@ -205,6 +211,7 @@ class Bureau(TracabiliteModel):
 # ═══════════════════════════════════════════════════════════
 
 class Marque(TracabiliteModel):
+    history = HistoricalRecords()
     nom = models.CharField(max_length=100, unique=True)
 
     def __str__(self):
@@ -215,6 +222,7 @@ class Marque(TracabiliteModel):
 
 
 class Modele(TracabiliteModel):
+    history = HistoricalRecords()
     marque = models.ForeignKey(Marque, on_delete=models.PROTECT, related_name='modeles')
     nom    = models.CharField(max_length=150)
 
@@ -232,6 +240,7 @@ class Modele(TracabiliteModel):
 
 class Immobilisation(TracabiliteModel):
 
+    history = HistoricalRecords()
     STATUT_CHOICES = [
         ('EN_ATTENTE',  'En attente d\'immatriculation (Sas)'),
         ('ACTIF',       'En service / Actif'),
@@ -438,6 +447,7 @@ class Immobilisation(TracabiliteModel):
 
 class MouvementPatrimoine(TracabiliteModel):
 
+    history = HistoricalRecords()
     TYPE_CHOICES = [
         ('AFFECTATION',        'Affectation initiale'),
         ('MUTATION',           'Mutation (changement de bureau)'),
@@ -507,6 +517,7 @@ class MouvementPatrimoine(TracabiliteModel):
 
 # 1️⃣ D'ABORD : Le modele TypeContrat
 class TypeContrat(TracabiliteModel):
+    history = HistoricalRecords()
     nom = models.CharField(max_length=100, unique=True, verbose_name="Nom du type (ex: Bronze, Constructeur)")
     description = models.TextField(blank=True, null=True)
 
@@ -522,6 +533,7 @@ class TypeContrat(TracabiliteModel):
 # 2️⃣ ENSUITE SEULEMENT : Le modele ContratMaintenance
 class ContratMaintenance(TracabiliteModel):
 
+    history = HistoricalRecords()
     STATUT_CHOICES = [
         ('ACTIF',    'Actif'),
         ('EXPIRE',   'Expire'),
@@ -578,6 +590,7 @@ class ContratMaintenance(TracabiliteModel):
 class Intervention(TracabiliteModel):
     
     # 🟢 1. AJOUT DES CHOIX D'URGENCE
+    history = HistoricalRecords()
     URGENCE_CHOICES = [
         ('FAIBLE', 'Faible'),
         ('MOYENNE', 'Moyenne'),
@@ -756,6 +769,7 @@ class ComptePrestataire(TracabiliteModel):
     Compte limite permettant a un prestataire de saisir ses propres interventions.
     Il ne voit que les equipements couverts par ses contrats.
     """
+    history = HistoricalRecords()
     user                = models.OneToOneField(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
         related_name='compte_prestataire'
@@ -782,6 +796,7 @@ class TechnicienPrestataire(TracabiliteModel):
     Repertoire des contacts/techniciens travaillant pour un fournisseur externe.
     (Pour les prestataires qui n'ont pas acces a l'application).
     """
+    history = HistoricalRecords()
     fournisseur = models.ForeignKey(
         'stock.Fournisseur', on_delete=models.PROTECT, related_name='techniciens_contacts'
     )
@@ -808,6 +823,7 @@ class ImportPatrimoine(TracabiliteModel):
     """
     Trace chaque import Excel : qui, quand, quel type, combien de lignes.
     """
+    history = HistoricalRecords()
     type_equipement     = models.ForeignKey(
         TypeEquipement, on_delete=models.SET_NULL, null=True, blank=True,
         help_text="Type cible par cet import (None = import generique)"
@@ -839,6 +855,7 @@ class ImportPatrimoine(TracabiliteModel):
 
 
 class ParametresPatrimoine(models.Model):
+    history = HistoricalRecords()
     MODE_CHOICES = [
         ('GLOBAL',  "Mode Global : Tout le monde voit toutes les demandes d'intervention."),
         ('DIRECT',  "Mode Direct : Les demandes sont vues directement par le technicien concerne (selon sa specialite/domaine)."),
@@ -896,6 +913,7 @@ class ParametresPatrimoine(models.Model):
 # ═══════════════════════════════════════════════════════════
 
 class CampagneInventairePatrimoine(TracabiliteModel): # 🟢 ON A RENOMMÉ ICI
+    history = HistoricalRecords()
     STATUT_CHOICES = [
         ('BROUILLON', 'Brouillon'),
         ('EN_COURS', 'En cours'),
@@ -927,6 +945,7 @@ class CampagneInventairePatrimoine(TracabiliteModel): # 🟢 ON A RENOMMÉ ICI
 
 
 class LigneInventairePatrimoine(TracabiliteModel): # 🟢 ON A RENOMMÉ ICI AUSSI
+    history = HistoricalRecords()
     ETAT_CONSTATE_CHOICES = [
         ('PRESENT', 'Present et conforme'),
         ('DEPLACE', 'Present mais dans un autre bureau'),
@@ -963,6 +982,7 @@ class Vehicule(TracabiliteModel):
     """
     Gestion des vehicules du CHU : immatriculation, assurance, maintenance, etc.
     """
+    history = HistoricalRecords()
     STATUT_CHOICES = [
         ('DISPONIBLE',  'Disponible'),
         ('EN_SERVICE',  'En service / En mission'),
@@ -1062,6 +1082,7 @@ class InterventionVehicule(TracabiliteModel):
     """
     Interventions / maintenances sur un véhicule.
     """
+    history = HistoricalRecords()
     TYPE_CHOICES = [
         ('ENTRETIEN',     'Entretien courant'),
         ('REPARATION',    'Réparation'),
@@ -1110,6 +1131,7 @@ class MissionVehicule(TracabiliteModel):
     """
     Enregistrement des missions / déplacements effectués avec un véhicule.
     """
+    history = HistoricalRecords()
     STATUT_CHOICES = [
         ('EN_COURS',  'En cours'),
         ('TERMINEE',  'Terminée'),
@@ -1161,6 +1183,7 @@ class SalleConference(TracabiliteModel):
     """
     Salle de conférence / réunion avec réservation.
     """
+    history = HistoricalRecords()
     STATUT_CHOICES = [
         ('DISPONIBLE',   'Disponible'),
         ('INDISPONIBLE', 'Indisponible'),
@@ -1222,6 +1245,7 @@ class ReservationSalle(TracabiliteModel):
     """
     Réservation d'une salle de conférence.
     """
+    history = HistoricalRecords()
     STATUT_CHOICES = [
         ('EN_ATTENTE', 'En attente de validation'),
         ('CONFIRMEE',  'Confirmée'),
@@ -1309,6 +1333,7 @@ class DemandeVehicule(TracabiliteModel):
     """
     Demande d'affectation temporaire d'un véhicule par un utilisateur.
     """
+    history = HistoricalRecords()
     STATUT_CHOICES = [
         ('EN_ATTENTE',  'En attente de validation'),
         ('VALIDEE',     'Validée — véhicule affecté'),
@@ -1382,6 +1407,7 @@ class DemandeSalle(TracabiliteModel):
     """
     Demande simplifiée de salle de conférence pour les utilisateurs.
     """
+    history = HistoricalRecords()
     STATUT_CHOICES = [
         ('EN_ATTENTE',  'En attente'),
         ('VALIDEE',     'Validée'),

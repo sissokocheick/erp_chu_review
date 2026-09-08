@@ -25,6 +25,8 @@ from ..models import (
 )
 from .common import patrimoine_required
 
+from ..audit import audit
+
 COLONNES_FIXES = [
     'Batiment',
     'Etage',
@@ -199,6 +201,8 @@ def export_registre_excel(request):
 
     wb.save(response)
 
+    audit(request, 'Export Excel du registre du patrimoine', 'EXPORT', modele_concerne='Immobilisation', details={'nb_biens': qs.count()})
+
     return response
 
 
@@ -341,6 +345,8 @@ def telecharger_template(request, type_id):
     response['Content-Disposition'] = f'attachment; filename="template_{te.code}_{timezone.now().strftime("%Y%m%d")}.xlsx"'
 
     wb.save(response)
+
+    audit(request, "Téléchargement du template d'import patrimoine", 'EXPORT', modele_concerne='TypeEquipement', details={'type': te.nom})
 
     return response
 
@@ -625,6 +631,8 @@ def import_excel(request):
 
             else: messages.warning(request, f"⚠️ Import partiel — {nb_crees} créés, {nb_maj} mis à jour, {nb_err} erreurs.")
 
+
+            audit(request, 'Import Excel du patrimoine', 'CREATE', instance=log, details={'crees': nb_crees, 'mis_a_jour': nb_maj, 'erreurs': nb_err})
 
             return redirect('patrimoine_import_log', pk=log.pk)
 

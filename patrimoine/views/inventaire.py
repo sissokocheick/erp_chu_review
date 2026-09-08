@@ -26,6 +26,8 @@ from ..models import (
 )
 from .common import patrimoine_required
 
+from ..audit import audit
+
 logger = logging.getLogger(__name__)
 
 
@@ -84,6 +86,8 @@ def patrimoine_campagnes_inventaire(request):
 
                 messages.success(request, "Campagne modifiée avec succès.")
 
+                audit(request, "Modification de la campagne d'inventaire", 'UPDATE', modele_concerne='CampagneInventairePatrimoine', details={'reference': reference, 'id': item_id})
+
             else:
 
                 CampagneInventairePatrimoine.objects.create(
@@ -101,6 +105,8 @@ def patrimoine_campagnes_inventaire(request):
                 messages.success(request, "Nouvelle campagne d'inventaire créée.")
 
 
+                audit(request, "Création de la campagne d'inventaire", 'CREATE', modele_concerne='CampagneInventairePatrimoine', details={'reference': reference})
+
         elif action == 'delete_campagne':
 
             item_id = request.POST.get('item_id')
@@ -111,6 +117,8 @@ def patrimoine_campagnes_inventaire(request):
                 messages.error(request, "⛔ Seule une campagne en brouillon peut être supprimée (annulez-la d'abord).")
             elif campagne_del:
                 campagne_del.delete()
+                audit(request, f"Suppression de la campagne d'inventaire {campagne_del.reference}", 'DELETE', instance=campagne_del)
+
                 messages.success(request, "Campagne supprimée.")
 
 
@@ -392,6 +400,8 @@ def appliquer_reconciliation_inventaire(request, campagne):
 
         campagne.save()
 
+
+        audit(request, f"Réconciliation appliquée — clôture de la campagne d'inventaire {campagne.reference}", 'UPDATE', instance=campagne)
 
 @login_required(login_url='/auth/login/')
 
