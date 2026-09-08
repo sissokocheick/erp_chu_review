@@ -194,7 +194,7 @@ def _creer_ma_demande(request):
         messages.error(request, "Impossible : Vous n avez pas de service rattache.")
         return redirect('mes_demandes')
 
-        # ── Verification : reception obligatoire de la livraison precedente ──
+    # ── Verification : reception obligatoire de la livraison precedente ──
     config = get_or_create_logistique_config()
     if getattr(config, 'obliger_reception_precedente', False):
         a_livraison_non_signee = LivraisonPartielle.objects.filter(

@@ -39,7 +39,7 @@ def get_magasins_autorises(request) -> QuerySet:
         >>> magasins = get_magasins_autorises(request)
         >>> articles = Article.objects.filter(magasin__in=magasins)
     """
-    user = request.user
+    user = getattr(request, 'user', request)
     
     # Cas 1 : Superuser a accès à tout
     if user.is_superuser:

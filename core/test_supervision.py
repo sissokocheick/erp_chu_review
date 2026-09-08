@@ -7,6 +7,7 @@ from unittest import mock
 
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.db import connection
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
@@ -118,6 +119,8 @@ class SupervisionHelpersTest(TestCase):
         self.assertEqual(_taille_lisible(2 * 1024 * 1024 * 1024), '2.0 Go')
 
     def test_taille_base_postgres_positive(self):
+        if connection.vendor != 'postgresql':
+            self.skipTest("Nécessite PostgreSQL (pg_database_size)")
         octets = taille_base()
         self.assertIsNotNone(octets)
         self.assertGreater(octets, 0)
