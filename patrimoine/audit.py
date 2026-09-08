@@ -8,37 +8,33 @@ remonte ainsi les créations, modifications, suppressions, validations,
 imports et exports du patrimoine, en plus de l'historique fin
 (django-simple-history) enregistré par modèle.
 
-L'adresse IP respecte la même règle que accounts.views.get_client_ip :
+L'adresse IP est calculée par accounts.views.get_client_ip (source unique) :
 HTTP_X_FORWARDED_FOR n'est utilisé que si USE_X_FORWARDED_FOR est explicitement
 activé (reverse proxy), sinon on prend REMOTE_ADDR (l'en-tête est spoofable).
 """
 import logging
 
-from django.conf import settings
-
 from accounts.models import JournalAudit
+from accounts.views import get_client_ip
 
 logger = logging.getLogger(__name__)
-
-
-def get_client_ip(request):
-    """IP réelle du client (mêmes règles que accounts.views.get_client_ip)."""
-    if getattr(settings, 'USE_X_FORWARDED_FOR', False):
-        x_forwarded = request.META.get('HTTP_X_FORWARDED_FOR')
-        if x_forwarded:
-            ips = [ip.strip() for ip in x_forwarded.split(',') if ip.strip()]
-            if ips:
-                return ips[-1]
-    return request.META.get('REMOTE_ADDR', '')
 
 
 def audit(request, action, type_action='UPDATE', instance=None,
           modele_concerne='', id_objet=None, details=None):
     """Écrit une entrée dans le journal d'audit global (JournalAudit).
 
-    Ne lève jamais : un échec d'écriture est journalisé dans les logs et
-    n'interrompt pas le flux métier.
+    Un échec d'écriture est journalisé dans les logs et n'interrompt pas le
+    flux métier. En revanche, une combinaison ambiguë `instance` +
+    `modele_concerne`/`id_objet` lève `ValueError` immédiatement : les
+    références sont soit dérivées de l'instance, soit fournies explicitement
+    pour les mutations sans instance (comme les queryset `.update()`).
     """
+    if instance is not None and (modele_concerne or id_objet is not None):
+        raise ValueError(
+            "audit() : fournir instance ou modele_concerne/id_objet, pas les deux"
+        )
+
     try:
         utilisateur = None
         if request is not None and getattr(request, 'user', None) is not None \

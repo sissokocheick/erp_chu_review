@@ -317,3 +317,57 @@ class ImpressionPdfAutresDocumentsIsolationTest(BaseAgentTest):
         self._verifier_accepte('imprimer_bon_retour_fournisseur',
                                self.retour_a.pk, 'menu_retours_fournisseurs')
 
+class ApercuBonEntreeIsolationTest(BaseAgentTest):
+    """apercu_bon_entree : même isolation fail-closed par magasins autorisés
+    que les autres aperçus et les vues PDF de stock — refus d'un bon d'entrée
+    d'un magasin non autorisé, aperçu OK pour le magasin de l'agent.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        super().setUpTestData()
+        cls.magasin_b = Magasin.objects.create(nom='Magasin B (non autorisé)')
+        cls.famille = creer_famille(code='FAM-AP', intitule='Famille Aperçu')
+        cls.article = creer_article(
+            famille=cls.famille, reference='ART-AP',
+            designation='Article Aperçu')
+        cls.fournisseur = Fournisseur.objects.create(
+            code='FAP', raison_sociale='Fournisseur Aperçu')
+        cls.service = Service.objects.create(code='SVC-AP', nom='Service Aperçu')
+        cls.entree_a = BonMouvement.objects.create(
+            type_bon='ENTREE', magasin=cls.magasin,
+            fournisseur=cls.fournisseur, service_demandeur=cls.service,
+            cree_par=cls.user, numero_bon='BE-A-AP')
+        cls.entree_b = BonMouvement.objects.create(
+            type_bon='ENTREE', magasin=cls.magasin_b,
+            fournisseur=cls.fournisseur, service_demandeur=cls.service,
+            cree_par=cls.user, numero_bon='BE-B-AP')
+        for b in (cls.entree_a, cls.entree_b):
+            LigneBon.objects.create(bon=b, article=cls.article, quantite=3)
+
+    def test_apercu_bon_entree_magasin_non_autorise_refuse(self):
+        """Un aperçu d'un bon d'entrée d'un magasin non autorisé est refusé."""
+        self._donner_permission('menu_entrees')
+        resp = self.client.get(
+            reverse('apercu_bon_entree', args=[self.entree_b.pk]))
+        self.assertEqual(
+            resp.status_code, 302,
+            "l'aperçu d'un bon d'un magasin non autorisé doit être refusé")
+        self.assertRedirects(
+            resp, reverse('liste_entrees'), fetch_redirect_response=False)
+        from django.contrib.messages import get_messages
+        msgs = [str(m) for m in get_messages(resp.wsgi_request)]
+        self.assertTrue(
+            any("accès au magasin" in m for m in msgs),
+            f"message d'accès refusé absent : {msgs}")
+
+    def test_apercu_bon_entree_magasin_autorise_accepte(self):
+        """L'aperçu d'un bon d'entrée du magasin de l'agent est autorisé."""
+        self._donner_permission('menu_entrees')
+        resp = self.client.get(
+            reverse('apercu_bon_entree', args=[self.entree_a.pk]))
+        self.assertEqual(
+            resp.status_code, 200,
+            "l'aperçu d'un bon du magasin autorisé doit être rendu")
+        self.assertTemplateUsed(resp, 'stock/pdf/bon_entree.html')
+

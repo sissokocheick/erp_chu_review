@@ -14,6 +14,7 @@ from django.utils import timezone
 
 from accounts.permissions import verifier_permission
 from stock.services.isolation_service import get_magasins_autorises
+from .pdf_views import _verifier_acces_document
 from ..decorators import magasin_requis, catch_errors
 from ..pdf_utils import get_pdf_config, paginate_lignes, ajouter_hauteurs_lignes, build_signature_cases
 from ..models import (
@@ -210,8 +211,10 @@ def apercu_bon_retour(request, bon_id):
         BonMouvement,
         id=bon_id,
         type_bon='RETOUR_SERVICE',
-        magasin__in=get_magasins_autorises(request),
     )
+    reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_retours_services")
+    if reponse_refus:
+        return reponse_refus
 
     lignes_brutes = list(bon.lignes_bon.select_related('article').all())
     total_qte = sum(l.quantite for l in lignes_brutes)
@@ -699,11 +702,12 @@ def annuler_retour_fournisseur(request, bon_id):
     if request.method != 'POST':
         return redirect('liste_retours_fournisseurs')
 
-    magasins_autorises = get_magasins_autorises(request)
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='RETOUR_FOURNISSEUR',
-        magasin__in=magasins_autorises
     )
+    reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_retours_fournisseurs")
+    if reponse_refus:
+        return reponse_refus
 
     if bon.est_annule:
         messages.error(request, f"Le bon {bon.numero_bon} est déjà annulé.")

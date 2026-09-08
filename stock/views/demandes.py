@@ -280,6 +280,7 @@ def _creer_ma_demande(request):
             'est_multi_page': pagination.est_multi_page,
             'pdf_config': pdf_config,
             'logo_url': logo_url,
+            'magasin': demande.magasin_cible,
             'signature_cases': build_signature_cases(demande, pdf_config, request),
         }
         pdf_bytes = render_pdf_to_bytes(request, 'stock/pdf/bon_demande.html', context)

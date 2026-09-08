@@ -27,6 +27,7 @@ from ..services.bon_service import BonService
 from .catalogue import paginer
 from .common import _has_perm_bon
 from .common_views import render_liste, get_magasin_actif, build_redirect_url
+from .pdf_views import _verifier_acces_document
 from django.core.exceptions import PermissionDenied
 
 # Constante : taille maximale de fichier upload (1 Mo)
@@ -268,11 +269,12 @@ def annuler_entree(request, bon_id):
     if request.method != 'POST':
         return redirect('liste_entrees')
 
-    magasins_autorises = get_magasins_autorises(request)
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='ENTREE',
-        magasin__in=magasins_autorises
     )
+    reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_entrees")
+    if reponse_refus:
+        return reponse_refus
 
     motif_id = request.POST.get('motif_id')
     if not motif_id:
@@ -318,6 +320,9 @@ def apercu_bon_entree(request, bon_id):
         id=bon_id,
         type_bon='ENTREE',
     )
+    reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_entrees")
+    if reponse_refus:
+        return reponse_refus
 
     pdf_config, logo_url = get_pdf_config(bon.magasin, 'BE', request)
 

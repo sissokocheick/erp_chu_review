@@ -13,6 +13,7 @@ from django.utils import timezone
 
 from accounts.permissions import verifier_permission
 from stock.services.isolation_service import get_magasins_autorises
+from .pdf_views import _verifier_acces_document
 from ..decorators import magasin_requis, catch_errors
 from ..models import Article, BonMouvement, Magasin, Mouvement
 from ..services.transfert_service import TransfertService
@@ -174,10 +175,10 @@ def annuler_transfert(request, bon_id):
         type_bon='TRANSFERT',
     )
 
-    magasins_autorises = get_magasins_autorises(request)
-    if not magasins_autorises.filter(id=bon.magasin_id).exists():
-        messages.error(request, "⛔ Vous n'avez pas accès au magasin source de ce transfert.")
-        return redirect('liste_transferts')
+    reponse_refus = _verifier_acces_document(
+        request, bon, champ_magasin="magasin", url_retour="liste_transferts")
+    if reponse_refus:
+        return reponse_refus
 
     motif = request.POST.get('motif', '').strip() or 'Annulation manuelle'
 

@@ -15,15 +15,28 @@ from stock.pdf_utils import (
 logger = logging.getLogger(__name__)
 
 
-def _verifier_acces_document(request, instance, champ_magasin="magasin", url_retour="/"):
-    """Refuse (message + redirect) si le document appartient à un magasin non
-    autorisé pour l'utilisateur — même règle qu'imprimer_bon_multi_lignes.
+def _verifier_acces_document(request, instance, champ_magasin="magasin",
+                             url_retour="/"):
+    """Refuse (message + redirect) si le magasin du document n'appartient pas
+    aux magasins autorisés de l'utilisateur — invariant partagé par toutes les
+    vues d'impression, d'aperçu et d'annulation de documents de stock.
+
+    `champ_magasin` accepte une chaîne ou une liste de champs : pour un
+    TRANSFERT, ("magasin", "magasin_destination") autorise l'accès si l'un
+    des deux magasins du document est autorisé.
     Retourne une HttpResponse de refus, ou None si l'accès est autorisé."""
     from django.contrib import messages
     from stock.services.isolation_service import get_magasins_autorises
+
     magasins = get_magasins_autorises(request)
-    magasin_id = getattr(instance, f"{champ_magasin}_id", None)
-    if magasin_id is None or not magasins.filter(id=magasin_id).exists():
+    champs = [champ_magasin] if isinstance(champ_magasin, str) else list(champ_magasin)
+    autorise = False
+    for champ in champs:
+        magasin_id = getattr(instance, f"{champ}_id", None)
+        if magasin_id is not None and magasins.filter(id=magasin_id).exists():
+            autorise = True
+            break
+    if not autorise:
         messages.error(request, "⛔ Vous n'avez pas accès au magasin de ce document.")
         return redirect(url_retour)
     return None
@@ -55,9 +68,7 @@ def imprimer_bon_multi_lignes(request, bon_id):
     auquel il n'a pas accès) + isolation par magasins autorisés.
     """
     from django.contrib import messages
-    from django.db.models import Q
     from stock.models import BonMouvement
-    from stock.services.isolation_service import get_magasins_autorises
 
     bon = get_object_or_404(BonMouvement, id=bon_id)
 
@@ -79,13 +90,11 @@ def imprimer_bon_multi_lignes(request, bon_id):
         )
         return redirect('/')
 
-    magasins = get_magasins_autorises(request)
-    acces = Q(magasin__in=magasins)
-    if bon.type_bon == 'TRANSFERT':
-        acces |= Q(magasin_destination__in=magasins)
-    if not BonMouvement.objects.filter(Q(id=bon.id) & acces).exists():
-        messages.error(request, "⛔ Vous n'avez pas accès au magasin de ce document.")
-        return redirect('/')
+    champ_magasin = ("magasin", "magasin_destination") if bon.type_bon == 'TRANSFERT' else "magasin"
+    reponse_refus = _verifier_acces_document(
+        request, bon, champ_magasin=champ_magasin, url_retour="/")
+    if reponse_refus:
+        return reponse_refus
 
     return _imprimer_bon_multi_lignes(request, bon_id)
 

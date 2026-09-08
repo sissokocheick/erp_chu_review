@@ -51,7 +51,7 @@
             <form method="GET" id="form-audit-filtres" style="display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
                 <div>
                     <label style="font-size: 11px; color: var(--text-light); display: block; margin-bottom: 4px;">Recherche</label>
-                    <input type="text" name="q" value="{{ q }}" placeholder="Utilisateur, IP..." class="nx-input" style="width: 220px;">
+                    <input type="text" name="q" value="{{ q }}" placeholder="Utilisateur, action, modèle, IP..." class="nx-input" style="width: 220px;">
                 </div>
                 <div>
                     <label style="font-size: 11px; color: var(--text-light); display: block; margin-bottom: 4px;">Type</label>
@@ -62,6 +62,13 @@
                         <option value="ECHEC" {% if type_filtre == 'ECHEC' %}selected{% endif %}>Échecs</option>
                         <option value="ADMIN" {% if type_filtre == 'ADMIN' %}selected{% endif %}>Admin</option>
                         <option value="PASSWORD_CHANGE" {% if type_filtre == 'PASSWORD_CHANGE' %}selected{% endif %}>MDP changé</option>
+                        <option value="CREATE" {% if type_filtre == 'CREATE' %}selected{% endif %}>Créations</option>
+                        <option value="UPDATE" {% if type_filtre == 'UPDATE' %}selected{% endif %}>Modifications</option>
+                        <option value="DELETE" {% if type_filtre == 'DELETE' %}selected{% endif %}>Suppressions</option>
+                        <option value="EXPORT" {% if type_filtre == 'EXPORT' %}selected{% endif %}>Exports</option>
+                        <option value="PERMISSION" {% if type_filtre == 'PERMISSION' %}selected{% endif %}>Permissions</option>
+                        <option value="LOGIN" {% if type_filtre == 'LOGIN' %}selected{% endif %}>Connexions applicatives</option>
+                        <option value="LOGOUT" {% if type_filtre == 'LOGOUT' %}selected{% endif %}>Déconnexions applicatives</option>
                     </select>
                 </div>
                 <div>
@@ -109,6 +116,56 @@
             <div><div class="nx-kpi-val">{{ utilisateurs_actifs }}</div><div class="nx-kpi-lbl">Sessions ouvertes</div></div>
         </div>
     </div>
+
+    {% if actions_page.object_list %}
+    <div class="nx-card" style="margin-bottom: 20px;">
+        <div class="nx-card-header">
+            <h4><i class="fas fa-history"></i> Activité applicative (Journal d'audit)</h4>
+            <span class="nx-badge nx-badge-blue">{{ actions_page.paginator.count }} action(s) applicative(s)</span>
+        </div>
+        <div class="nx-card-body" style="padding: 0; overflow-x: auto;">
+            <table class="nx-table">
+                <thead>
+                    <tr>
+                        <th>Date &amp; Heure</th><th>Utilisateur</th><th>Type</th><th>Action</th><th>Modèle / Objet</th><th>IP</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for a in actions_page %}
+                    <tr>
+                        <td style="white-space: nowrap; font-size: 12px; color: var(--text-light);">{{ a.date_action|date:'d/m/Y H:i:s' }}</td>
+                        <td style="font-size: 13px; font-weight: 600;">{{ a.utilisateur.get_full_name|default:a.utilisateur.username|default:'—' }}</td>
+                        <td>
+                            {% if a.type_action == 'CREATE' %}<span class="nx-badge nx-badge-green">Création</span>
+                            {% elif a.type_action == 'UPDATE' %}<span class="nx-badge nx-badge-blue">Modification</span>
+                            {% elif a.type_action == 'DELETE' %}<span class="nx-badge nx-badge-red">Suppression</span>
+                            {% elif a.type_action == 'EXPORT' %}<span class="nx-badge nx-badge-purple">Export</span>
+                            {% else %}<span class="nx-badge nx-badge-grey">{{ a.type_action }}</span>{% endif %}
+                        </td>
+                        <td style="font-size: 13px; max-width: 340px;">{{ a.action }}</td>
+                        <td style="font-size: 12px;">{{ a.modele_concerne|default:'—' }}{% if a.id_objet %}<br><small>#{{ a.id_objet }}</small>{% endif %}</td>
+                        <td style="font-size: 12px; color: var(--text-light); font-family: monospace;">{{ a.adresse_ip|default:'—' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+                {% if actions_page.has_other_pages %}
+                <div class="nx-card-footer">
+                    <div class="nx-pag">
+                        {% if actions_page.has_previous %}
+                            <a href="{{ actions_page_urls.previous }}"><i class="fas fa-chevron-left"></i></a>
+                        {% endif %}
+                        <span class="active">Page {{ actions_page.number }} / {{ actions_page.paginator.num_pages }}</span>
+                        {% if actions_page.has_next %}
+                            <a href="{{ actions_page_urls.next }}"><i class="fas fa-chevron-right"></i></a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+    </div>
+    {% endif %}
+
 
     <div style="display: grid; grid-template-columns: 1fr 320px; gap: 20px;">
         <!-- TABLE PRINCIPALE -->

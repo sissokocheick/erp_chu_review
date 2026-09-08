@@ -38,7 +38,8 @@ from ..models import (
     LivraisonPartielle, DemandeMateriel, LigneDemande,
     AccuseReception,
     LivraisonLigne)
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
+from ..services.isolation_service import get_magasins_autorises
 
 logger = logging.getLogger(__name__)
 User = get_user_model()

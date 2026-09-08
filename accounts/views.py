@@ -10,7 +10,7 @@ import json
 import logging
 
 
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -3156,7 +3156,7 @@ def journal_audit(request):
     date_fin = request.GET.get('date_fin', '').strip()
 
 
-    qs = AuditConnexion.objects.select_related('utilisateur').order_by('-date_creation')
+    qs = AuditConnexion.objects.select_related('utilisateur').order_by('-date_creation', '-pk')
 
 
     # Periode
@@ -3196,9 +3196,6 @@ def journal_audit(request):
 
 
     elif periode == 'custom' or date_debut or date_fin:
-
-
-        from datetime import datetime
 
 
         if date_debut:
@@ -3327,6 +3324,39 @@ def journal_audit(request):
         })
 
 
+    # Actions applicatives (JournalAudit) : partagées entre l'export CSV
+    # et la carte « Activité applicative » (paginée, page_actions).
+
+
+    actions_qs = JournalAudit.objects.select_related('utilisateur').order_by('-date_action', '-pk')
+
+
+    # Les mêmes filtres s'appliquent aux deux journaux affichés sur la page.
+    if periode_debut:
+        actions_qs = actions_qs.filter(date_action__gte=periode_debut)
+
+    if date_fin:
+        try:
+            actions_qs = actions_qs.filter(
+                date_action__date__lte=datetime.strptime(date_fin, '%Y-%m-%d').date()
+            )
+        except ValueError:
+            pass
+
+    if type_filtre:
+        actions_qs = actions_qs.filter(type_action=type_filtre)
+
+    if q:
+        actions_qs = actions_qs.filter(
+            Q(action__icontains=q) |
+            Q(modele_concerne__icontains=q) |
+            Q(utilisateur__username__icontains=q) |
+            Q(utilisateur__first_name__icontains=q) |
+            Q(utilisateur__last_name__icontains=q) |
+            Q(adresse_ip__icontains=q)
+        )
+
+
     # Export CSV
 
 
@@ -3381,6 +3411,45 @@ def journal_audit(request):
 
 
                 _anti_formulaire(evt.adresse_ip or ''),
+
+
+            ])
+
+
+
+
+        # ── Bloc 2 : actions applicatives (JournalAudit) — mêmes colonnes
+        # que la carte « Activité applicative » ──
+
+
+        writer.writerow([])
+
+
+        writer.writerow(['Date', 'Utilisateur', 'Type', 'Action', 'Modèle / Objet', 'IP'])
+
+
+        for act in actions_qs[:5000]:
+
+
+            writer.writerow([
+
+
+                act.date_action.strftime('%d/%m/%Y %H:%M:%S') if act.date_action else '',
+
+
+                _anti_formulaire(act.utilisateur.username if act.utilisateur else ''),
+
+
+                _anti_formulaire(act.type_action),
+
+
+                _anti_formulaire(act.action),
+
+
+                _anti_formulaire((act.modele_concerne or '') + (f' #{act.id_objet}' if act.id_objet else '')),
+
+
+                _anti_formulaire(act.adresse_ip or ''),
 
 
             ])
@@ -3803,6 +3872,22 @@ def journal_audit(request):
     )
 
 
+    # JournalAudit : actions applicatives (créations, modifications,
+    # suppressions, exports…) — complètent le journal de connexions ci-dessus.
+
+
+    actions_page, _ = paginer(actions_qs, request, default=30, page_key='page_actions')
+    actions_page_urls = {}
+    if actions_page.has_previous():
+        params = request.GET.copy()
+        params['page_actions'] = actions_page.previous_page_number()
+        actions_page_urls['previous'] = '?' + params.urlencode()
+    if actions_page.has_next():
+        params = request.GET.copy()
+        params['page_actions'] = actions_page.next_page_number()
+        actions_page_urls['next'] = '?' + params.urlencode()
+
+
     return render(request, 'accounts/audit.html', {
 
 
@@ -3852,6 +3937,8 @@ def journal_audit(request):
 
 
         'log_entries': log_entries,
+        'actions_page': actions_page,
+        'actions_page_urls': actions_page_urls,
 
 
         'per_page': per_page,

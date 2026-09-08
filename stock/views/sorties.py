@@ -15,6 +15,7 @@ from django.utils import timezone
 
 from accounts.permissions import verifier_permission
 from stock.services.isolation_service import get_magasins_autorises
+from .pdf_views import _verifier_acces_document
 from ..decorators import magasin_requis, catch_errors
 from ..models import (
     BonMouvement, LigneBon, MotifAnnulation,
@@ -222,11 +223,12 @@ def annuler_sortie(request, bon_id):
     if request.method != 'POST':
         return redirect('liste_sorties')
 
-    magasins_autorises = get_magasins_autorises(request)
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='SORTIE',
-        magasin__in=magasins_autorises
     )
+    reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_sorties")
+    if reponse_refus:
+        return reponse_refus
 
     if bon.est_annule:
         messages.error(request, f"Le bon {bon.numero_bon} est déjà annulé.")
@@ -365,8 +367,10 @@ def remplacer_scan_sortie(request, bon_id):
     """Permet de remplacer le fichier scanné d'un bon de sortie."""
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='SORTIE',
-        magasin__in=get_magasins_autorises(request),
     )
+    reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_sorties")
+    if reponse_refus:
+        return reponse_refus
 
     if request.method == 'POST':
         from core.file_validation import valider_scan_document

@@ -13,26 +13,13 @@ import logging
 
 from accounts.permissions import verifier_permission
 from ..models import (
-    Article, Mouvement, FamilleArticle, FamilleParametre, Magasin,
+    Article, Mouvement, FamilleArticle, FamilleParametre,
     StockItem, LigneBon, LigneCommande)
 from ..forms import ArticleForm, FamilleArticleForm
 from ..decorators import magasin_requis, catch_errors
 from .common_views import filtrer_texte
 
 logger = logging.getLogger(__name__)
-
-
-def get_magasins_autorises(request):
-    """Retourne les magasins autorisés pour l'utilisateur (mono-tenant)."""
-    user = request.user
-    if user.is_superuser:
-        return Magasin.objects.all()
-    try:
-        return user.profil.magasins_autorises.all()
-    except Exception as e:
-        import logging
-        logging.getLogger(__name__).warning("[get_magasins_autorises] profil inaccessible pour %s : %s", user, e)
-        return Magasin.objects.none()
 
 
 def appliquer_tri(queryset, request, colonnes, defaut):

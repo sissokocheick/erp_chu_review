@@ -8,6 +8,7 @@ Tests pour le module accounts (mono-tenant) :
   - MenuAccess
 """
 from django.test import TestCase
+from django.urls import reverse
 from django.contrib.auth.models import User, Group
 from django.utils import timezone
 from datetime import timedelta
@@ -518,3 +519,93 @@ class CreationUtilisateurValidationTest(TestCase):
         self.assertEqual(len(mail.outbox), 0)
         session = self.client.session
         self.assertIsNotNone(session.get('new_user_credentials'))
+
+
+class JournalAuditPageTest(TestCase):
+    """La page Sécurité → Journal d'audit doit afficher les actions
+    applicatives (JournalAudit), pas seulement le journal de connexions."""
+
+    def test_page_affiche_les_actions_applicatives(self):
+        admin = User.objects.create_superuser(username="auditadmin", password="pass")
+        admin.profil.doit_changer_mdp = False
+        admin.profil.save()
+        JournalAudit.objects.create(
+            utilisateur=admin,
+            action="Création d'une immobilisation",
+            type_action='CREATE',
+            modele_concerne='Immobilisation',
+            id_objet=42,
+        )
+        self.client.force_login(admin)
+        r = self.client.get(reverse('accounts:journal_audit'))
+        self.assertEqual(r.status_code, 200)
+        content = r.content.decode('utf-8')
+        self.assertIn('Activité applicative', content)
+        self.assertIn('Immobilisation', content)
+        # l'apostrophe est échappée par Django (&#x27;) dans le rendu
+        self.assertIn('Création d&#x27;une immobilisation', content)
+
+    def test_export_csv_contient_les_actions_applicatives(self):
+        """L'export CSV de la page inclut les actions applicatives
+        (JournalAudit) sans casser le bloc des connexions existant."""
+        admin = User.objects.create_superuser(username="auditcsv", password="pass")
+        admin.profil.doit_changer_mdp = False
+        admin.profil.save()
+        JournalAudit.objects.create(
+            utilisateur=admin, action="Export CSV test", type_action='EXPORT',
+            modele_concerne='Immobilisation', id_objet=7)
+        AuditConnexion.objects.create(
+            utilisateur=admin, type_action='CONNEXION',
+            description='Connexion CSV test')
+        self.client.force_login(admin)
+        r = self.client.get(reverse('accounts:journal_audit') + '?export=csv')
+        self.assertEqual(r.status_code, 200)
+        content = r.content.decode('utf-8-sig')  # enlève le BOM Excel
+        # Format existant des connexions inchangé
+        self.assertIn('Connexion CSV test', content)
+        self.assertIn('Description', content)
+        # Bloc actions applicatives présent, mêmes colonnes que la carte
+        self.assertIn('Export CSV test', content)
+        self.assertIn('Immobilisation #7', content)
+
+    def test_filtres_type_et_recherche_s_appliquent_aux_actions(self):
+        """Les filtres de la page couvrent aussi JournalAudit."""
+        admin = User.objects.create_superuser(username="auditfilters", password="pass")
+        admin.profil.doit_changer_mdp = False
+        admin.profil.save()
+        JournalAudit.objects.create(
+            utilisateur=admin, action="Création filtrée", type_action='CREATE',
+            modele_concerne='CategoriePatrimoine')
+        JournalAudit.objects.create(
+            utilisateur=admin, action="Modification masquée", type_action='UPDATE',
+            modele_concerne='CategoriePatrimoine')
+        self.client.force_login(admin)
+        r = self.client.get(reverse('accounts:journal_audit'), {
+            'periode': 'all', 'type_filtre': 'CREATE', 'q': 'Création filtrée',
+        })
+        self.assertEqual(r.status_code, 200)
+        content = r.content.decode('utf-8')
+        self.assertIn('Création filtrée', content)
+        self.assertNotIn('Modification masquée', content)
+
+    def test_pagination_actions_conserve_les_filtres(self):
+        """La pagination de la carte ne perd pas le périmètre courant."""
+        admin = User.objects.create_superuser(username="auditpagination", password="pass")
+        admin.profil.doit_changer_mdp = False
+        admin.profil.save()
+        JournalAudit.objects.bulk_create([
+            JournalAudit(
+                utilisateur=admin, action=f"Action pagination {index}",
+                type_action='CREATE', modele_concerne='Test'
+            )
+            for index in range(31)
+        ])
+        self.client.force_login(admin)
+        r = self.client.get(reverse('accounts:journal_audit'), {
+            'periode': 'all', 'type_filtre': 'CREATE', 'q': 'pagination',
+            'page_actions': 1,
+        })
+        self.assertEqual(r.status_code, 200)
+        self.assertContains(r, 'page_actions=2')
+        self.assertContains(r, 'type_filtre=CREATE')
+        self.assertContains(r, 'q=pagination')

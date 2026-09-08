@@ -24,6 +24,7 @@ from ..models import (
 )
 from stock.models import Fournisseur
 from .common import patrimoine_required
+from ..audit import audit
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,7 @@ def parametres(request):
                 titre = "promu chef de service" if nouveau_statut else "retiré du rôle de chef"
 
                 messages.success(request, f"✅ {utilisateur.get_full_name() or utilisateur.username} a été {titre}.")
+                audit(request, f"Chef de service : {utilisateur.get_full_name() or utilisateur.username} {titre}", 'UPDATE', instance=utilisateur.profil)
 
 
             elif action == 'save_visibilite':
@@ -127,6 +129,7 @@ def parametres(request):
 
                 
                 messages.success(request, "✅ Configuration et workflows mis à jour.")
+                audit(request, "Configuration et workflows patrimoine mis à jour", 'UPDATE', instance=params)
 
 
             elif action == 'save_technicien':
@@ -150,6 +153,7 @@ def parametres(request):
                 utilisateur.profil.domaines_intervention.set(categories_ids)
 
                 messages.success(request, f"✅ Compétences mises à jour pour {utilisateur.get_full_name() or utilisateur.username}.")
+                audit(request, f"Compétences technicien : {utilisateur.get_full_name() or utilisateur.username}", 'UPDATE', instance=utilisateur.profil)
 
 
             elif action == 'save_batiment':
@@ -175,6 +179,7 @@ def parametres(request):
                     b.services.set(services_ids)
 
                 messages.success(request, "Bâtiment et ses bureaux mis à jour.")
+                audit(request, f"Bâtiment {'modifié' if item_id else 'créé'} : {batiment.nom}", 'UPDATE' if item_id else 'CREATE', instance=batiment)
 
 
             elif action == 'save_etage':
@@ -202,6 +207,7 @@ def parametres(request):
                     b.services.set(services_ids)
 
                 messages.success(request, "Étage et ses bureaux mis à jour.")
+                audit(request, f"Étage {'modifié' if item_id else 'créé'} : {etage.nom}", 'UPDATE' if item_id else 'CREATE', instance=etage)
 
 
             elif action == 'save_bureau':
@@ -229,6 +235,7 @@ def parametres(request):
                 bureau.services.set(services_ids)
 
                 messages.success(request, "Bureau enregistré et services liés.")
+                audit(request, f"Bureau {'modifié' if item_id else 'créé'} : {bureau.nom}", 'UPDATE' if item_id else 'CREATE', instance=bureau)
 
                 
             elif action == 'assigner_bureau':
@@ -254,21 +261,35 @@ def parametres(request):
                 utilisateur.profil.save()
 
                 messages.success(request, f"✅ Bureau assigné à {utilisateur.get_full_name() or utilisateur.username}.")
+                audit(request, f"Bureau assigné : {utilisateur.get_full_name() or utilisateur.username}", 'UPDATE', instance=utilisateur.profil)
 
 
             elif action == 'save_categorie':
 
                 data = {'nom': request.POST.get('nom', '').upper(), 'code': request.POST.get('code', '').upper(), 'icone': request.POST.get('icone', 'fas fa-box'), 'couleur': request.POST.get('couleur', '#1c5b96'), 'modifie_par': request.user}
 
-                if item_id: CategoriePatrimoine.objects.filter(pk=item_id).update(**data)
+                if item_id:
 
-                else: data['cree_par'] = request.user; CategoriePatrimoine.objects.create(**data)
+                    cat = CategoriePatrimoine.objects.filter(pk=item_id).first()
+
+                    CategoriePatrimoine.objects.filter(pk=item_id).update(**data)
+
+                    audit(request, "Catégorie modifiée", 'UPDATE', instance=cat)
+
+                else:
+
+                    data['cree_par'] = request.user
+
+                    cat = CategoriePatrimoine.objects.create(**data)
+
+                    audit(request, "Catégorie créée", 'CREATE', instance=cat)
 
                 messages.success(request, "Catégorie enregistrée.")
 
             elif action == 'delete_categorie':
 
                 CategoriePatrimoine.objects.get(pk=item_id).delete()
+                audit(request, "Catégorie supprimée", 'DELETE', modele_concerne='CategoriePatrimoine', id_objet=item_id)
 
                 messages.success(request, "Catégorie supprimée.")
 
@@ -277,15 +298,28 @@ def parametres(request):
 
                 data = {'categorie_id': request.POST.get('categorie'), 'nom': request.POST.get('nom', '').upper(), 'code': request.POST.get('code', '').upper(), 'duree_amortissement_defaut': int(request.POST.get('duree', 5)), 'mode_amortissement': request.POST.get('mode', 'LINEAIRE'), 'modifie_par': request.user}
 
-                if item_id: TypeEquipement.objects.filter(pk=item_id).update(**data)
+                if item_id:
 
-                else: data['cree_par'] = request.user; TypeEquipement.objects.create(**data)
+                    te = TypeEquipement.objects.filter(pk=item_id).first()
+
+                    TypeEquipement.objects.filter(pk=item_id).update(**data)
+
+                    audit(request, "Type d'équipement modifié", 'UPDATE', instance=te)
+
+                else:
+
+                    data['cree_par'] = request.user
+
+                    te = TypeEquipement.objects.create(**data)
+
+                    audit(request, "Type d'équipement créé", 'CREATE', instance=te)
 
                 messages.success(request, "Type enregistré.")
 
             elif action == 'delete_type':
 
                 TypeEquipement.objects.get(pk=item_id).delete()
+                audit(request, "Type d'équipement supprimé", 'DELETE', modele_concerne='TypeEquipement', id_objet=item_id)
 
                 messages.success(request, "Type supprimé.")
 
@@ -294,15 +328,26 @@ def parametres(request):
 
                 nom = request.POST.get('nom', '').upper()
 
-                if item_id: Marque.objects.filter(pk=item_id).update(nom=nom, modifie_par=request.user)
+                if item_id:
 
-                else: Marque.objects.get_or_create(nom=nom, defaults={'cree_par': request.user})
+                    Marque.objects.filter(pk=item_id).update(nom=nom, modifie_par=request.user)
+
+                    audit(request, "Marque modifiée", 'UPDATE', modele_concerne='Marque', id_objet=item_id)
+
+                else:
+
+                    marque, cree = Marque.objects.get_or_create(nom=nom, defaults={'cree_par': request.user})
+
+                    if cree:
+
+                        audit(request, "Marque créée", 'CREATE', instance=marque)
 
                 messages.success(request, "Marque enregistrée.")
 
             elif action == 'delete_marque':
 
                 Marque.objects.get(pk=item_id).delete()
+                audit(request, "Marque supprimée", 'DELETE', modele_concerne='Marque', id_objet=item_id)
 
                 messages.success(request, "Marque supprimée.")
 
@@ -314,16 +359,19 @@ def parametres(request):
                     TechnicienPrestataire.objects.filter(id=item_id).update(fournisseur_id=request.POST.get('fournisseur_id'), nom=request.POST.get('nom'), telephone=request.POST.get('telephone'), specialite=request.POST.get('specialite', ''))
 
                     messages.success(request, "👷 Technicien externe mis à jour.")
+                    audit(request, "Technicien externe modifié", 'UPDATE', modele_concerne='TechnicienPrestataire', id_objet=item_id)
 
                 else:
 
-                    TechnicienPrestataire.objects.create(fournisseur_id=request.POST.get('fournisseur_id'), nom=request.POST.get('nom'), telephone=request.POST.get('telephone'), specialite=request.POST.get('specialite', ''))
+                    tech = TechnicienPrestataire.objects.create(fournisseur_id=request.POST.get('fournisseur_id'), nom=request.POST.get('nom'), telephone=request.POST.get('telephone'), specialite=request.POST.get('specialite', ''))
 
                     messages.success(request, "👷 Technicien externe ajouté.")
+                    audit(request, "Technicien externe ajouté", 'CREATE', instance=tech)
 
             elif action == 'delete_tech_externe':
 
                 TechnicienPrestataire.objects.filter(id=item_id).delete()
+                audit(request, "Technicien externe supprimé", 'DELETE', modele_concerne='TechnicienPrestataire', id_objet=item_id)
 
                 messages.success(request, "🗑️ Technicien externe supprimé.")
 
@@ -335,16 +383,19 @@ def parametres(request):
                     TypeContrat.objects.filter(id=item_id).update(nom=request.POST.get('nom'), description=request.POST.get('description', ''))
 
                     messages.success(request, "📄 Type de contrat modifié.")
+                    audit(request, "Type de contrat modifié", 'UPDATE', modele_concerne='TypeContrat', id_objet=item_id)
 
                 else:
 
-                    TypeContrat.objects.create(nom=request.POST.get('nom'), description=request.POST.get('description', ''))
+                    tc = TypeContrat.objects.create(nom=request.POST.get('nom'), description=request.POST.get('description', ''))
 
                     messages.success(request, "📄 Nouveau type de contrat créé.")
+                    audit(request, "Type de contrat créé", 'CREATE', instance=tc)
 
             elif action == 'delete_type_contrat':
 
                 TypeContrat.objects.filter(id=item_id).delete()
+                audit(request, "Type de contrat supprimé", 'DELETE', modele_concerne='TypeContrat', id_objet=item_id)
 
                 messages.success(request, "🗑️ Type de contrat supprimé.")
 
@@ -445,6 +496,7 @@ def editer_schema(request, pk):
             te.save()
 
             messages.success(request, f"✅ Schéma mis à jour.")
+            audit(request, f"Schéma de type d'équipement mis à jour : {te.nom}", 'UPDATE', instance=te)
 
             return redirect('patrimoine_parametres')
 
@@ -608,7 +660,7 @@ def creer_type_equipement(request):
 
             specs_schema = json.loads(request.POST.get('specs_schema_cache', '[]'))
 
-            TypeEquipement.objects.create(
+            te = TypeEquipement.objects.create(
 
                 nom=request.POST.get('nom'), code=request.POST.get('code'), categorie_id=request.POST.get('categorie'),
 
@@ -617,6 +669,7 @@ def creer_type_equipement(request):
             )
 
             messages.success(request, "Type créé avec succès !")
+            audit(request, f"Type d'équipement créé : {te.nom}", 'CREATE', instance=te)
 
             return redirect('patrimoine_registre')
 

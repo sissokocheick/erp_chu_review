@@ -40,7 +40,8 @@ from ..models import (
 from ..services import (
     NumeroGenerator, StockService, PDFService, NotificationService
 )
-from .catalogue import paginer, get_magasins_autorises
+from .catalogue import paginer
+from ..services.isolation_service import get_magasins_autorises
 from .common_views import render_liste, get_magasin_actif, build_redirect_url, filtrer_texte
 
 logger = logging.getLogger(__name__)

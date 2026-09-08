@@ -571,6 +571,8 @@ def creer_intervention(request, immo_pk):
 
             messages.success(request, "✅ Problème signalé avec succès.")
 
+            audit(request, f"Création d'une intervention sur {immo.nom_affichage}", 'CREATE', instance=inter)
+
             if 'mobile' in request.GET and immo.code_patrimoine:
 
                 return redirect('patrimoine_scan', code=immo.code_patrimoine)

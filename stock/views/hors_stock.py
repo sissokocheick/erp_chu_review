@@ -15,6 +15,7 @@ from django.utils import timezone
 from accounts.permissions import verifier_permission
 from core.models import ConfigurationHopital
 from stock.services.isolation_service import get_magasins_autorises
+from .pdf_views import _verifier_acces_document
 from ..decorators import magasin_requis, catch_errors
 from ..pdf_utils import get_pdf_config, paginate_lignes, ajouter_hauteurs_lignes, build_signature_cases
 from ..models import (
@@ -219,11 +220,12 @@ def annuler_bon_hors_stock(request, bon_id):
     if request.method != 'POST':
         return redirect('liste_bons_hors_stock')
 
-    magasins_autorises = get_magasins_autorises(request)
     bon = get_object_or_404(
         BonMouvement, id=bon_id, type_bon='SORTIE_HORS_STOCK',
-        magasin__in=magasins_autorises
     )
+    reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_bons_hors_stock")
+    if reponse_refus:
+        return reponse_refus
 
     motif_id = request.POST.get('motif_id')
     if not motif_id:
@@ -258,10 +260,10 @@ def apercu_bon_hors_stock(request, bon_id):
         id=bon_id
     )
 
-    magasins_autorises = get_magasins_autorises(request)
-    if not magasins_autorises.filter(id=bon.magasin_id).exists():
-        messages.error(request, "⛔ Accès non autorisé.")
-        return redirect('liste_bons_hors_stock')
+    reponse_refus = _verifier_acces_document(
+        request, bon, url_retour="liste_bons_hors_stock")
+    if reponse_refus:
+        return reponse_refus
 
     service = bon.service_demandeur
     service_poste = getattr(service, 'poste_telephone', '') if service else ''
