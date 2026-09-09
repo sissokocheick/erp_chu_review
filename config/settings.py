@@ -8,15 +8,33 @@ import dj_database_url
 from pathlib import Path
 from django.core.exceptions import ImproperlyConfigured
 
-# Load .env file automatically
-try:
-    from dotenv import load_dotenv
-    load_dotenv()
-except ImportError:
-    pass
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load .env file automatically (supporte python-dotenv et lecture directe sans dépendance)
+_env_path = BASE_DIR / '.env'
+if not _env_path.is_file() and os.path.isfile('/opt/erp_chu_review/.env'):
+    _env_path = Path('/opt/erp_chu_review/.env')
+
+if _env_path.is_file():
+    try:
+        from dotenv import load_dotenv
+        load_dotenv(_env_path)
+    except ImportError:
+        pass
+
+    try:
+        with open(_env_path, 'r', encoding='utf-8') as _f:
+            for _line in _f:
+                _line = _line.strip()
+                if _line and not _line.startswith('#') and '=' in _line:
+                    _k, _v = _line.split('=', 1)
+                    _k = _k.strip()
+                    _v = _v.strip().strip("'\"")
+                    if _k and _k not in os.environ:
+                        os.environ[_k] = _v
+    except Exception:
+        pass
 
 
 # Quick-start development settings - unsuitable for production
