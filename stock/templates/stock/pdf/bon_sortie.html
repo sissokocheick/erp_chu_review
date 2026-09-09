@@ -9,7 +9,7 @@
     size: A4;
     margin: 6mm 7mm 12mm 7mm;
     @bottom-center {
-        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:pdf_config.texte_institutionnel|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
+        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
         white-space: pre-line;
         font-size: 7pt;
         color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
