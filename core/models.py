@@ -151,7 +151,7 @@ class ConfigurationHopital(TraceabiliteMixin):
     direction_label = models.CharField(max_length=200, default="DIRECTION DES AFFAIRES FINANCIÈRES", verbose_name="Label Direction", blank=True)
     sous_direction_label = models.CharField(max_length=200, default="SOUS-DIRECTION DE LA LOGISTIQUE", verbose_name="Label Sous-Direction", blank=True)
     service_label = models.CharField(max_length=200, default="SERVICE APPROVISIONNEMENT ET GESTION DES STOCKS", verbose_name="Label Service", blank=True)
-    pied_page_pdf = models.TextField(default="Document gǸnǸrǸ par NexusERP \u2014 Tous droits rǸservǸs.", verbose_name="Pied de page PDF", blank=True)
+    pied_page_pdf = models.TextField(default="Document généré par NexusERP — Tous droits réservés.", verbose_name="Pied de page PDF", blank=True)
 
     # 🔧 Affichage global PDF 🔧
     afficher_logo = models.BooleanField(default=True, verbose_name="Afficher le logo sur les PDF")

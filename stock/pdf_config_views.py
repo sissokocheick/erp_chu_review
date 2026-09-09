@@ -311,17 +311,19 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
         else:
             config_preview = base_config
 
-        # Parité avec pdf_utils : texte institutionnel manquant -> VariableDoesNotExist en DEBUG
-        if isinstance(config_preview.get('pied_de_page'), dict):
-            config_preview['texte_institutionnel'] = (
-                config_preview.get('texte_institutionnel')
-                or config_preview['pied_de_page'].get('texte_personnalise')
-                or "Direction des Affaires Financières / Sous-Direction de la Logistique"
-            )
-        elif isinstance(config_preview.get('pied_de_page'), str):
-            config_preview['texte_institutionnel'] = config_preview['pied_de_page']
-        else:
-            config_preview['texte_institutionnel'] = "Direction des Affaires Financières / Sous-Direction de la Logistique"
+        # Parité avec pdf_utils : texte institutionnel centralisé depuis l'établissement
+        from core.models import ConfigurationHopital
+        hopital = ConfigurationHopital.objects.first()
+        hopital_pied = (getattr(hopital, 'pied_page_pdf', None) or '').strip() if hopital else ''
+
+        pied = config_preview.get('pied_de_page') or {}
+        if not isinstance(pied, dict):
+            pied = {'texte_personnalise': str(pied)}
+            config_preview['pied_de_page'] = pied
+
+        texte_pied_final = hopital_pied or (pied.get('texte_personnalise') or '').strip() or "Direction des Affaires Financières / Sous-Direction de la Logistique"
+        pied['texte_personnalise'] = texte_pied_final
+        config_preview['texte_institutionnel'] = texte_pied_final
 
         # Métadonnées et cartouche pour les templates
         meta = config_preview.get('metadonnees') or {}

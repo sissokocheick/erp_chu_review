@@ -189,6 +189,7 @@ def get_pdf_config(magasin, type_doc_code, request):
 
     from core.models import ConfigurationHopital
     hopital = ConfigurationHopital.objects.first()
+    hopital_pied = (getattr(hopital, 'pied_page_pdf', None) or '').strip() if hopital else ''
 
     if hopital:
         pdf_config['couleur_principale'] = hopital.couleur_principale or '#1c5b96'
@@ -216,11 +217,21 @@ def get_pdf_config(magasin, type_doc_code, request):
     if 'afficher_code_iso' not in cart:
         cart['afficher_code_iso'] = True
 
-    pdf_config['texte_institutionnel'] = (
-        pdf_config.get('texte_institutionnel')
-        or (pied_texte or '')
-        or "Direction des Affaires Financières / Sous-Direction de la Logistique"
-    )
+    # Pied de page centralisé : priorité au texte de l'établissement (Paramètres Administratifs)
+    existing_pied = pdf_config.get('pied_de_page') or {}
+    if not isinstance(existing_pied, dict):
+        existing_pied = {'texte_personnalise': str(existing_pied)}
+
+    texte_perso = hopital_pied or (existing_pied.get('texte_personnalise') or '').strip() or "Direction des Affaires Financières / Sous-Direction de la Logistique"
+
+    pdf_config['pied_de_page'] = {
+        'texte_personnalise': texte_perso,
+        'afficher_numero_page': existing_pied.get('afficher_numero_page', True),
+        'afficher_date_generation': existing_pied.get('afficher_date_generation', True),
+        'afficher_trait_couleur': existing_pied.get('afficher_trait_couleur', True),
+        'trait_couleur': existing_pied.get('trait_couleur') or pdf_config.get('couleur_principale', '#1c5b96'),
+    }
+    pdf_config['texte_institutionnel'] = texte_perso
 
     # Parametres unifies globaux
     pdf_config['afficher_logo'] = getattr(hopital, 'afficher_logo', True) if hopital else True
@@ -240,20 +251,6 @@ def get_pdf_config(magasin, type_doc_code, request):
     
     # La signature reste parametrable par bon/document
     pdf_config['afficher_signatures'] = pdf_config.get('afficher_signatures', True)
-
-    # Pied de page unifie globalement (en préservant la personnalisation du magasin si présente)
-    existing_pied = pdf_config.get('pied_de_page') or {}
-    if not isinstance(existing_pied, dict):
-        existing_pied = {'texte_personnalise': str(existing_pied)}
-
-    texte_perso = existing_pied.get('texte_personnalise') or (getattr(hopital, 'pied_page_pdf', None) if hopital else None) or _pied_de_page_par_defaut()
-    pdf_config['pied_de_page'] = {
-        'texte_personnalise': texte_perso,
-        'afficher_numero_page': existing_pied.get('afficher_numero_page', True),
-        'afficher_date_generation': existing_pied.get('afficher_date_generation', True),
-        'afficher_trait_couleur': existing_pied.get('afficher_trait_couleur', True),
-        'trait_couleur': existing_pied.get('trait_couleur') or pdf_config.get('couleur_principale', '#17a2b8'),
-    }
 
     # Injecter le dictionnaire de visibilité des colonnes pour les templates
     colonnes_cfg = (pdf_config.get('tableau') or {}).get('colonnes') or []
