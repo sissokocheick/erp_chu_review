@@ -9,6 +9,10 @@
     word-wrap: break-word;
     overflow-wrap: break-word;
 }
+.signatures-table.sans-cadre {
+    border-collapse: separate;
+    border-spacing: 4mm 0;
+}
 .signatures-table td {
     border: 2px solid #000;
     vertical-align: top;
@@ -17,6 +21,16 @@
     position: relative;
     word-wrap: break-word;
     overflow-wrap: break-word;
+}
+.signatures-table.sans-cadre td {
+    border: none !important;
+    padding: 0 1mm;
+}
+.signatures-table td.sig-cell-sans-trait {
+    border: none !important;
+}
+.signatures-table td.sig-cell-encadre {
+    border: 2px solid #000 !important;
 }
 .sig-case-title {
     font-weight: bold;
@@ -80,12 +94,22 @@
     color: var(--text-dark);
     margin-top: 0.5mm;
 }
+.sig-line-pointillee {
+    border-bottom: 1px dashed #555;
+    width: 85%;
+    margin: 2mm auto 1mm auto;
+}
+.sig-line-pleine {
+    border-bottom: 1px solid #000;
+    width: 85%;
+    margin: 2mm auto 1mm auto;
+}
 </style>
 {% if signature_cases %}
-<table class="signatures-table">
+<table class="signatures-table {% if not pdf_config.encadrer_signatures|default_if_none:True %}sans-cadre{% endif %}">
   <tr>
   {% for case in signature_cases %}
-    <td>
+    <td class="{% if case.style == 'sans_trait' %}sig-cell-sans-trait{% elif case.style == 'encadre' %}sig-cell-encadre{% endif %}">
       <div class="sig-case-title">{{ case.label }}</div>
       <div class="sig-case-content">
         {% if case.has_signature %}
@@ -106,6 +130,14 @@
           {% endif %}
           {% if case.default_text %}
             <div class="sig-default-bottom">{{ case.default_text|safe }}</div>
+          {% endif %}
+        {% endif %}
+
+        {% if not pdf_config.encadrer_signatures|default_if_none:True and not case.has_signature %}
+          {% if case.style == 'ligne_pointillee' %}
+            <div class="sig-line-pointillee"></div>
+          {% elif case.style == 'ligne_pleine' %}
+            <div class="sig-line-pleine"></div>
           {% endif %}
         {% endif %}
       </div>

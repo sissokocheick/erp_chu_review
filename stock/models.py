@@ -2035,6 +2035,8 @@ class ModeleDocumentMagasin(TracabiliteModel):
                 'bordure_epaisseur': 'normal',
             },
             'signatures': sigs,
+            'encadrer_signatures': True,
+            'afficher_fonction_signataire': True,
             'service_demandeur': {
                 'encadrer': True,
                 'position': 'left',

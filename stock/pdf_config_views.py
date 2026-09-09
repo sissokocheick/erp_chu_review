@@ -124,6 +124,10 @@ def _parse_post_to_config(request_post, type_doc='BS'):
             })
 
     cfg['afficher_fonction_signataire'] = request_post.get('afficher_fonction_signataire') == 'on'
+    if 'signatures_form_present' in request_post or 'encadrer_signatures' in request_post:
+        cfg['encadrer_signatures'] = request_post.get('encadrer_signatures') == 'on'
+    else:
+        cfg['encadrer_signatures'] = True
 
     if type_doc in ('BS', 'BR', 'BSHS'):
         cfg['service_demandeur'] = {
@@ -163,6 +167,7 @@ def _config_to_form_context(cfg):
     for k, v in cfg.get('sondage', {}).items():
         ctx[f'sondage_{k}'] = v
     ctx['afficher_fonction_signataire'] = cfg.get('afficher_fonction_signataire', False)
+    ctx['encadrer_signatures'] = cfg.get('encadrer_signatures', True)
     for k, v in cfg.get('service_demandeur', {}).items():
         ctx[f'service_demandeur_{k}'] = v
     for k, v in cfg.get('metadonnees', {}).items():

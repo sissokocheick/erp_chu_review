@@ -669,26 +669,26 @@ def ajouter_hauteurs_lignes(pages, pdf_config, type_doc='', bloc_bas=True):
 def _role_utilisateur(doc, role):
     """Retourne l'utilisateur associé à un rôle de signature pour un document.
     Supporte BonMouvement (cree_par) et DemandeMateriel (demandeur).
+    Tolère les variantes de saisie (majuscules, espaces, tirets).
     """
     cree_par = getattr(doc, 'cree_par', None)
     demandeur = getattr(doc, 'demandeur', None)
     valide_par = getattr(doc, 'valide_par', None)
     
-    if role == 'demandeur':
+    r = (role or '').lower().replace(' ', '_').replace('-', '_').strip()
+    
+    if r in ('demandeur', 'le_demandeur', 'emission', 'service_demandeur'):
         return demandeur or (cree_par if hasattr(doc, 'service_demandeur') else None)
-    if role == 'magasinier':
+    if r in ('magasinier', 'le_magasinier', 'sortie_effectuee', 'gestionnaire'):
         return cree_par
-    if role in ('responsable', 'sous_directeur', 'chef_service'):
-        # Si valide_par existe, on l'utilise (c'est le validateur)
-        # Sinon, fallback sur le responsable du magasin (info affichee meme sans validation)
+    if r in ('responsable', 'sous_directeur', 'chef_service', 'chef_de_service', 'validateur', 'direction'):
         if valide_par:
             return valide_par
         magasin = getattr(doc, 'magasin', None)
         if magasin:
             return getattr(magasin, 'responsable', None)
         return None
-    if role == 'receptionnaire':
-        # currently no reception tracking on BonMouvement, so we leave it empty for manual signing
+    if r in ('receptionnaire', 'recepteur', 'destinataire'):
         return getattr(doc, 'receptionnaire', None)
         
     return None
@@ -698,12 +698,14 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
     """
     Construit les cases de signature à partir de la configuration du document
     (pdf_config['signatures'] : labels, visibilité, position, rôle).
-    Les noms/dates sont renseignés depuis le document (si fourni).
+    Les noms/dates/fonctions sont renseignés depuis l'utilisateur lié au document.
     """
     cases = []
     if not pdf_config.get('afficher_signatures', True):
         return cases
     signatures = pdf_config.get('signatures') or []
+    afficher_fct = pdf_config.get('afficher_fonction_signataire', True)
+
     for sig in signatures:
         if not sig.get('visible', True):
             continue
@@ -716,37 +718,46 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
         role = sig.get('role', '')
         user = _role_utilisateur(bon, role) if bon is not None else None
         user_name = ''
-        fonction = sig.get('role', '').replace('_', ' ').capitalize()
+        fonction = ''
         date = None
         signature_path = None
+
         if user is not None:
             user_name = user.get_full_name() or user.username
             profil = getattr(user, 'profil', None)
             if profil is not None and getattr(profil, 'fonction', None):
-                fonction = profil.fonction
-            elif fonction:
-                # Format internal codes like 'sous_directeur' to 'Sous-directeur'
-                fonction = fonction.replace('_', ' ').capitalize()
-            # Pour le role responsable : utiliser le titre_responsable du magasin
-            # (surtout si c'est le fallback magasin et non le validateur)
-            if role in ('responsable', 'sous_directeur', 'chef_service') and bon is not None:
+                fct_obj = profil.fonction
+                fonction = getattr(fct_obj, 'nom', str(fct_obj))
+            elif getattr(user, 'fonction', None):
+                fct_obj = user.fonction
+                fonction = getattr(fct_obj, 'nom', str(fct_obj))
+
+            # Titre de responsable de magasin si défini
+            r_norm = (role or '').lower().replace(' ', '_').replace('-', '_').strip()
+            if not fonction and r_norm in ('responsable', 'sous_directeur', 'chef_service', 'chef_de_service') and bon is not None:
                 magasin = getattr(bon, 'magasin', None)
                 titre_resp = getattr(magasin, 'titre_responsable', None) if magasin else None
                 if titre_resp:
                     fonction = titre_resp
+
             valide_par = getattr(bon, 'valide_par', None)
             date = (getattr(bon, 'date_validation', None)
                     if user == valide_par
                     else getattr(bon, 'date_creation', None) or getattr(bon, 'date_demande', None))
             signature_path = _get_signature_url(request, user) if request is not None else None
 
-        afficher_fct = pdf_config.get('afficher_fonction_signataire', True)
+        # Titre par défaut si aucun utilisateur ou aucune fonction profil
+        if not fonction and role:
+            fonction = role.replace('_', ' ').capitalize()
+
+        fct_to_display = fonction if afficher_fct else ''
+
         cases.append({
             'label': sig.get('label', ''),
             'sous_label': sig.get('role', ''),
             'role': role,
             'user_name': user_name,
-            'fonction': fonction if (user is not None and afficher_fct) else (sig.get('role', '').replace('_', ' ').capitalize() if (role and afficher_fct) else ''),
+            'fonction': fct_to_display,
             'date': date,
             'has_signature': user is not None and signature_path is not None,
             'signature_path': signature_path,

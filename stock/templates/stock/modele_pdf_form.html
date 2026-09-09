@@ -383,6 +383,36 @@
             <!-- COLONNE GAUCHE -->
             <div class="left-col">
 
+                <!-- ── SERVICE DEMANDEUR (BS, BR, BSHS) ── -->
+                {% if type_doc == 'BS' or type_doc == 'BR' or type_doc == 'BSHS' %}
+                <div class="config-card">
+                    <div class="config-card-header" onclick="toggleCard(this)">
+                        <div class="icon">🏥</div>
+                        <h2>Service Demandeur</h2>
+                        <span class="toggle-icon">▼</span>
+                    </div>
+                    <div class="config-card-body open">
+                        <div class="form-group">
+                            <label>Encadrer le service</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item {% if service_demandeur_encadrer %}checked{% endif %}">
+                                    <input type="checkbox" name="service_demandeur_encadrer" {% if service_demandeur_encadrer %}checked{% endif %}>
+                                    Oui
+                                </label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Position</label>
+                            <select name="service_demandeur_position">
+                                <option value="left" {% if service_demandeur_position == 'left' %}selected{% endif %}>Gauche</option>
+                                <option value="center" {% if service_demandeur_position == 'center' %}selected{% endif %}>Centre</option>
+                                <option value="right" {% if service_demandeur_position == 'right' %}selected{% endif %}>Droite</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+
                 <!-- ── TABLEAU ── -->
                 <div class="config-card">
                     <div class="config-card-header" onclick="toggleCard(this)">
@@ -460,13 +490,39 @@
                         <span class="toggle-icon">▼</span>
                     </div>
                     <div class="config-card-body open">
-                        <div class="form-group">
-                            <label>Afficher la fonction du signataire</label>
-                            <div class="checkbox-group">
-                                <label class="checkbox-item {% if afficher_fonction_signataire %}checked{% endif %}">
-                                    <input type="checkbox" name="afficher_fonction_signataire" {% if afficher_fonction_signataire %}checked{% endif %}>
-                                    Oui
-                                </label>
+                        <input type="hidden" name="signatures_form_present" value="1">
+
+                        <datalist id="roles_predefinis">
+                            <option value="demandeur">Demandeur (utilisateur ayant émis la demande)</option>
+                            <option value="magasinier">Magasinier (utilisateur ayant créé le bon)</option>
+                            <option value="responsable">Responsable / Validateur du magasin</option>
+                            <option value="chef_service">Chef de Service</option>
+                            <option value="sous_directeur">Sous-Directeur de la Logistique</option>
+                            <option value="receptionnaire">Réceptionnaire</option>
+                            <option value="fournisseur">Fournisseur / Livreur</option>
+                            <option value="direction">Direction / DAF</option>
+                            <option value="economat">Service Économique</option>
+                        </datalist>
+
+                        <div style="display: flex; gap: 24px; flex-wrap: wrap; margin-bottom: 16px; padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e9ecef;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-weight: 600;">Encadrer les signatures</label>
+                                <div class="checkbox-group" style="margin-top: 4px;">
+                                    <label class="checkbox-item {% if encadrer_signatures|default_if_none:True %}checked{% endif %}">
+                                        <input type="checkbox" name="encadrer_signatures" {% if encadrer_signatures|default_if_none:True %}checked{% endif %}>
+                                        Oui
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-weight: 600;">Afficher la fonction du signataire</label>
+                                <div class="checkbox-group" style="margin-top: 4px;">
+                                    <label class="checkbox-item {% if afficher_fonction_signataire %}checked{% endif %}">
+                                        <input type="checkbox" name="afficher_fonction_signataire" {% if afficher_fonction_signataire %}checked{% endif %}>
+                                        Oui
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -475,7 +531,11 @@
                             <h4>Signature #1</h4>
                             <div class="sig-grid">
                                 <div class="form-group"><label>Label</label><input type="text" name="signatures_1_label" value="{{ signatures_1_label|default:'' }}" placeholder="ex: Le Magasinier"></div>
-                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_1_role" value="{{ signatures_1_role|default:'' }}" placeholder="ex: Responsable Stock"></div>
+                                <div class="form-group">
+                                    <label>Rôle système / Titre</label>
+                                    <input type="text" name="signatures_1_role" value="{{ signatures_1_role|default:'' }}" list="roles_predefinis" placeholder="ex: magasinier, demandeur...">
+                                    <small style="color: var(--gray-600); font-size: 0.72rem; display: block; margin-top: 2px;">Rôle système. La fonction du profil utilisateur s'affiche si la case ci-dessus est cochée.</small>
+                                </div>
                                 <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_1_visible %}checked{% endif %}"><input type="checkbox" name="signatures_1_visible" {% if signatures_1_visible %}checked{% endif %}> Afficher</label></div></div>
                                 <div class="form-group"><label>Position</label><select name="signatures_1_position"><option value="left" {% if signatures_1_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_1_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_1_position == 'right' %}selected{% endif %}>Droite</option></select></div>
                                 <div class="form-group"><label>Style</label><select name="signatures_1_style"><option value="ligne_pointillee" {% if signatures_1_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_1_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_1_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_1_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
@@ -489,7 +549,11 @@
                             <h4>Signature #2</h4>
                             <div class="sig-grid">
                                 <div class="form-group"><label>Label</label><input type="text" name="signatures_2_label" value="{{ signatures_2_label|default:'' }}" placeholder="ex: Le Demandeur"></div>
-                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_2_role" value="{{ signatures_2_role|default:'' }}" placeholder="ex: Chef de Service"></div>
+                                <div class="form-group">
+                                    <label>Rôle système / Titre</label>
+                                    <input type="text" name="signatures_2_role" value="{{ signatures_2_role|default:'' }}" list="roles_predefinis" placeholder="ex: demandeur, chef_service...">
+                                    <small style="color: var(--gray-600); font-size: 0.72rem; display: block; margin-top: 2px;">Rôle système. La fonction du profil utilisateur s'affiche si la case ci-dessus est cochée.</small>
+                                </div>
                                 <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_2_visible %}checked{% endif %}"><input type="checkbox" name="signatures_2_visible" {% if signatures_2_visible %}checked{% endif %}> Afficher</label></div></div>
                                 <div class="form-group"><label>Position</label><select name="signatures_2_position"><option value="left" {% if signatures_2_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_2_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_2_position == 'right' %}selected{% endif %}>Droite</option></select></div>
                                 <div class="form-group"><label>Style</label><select name="signatures_2_style"><option value="ligne_pointillee" {% if signatures_2_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_2_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_2_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_2_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
@@ -503,7 +567,11 @@
                             <h4>Signature #3</h4>
                             <div class="sig-grid">
                                 <div class="form-group"><label>Label</label><input type="text" name="signatures_3_label" value="{{ signatures_3_label|default:'' }}" placeholder="ex: Le Responsable"></div>
-                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_3_role" value="{{ signatures_3_role|default:'' }}" placeholder="ex: Directeur"></div>
+                                <div class="form-group">
+                                    <label>Rôle système / Titre</label>
+                                    <input type="text" name="signatures_3_role" value="{{ signatures_3_role|default:'' }}" list="roles_predefinis" placeholder="ex: responsable, directeur...">
+                                    <small style="color: var(--gray-600); font-size: 0.72rem; display: block; margin-top: 2px;">Rôle système. La fonction du profil utilisateur s'affiche si la case ci-dessus est cochée.</small>
+                                </div>
                                 <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_3_visible %}checked{% endif %}"><input type="checkbox" name="signatures_3_visible" {% if signatures_3_visible %}checked{% endif %}> Afficher</label></div></div>
                                 <div class="form-group"><label>Position</label><select name="signatures_3_position"><option value="left" {% if signatures_3_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_3_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_3_position == 'right' %}selected{% endif %}>Droite</option></select></div>
                                 <div class="form-group"><label>Style</label><select name="signatures_3_style"><option value="ligne_pointillee" {% if signatures_3_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_3_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_3_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_3_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
@@ -517,7 +585,11 @@
                             <h4>Signature #4</h4>
                             <div class="sig-grid">
                                 <div class="form-group"><label>Label</label><input type="text" name="signatures_4_label" value="{{ signatures_4_label|default:'' }}" placeholder="ex: Vu pour exécution"></div>
-                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_4_role" value="{{ signatures_4_role|default:'' }}" placeholder="ex: DAF"></div>
+                                <div class="form-group">
+                                    <label>Rôle système / Titre</label>
+                                    <input type="text" name="signatures_4_role" value="{{ signatures_4_role|default:'' }}" list="roles_predefinis" placeholder="ex: sous_directeur, direction...">
+                                    <small style="color: var(--gray-600); font-size: 0.72rem; display: block; margin-top: 2px;">Rôle système. La fonction du profil utilisateur s'affiche si la case ci-dessus est cochée.</small>
+                                </div>
                                 <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_4_visible %}checked{% endif %}"><input type="checkbox" name="signatures_4_visible" {% if signatures_4_visible %}checked{% endif %}> Afficher</label></div></div>
                                 <div class="form-group"><label>Position</label><select name="signatures_4_position"><option value="left" {% if signatures_4_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_4_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_4_position == 'right' %}selected{% endif %}>Droite</option></select></div>
                                 <div class="form-group"><label>Style</label><select name="signatures_4_style"><option value="ligne_pointillee" {% if signatures_4_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_4_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_4_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_4_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
@@ -531,7 +603,11 @@
                             <h4>Signature #5</h4>
                             <div class="sig-grid">
                                 <div class="form-group"><label>Label</label><input type="text" name="signatures_5_label" value="{{ signatures_5_label|default:'' }}" placeholder="ex: Réceptionnaire"></div>
-                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_5_role" value="{{ signatures_5_role|default:'' }}" placeholder="ex: Contrôleur"></div>
+                                <div class="form-group">
+                                    <label>Rôle système / Titre</label>
+                                    <input type="text" name="signatures_5_role" value="{{ signatures_5_role|default:'' }}" list="roles_predefinis" placeholder="ex: receptionnaire, controleur...">
+                                    <small style="color: var(--gray-600); font-size: 0.72rem; display: block; margin-top: 2px;">Rôle système. La fonction du profil utilisateur s'affiche si la case ci-dessus est cochée.</small>
+                                </div>
                                 <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_5_visible %}checked{% endif %}"><input type="checkbox" name="signatures_5_visible" {% if signatures_5_visible %}checked{% endif %}> Afficher</label></div></div>
                                 <div class="form-group"><label>Position</label><select name="signatures_5_position"><option value="left" {% if signatures_5_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_5_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_5_position == 'right' %}selected{% endif %}>Droite</option></select></div>
                                 <div class="form-group"><label>Style</label><select name="signatures_5_style"><option value="ligne_pointillee" {% if signatures_5_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_5_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_5_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_5_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
@@ -545,7 +621,11 @@
                             <h4>Signature #6</h4>
                             <div class="sig-grid">
                                 <div class="form-group"><label>Label</label><input type="text" name="signatures_6_label" value="{{ signatures_6_label|default:'' }}" placeholder="ex: Visa Direction"></div>
-                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_6_role" value="{{ signatures_6_role|default:'' }}" placeholder="ex: Directeur Général"></div>
+                                <div class="form-group">
+                                    <label>Rôle système / Titre</label>
+                                    <input type="text" name="signatures_6_role" value="{{ signatures_6_role|default:'' }}" list="roles_predefinis" placeholder="ex: direction, directeur_general...">
+                                    <small style="color: var(--gray-600); font-size: 0.72rem; display: block; margin-top: 2px;">Rôle système. La fonction du profil utilisateur s'affiche si la case ci-dessus est cochée.</small>
+                                </div>
                                 <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_6_visible %}checked{% endif %}"><input type="checkbox" name="signatures_6_visible" {% if signatures_6_visible %}checked{% endif %}> Afficher</label></div></div>
                                 <div class="form-group"><label>Position</label><select name="signatures_6_position"><option value="left" {% if signatures_6_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_6_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_6_position == 'right' %}selected{% endif %}>Droite</option></select></div>
                                 <div class="form-group"><label>Style</label><select name="signatures_6_style"><option value="ligne_pointillee" {% if signatures_6_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_6_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_6_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_6_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
@@ -555,36 +635,6 @@
                         {% endif %}
                     </div>
                 </div>
-
-                <!-- ── SERVICE DEMANDEUR (BS, BR, BSHS) ── -->
-                {% if type_doc == 'BS' or type_doc == 'BR' or type_doc == 'BSHS' %}
-                <div class="config-card">
-                    <div class="config-card-header" onclick="toggleCard(this)">
-                        <div class="icon">🏥</div>
-                        <h2>Service Demandeur</h2>
-                        <span class="toggle-icon">▼</span>
-                    </div>
-                    <div class="config-card-body open">
-                        <div class="form-group">
-                            <label>Encadrer le service</label>
-                            <div class="checkbox-group">
-                                <label class="checkbox-item {% if service_demandeur_encadrer %}checked{% endif %}">
-                                    <input type="checkbox" name="service_demandeur_encadrer" {% if service_demandeur_encadrer %}checked{% endif %}>
-                                    Oui
-                                </label>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Position</label>
-                            <select name="service_demandeur_position">
-                                <option value="left" {% if service_demandeur_position == 'left' %}selected{% endif %}>Gauche</option>
-                                <option value="center" {% if service_demandeur_position == 'center' %}selected{% endif %}>Centre</option>
-                                <option value="right" {% if service_demandeur_position == 'right' %}selected{% endif %}>Droite</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-                {% endif %}
 
                 <!-- ── SONDAGE (BS uniquement) ── -->
                 {% if type_doc == 'BS' %}
