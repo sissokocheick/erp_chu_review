@@ -17,42 +17,22 @@ class ConfigurationHopitalForm(forms.ModelForm):
         model = ConfigurationHopital
         fields = [
             # Identité
-            'nom', 'couleur_principale', 'logo', 'cachet',
-            # Contact & légal
-            'telephone', 'email_contact', 'cc', 'ifu', 'rccm',
-            'ville', 'adresse', 'pays',
-            # Hiérarchie
-            'direction_label', 'sous_direction_label', 'service_label',
+            'nom', 'couleur_principale', 'logo',
+            # Contact
+            'telephone', 'email_contact', 'ville', 'adresse', 'pays',
+            # Documents / Pied de page PDF
             'pied_page_pdf',
-            # Numérotation
-            'prefixe_bon_sortie', 'prefixe_bon_entree', 'prefixe_bon_retour',
-            'prefixe_bon_hors_stock', 'prefixe_commande',
-            # Signatures
-            
         ]
         widgets = {
             'nom': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
             'couleur_principale': forms.TextInput(attrs={'class': 'form-control', 'type': 'color'}),
             'logo': forms.ClearableFileInput(attrs={'class': 'form-control'}),
-            'cachet': forms.ClearableFileInput(attrs={'class': 'form-control'}),
             'telephone': forms.TextInput(attrs={'class': 'form-control'}),
             'email_contact': forms.EmailInput(attrs={'class': 'form-control'}),
-            'cc': forms.TextInput(attrs={'class': 'form-control'}),
-            'ifu': forms.TextInput(attrs={'class': 'form-control'}),
-            'rccm': forms.TextInput(attrs={'class': 'form-control'}),
             'ville': forms.TextInput(attrs={'class': 'form-control'}),
             'adresse': forms.Textarea(attrs={'class': 'form-control', 'rows': '2'}),
             'pays': forms.TextInput(attrs={'class': 'form-control'}),
-            'direction_label': forms.TextInput(attrs={'class': 'form-control'}),
-            'sous_direction_label': forms.TextInput(attrs={'class': 'form-control'}),
-            'service_label': forms.TextInput(attrs={'class': 'form-control'}),
             'pied_page_pdf': forms.Textarea(attrs={'class': 'form-control', 'rows': '2'}),
-            'prefixe_bon_sortie': forms.TextInput(attrs={'class': 'form-control'}),
-            'prefixe_bon_entree': forms.TextInput(attrs={'class': 'form-control'}),
-            'prefixe_bon_retour': forms.TextInput(attrs={'class': 'form-control'}),
-            'prefixe_bon_hors_stock': forms.TextInput(attrs={'class': 'form-control'}),
-            'prefixe_commande': forms.TextInput(attrs={'class': 'form-control'}),
-            
         }
 
 

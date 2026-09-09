@@ -125,21 +125,14 @@ class ConfigurationHopitalFormTest(TestCase):
             'couleur_principale': '#123456',
             'telephone': '27 22 45 00 00',
             'email_contact': 'contact@chu.ci',
-            'cc': 'CC-1', 'ifu': 'IFU-1', 'rccm': 'RCCM-1',
             'ville': 'Abidjan', 'pays': "Côte d'Ivoire",
-            'direction_label': 'DIR', 'sous_direction_label': 'SOUS-DIR',
-            'service_label': 'SVC', 'pied_page_pdf': 'pied',
-            'prefixe_bon_sortie': 'BS', 'prefixe_bon_entree': 'BE',
-            'prefixe_bon_retour': 'BR', 'prefixe_bon_hors_stock': 'HS',
-            'prefixe_commande': 'BC',
-            'label_signataire_1': 'S1', 'label_signataire_2': 'S2',
-            'label_signataire_3': 'S3', 'label_signataire_4': 'S4',
-            'label_signataire_5': 'S5', 'label_signataire_6': 'S6',
+            'adresse': 'Boulevard Mitterrand',
+            'pied_page_pdf': 'pied institutionnel',
         }, instance=config)
         self.assertTrue(form.is_valid(), form.errors)
         config = form.save()
         self.assertEqual(config.nom, "CHU d'Angré")
-        self.assertEqual(config.prefixe_bon_sortie, 'BS')
+        self.assertEqual(config.pied_page_pdf, 'pied institutionnel')
 
     def test_form_couleur_invalide(self):
         config = ConfigurationHopital.get_instance()
@@ -156,9 +149,9 @@ class ConfigurationHopitalFormTest(TestCase):
 
     def test_form_champs_presents(self):
         form = ConfigurationHopitalForm()
-        for champ in ('nom', 'couleur_principale', 'logo', 'cachet',
-                      'telephone', 'email_contact', 'cc', 'ifu', 'rccm',
-                      'prefixe_bon_sortie'):
+        for champ in ('nom', 'couleur_principale', 'logo',
+                      'telephone', 'email_contact', 'ville', 'adresse', 'pays',
+                      'pied_page_pdf'):
             self.assertIn(champ, form.fields)
 
 
