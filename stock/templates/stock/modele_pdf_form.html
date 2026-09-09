@@ -694,71 +694,43 @@
         });
     });
 
-    // Aperçu dans la Modale PDF globale (sans ouvrir de nouvel onglet)
+    // Aperçu dans la Modale PDF globale (sans blob, via URL HTTP directe pour compatibilité Brave/Chrome)
     const form = document.getElementById('configForm');
-    let currentBlobUrl = null;
+    const apercuEndpoint = "{% url 'modele_pdf_apercu' magasin.id type_doc %}";
 
     document.getElementById('btnApercu').addEventListener('click', function(e) {
         e.preventDefault();
 
+        const docTitle = 'Aperçu du modèle PDF : {{ type_doc_label|escapejs }}';
+
         // 1. Ouvrir immédiatement la modale PDF avec le chargeur
         if (window.nxOpenPdfModal) {
-            window.nxOpenPdfModal('', 'Aperçu du modèle PDF : {{ type_doc_label|escapejs }}');
+            window.nxOpenPdfModal('', docTitle);
         }
 
-        // 2. Préparer les données actuelles du formulaire
+        // 2. Préparer les données actuelles du formulaire (modifications en cours)
         const formData = new FormData(form);
-        formData.set('action', 'apercu');
 
-        // Révoquer le précédent blob pour libérer la mémoire si présent
-        if (currentBlobUrl) {
-            URL.revokeObjectURL(currentBlobUrl);
-            currentBlobUrl = null;
-        }
-
-        // 3. Appel asynchrone pour générer le PDF
-        fetch(form.action || window.location.href, {
+        // 3. Soumettre la configuration temporaire au serveur
+        fetch(apercuEndpoint, {
             method: 'POST',
             body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(async function(response) {
-            const contentType = response.headers.get('content-type') || '';
-            if (response.ok && contentType.indexOf('application/pdf') !== -1) {
-                const blob = await response.blob();
-                currentBlobUrl = URL.createObjectURL(blob);
-                const iframe = document.getElementById('nx-pdf-iframe');
-                const loader = document.getElementById('nx-pdf-loader');
-                if (iframe) {
-                    iframe.onload = function() {
-                        if (loader) loader.style.display = 'none';
-                        iframe.style.display = 'block';
-                    };
-                    iframe.src = currentBlobUrl;
+        .then(function(response) {
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.ok && data.url) {
+                // 4. Charger l'URL HTTP native dans l'iframe de la modale
+                if (window.nxOpenPdfModal) {
+                    window.nxOpenPdfModal(data.url, docTitle);
                 }
             } else {
-                if (window.nxClosePdfModal) window.nxClosePdfModal();
-                const text = await response.text();
-                let errMsg = "Erreur lors de la génération de l'aperçu PDF.";
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(text, 'text/html');
-                const alertMsg = doc.querySelector('.alert-error, .alert-danger, .messages');
-                if (alertMsg) {
-                    errMsg = alertMsg.textContent.trim();
-                } else if (text && text.trim().length > 0 && text.length < 400) {
-                    errMsg = text.trim();
-                }
-                if (window.Swal) {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Erreur Aperçu PDF',
-                        text: errMsg
-                    });
-                } else {
-                    alert(errMsg);
-                }
+                throw new Error(data.error || "Erreur lors de la préparation de l'aperçu.");
             }
         })
         .catch(function(err) {
@@ -767,11 +739,11 @@
             if (window.Swal) {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Erreur réseau',
-                    text: "Impossible de joindre le serveur pour générer l'aperçu : " + err.message
+                    title: 'Erreur Aperçu PDF',
+                    text: "Impossible d'afficher l'aperçu : " + err.message
                 });
             } else {
-                alert("Erreur réseau : " + err.message);
+                alert("Erreur : " + err.message);
             }
         });
     });

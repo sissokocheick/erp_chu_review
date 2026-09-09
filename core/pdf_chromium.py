@@ -183,7 +183,7 @@ class ChromiumPDFGenerator:
                 try:
                     await page.set_content(html_string, wait_until='domcontentloaded')
                     await page.wait_for_timeout(500)
-                    pdf_bytes = await page.pdf(**PDF_PRINT_OPTIONS, timeout=30000)
+                    pdf_bytes = await asyncio.wait_for(page.pdf(**PDF_PRINT_OPTIONS), timeout=30.0)
                     logger.debug(f"[ChromiumPDF] PDF genere: {len(pdf_bytes)} octets")
                     return pdf_bytes
                 finally:

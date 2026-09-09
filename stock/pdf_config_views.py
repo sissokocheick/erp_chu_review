@@ -11,7 +11,8 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
 from django.views import View
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.contrib import messages
 from django.utils import timezone
@@ -296,9 +297,18 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
         messages.success(request, f"Modèle {modele.get_type_document_display()} sauvegardé avec succès pour {magasin.nom}.")
         return redirect('modele_pdf_config', magasin_id=magasin.id, type_doc=type_doc)
 
-    def _generer_apercu(self, request, magasin, modele):
+    def _generer_apercu(self, request, magasin, modele, override_config=None):
         """Génère un PDF d'aperçu avec des données factices."""
-        config_preview = _parse_post_to_config(request.POST, type_doc=modele.type_document)
+        if override_config is not None:
+            config_preview = override_config
+        else:
+            config_preview = _parse_post_to_config(request.POST, type_doc=modele.type_document)
+            if not config_preview or not any(config_preview.values()):
+                try:
+                    config_preview = modele.get_config_complete()
+                except Exception:
+                    config_preview = {}
+
         # Parité avec pdf_utils : texte institutionnel manquant -> VariableDoesNotExist en DEBUG
         config_preview['texte_institutionnel'] = (
             config_preview.get('texte_institutionnel')
@@ -528,6 +538,7 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             filename = f'apercu_{modele.type_document.lower()}.pdf'
             response['Content-Disposition'] = f'inline; filename="{filename}"'
+            response['X-Frame-Options'] = 'SAMEORIGIN'
             return response
 
         except Exception as e:
@@ -536,3 +547,37 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                 return HttpResponse(f"Erreur lors de la génération de l'aperçu : {e}", status=500, content_type='text/plain; charset=utf-8')
             messages.error(request, f"Erreur lors de la génération de l'aperçu : {e}")
             return redirect('modele_pdf_config', magasin_id=magasin.id, type_doc=modele.type_document)
+
+
+@method_decorator(login_required, name='dispatch')
+class ModelePDFApercuView(LoginRequiredMixin, UserPassesTestMixin, View):
+    """Génère l'aperçu PDF sous forme d'URL HTTP directe compatible avec les iframes (Brave, Chrome, Firefox)."""
+
+    def test_func(self):
+        magasin = get_object_or_404(Magasin, pk=self.kwargs['magasin_id'])
+        return _user_peut_configurer_magasin(self.request.user, magasin)
+
+    def post(self, request, magasin_id, type_doc='BS'):
+        """Stocke temporairement en session la configuration éditée et renvoie l'URL de chargement HTTP."""
+        magasin = get_object_or_404(Magasin, pk=magasin_id)
+        config_preview = _parse_post_to_config(request.POST, type_doc=type_doc)
+        session_key = f'pdf_preview_{magasin.id}_{type_doc}'
+        request.session[session_key] = config_preview
+        request.session.modified = True
+
+        preview_url = reverse('modele_pdf_apercu', kwargs={'magasin_id': magasin.id, 'type_doc': type_doc})
+        ts = int(timezone.now().timestamp())
+        return JsonResponse({'ok': True, 'url': f"{preview_url}?_t={ts}"})
+
+    def get(self, request, magasin_id, type_doc='BS'):
+        """Retourne le flux PDF directement en réponse HTTP avec en-têtes SAMEORIGIN."""
+        magasin = get_object_or_404(Magasin, pk=magasin_id)
+        modele = ModeleDocumentMagasin.objects.filter(magasin=magasin, type_document=type_doc).first()
+        if not modele:
+            modele = ModeleDocumentMagasin(magasin=magasin, type_document=type_doc)
+
+        session_key = f'pdf_preview_{magasin.id}_{type_doc}'
+        config_override = request.session.get(session_key)
+
+        view_config = ModelePDFConfigView()
+        return view_config._generer_apercu(request, magasin, modele, override_config=config_override)
