@@ -87,7 +87,7 @@ body {
     height: 28mm;
 }
 .logo-cell {
-    width: 25%;
+    width: 18%;
     text-align: center;
     font-size: 9pt;
 }
@@ -97,18 +97,21 @@ body {
     margin-top: 1mm;
 }
 .title-cell {
-    width: 50%;
+    width: 48%;
     text-align: center;
     border-left: 1.5px solid #000 !important;
     padding: 0;
     vertical-align: middle;
 }
 .code-cell {
-    width: 25%;
+    width: 34%;
     text-align: left;
-    font-size: 9pt;
+    font-size: 8pt;
     font-weight: bold;
-    line-height: 1.8;
+    line-height: 1.35;
+    padding: 1.5mm 2mm;
+    white-space: nowrap;
+    vertical-align: middle;
     border-left: 1.5px solid #000 !important;
 }
 
@@ -263,7 +266,7 @@ img { max-width: 100%; height: auto; }
             <img src="{{ logo_url }}" alt="Logo">
           {% endif %}
         </td>
-        <td class="title-cell" style="{% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}width:50%{% else %}width:75%{% endif %}; padding:0; vertical-align:top;">
+        <td class="title-cell" style="{% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}width:48%{% else %}width:82%{% endif %}; padding:0; vertical-align:top;">
           <div style="height:11mm; line-height:11mm; width:100%; border-bottom:1.5px solid #000; box-sizing:border-box; text-align:center;">
             <span style="font-size:10pt; font-weight:bold; text-transform:uppercase; display:inline-block; vertical-align:middle; line-height:normal;">
               {{ pdf_config.metadonnees.ps2_label|default:pdf_config.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
@@ -398,7 +401,7 @@ img { max-width: 100%; height: auto; }
               <img src="{{ logo_url }}" alt="Logo">
             {% endif %}
           </td>
-          <td class="title-cell" style="{% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}width:50%{% else %}width:75%{% endif %}; padding:0; vertical-align:top;">
+          <td class="title-cell" style="{% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}width:48%{% else %}width:82%{% endif %}; padding:0; vertical-align:top;">
             <div style="height:11mm; line-height:11mm; width:100%; border-bottom:1.5px solid #000; box-sizing:border-box; text-align:center;">
               <span style="font-size:10pt; font-weight:bold; text-transform:uppercase; display:inline-block; vertical-align:middle; line-height:normal;">
                 {{ pdf_config.metadonnees.ps2_label|default:pdf_config.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
