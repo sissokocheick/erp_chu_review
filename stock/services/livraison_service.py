@@ -112,11 +112,14 @@ class LivraisonService:
                     batch_number=premier_lot['numero_lot'] if premier_lot else None,
                 ).first()
             else:
-                try:
-                    stock_item = StockItem.objects.select_for_update().get(
+                stock_item = StockItem.objects.select_for_update().filter(
+                    article=ligne.article, magasin_id=magasin_id, batch_number__isnull=True
+                ).first()
+                if not stock_item:
+                    stock_item = StockItem.objects.select_for_update().filter(
                         article=ligne.article, magasin_id=magasin_id
-                    )
-                except StockItem.DoesNotExist:
+                    ).first()
+                if not stock_item:
                     stock_item = StockItem.objects.create(
                         article=ligne.article, magasin_id=magasin_id,
                         quantite_physique=0, valeur_cmup=0
@@ -142,7 +145,11 @@ class LivraisonService:
             LigneBon.objects.create(
                 bon=bon,
                 article=ligne.article,
-                quantite=qte
+                quantite=ligne_verrouillee.quantite_demandee,
+                quantite_servie=qte,
+                quantite_demandee=ligne_verrouillee.quantite_demandee,
+                reste=reste_apres,
+                prix_unitaire=prix_unitaire_ligne,
             )
             # ✅ CORRECTION : sémantique correcte — reste_avant_livraison au lieu de quantite_demandee
             LivraisonLigne.objects.create(

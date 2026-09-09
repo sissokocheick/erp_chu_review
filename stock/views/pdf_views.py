@@ -118,21 +118,62 @@ def _imprimer_bon_multi_lignes(request, bon_id):
     if cache:
         return cache
 
+    # ── Récupérer la demande liée (si sortie/livraison) ──
+    demande = None
+    if hasattr(bon, 'demande_origine') and bon.demande_origine.exists():
+        demande = bon.demande_origine.first()
+    elif hasattr(bon, 'livraison_origine') and bon.livraison_origine.exists():
+        liv = bon.livraison_origine.first()
+        demande = getattr(liv, 'demande', None)
+    elif hasattr(bon, 'demande') and bon.demande:
+        demande = bon.demande
+
+    est_livraison_partielle = False
+    est_cloture = False
+    if demande:
+        est_livraison_partielle = (demande.statut == 'LIVRAISON_PARTIELLE')
+        est_cloture = (demande.statut in ('RECEPTIONNE', 'CLOTUREE'))
+    elif hasattr(bon, 'livraison_origine') and bon.livraison_origine.exists():
+        liv = bon.livraison_origine.first()
+        est_livraison_partielle = getattr(liv, 'est_partielle', False)
+
     lignes_data = []
     for idx, ligne in enumerate(bon.lignes_bon.all(), start=1):
         article = ligne.article
+
+        # Quantité demandée
+        qte_demandee = getattr(ligne, 'quantite_demandee', None)
+        if (not qte_demandee or qte_demandee == 0) and demande:
+            ld = demande.lignes_demande.filter(article=article).first()
+            if ld:
+                qte_demandee = ld.quantite_demandee
+        if not qte_demandee:
+            qte_demandee = ligne.quantite
+
+        # Quantité servie
+        qte_servie = getattr(ligne, 'quantite_servie', None)
+        if qte_servie is None and bon.type_bon == 'SORTIE':
+            qte_servie = ligne.quantite
+
+        # Reste
+        reste = getattr(ligne, 'reste', None)
+        if reste is None and qte_demandee is not None and qte_servie is not None:
+            reste = max(0, qte_demandee - qte_servie)
+
         lignes_data.append({
             'idx': idx,
             'reference': getattr(article, 'reference', ''),
             'designation': getattr(article, 'designation', ''),
             'unite': getattr(article, 'unite_distribution', None) or getattr(article, 'unite', 'U') or 'U',
-            'quantite': ligne.quantite,
-            'quantite_servie': getattr(ligne, 'quantite_servie', None),
-            'quantite_demandee': getattr(ligne, 'quantite_demandee', None),
+            'quantite': qte_demandee,
+            'quantite_servie': qte_servie,
+            'quantite_demandee': qte_demandee,
             'quantite_recue': ligne.quantite,
-            'reste': getattr(ligne, 'reste', None),
+            'reste': reste,
             'numero_lot': getattr(ligne, 'numero_lot', None),
             'date_peremption': getattr(ligne, 'date_peremption', None),
+            'prix_unitaire': ligne.prix_unitaire,
+            'montant': ligne.montant,
         })
     a_lots = any(l['numero_lot'] for l in lignes_data)
 
@@ -161,12 +202,12 @@ def _imprimer_bon_multi_lignes(request, bon_id):
         'lignes_pages': pagination.pages,
         'pages': pages,
         'est_multi_page': pagination.est_multi_page,
-        'est_reception_partielle': False,
-        'est_livraison_partielle': False,
-        'est_cloture': False,
+        'est_reception_partielle': any(l.get('reste', 0) > 0 for l in lignes_data if bon.type_bon == 'ENTREE'),
+        'est_livraison_partielle': est_livraison_partielle,
+        'est_cloture': est_cloture,
         'numero_livraison': bon.numero_livraison,
         'commande': bon.commande_liee,
-        'demande': bon.demande_origine,
+        'demande': demande,
         'service': service,
         'service_code': getattr(service, 'code', '') if service else '',
         'service_poste': getattr(service, 'poste', '') if service else '',

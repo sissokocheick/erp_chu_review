@@ -465,33 +465,39 @@ def _weasyprint_disponible():
 def render_pdf_response(request, template, context, filename, inline=True):
     """
     Rend un template HTML en PDF et retourne une HttpResponse.
-    Si WeasyPrint n'est pas disponible, retourne le HTML brut avec
-    un message d'avertissement (fallback gracieux).
+    Cascade de moteurs :
+    1. Chromium (Playwright) — rendu CSS paged media fidèle
+    2. WeasyPrint si Chromium indisponible
+    3. ReportLab (fallback texte minimal)
     """
     html_string = render_to_string(template, context, request=request)
     base_url = request.build_absolute_uri('/')
+    pdf_bytes = None
 
-    if not _weasyprint_disponible():
+    # 1. Chromium / Playwright
+    try:
+        from core.pdf_chromium import html_to_pdf
+        pdf_bytes = html_to_pdf(html_string)
+    except Exception as e_chrom:
+        logger.debug("[PDF] Chromium indisponible (%s), tentative WeasyPrint", e_chrom)
+
+    # 2. WeasyPrint
+    if pdf_bytes is None and _weasyprint_disponible():
+        try:
+            pdf_bytes = HTML(string=html_string, base_url=base_url).write_pdf()
+        except Exception as e_wp:
+            logger.warning("[PDF] WeasyPrint a échoué (%s), repli ReportLab", e_wp)
+
+    # 3. ReportLab de secours
+    if pdf_bytes is None:
         logger.warning(
-            "[PDF] WeasyPrint indisponible — génération ReportLab de secours pour %s", template)
+            "[PDF] WeasyPrint et Chromium indisponibles — génération ReportLab de secours pour %s", template)
         pdf_bytes = _pdf_fallback(context, html_string)
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         disposition = 'inline' if inline else 'attachment'
         response['Content-Disposition'] = f'{disposition}; filename="{filename}"'
         response['X-PDF-Engine'] = 'reportlab-fallback'
         return _marquer_template(response, template)
-
-    try:
-        pdf_bytes = HTML(string=html_string, base_url=base_url).write_pdf()
-    except Exception as e:
-        logger.exception("[PDF] Erreur génération %s : %s", template, e)
-        return HttpResponse(
-            f"<html><body><h2>Erreur de génération PDF</h2>"
-            f"<p>Template : {template}</p>"
-            f"<p>Erreur : {e}</p></body></html>",
-            content_type='text/html; charset=utf-8',
-            status=500,
-        )
 
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     disposition = 'inline' if inline else 'attachment'
@@ -500,15 +506,26 @@ def render_pdf_response(request, template, context, filename, inline=True):
 
 
 def render_pdf_to_bytes(request, template, context):
-    """Génère un PDF et retourne les bytes (pour sauvegarde en cache).
-    Retourne None si WeasyPrint n'est pas disponible."""
+    """Génère un PDF et retourne les bytes (pour sauvegarde en cache)."""
     html_string = render_to_string(template, context, request=request)
     base_url = request.build_absolute_uri('/')
-    if not _weasyprint_disponible():
-        logger.warning(
-            "[PDF] WeasyPrint indisponible — génération ReportLab de secours (%s)", template)
-        return _pdf_fallback(context, html_string)
-    return HTML(string=html_string, base_url=base_url).write_pdf()
+
+    # 1. Chromium
+    try:
+        from core.pdf_chromium import html_to_pdf
+        return html_to_pdf(html_string)
+    except Exception:
+        pass
+
+    # 2. WeasyPrint
+    if _weasyprint_disponible():
+        try:
+            return HTML(string=html_string, base_url=base_url).write_pdf()
+        except Exception:
+            pass
+
+    # 3. ReportLab
+    return _pdf_fallback(context, html_string)
 
 
 # ═════════════════════════════════════════════════════════════════════════════
