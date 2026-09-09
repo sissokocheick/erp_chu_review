@@ -116,21 +116,28 @@
   .valeur-chip { font-weight: 600; color: var(--text-dark); background: var(--bg-stripe); border: 1px solid var(--border-color); padding: 3px 10px; border-radius: 6px; display: inline-block; font-size: 12px; }
 
   .ref-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .ref-card { border: 1px solid var(--border-light); border-radius: 9px; overflow: hidden; background: var(--bg-card); display: flex; flex-direction: column; }
-  .ref-card-head { padding: 11px 14px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-stripe); border-bottom: 1px solid var(--border-light); }
-  .ref-card-head strong { font-size: 13px; color: var(--text-dark); }
-  .ref-card-body { padding: 10px 14px; flex: 1; }
-  .ref-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-light); color: var(--text-dark); font-size: 13px; }
+  .ref-card { border: 1px solid var(--border-light); border-radius: 10px; overflow: hidden; background: var(--bg-card); display: flex; flex-direction: column; box-shadow: 0 2px 8px rgba(0,0,0,0.04); transition: box-shadow .2s ease; }
+  .ref-card:hover { box-shadow: 0 4px 14px var(--shadow); }
+  .ref-card-head { padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-stripe); border-bottom: 1px solid var(--border-light); }
+  .ref-card-head strong { font-size: 13px; font-weight: 700; color: var(--text-dark); }
+  .ref-card-body { padding: 8px 16px; flex: 1; min-height: 210px; }
+  .ref-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-light); color: var(--text-dark); font-size: 13px; transition: background .12s; }
   .ref-row:last-child { border-bottom: 0; }
-  .ref-actions { white-space: nowrap; }
+  .ref-actions { white-space: nowrap; display: flex; gap: 4px; align-items: center; }
   .ref-actions button { border: 0; background: transparent; cursor: pointer; padding: 4px 6px; }
   .ref-actions .edit { color: #28a745; } .ref-actions .delete { color: #dc3545; }
-  .ref-empty { color: var(--text-medium); font-size: 12px; font-style: italic; padding: 8px 0; }
-  .card-pag { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid var(--border-light); font-size: 11px; color: var(--text-medium); background: var(--bg-stripe); }
-  .card-pag button { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-dark); border-radius: 4px; padding: 3px 8px; cursor: pointer; font-size: 11px; transition: .15s; }
-  .card-pag button:hover:not(:disabled) { background: var(--bg-hover); }
-  .card-pag button:disabled { opacity: 0.35; cursor: not-allowed; }
-  @media (max-width: 700px) { .ref-grid { grid-template-columns: 1fr; } }
+  .ref-empty { color: var(--text-medium); font-size: 12px; font-style: italic; padding: 25px 0; text-align: center; }
+  .card-per-page-select { font-size: 11px; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-dark); cursor: pointer; outline: none; }
+  .card-pag { display: flex; justify-content: space-between; align-items: center; padding: 8px 14px; border-top: 1px solid var(--border-light); font-size: 11px; color: var(--text-medium); background: var(--bg-stripe); flex-wrap: wrap; gap: 6px; }
+  .card-pag-info { font-weight: 600; color: var(--text-medium); }
+  .card-pag-ctrl { display: flex; gap: 3px; align-items: center; }
+  .card-pag-btn { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-dark); border-radius: 5px; padding: 2px 7px; cursor: pointer; font-size: 11px; font-weight: 600; min-width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; transition: all .15s ease; }
+  .card-pag-btn:hover:not(:disabled):not(.active) { background: var(--bg-hover); border-color: var(--primary-blue); color: var(--primary-blue); }
+  .card-pag-btn.active { color: white !important; font-weight: 700; }
+  .card-pag-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  body.dark-mode .card-pag-btn { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+  body.dark-mode .card-per-page-select { background: #1e293b; border-color: #334155; color: #e2e8f0; }
+  @media (max-width: 768px) { .ref-grid { grid-template-columns: 1fr; } }
 
   .btn-ed-sm { color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: 5px; transition: .2s; }
   .btn-ed-sm:hover { background: #d4edda; }
@@ -333,109 +340,198 @@
       <i class="fas fa-chevron-down chevron"></i>
     </div>
     <div class="acc-body {% if request.GET.open == 'famille-parametres' %}open{% endif %}" id="acc-ref-familles">
-      <!-- 1. Indicateurs KPI / Filtres rapides -->
-      <div class="ref-kpi-grid">
-        <div class="ref-kpi-card" data-ref-type="TYPE_FAMILLE" onclick="RefManager.filterByType('TYPE_FAMILLE')" title="Filtrer par types de famille">
-          <div class="ref-kpi-left">
-            <div class="ref-kpi-icon" style="background:rgba(28,91,150,0.12); color:#1c5b96;">
-              <i class="fas fa-layer-group"></i>
-            </div>
-            <div>
-              <div class="ref-kpi-label">Types de famille</div>
-              <div class="ref-kpi-val">{{ params_types_famille|length }}</div>
-            </div>
-          </div>
-          <button type="button" class="ref-kpi-add" title="Ajouter un type de famille" onclick="event.stopPropagation(); ouvrirModalParamFamille('', 'TYPE_FAMILLE', '')">
-            <i class="fas fa-plus"></i>
-          </button>
+      <!-- 1. En-tête & Barre d'outils du Référentiel -->
+      <div class="sec-bar" style="margin-bottom: 14px;">
+        <div style="font-size:12px;color:var(--text-medium);display:flex;align-items:center;gap:6px;">
+          <i class="fas fa-info-circle text-primary"></i>
+          Gérez ici les valeurs proposées dans les formulaires de familles et d'articles.
         </div>
-
-        <div class="ref-kpi-card" data-ref-type="VALORISATION" onclick="RefManager.filterByType('VALORISATION')" title="Filtrer par méthodes de valorisation">
-          <div class="ref-kpi-left">
-            <div class="ref-kpi-icon" style="background:rgba(15,118,110,0.12); color:#0f766e;">
-              <i class="fas fa-calculator"></i>
-            </div>
-            <div>
-              <div class="ref-kpi-label">Valorisation</div>
-              <div class="ref-kpi-val">{{ params_valorisation|length }}</div>
-            </div>
-          </div>
-          <button type="button" class="ref-kpi-add" title="Ajouter une méthode de valorisation" onclick="event.stopPropagation(); ouvrirModalParamFamille('', 'VALORISATION', '')">
-            <i class="fas fa-plus"></i>
-          </button>
-        </div>
-
-        <div class="ref-kpi-card" data-ref-type="CATEGORIE" onclick="RefManager.filterByType('CATEGORIE')" title="Filtrer par catégories">
-          <div class="ref-kpi-left">
-            <div class="ref-kpi-icon" style="background:rgba(253,126,20,0.12); color:#fd7e14;">
-              <i class="fas fa-tags"></i>
-            </div>
-            <div>
-              <div class="ref-kpi-label">Catégories</div>
-              <div class="ref-kpi-val">{{ params_categories|length }}</div>
-            </div>
-          </div>
-          <button type="button" class="ref-kpi-add" title="Ajouter une catégorie" onclick="event.stopPropagation(); ouvrirModalParamFamille('', 'CATEGORIE', '')">
-            <i class="fas fa-plus"></i>
-          </button>
-        </div>
-
-        <div class="ref-kpi-card" data-ref-type="LIGNE_BUDGETAIRE" onclick="RefManager.filterByType('LIGNE_BUDGETAIRE')" title="Filtrer par lignes budgétaires">
-          <div class="ref-kpi-left">
-            <div class="ref-kpi-icon" style="background:rgba(111,66,193,0.12); color:#6f42c1;">
-              <i class="fas fa-coins"></i>
-            </div>
-            <div>
-              <div class="ref-kpi-label">Lignes budgétaires</div>
-              <div class="ref-kpi-val">{{ params_lignes_budgetaires|length }}</div>
-            </div>
-          </div>
-          <button type="button" class="ref-kpi-add" title="Ajouter une ligne budgétaire" onclick="event.stopPropagation(); ouvrirModalParamFamille('', 'LIGNE_BUDGETAIRE', '')">
-            <i class="fas fa-plus"></i>
-          </button>
-        </div>
-      </div>
-
-      <!-- 2. Barre d'outils et de filtres -->
-      <div class="ref-toolbar">
-        <div class="ref-pills">
-          <button type="button" class="ref-pill active" data-ref-type="ALL" onclick="RefManager.filterByType('ALL')">
-            <i class="fas fa-th-list"></i> Tous <span class="pill-badge" id="ref-count-all">{{ params_familles_all|length }}</span>
-          </button>
-          <button type="button" class="ref-pill" data-ref-type="TYPE_FAMILLE" onclick="RefManager.filterByType('TYPE_FAMILLE')">
-            <i class="fas fa-layer-group" style="color:#1c5b96;"></i> Types <span class="pill-badge">{{ params_types_famille|length }}</span>
-          </button>
-          <button type="button" class="ref-pill" data-ref-type="VALORISATION" onclick="RefManager.filterByType('VALORISATION')">
-            <i class="fas fa-calculator" style="color:#0f766e;"></i> Valorisation <span class="pill-badge">{{ params_valorisation|length }}</span>
-          </button>
-          <button type="button" class="ref-pill" data-ref-type="CATEGORIE" onclick="RefManager.filterByType('CATEGORIE')">
-            <i class="fas fa-tags" style="color:#fd7e14;"></i> Catégories <span class="pill-badge">{{ params_categories|length }}</span>
-          </button>
-          <button type="button" class="ref-pill" data-ref-type="LIGNE_BUDGETAIRE" onclick="RefManager.filterByType('LIGNE_BUDGETAIRE')">
-            <i class="fas fa-coins" style="color:#6f42c1;"></i> Lignes Budgétaires <span class="pill-badge">{{ params_lignes_budgetaires|length }}</span>
-          </button>
-        </div>
-
         <div class="ref-controls">
           <div class="search-wrap" style="max-width:260px;">
             <i class="fas fa-search ico"></i>
-            <input type="text" id="ref-search-input" class="search-input" placeholder="Rechercher une valeur…" oninput="RefManager.onSearch(this.value)">
-            <button type="button" id="ref-search-clear" class="search-clear-btn" onclick="RefManager.clearSearch()" title="Effacer"><i class="fas fa-times"></i></button>
+            <input type="text" id="ref-search-input" class="search-input" placeholder="Rechercher une valeur…" oninput="RefCards.filter(this.value); RefManager.onSearch(this.value);">
+            <button type="button" id="ref-search-clear" class="search-clear-btn" onclick="RefCards.filter(''); RefManager.clearSearch();" title="Effacer"><i class="fas fa-times"></i></button>
           </div>
-
           <div class="view-switch" title="Changer le mode d'affichage">
-            <button type="button" id="btn-view-table" class="view-btn active" onclick="RefManager.switchView('table')"><i class="fas fa-table"></i> Tableau</button>
-            <button type="button" id="btn-view-cards" class="view-btn" onclick="RefManager.switchView('cards')"><i class="fas fa-grip-horizontal"></i> Cartes</button>
+            <button type="button" id="btn-view-cards" class="view-btn active" onclick="RefManager.switchView('cards')"><i class="fas fa-grip-horizontal"></i> Cartes</button>
+            <button type="button" id="btn-view-table" class="view-btn" onclick="RefManager.switchView('table')"><i class="fas fa-table"></i> Tableau</button>
           </div>
-
           <button class="btn-add btn-add-ref" type="button" onclick="RefManager.openModalForCurrent()">
             <i class="fas fa-plus"></i> Ajouter une valeur
           </button>
         </div>
       </div>
 
-      <!-- 3. VUE TABLEAU (Par défaut, pro et paginée) -->
-      <div id="ref-view-table">
+      <!-- 2. Filtres pills rapides -->
+      <div class="ref-pills" style="margin-bottom: 16px;">
+        <button type="button" class="ref-pill active" data-ref-type="ALL" onclick="RefManager.filterByType('ALL')">
+          <i class="fas fa-th-list"></i> Tous <span class="pill-badge" id="ref-count-all">{{ params_familles_all|length }}</span>
+        </button>
+        <button type="button" class="ref-pill" data-ref-type="TYPE_FAMILLE" onclick="RefManager.filterByType('TYPE_FAMILLE')">
+          <i class="fas fa-layer-group" style="color:#1c5b96;"></i> Types <span class="pill-badge">{{ params_types_famille|length }}</span>
+        </button>
+        <button type="button" class="ref-pill" data-ref-type="VALORISATION" onclick="RefManager.filterByType('VALORISATION')">
+          <i class="fas fa-calculator" style="color:#0f766e;"></i> Valorisation <span class="pill-badge">{{ params_valorisation|length }}</span>
+        </button>
+        <button type="button" class="ref-pill" data-ref-type="CATEGORIE" onclick="RefManager.filterByType('CATEGORIE')">
+          <i class="fas fa-tags" style="color:#fd7e14;"></i> Catégories <span class="pill-badge">{{ params_categories|length }}</span>
+        </button>
+        <button type="button" class="ref-pill" data-ref-type="LIGNE_BUDGETAIRE" onclick="RefManager.filterByType('LIGNE_BUDGETAIRE')">
+          <i class="fas fa-coins" style="color:#6f42c1;"></i> Lignes Budgétaires <span class="pill-badge">{{ params_lignes_budgetaires|length }}</span>
+        </button>
+      </div>
+
+      <!-- 3. VUE CARTES PAR CATÉGORIE (Active par défaut avec pagination individuelle) -->
+      <div id="ref-view-cards">
+        <div class="ref-grid">
+          <!-- Carte 1: Types de famille -->
+          <div class="ref-card" data-ref-card="TYPE_FAMILLE">
+            <div class="ref-card-head">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-layer-group" style="color:#1c5b96;font-size:14px;"></i>
+                <strong>Types de famille</strong>
+                <span class="badge-ref badge-type-famille" id="card-count-TYPE_FAMILLE">{{ params_types_famille|length }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <select class="card-per-page-select" onchange="RefCards.setPerPage('TYPE_FAMILLE', this.value)" title="Éléments par page">
+                  <option value="5" selected>5 / page</option>
+                  <option value="10">10 / page</option>
+                  <option value="all">Tous</option>
+                </select>
+                <button type="button" class="btn-ed-sm" title="Ajouter un type de famille" onclick="ouvrirModalParamFamille('','TYPE_FAMILLE','')"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="ref-card-body" id="card-body-TYPE_FAMILLE">
+              {% for p in params_types_famille %}
+              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
+                <span class="fw-semibold">{{ p.valeur }}</span>
+                <span class="ref-actions">
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                </span>
+              </div>
+              {% empty %}
+              <div class="ref-empty">Aucun type enregistré.</div>
+              {% endfor %}
+            </div>
+            <div class="card-pag" id="card-pag-TYPE_FAMILLE">
+              <div class="card-pag-info" id="card-pag-info-TYPE_FAMILLE"></div>
+              <div class="card-pag-ctrl" id="card-pag-ctrl-TYPE_FAMILLE"></div>
+            </div>
+          </div>
+
+          <!-- Carte 2: Méthodes de valorisation -->
+          <div class="ref-card" data-ref-card="VALORISATION">
+            <div class="ref-card-head">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-calculator" style="color:#0f766e;font-size:14px;"></i>
+                <strong>Méthodes de valorisation</strong>
+                <span class="badge-ref badge-valorisation" id="card-count-VALORISATION">{{ params_valorisation|length }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <select class="card-per-page-select" onchange="RefCards.setPerPage('VALORISATION', this.value)" title="Éléments par page">
+                  <option value="5" selected>5 / page</option>
+                  <option value="10">10 / page</option>
+                  <option value="all">Tous</option>
+                </select>
+                <button type="button" class="btn-ed-sm" title="Ajouter une méthode" onclick="ouvrirModalParamFamille('','VALORISATION','')"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="ref-card-body" id="card-body-VALORISATION">
+              {% for p in params_valorisation %}
+              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
+                <span class="fw-semibold">{{ p.valeur }}</span>
+                <span class="ref-actions">
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                </span>
+              </div>
+              {% empty %}
+              <div class="ref-empty">Aucune méthode enregistrée.</div>
+              {% endfor %}
+            </div>
+            <div class="card-pag" id="card-pag-VALORISATION">
+              <div class="card-pag-info" id="card-pag-info-VALORISATION"></div>
+              <div class="card-pag-ctrl" id="card-pag-ctrl-VALORISATION"></div>
+            </div>
+          </div>
+
+          <!-- Carte 3: Catégories -->
+          <div class="ref-card" data-ref-card="CATEGORIE">
+            <div class="ref-card-head">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-tags" style="color:#fd7e14;font-size:14px;"></i>
+                <strong>Catégories</strong>
+                <span class="badge-ref badge-categorie" id="card-count-CATEGORIE">{{ params_categories|length }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <select class="card-per-page-select" onchange="RefCards.setPerPage('CATEGORIE', this.value)" title="Éléments par page">
+                  <option value="5" selected>5 / page</option>
+                  <option value="10">10 / page</option>
+                  <option value="all">Tous</option>
+                </select>
+                <button type="button" class="btn-ed-sm" title="Ajouter une catégorie" onclick="ouvrirModalParamFamille('','CATEGORIE','')"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="ref-card-body" id="card-body-CATEGORIE">
+              {% for p in params_categories %}
+              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
+                <span class="fw-semibold">{{ p.valeur }}</span>
+                <span class="ref-actions">
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                </span>
+              </div>
+              {% empty %}
+              <div class="ref-empty">Aucune catégorie enregistrée.</div>
+              {% endfor %}
+            </div>
+            <div class="card-pag" id="card-pag-CATEGORIE">
+              <div class="card-pag-info" id="card-pag-info-CATEGORIE"></div>
+              <div class="card-pag-ctrl" id="card-pag-ctrl-CATEGORIE"></div>
+            </div>
+          </div>
+
+          <!-- Carte 4: Lignes budgétaires -->
+          <div class="ref-card" data-ref-card="LIGNE_BUDGETAIRE">
+            <div class="ref-card-head">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <i class="fas fa-coins" style="color:#6f42c1;font-size:14px;"></i>
+                <strong>Lignes budgétaires</strong>
+                <span class="badge-ref badge-ligne-budgetaire" id="card-count-LIGNE_BUDGETAIRE">{{ params_lignes_budgetaires|length }}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <select class="card-per-page-select" onchange="RefCards.setPerPage('LIGNE_BUDGETAIRE', this.value)" title="Éléments par page">
+                  <option value="5" selected>5 / page</option>
+                  <option value="10">10 / page</option>
+                  <option value="all">Tous</option>
+                </select>
+                <button type="button" class="btn-ed-sm" title="Ajouter une ligne" onclick="ouvrirModalParamFamille('','LIGNE_BUDGETAIRE','')"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="ref-card-body" id="card-body-LIGNE_BUDGETAIRE">
+              {% for p in params_lignes_budgetaires %}
+              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
+                <span class="fw-semibold">{{ p.valeur }}</span>
+                <span class="ref-actions">
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                </span>
+              </div>
+              {% empty %}
+              <div class="ref-empty">Aucune ligne budgétaire enregistrée.</div>
+              {% endfor %}
+            </div>
+            <div class="card-pag" id="card-pag-LIGNE_BUDGETAIRE">
+              <div class="card-pag-info" id="card-pag-info-LIGNE_BUDGETAIRE"></div>
+              <div class="card-pag-ctrl" id="card-pag-ctrl-LIGNE_BUDGETAIRE"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. VUE TABLEAU (Optionnelle, paginée) -->
+      <div id="ref-view-table" style="display:none;">
         <div style="overflow-x: auto; border: 1px solid var(--border-light); border-radius: 8px;">
           <table class="param-table">
             <thead>
@@ -518,135 +614,6 @@
             </div>
             <div class="pag-ctrl" id="ref-pag-ctrl">
               <!-- Dynamique via RefManager -->
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 4. VUE CARTES PAR CATÉGORIE (Optimisée et synchronisée) -->
-      <div id="ref-view-cards" style="display:none;">
-        <div class="ref-grid">
-          <!-- Carte: Types de famille -->
-          <div class="ref-card" data-ref-card="TYPE_FAMILLE">
-            <div class="ref-card-head">
-              <strong><i class="fas fa-layer-group" style="color:#1c5b96;margin-right:6px;"></i>Types de famille</strong>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="badge-ref badge-type-famille" id="card-count-TYPE_FAMILLE">{{ params_types_famille|length }}</span>
-                <button type="button" class="btn-ed-sm" title="Ajouter un type" onclick="ouvrirModalParamFamille('','TYPE_FAMILLE','')"><i class="fas fa-plus"></i></button>
-              </div>
-            </div>
-            <div class="ref-card-body" id="card-body-TYPE_FAMILLE">
-              {% for p in params_types_famille %}
-              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
-                <span class="fw-semibold">{{ p.valeur }}</span>
-                <span class="ref-actions">
-                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
-                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
-                </span>
-              </div>
-              {% empty %}
-              <div class="ref-empty">Aucun type enregistré.</div>
-              {% endfor %}
-            </div>
-            <div class="card-pag" id="card-pag-TYPE_FAMILLE" style="display:none;">
-              <span class="card-pag-info">1 / 1</span>
-              <div>
-                <button type="button" class="card-prev" onclick="RefCards.prev('TYPE_FAMILLE')"><i class="fas fa-chevron-left"></i></button>
-                <button type="button" class="card-next" onclick="RefCards.next('TYPE_FAMILLE')"><i class="fas fa-chevron-right"></i></button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Carte: Méthodes de valorisation -->
-          <div class="ref-card" data-ref-card="VALORISATION">
-            <div class="ref-card-head">
-              <strong><i class="fas fa-calculator" style="color:#0f766e;margin-right:6px;"></i>Méthodes de valorisation</strong>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="badge-ref badge-valorisation" id="card-count-VALORISATION">{{ params_valorisation|length }}</span>
-                <button type="button" class="btn-ed-sm" title="Ajouter une méthode" onclick="ouvrirModalParamFamille('','VALORISATION','')"><i class="fas fa-plus"></i></button>
-              </div>
-            </div>
-            <div class="ref-card-body" id="card-body-VALORISATION">
-              {% for p in params_valorisation %}
-              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
-                <span class="fw-semibold">{{ p.valeur }}</span>
-                <span class="ref-actions">
-                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
-                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
-                </span>
-              </div>
-              {% empty %}
-              <div class="ref-empty">Aucune méthode enregistrée.</div>
-              {% endfor %}
-            </div>
-            <div class="card-pag" id="card-pag-VALORISATION" style="display:none;">
-              <span class="card-pag-info">1 / 1</span>
-              <div>
-                <button type="button" class="card-prev" onclick="RefCards.prev('VALORISATION')"><i class="fas fa-chevron-left"></i></button>
-                <button type="button" class="card-next" onclick="RefCards.next('VALORISATION')"><i class="fas fa-chevron-right"></i></button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Carte: Catégories -->
-          <div class="ref-card" data-ref-card="CATEGORIE">
-            <div class="ref-card-head">
-              <strong><i class="fas fa-tags" style="color:#fd7e14;margin-right:6px;"></i>Catégories</strong>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="badge-ref badge-categorie" id="card-count-CATEGORIE">{{ params_categories|length }}</span>
-                <button type="button" class="btn-ed-sm" title="Ajouter une catégorie" onclick="ouvrirModalParamFamille('','CATEGORIE','')"><i class="fas fa-plus"></i></button>
-              </div>
-            </div>
-            <div class="ref-card-body" id="card-body-CATEGORIE">
-              {% for p in params_categories %}
-              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
-                <span class="fw-semibold">{{ p.valeur }}</span>
-                <span class="ref-actions">
-                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
-                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
-                </span>
-              </div>
-              {% empty %}
-              <div class="ref-empty">Aucune catégorie enregistrée.</div>
-              {% endfor %}
-            </div>
-            <div class="card-pag" id="card-pag-CATEGORIE" style="display:none;">
-              <span class="card-pag-info">1 / 1</span>
-              <div>
-                <button type="button" class="card-prev" onclick="RefCards.prev('CATEGORIE')"><i class="fas fa-chevron-left"></i></button>
-                <button type="button" class="card-next" onclick="RefCards.next('CATEGORIE')"><i class="fas fa-chevron-right"></i></button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Carte: Lignes budgétaires -->
-          <div class="ref-card" data-ref-card="LIGNE_BUDGETAIRE">
-            <div class="ref-card-head">
-              <strong><i class="fas fa-coins" style="color:#6f42c1;margin-right:6px;"></i>Lignes budgétaires</strong>
-              <div style="display:flex;align-items:center;gap:8px;">
-                <span class="badge-ref badge-ligne-budgetaire" id="card-count-LIGNE_BUDGETAIRE">{{ params_lignes_budgetaires|length }}</span>
-                <button type="button" class="btn-ed-sm" title="Ajouter une ligne" onclick="ouvrirModalParamFamille('','LIGNE_BUDGETAIRE','')"><i class="fas fa-plus"></i></button>
-              </div>
-            </div>
-            <div class="ref-card-body" id="card-body-LIGNE_BUDGETAIRE">
-              {% for p in params_lignes_budgetaires %}
-              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
-                <span class="fw-semibold">{{ p.valeur }}</span>
-                <span class="ref-actions">
-                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
-                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
-                </span>
-              </div>
-              {% empty %}
-              <div class="ref-empty">Aucune ligne budgétaire enregistrée.</div>
-              {% endfor %}
-            </div>
-            <div class="card-pag" id="card-pag-LIGNE_BUDGETAIRE" style="display:none;">
-              <span class="card-pag-info">1 / 1</span>
-              <div>
-                <button type="button" class="card-prev" onclick="RefCards.prev('LIGNE_BUDGETAIRE')"><i class="fas fa-chevron-left"></i></button>
-                <button type="button" class="card-next" onclick="RefCards.next('LIGNE_BUDGETAIRE')"><i class="fas fa-chevron-right"></i></button>
-              </div>
             </div>
           </div>
         </div>
@@ -966,14 +933,14 @@ var RefManager = (function() {
         searchQuery: '',
         perPage: 10,
         currentPage: 1,
-        viewMode: 'table'
+        viewMode: 'cards'
     };
 
     function init() {
         var container = document.getElementById('acc-ref-familles');
         if (!container) return;
-        render();
         RefCards.init();
+        render();
     }
 
     function filterByType(type) {
@@ -985,25 +952,10 @@ var RefManager = (function() {
             pill.classList.toggle('active', pill.dataset.refType === type);
         });
 
-        // Mise à jour des mini-cartes KPI
-        document.querySelectorAll('.ref-kpi-card').forEach(function(card) {
-            var cardType = card.dataset.refType;
-            card.classList.toggle('active', cardType === type);
-            card.classList.remove('active-typ', 'active-val', 'active-cat', 'active-lig');
-            if (cardType === type) {
-                if (type === 'TYPE_FAMILLE') card.classList.add('active-typ');
-                else if (type === 'VALORISATION') card.classList.add('active-val');
-                else if (type === 'CATEGORIE') card.classList.add('active-cat');
-                else if (type === 'LIGNE_BUDGETAIRE') card.classList.add('active-lig');
-            }
+        // Filtrer les cartes visibles
+        document.querySelectorAll('.ref-card[data-ref-card]').forEach(function(c) {
+            c.style.display = (type === 'ALL' || c.dataset.refCard === type) ? '' : 'none';
         });
-
-        // Mode cartes : filtrer les cartes visibles
-        if (state.viewMode === 'cards') {
-            document.querySelectorAll('.ref-card[data-ref-card]').forEach(function(c) {
-                c.style.display = (type === 'ALL' || c.dataset.refCard === type) ? '' : 'none';
-            });
-        }
 
         render();
     }
@@ -1013,8 +965,8 @@ var RefManager = (function() {
         state.currentPage = 1;
         var clearBtn = document.getElementById('ref-search-clear');
         if (clearBtn) clearBtn.style.display = state.searchQuery ? 'block' : 'none';
-        render();
         RefCards.filter(state.searchQuery);
+        render();
     }
 
     function clearSearch() {
@@ -1154,16 +1106,43 @@ var RefManager = (function() {
 
 var RefCards = (function() {
     var cards = {
-        'TYPE_FAMILLE': { page: 1, perPage: 5 },
-        'VALORISATION': { page: 1, perPage: 5 },
-        'CATEGORIE': { page: 1, perPage: 5 },
-        'LIGNE_BUDGETAIRE': { page: 1, perPage: 5 }
+        'TYPE_FAMILLE': { page: 1, perPage: 5, accent: '#1c5b96' },
+        'VALORISATION': { page: 1, perPage: 5, accent: '#0f766e' },
+        'CATEGORIE': { page: 1, perPage: 5, accent: '#fd7e14' },
+        'LIGNE_BUDGETAIRE': { page: 1, perPage: 5, accent: '#6f42c1' }
     };
 
     function init() {
         Object.keys(cards).forEach(function(type) {
             updateCard(type);
         });
+    }
+
+    function setPage(type, page) {
+        if (!cards[type]) return;
+        cards[type].page = page;
+        updateCard(type);
+    }
+
+    function setPerPage(type, perPage) {
+        if (!cards[type]) return;
+        cards[type].perPage = (perPage === 'all' ? 9999 : parseInt(perPage, 10));
+        cards[type].page = 1;
+        updateCard(type);
+    }
+
+    function prev(type) {
+        if (!cards[type]) return;
+        if (cards[type].page > 1) {
+            cards[type].page--;
+            updateCard(type);
+        }
+    }
+
+    function next(type) {
+        if (!cards[type]) return;
+        cards[type].page++;
+        updateCard(type);
     }
 
     function filter(query) {
@@ -1173,22 +1152,14 @@ var RefCards = (function() {
         });
     }
 
-    function prev(type) {
-        if (cards[type].page > 1) {
-            cards[type].page--;
-            updateCard(type);
-        }
-    }
-
-    function next(type) {
-        cards[type].page++;
-        updateCard(type);
-    }
-
     function updateCard(type, query) {
+        var conf = cards[type];
+        if (!conf) return;
+
         var q = (query !== undefined ? query : (document.getElementById('ref-search-input') ? document.getElementById('ref-search-input').value.toLowerCase().trim() : ''));
         var body = document.getElementById('card-body-' + type);
         var pagEl = document.getElementById('card-pag-' + type);
+        var countBadge = document.getElementById('card-count-' + type);
         if (!body) return;
 
         var rows = Array.from(body.querySelectorAll('.card-row'));
@@ -1200,17 +1171,24 @@ var RefCards = (function() {
         });
 
         var total = filtered.length;
-        var perPage = cards[type].perPage;
+        var totalRaw = rows.length;
+
+        // Mettre à jour le badge du header
+        if (countBadge) {
+            countBadge.textContent = q ? (total + '/' + totalRaw) : total;
+        }
+
+        var perPage = conf.perPage;
         var totalPages = Math.max(1, Math.ceil(total / perPage));
-        if (cards[type].page > totalPages) cards[type].page = totalPages;
-        if (cards[type].page < 1) cards[type].page = 1;
+        if (conf.page > totalPages) conf.page = totalPages;
+        if (conf.page < 1) conf.page = 1;
 
         rows.forEach(function(r) { r.style.display = 'none'; });
 
         if (total === 0) {
             if (emptyEl) {
                 emptyEl.style.display = 'block';
-                emptyEl.textContent = q ? 'Aucun résultat.' : 'Aucun élément enregistré.';
+                emptyEl.textContent = q ? 'Aucun résultat trouvé.' : 'Aucun élément enregistré.';
             }
             if (pagEl) pagEl.style.display = 'none';
             return;
@@ -1218,32 +1196,60 @@ var RefCards = (function() {
 
         if (emptyEl) emptyEl.style.display = 'none';
 
-        var start = (cards[type].page - 1) * perPage;
+        var start = (conf.page - 1) * perPage;
         var end = Math.min(start + perPage, total);
         for (var i = start; i < end; i++) {
             filtered[i].style.display = 'flex';
         }
 
         if (pagEl) {
-            if (totalPages > 1) {
-                pagEl.style.display = 'flex';
-                var info = pagEl.querySelector('.card-pag-info');
-                if (info) info.textContent = cards[type].page + ' / ' + totalPages + ' (' + total + ')';
-                var btnPrev = pagEl.querySelector('.card-prev');
-                var btnNext = pagEl.querySelector('.card-next');
-                if (btnPrev) btnPrev.disabled = (cards[type].page === 1);
-                if (btnNext) btnNext.disabled = (cards[type].page >= totalPages);
-            } else {
-                pagEl.style.display = 'none';
+            pagEl.style.display = 'flex';
+            var infoEl = document.getElementById('card-pag-info-' + type);
+            var ctrlEl = document.getElementById('card-pag-ctrl-' + type);
+
+            if (infoEl) {
+                if (perPage >= total) {
+                    infoEl.textContent = total + ' élément' + (total > 1 ? 's' : '');
+                } else {
+                    infoEl.textContent = (start + 1) + '-' + end + ' sur ' + total;
+                }
+            }
+
+            if (ctrlEl) {
+                if (totalPages <= 1) {
+                    ctrlEl.innerHTML = '';
+                } else {
+                    var html = '';
+                    // Bouton Précédent
+                    html += '<button type="button" class="card-pag-btn" ' + (conf.page === 1 ? 'disabled' : '') + ' onclick="RefCards.setPage(\'' + type + '\', ' + (conf.page - 1) + ')" title="Page précédente"><i class="fas fa-chevron-left"></i></button>';
+
+                    // Numéros de page
+                    for (var p = 1; p <= totalPages; p++) {
+                        if (p === conf.page) {
+                            html += '<button type="button" class="card-pag-btn active" style="background:' + conf.accent + '; border-color:' + conf.accent + ';">' + p + '</button>';
+                        } else if (p === 1 || p === totalPages || (p >= conf.page - 1 && p <= conf.page + 1)) {
+                            html += '<button type="button" class="card-pag-btn" onclick="RefCards.setPage(\'' + type + '\', ' + p + ')">' + p + '</button>';
+                        } else if (p === conf.page - 2 || p === conf.page + 2) {
+                            html += '<span style="padding:0 2px;color:var(--text-medium);font-size:10px;">…</span>';
+                        }
+                    }
+
+                    // Bouton Suivant
+                    html += '<button type="button" class="card-pag-btn" ' + (conf.page >= totalPages ? 'disabled' : '') + ' onclick="RefCards.setPage(\'' + type + '\', ' + (conf.page + 1) + ')" title="Page suivante"><i class="fas fa-chevron-right"></i></button>';
+
+                    ctrlEl.innerHTML = html;
+                }
             }
         }
     }
 
     return {
         init: init,
-        filter: filter,
+        setPage: setPage,
+        setPerPage: setPerPage,
         prev: prev,
         next: next,
+        filter: filter,
         updateCard: updateCard
     };
 })();
