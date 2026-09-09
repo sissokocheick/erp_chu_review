@@ -247,10 +247,10 @@
         {% if intervention.rapport_prestataire_scan or intervention.bon_sortie_signe_scan %}
         <div style="margin-top: 15px; border-top: 1px dashed #cbd5e0; padding-top: 15px; display: flex; gap: 15px;">
             {% if intervention.rapport_prestataire_scan %}
-            <a href="{{ intervention.rapport_prestataire_scan.url }}" target="_blank" style="background: var(--bg-hover); padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: var(--text-medium); text-decoration: none; border: 1px solid var(--border-color);"><i class="fas fa-file-pdf" style="color: #ef4444; margin-right: 5px;"></i> Voir Rapport Scanné</a>
+            <a href="{{ intervention.rapport_prestataire_scan.url }}" onclick="if(window.imprimerModal){ window.imprimerModal(this.href, 'Rapport Scanné'); return false; }" style="background: var(--bg-hover); padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: var(--text-medium); text-decoration: none; border: 1px solid var(--border-color);"><i class="fas fa-file-pdf" style="color: #ef4444; margin-right: 5px;"></i> Voir Rapport Scanné</a>
             {% endif %}
             {% if intervention.bon_sortie_signe_scan %}
-            <a href="{{ intervention.bon_sortie_signe_scan.url }}" target="_blank" style="background: var(--bg-hover); padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: var(--text-medium); text-decoration: none; border: 1px solid var(--border-color);"><i class="fas fa-file-signature" style="color: #3b82f6; margin-right: 5px;"></i> Voir Bon Signé</a>
+            <a href="{{ intervention.bon_sortie_signe_scan.url }}" onclick="if(window.imprimerModal){ window.imprimerModal(this.href, 'Bon Signé'); return false; }" style="background: var(--bg-hover); padding: 10px 15px; border-radius: 8px; font-size: 12px; font-weight: 800; color: var(--text-medium); text-decoration: none; border: 1px solid var(--border-color);"><i class="fas fa-file-signature" style="color: #3b82f6; margin-right: 5px;"></i> Voir Bon Signé</a>
             {% endif %}
         </div>
         {% endif %}
@@ -344,7 +344,7 @@
             {% if intervention.necessite_sortie_reparation %}
             <div style="background: #fee2e2; padding: 15px; border-radius: 8px; border: 1px solid #fca5a5; margin-bottom: 15px; text-align: center;">
                 <strong style="color: #b91c1c; font-size: 13px;"><i class="fas fa-exclamation-triangle"></i> La machine a quitté l'hôpital.</strong>
-                <a href="{% url 'patrimoine_imprimer_bon_sortie' intervention.id %}" target="_blank" style="display: block; background: #dc2626; color: white; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 800; font-size: 13px; margin-top: 10px; transition: 0.2s;"><i class="fas fa-print"></i> Imprimer Bon de Sortie (Sécurité)</a>
+                <a href="{% url 'patrimoine_imprimer_bon_sortie' intervention.id %}" onclick="if(window.imprimerModal){ window.imprimerModal(this.href, 'Bon de Sortie — {{ intervention.numero_intervention|escapejs }}'); return false; }" style="display: block; background: #dc2626; color: white; padding: 10px; border-radius: 6px; text-decoration: none; font-weight: 800; font-size: 13px; margin-top: 10px; transition: 0.2s;"><i class="fas fa-print"></i> Imprimer Bon de Sortie (Sécurité)</a>
             </div>
             {% endif %}
 

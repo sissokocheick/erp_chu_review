@@ -655,7 +655,7 @@
 
         <!-- Barre d'actions fixe -->
         <div class="btn-bar">
-            <button type="submit" name="action" value="apercu" class="btn btn-outline" id="btnApercu">
+            <button type="button" class="btn btn-outline" id="btnApercu">
                 👁️ Aperçu PDF
             </button>
             <button type="submit" class="btn btn-success" id="btnSave">
@@ -694,11 +694,88 @@
         });
     });
 
-    // Aperçu → nouvel onglet | Sauvegarde → même onglet
+    // Aperçu dans la Modale PDF globale (sans ouvrir de nouvel onglet)
     const form = document.getElementById('configForm');
+    let currentBlobUrl = null;
+
     document.getElementById('btnApercu').addEventListener('click', function(e) {
-        form.target = '_blank';
+        e.preventDefault();
+
+        // 1. Ouvrir immédiatement la modale PDF avec le chargeur
+        if (window.nxOpenPdfModal) {
+            window.nxOpenPdfModal('', 'Aperçu du modèle PDF : {{ type_doc_label|escapejs }}');
+        }
+
+        // 2. Préparer les données actuelles du formulaire
+        const formData = new FormData(form);
+        formData.set('action', 'apercu');
+
+        // Révoquer le précédent blob pour libérer la mémoire si présent
+        if (currentBlobUrl) {
+            URL.revokeObjectURL(currentBlobUrl);
+            currentBlobUrl = null;
+        }
+
+        // 3. Appel asynchrone pour générer le PDF
+        fetch(form.action || window.location.href, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(async function(response) {
+            const contentType = response.headers.get('content-type') || '';
+            if (response.ok && contentType.indexOf('application/pdf') !== -1) {
+                const blob = await response.blob();
+                currentBlobUrl = URL.createObjectURL(blob);
+                const iframe = document.getElementById('nx-pdf-iframe');
+                const loader = document.getElementById('nx-pdf-loader');
+                if (iframe) {
+                    iframe.onload = function() {
+                        if (loader) loader.style.display = 'none';
+                        iframe.style.display = 'block';
+                    };
+                    iframe.src = currentBlobUrl;
+                }
+            } else {
+                if (window.nxClosePdfModal) window.nxClosePdfModal();
+                const text = await response.text();
+                let errMsg = "Erreur lors de la génération de l'aperçu PDF.";
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(text, 'text/html');
+                const alertMsg = doc.querySelector('.alert-error, .alert-danger, .messages');
+                if (alertMsg) {
+                    errMsg = alertMsg.textContent.trim();
+                } else if (text && text.trim().length > 0 && text.length < 400) {
+                    errMsg = text.trim();
+                }
+                if (window.Swal) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Erreur Aperçu PDF',
+                        text: errMsg
+                    });
+                } else {
+                    alert(errMsg);
+                }
+            }
+        })
+        .catch(function(err) {
+            console.error('[Aperçu PDF] Erreur:', err);
+            if (window.nxClosePdfModal) window.nxClosePdfModal();
+            if (window.Swal) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur réseau',
+                    text: "Impossible de joindre le serveur pour générer l'aperçu : " + err.message
+                });
+            } else {
+                alert("Erreur réseau : " + err.message);
+            }
+        });
     });
+
     document.getElementById('btnSave').addEventListener('click', function(e) {
         form.target = '_self';
     });

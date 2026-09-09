@@ -267,9 +267,9 @@
                     {% endif %}
                 </td>
                 <td data-label="Actions" style="text-align:right;white-space:nowrap;">
-                    <a href="{% url 'imprimer_bon_multi_lignes' t.id %}" target="_blank" class="btn-action btn-print" style="padding: 8px 10px;" title="Imprimer le bon de transfert">
+                    <button type="button" class="btn-action btn-print" style="padding: 8px 10px;" onclick="imprimerModal('{% url 'imprimer_bon_multi_lignes' t.id %}', 'Bon de Transfert — {{ t.numero_bon|escapejs }}')" title="Imprimer le bon de transfert">
                         <i class="fas fa-print"></i>
-                    </a>
+                    </button>
                     {% if t.statut_validation == 'ATTENTE' and not t.est_annule %}
                     <button class="btn-action btn-receive" style="padding: 8px 10px;" onclick="receptionnerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Confirmer la réception du stock dans le magasin destination">
                         <i class="fas fa-check-double"></i>

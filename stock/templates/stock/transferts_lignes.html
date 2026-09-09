@@ -23,9 +23,9 @@
         {% endif %}
     </td>
     <td data-label="Actions" style="text-align:right;white-space:nowrap;">
-        <a href="{% url 'imprimer_bon_multi_lignes' t.id %}" target="_blank" class="btn-action btn-print" title="Imprimer le bon de transfert">
+        <button type="button" class="btn-action btn-print" onclick="imprimerModal('{% url 'imprimer_bon_multi_lignes' t.id %}', 'Bon de Transfert — {{ t.numero_bon|escapejs }}')" title="Imprimer le bon de transfert">
             <i class="fas fa-print"></i> Imprimer
-        </a>
+        </button>
         {% if t.statut_validation == 'ATTENTE' and not t.est_annule %}
         <form method="POST" action="{% url 'receptionner_transfert' t.id %}" style="display:inline;" id="form-recep-trans-{{ t.id }}">
             {% csrf_token %}

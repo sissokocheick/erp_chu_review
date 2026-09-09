@@ -216,3 +216,25 @@ class ConfigurationPDFTest(TestCase):
         # Le logo du magasin prime : le repli statique ne doit pas être utilisé
         self.assertIsNotNone(logo_url)
         self.assertNotIn('static/img/logo.jpg', logo_url)
+
+    def test_generer_apercu_pdf_reponse(self):
+        """Vérifie que l'action aperçu génère bien un flux PDF valide sans erreur name 'weasyprint'."""
+        from django.urls import reverse
+
+        self.user.is_superuser = True
+        self.user.save()
+        if hasattr(self.user, 'profil'):
+            self.user.profil.doit_changer_mdp = False
+            self.user.profil.save()
+        self.client.force_login(self.user)
+
+        url = reverse('modele_pdf_config', kwargs={'magasin_id': self.magasin.id, 'type_doc': 'BS'})
+        response = self.client.post(url, {
+            'action': 'apercu',
+            'couleur_primaire': '#1c5b96',
+            'texte_institutionnel': 'CHU TEST DAF',
+            'titre_document': 'BON DE SORTIE',
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertTrue(response.content.startswith(b'%PDF'))

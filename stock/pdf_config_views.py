@@ -20,11 +20,11 @@ from django.conf import settings
 from django.contrib.staticfiles.finders import find
 
 try:
+    import weasyprint
     from weasyprint import HTML
-except OSError:
-    HTML = None
-except ImportError:
+except (ImportError, OSError):
     weasyprint = None
+    HTML = None
 
 from stock.models import Magasin, ModeleDocumentMagasin
 
@@ -181,6 +181,30 @@ _TEMPLATE_MAP = {
 }
 
 
+def _get_logo_url(request, magasin=None):
+    """Retourne l'URL ou data-URI du logo pour les modèles PDF."""
+    try:
+        from stock.pdf_utils import _static_logo_data_uri, _make_absolute_url
+        if magasin and getattr(magasin, 'logo', None):
+            try:
+                return _make_absolute_url(request, magasin.logo.url)
+            except Exception:
+                pass
+        from core.models import ConfigurationHopital
+        hopital = ConfigurationHopital.get_instance()
+        if hopital and hopital.logo:
+            try:
+                return _make_absolute_url(request, hopital.logo.url)
+            except Exception:
+                pass
+        static_logo = _static_logo_data_uri()
+        if static_logo:
+            return static_logo
+    except Exception as e:
+        logger.warning(f"[PDF] Erreur récupération logo : {e}")
+    return None
+
+
 @method_decorator(login_required, name='dispatch')
 class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
 
@@ -283,12 +307,8 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
         )
 
         try:
-            if not weasyprint:
-                messages.error(request, "WeasyPrint n'est pas installé.")
-                return redirect('modele_pdf_config', magasin_id=magasin.id, type_doc=modele.type_document)
-
             template_name = _TEMPLATE_MAP.get(modele.type_document, 'stock/pdf/bon_sortie.html')
-            logo_url = _get_logo_url(request)
+            logo_url = _get_logo_url(request, magasin=magasin)
 
             service = SimpleNamespace(nom='ORTHO-TRAUMATO-CHIRURGIE PLASTIQUE')
             service_code = '411OTC'
@@ -481,14 +501,29 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                 }
 
             html_string = render_to_string(template_name, context, request=request)
+            pdf_bytes = None
+
+            # 1. Tentative avec Chromium (Playwright) si disponible
             try:
                 from core.pdf_chromium import html_to_pdf
                 pdf_bytes = html_to_pdf(html_string)
-            except Exception:
-                pdf_bytes = weasyprint.HTML(
-                    string=html_string,
-                    base_url=request.build_absolute_uri('/')
-                ).write_pdf()
+            except Exception as e_chrom:
+                logger.debug(f"[PDF Aperçu] Chromium indisponible ({e_chrom}), tentative WeasyPrint")
+
+            # 2. Tentative avec WeasyPrint si Chromium échoue ou est absent
+            if pdf_bytes is None and HTML is not None:
+                try:
+                    pdf_bytes = HTML(
+                        string=html_string,
+                        base_url=request.build_absolute_uri('/')
+                    ).write_pdf()
+                except Exception as e_wp:
+                    logger.warning(f"[PDF Aperçu] WeasyPrint a échoué ({e_wp}), repli ReportLab")
+
+            # 3. Secours universel avec ReportLab si aucun moteur HTML->PDF n'est prêt
+            if pdf_bytes is None:
+                from stock.pdf_utils import _pdf_fallback
+                pdf_bytes = _pdf_fallback(context, html_string)
 
             response = HttpResponse(pdf_bytes, content_type='application/pdf')
             filename = f'apercu_{modele.type_document.lower()}.pdf'
@@ -497,5 +532,7 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
 
         except Exception as e:
             logger.exception("[PDF Aperçu] Erreur génération")
+            if request.headers.get('x-requested-with') == 'XMLHttpRequest' or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return HttpResponse(f"Erreur lors de la génération de l'aperçu : {e}", status=500, content_type='text/plain; charset=utf-8')
             messages.error(request, f"Erreur lors de la génération de l'aperçu : {e}")
             return redirect('modele_pdf_config', magasin_id=magasin.id, type_doc=modele.type_document)

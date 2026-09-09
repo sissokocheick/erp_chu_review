@@ -1444,19 +1444,28 @@
         // â”€â”€ Modal PDF Globale â”€â”€
         function nxOpenPdfModal(url, title) {
             var modal = document.getElementById('nx-modal-pdf');
-            document.getElementById('nx-pdf-title').innerHTML = '<i class="fas fa-print me-2"></i> ' + (title || 'Impression');
+            if (!modal) return;
+            var titleEl = document.getElementById('nx-pdf-title');
+            if (titleEl) titleEl.innerHTML = '<i class="fas fa-print me-2"></i> ' + (title || 'Impression');
             var loader = document.getElementById('nx-pdf-loader');
             var iframe = document.getElementById('nx-pdf-iframe');
-            loader.style.display = 'flex';
-            iframe.style.display = 'none';
-            iframe.src = '';
+            if (loader) loader.style.display = 'flex';
+            if (iframe) {
+                iframe.style.display = 'none';
+                iframe.src = '';
+            }
             modal.classList.add('open');
-            iframe.onload = function() {
-                loader.style.display = 'none';
-                iframe.style.display = 'block';
-            };
-            iframe.src = url;
+            if (!url) return;
+            if (iframe) {
+                iframe.onload = function() {
+                    if (loader) loader.style.display = 'none';
+                    iframe.style.display = 'block';
+                };
+                iframe.src = url;
+            }
         }
+        window.nxOpenPdfModal = nxOpenPdfModal;
+
         // Alias global : toutes les pages appellent imprimerModal(url, titre)
         // et doivent passer par la modale PDF unique de base_ui.
         window.imprimerModal = function(url, titre) {
@@ -1470,8 +1479,15 @@
             window.open(url, '_blank');
         };
         function nxClosePdfModal() {
-            document.getElementById('nx-modal-pdf').classList.remove('open');
+            var modal = document.getElementById('nx-modal-pdf');
+            if (modal) modal.classList.remove('open');
+            var iframe = document.getElementById('nx-pdf-iframe');
+            if (iframe) {
+                iframe.src = '';
+                iframe.style.display = 'none';
+            }
         }
+        window.nxClosePdfModal = nxClosePdfModal;
         document.getElementById('nx-modal-pdf').addEventListener('click', function(e) {
             if (e.target === this) nxClosePdfModal();
         });
@@ -1529,14 +1545,56 @@
     </script>
 
     <script>
-        // â”€â”€ FORCER NAVIGATION NORMALE â”€â”€
+        // ── INTERCEPTION GLOBALE DES LIENS PDF / IMPRESSION ET FORÇAGE NAVIGATION ──
         document.addEventListener('click', function(e) {
             var a = e.target.closest('a');
             if (!a) return;
+
+            var href = a.getAttribute('href');
+            if (!href || href === '#' || href.startsWith('javascript:')) return;
+
+            // Ignorer si téléchargement direct explicite ou exception demandée
+            if (a.hasAttribute('download') || a.dataset.noModal === 'true') return;
+
+            var cleanHref = href.split('?')[0].split('#')[0].toLowerCase();
+            var isPdf = false;
+
+            if (cleanHref.endsWith('.pdf')) {
+                isPdf = true;
+            } else if (
+                cleanHref.includes('/pdf/') || 
+                cleanHref.includes('/imprimer/') || 
+                cleanHref.includes('/imprimer-') ||
+                a.classList.contains('btn-pdf') || 
+                a.classList.contains('btn-print') ||
+                a.dataset.pdf === 'true'
+            ) {
+                // Ne pas intercepter les formulaires de configuration ou l'admin django
+                if (!cleanHref.includes('modele-pdf') && !cleanHref.includes('/admin/')) {
+                    isPdf = true;
+                }
+            }
+
+            if (isPdf) {
+                e.preventDefault();
+                e.stopPropagation();
+                var title = a.getAttribute('title') || a.dataset.titre || a.innerText.trim() || 'Document PDF';
+                if (window.imprimerModal) {
+                    window.imprimerModal(href, title);
+                } else if (window.nxOpenPdfModal) {
+                    window.nxOpenPdfModal(href, title);
+                } else {
+                    window.open(href, '_blank');
+                }
+                return;
+            }
+
+            // Pour tous les autres liens internes, enlever target="_blank"
             if (a.href && a.href.indexOf(window.location.host) !== -1 && a.getAttribute('target') === '_blank') {
                 a.removeAttribute('target');
             }
-        });
+        }, true);
+
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelectorAll('.sidebar a[target="_blank"], .menu-item[target="_blank"], .module-title[target="_blank"]').forEach(function(a) {
                 a.removeAttribute('target');
