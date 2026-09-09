@@ -99,7 +99,9 @@ body {
 .data-table th {
     text-align: center;
     font-weight: bold;
+    font-size: 8.5pt;
     background-color: #f0f0f0;
+    white-space: nowrap;
 }
 {% if pdf_config.tableau.alternance_couleurs %}
 .data-table tbody tr:nth-child(even) { background-color: #f7f9fa; }
@@ -202,22 +204,22 @@ img { max-width: 100%; height: auto; }
       <table class="data-table">
         <thead>
           <tr>
-            {% if pdf_config.colonnes_visibles.numero %}<th style="width:6%;">N°</th>{% endif %}
-            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:14%;">Réf.</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.numero %}<th style="width:4%;">N°</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:10%;">Réf.</th>{% endif %}
             <th style="width:auto;">Désignations</th>
-            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:8%;">Unité</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:7%;">Unité</th>{% endif %}
             {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
-            <th style="width:10%; font-size:8pt;">N° Lot</th>
+            <th style="width:9%; font-size:8pt;">N° Lot</th>
             {% endif %}
             {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
-            <th style="width:10%; font-size:8pt;">Péremption</th>
+            <th style="width:9%; font-size:8pt;">Péremption</th>
             {% endif %}
-            <th style="width:10%;">Qté</th>
+            <th style="width:9%;">Qté</th>
             {% if pdf_config.colonnes_visibles.prix_unitaire %}
-            <th style="width:10%;">P.U.</th>
+            <th style="width:8%;">P.U.</th>
             {% endif %}
             {% if pdf_config.colonnes_visibles.montant %}
-            <th style="width:12%;">Montant</th>
+            <th style="width:10%;">Montant</th>
             {% endif %}
           </tr>
         </thead>
@@ -332,22 +334,22 @@ img { max-width: 100%; height: auto; }
       <table class="data-table">
         <thead>
           <tr>
-            {% if pdf_config.colonnes_visibles.numero %}<th style="width:6%;">N°</th>{% endif %}
-            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:14%;">Réf.</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.numero %}<th style="width:4%;">N°</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:10%;">Réf.</th>{% endif %}
             <th style="width:auto;">Désignations</th>
-            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:8%;">Unité</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:7%;">Unité</th>{% endif %}
             {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
-            <th style="width:10%; font-size:8pt;">N° Lot</th>
+            <th style="width:9%; font-size:8pt;">N° Lot</th>
             {% endif %}
             {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
-            <th style="width:10%; font-size:8pt;">Péremption</th>
+            <th style="width:9%; font-size:8pt;">Péremption</th>
             {% endif %}
-            <th style="width:10%;">Qté</th>
+            <th style="width:9%;">Qté</th>
             {% if pdf_config.colonnes_visibles.prix_unitaire %}
-            <th style="width:10%;">P.U.</th>
+            <th style="width:8%;">P.U.</th>
             {% endif %}
             {% if pdf_config.colonnes_visibles.montant %}
-            <th style="width:12%;">Montant</th>
+            <th style="width:10%;">Montant</th>
             {% endif %}
           </tr>
         </thead>
@@ -390,22 +392,22 @@ img { max-width: 100%; height: auto; }
         <table class="data-table">
           <thead>
             <tr>
-              {% if pdf_config.colonnes_visibles.numero %}<th style="width:6%;">N°</th>{% endif %}
-              {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:14%;">Réf.</th>{% endif %}
+              {% if pdf_config.colonnes_visibles.numero %}<th style="width:4%;">N°</th>{% endif %}
+              {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:10%;">Réf.</th>{% endif %}
               <th style="width:auto;">Désignations</th>
-              {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:8%;">Unité</th>{% endif %}
+              {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:7%;">Unité</th>{% endif %}
               {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
-              <th style="width:10%; font-size:8pt;">N° Lot</th>
+              <th style="width:9%; font-size:8pt;">N° Lot</th>
               {% endif %}
               {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
-              <th style="width:10%; font-size:8pt;">Péremption</th>
+              <th style="width:9%; font-size:8pt;">Péremption</th>
               {% endif %}
-              <th style="width:10%;">Qté</th>
+              <th style="width:9%;">Qté</th>
               {% if pdf_config.colonnes_visibles.prix_unitaire %}
-              <th style="width:10%;">P.U.</th>
+              <th style="width:8%;">P.U.</th>
               {% endif %}
               {% if pdf_config.colonnes_visibles.montant %}
-              <th style="width:12%;">Montant</th>
+              <th style="width:10%;">Montant</th>
               {% endif %}
             </tr>
           </thead>
@@ -447,22 +449,22 @@ img { max-width: 100%; height: auto; }
       <table class="data-table">
         <thead>
           <tr>
-            {% if pdf_config.colonnes_visibles.numero %}<th style="width:6%;">N°</th>{% endif %}
-            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:14%;">Réf.</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.numero %}<th style="width:4%;">N°</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:10%;">Réf.</th>{% endif %}
             <th style="width:auto;">Désignations</th>
-            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:8%;">Unité</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:7%;">Unité</th>{% endif %}
             {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
-            <th style="width:10%; font-size:8pt;">N° Lot</th>
+            <th style="width:9%; font-size:8pt;">N° Lot</th>
             {% endif %}
             {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
-            <th style="width:10%; font-size:8pt;">Péremption</th>
+            <th style="width:9%; font-size:8pt;">Péremption</th>
             {% endif %}
-            <th style="width:10%;">Qté</th>
+            <th style="width:9%;">Qté</th>
             {% if pdf_config.colonnes_visibles.prix_unitaire %}
-            <th style="width:10%;">P.U.</th>
+            <th style="width:8%;">P.U.</th>
             {% endif %}
             {% if pdf_config.colonnes_visibles.montant %}
-            <th style="width:12%;">Montant</th>
+            <th style="width:10%;">Montant</th>
             {% endif %}
           </tr>
         </thead>

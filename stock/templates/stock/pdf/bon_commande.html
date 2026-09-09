@@ -193,6 +193,7 @@ body {
     background-color: #f0f0f0;
     text-transform: uppercase;
     font-size: 8pt;
+    white-space: nowrap;
 }
 .data-table td.desig {
     text-align: left;
@@ -200,11 +201,11 @@ body {
 .data-table td.qt-bold {
     font-weight: bold;
 }
-.data-table .col-n { width: 8%; }
-.data-table .col-ref { width: 15%; }
+.data-table .col-n { width: 4%; }
+.data-table .col-ref { width: 10%; }
 .data-table .col-des { width: auto; }
-.data-table .col-un { width: 12%; }
-.data-table .col-qt { width: 13%; }
+.data-table .col-un { width: 9%; }
+.data-table .col-qt { width: 10%; }
 {% if pdf_config.tableau.alternance_couleurs %}
 .data-table tbody tr:nth-child(even) { background-color: #f7f9fa; }
 {% endif %}
@@ -329,10 +330,10 @@ img { max-width: 100%; height: auto; }
           {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th class="col-un">UNITE</th>{% endif %}
           <th class="col-qt">QUANTITE</th>
           {% if pdf_config.colonnes_visibles.prix_unitaire %}
-          <th style="width:12%;">P.U.</th>
+          <th style="width:9%;">P.U.</th>
           {% endif %}
           {% if pdf_config.colonnes_visibles.montant %}
-          <th style="width:14%;">MONTANT</th>
+          <th style="width:11%;">MONTANT</th>
           {% endif %}
         </tr>
       </thead>
@@ -463,10 +464,10 @@ img { max-width: 100%; height: auto; }
             {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th class="col-un">UNITE</th>{% endif %}
             <th class="col-qt">QUANTITE</th>
             {% if pdf_config.colonnes_visibles.prix_unitaire %}
-            <th style="width:12%;">P.U.</th>
+            <th style="width:9%;">P.U.</th>
             {% endif %}
             {% if pdf_config.colonnes_visibles.montant %}
-            <th style="width:14%;">MONTANT</th>
+            <th style="width:11%;">MONTANT</th>
             {% endif %}
           </tr>
         </thead>
@@ -509,10 +510,10 @@ img { max-width: 100%; height: auto; }
               {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th class="col-un">UNITE</th>{% endif %}
               <th class="col-qt">QUANTITE</th>
               {% if pdf_config.colonnes_visibles.prix_unitaire %}
-              <th style="width:12%;">P.U.</th>
+              <th style="width:9%;">P.U.</th>
               {% endif %}
               {% if pdf_config.colonnes_visibles.montant %}
-              <th style="width:14%;">MONTANT</th>
+              <th style="width:11%;">MONTANT</th>
               {% endif %}
             </tr>
           </thead>
@@ -557,10 +558,10 @@ img { max-width: 100%; height: auto; }
             {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th class="col-un">UNITE</th>{% endif %}
             <th class="col-qt">QUANTITE</th>
             {% if pdf_config.colonnes_visibles.prix_unitaire %}
-            <th style="width:12%;">P.U.</th>
+            <th style="width:9%;">P.U.</th>
             {% endif %}
             {% if pdf_config.colonnes_visibles.montant %}
-            <th style="width:14%;">MONTANT</th>
+            <th style="width:11%;">MONTANT</th>
             {% endif %}
           </tr>
         </thead>
