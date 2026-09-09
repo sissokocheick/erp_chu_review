@@ -93,13 +93,15 @@
           <div class="sig-image-center">
             <img src="{{ case.signature_path }}">
           </div>
+          {% if pdf_config.afficher_fonction_signataire|default_if_none:True and case.fonction %}
           <div class="sig-fonction-bottom">{{ case.fonction }}</div>
+          {% endif %}
         {% else %}
           {% if case.user_name %}
             <div class="sig-name-top">{{ case.user_name }}</div>
           {% endif %}
           <div class="sig-empty-space"></div>
-          {% if case.fonction %}
+          {% if pdf_config.afficher_fonction_signataire|default_if_none:True and case.fonction %}
             <div class="sig-fonction-bottom">{{ case.fonction }}</div>
           {% endif %}
           {% if case.default_text %}

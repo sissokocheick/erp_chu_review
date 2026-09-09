@@ -18,7 +18,11 @@
 
     }
     @bottom-right {
+        {% if pdf_config.pied_de_page.afficher_numero_page|default_if_none:True %}
         content: counter(page) " / " counter(pages);
+        {% else %}
+        content: "";
+        {% endif %}
         font-size: 7pt;
         color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
         font-weight: bold;
@@ -98,6 +102,17 @@ body {
     font-weight: bold;
     background-color: #f0f0f0;
 }
+{% if pdf_config.tableau.alternance_couleurs %}
+.data-table tbody tr:nth-child(even) { background-color: #f7f9fa; }
+{% endif %}
+{% if pdf_config.tableau.bordure_style and pdf_config.tableau.bordure_style != 'solid' %}
+.data-table th, .data-table td { border-style: {{ pdf_config.tableau.bordure_style }}; }
+{% endif %}
+{% if pdf_config.tableau.bordure_epaisseur == 'fine' %}
+.data-table th, .data-table td { border-width: 0.5px; }
+{% elif pdf_config.tableau.bordure_epaisseur == 'strong' %}
+.data-table th, .data-table td { border-width: 1.8px; }
+{% endif %}
 img { max-width: 100%; height: auto; }
 </style>
 <base target="_blank">
@@ -147,12 +162,16 @@ img { max-width: 100%; height: auto; }
             <div style="font-size:15pt; font-weight:bold; text-transform:uppercase;">BON D'ENTRÉE</div>
             <div style="font-size:13pt; font-weight:bold; text-transform:uppercase;">DE MATÉRIELS ET FOURNITURES</div>
           </td>
+          {% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}
           <td style="width:25%; vertical-align:top; text-align:left; border-left:none; font-size:10pt; font-weight:bold;">
             {% if pdf_config.metadonnees.code_document %}Code : {{ pdf_config.metadonnees.code_document }}<br>{% endif %}
             {% if pdf_config.metadonnees.date_creation_doc %}Créé le : {{ pdf_config.metadonnees.date_creation_doc }}<br>{% endif %}
             {% if pdf_config.metadonnees.date_revision_doc %}Révisé le : {{ pdf_config.metadonnees.date_revision_doc }}<br>{% endif %}
             {% if pdf_config.metadonnees.version_doc %}Version : {{ pdf_config.metadonnees.version_doc }}{% endif %}
           </td>
+          {% else %}
+          <td style="width:25%; border-left:none;"></td>
+          {% endif %}
         </tr>
       </table>
 
@@ -160,7 +179,7 @@ img { max-width: 100%; height: auto; }
         <tr>
           <td style="width:50%; vertical-align:top;">
             {% if bon.fournisseur %}
-              <div style="border:2px solid #000; padding:2mm; display:inline-block; min-width:60%;">
+              <div style="{% if pdf_config.service_demandeur.encadrer|default_if_none:True %}border:2px solid #000;{% else %}border:none;{% endif %} padding:2mm; display:inline-block; min-width:60%; text-align:{{ pdf_config.service_demandeur.position|default:'center' }};">
                 <div style="font-size:9pt; font-weight:bold; text-align:center; text-transform:uppercase;">FOURNISSEUR</div>
                 <div style="font-size:10pt; font-weight:bold; text-align:center; margin-top:1mm;">{{ bon.fournisseur.raison_sociale|upper|default:"-" }}</div>
                 <div style="font-size:8pt; text-align:center; margin-top:1mm;">
@@ -190,12 +209,14 @@ img { max-width: 100%; height: auto; }
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width:8%;">N°</th>
-            <th style="width:14%;">Ref.</th>
-            <th style="{% if a_lots %}{% if est_reception_partielle %}width:24%;{% else %}width:34%;{% endif %}{% elif est_reception_partielle %}width:44%;{% else %}width:54%;{% endif %}">Désignations</th>
-            <th style="width:10%;">Unité</th>
-            {% if a_lots %}
+            {% if pdf_config.colonnes_visibles.numero %}<th style="width:6%;">N°</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:14%;">Ref.</th>{% endif %}
+            <th style="width:auto;">Désignations</th>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:8%;">Unité</th>{% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
             <th style="width:10%; font-size:8pt;">N° Lot</th>
+            {% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
             <th style="width:10%; font-size:8pt;">Péremption</th>
             {% endif %}
             {% if est_reception_partielle %}
@@ -205,25 +226,39 @@ img { max-width: 100%; height: auto; }
             {% if est_reception_partielle %}
             <th style="width:10%;">Reliquat</th>
             {% endif %}
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <th style="width:10%;">P.U.</th>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <th style="width:12%;">Montant</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
           {% for ligne in pages.0.lignes %}
           <tr{% if pages.0.hauteur_ligne %} style="height: {{ pages.0.hauteur_ligne }}mm"{% endif %}>
-            <td style="text-align:center;">{{ ligne.idx }}</td>
-            <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+            {% if pdf_config.colonnes_visibles.numero %}<td style="text-align:center;">{{ ligne.idx }}</td>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>{% endif %}
             <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
-            <td style="text-align:center;">{{ ligne.unite|default:"Unité" }}</td>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<td style="text-align:center;">{{ ligne.unite|default:"Unité" }}</td>{% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+            {% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+            {% endif %}
             {% if est_reception_partielle %}
             <td style="text-align:center; font-weight:bold;">{{ ligne.quantite|intspace }}</td>
-            {% endif %}
-            {% if a_lots %}
-            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
-            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
             {% endif %}
             <td style="text-align:center; font-weight:bold;">{{ ligne.quantite_recue|intspace }}</td>
             {% if est_reception_partielle %}
             <td style="text-align:center; font-weight:bold; color:#c0392b;">{{ ligne.reliquat|intspace }}</td>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <td style="text-align:right;">{{ ligne.prix_unitaire|default:"&mdash;" }}</td>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <td style="text-align:right;">{{ ligne.montant|default:"&mdash;" }}</td>
             {% endif %}
           </tr>
           {% endfor %}
@@ -277,19 +312,23 @@ img { max-width: 100%; height: auto; }
             <div style="font-size:15pt; font-weight:bold; text-transform:uppercase;">BON D'ENTRÉE</div>
             <div style="font-size:13pt; font-weight:bold; text-transform:uppercase;">DE MATÉRIELS ET FOURNITURES</div>
           </td>
+          {% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}
           <td style="width:25%; vertical-align:top; text-align:left; border-left:none; font-size:10pt; font-weight:bold;">
             {% if pdf_config.metadonnees.code_document %}Code : {{ pdf_config.metadonnees.code_document }}<br>{% endif %}
             {% if pdf_config.metadonnees.date_creation_doc %}Créé le : {{ pdf_config.metadonnees.date_creation_doc }}<br>{% endif %}
             {% if pdf_config.metadonnees.date_revision_doc %}Révisé le : {{ pdf_config.metadonnees.date_revision_doc }}<br>{% endif %}
             {% if pdf_config.metadonnees.version_doc %}Version : {{ pdf_config.metadonnees.version_doc }}{% endif %}
           </td>
+          {% else %}
+          <td style="width:25%; border-left:none;"></td>
+          {% endif %}
         </tr>
       </table>
       <table class="service-infos">
         <tr>
           <td style="width:50%; vertical-align:top;">
             {% if bon.fournisseur %}
-              <div style="border:2px solid #000; padding:2mm; display:inline-block; min-width:60%;">
+              <div style="{% if pdf_config.service_demandeur.encadrer|default_if_none:True %}border:2px solid #000;{% else %}border:none;{% endif %} padding:2mm; display:inline-block; min-width:60%; text-align:{{ pdf_config.service_demandeur.position|default:'center' }};">
                 <div style="font-size:9pt; font-weight:bold; text-align:center; text-transform:uppercase;">FOURNISSEUR</div>
                 <div style="font-size:10pt; font-weight:bold; text-align:center; margin-top:1mm;">{{ bon.fournisseur.raison_sociale|upper|default:"-" }}</div>
               </div>
@@ -309,12 +348,14 @@ img { max-width: 100%; height: auto; }
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width:8%;">N°</th>
-            <th style="width:14%;">Ref.</th>
-            <th style="{% if a_lots %}{% if est_reception_partielle %}width:24%;{% else %}width:34%;{% endif %}{% elif est_reception_partielle %}width:44%;{% else %}width:54%;{% endif %}">Désignations</th>
-            <th style="width:10%;">Unité</th>
-            {% if a_lots %}
+            {% if pdf_config.colonnes_visibles.numero %}<th style="width:6%;">N°</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:14%;">Ref.</th>{% endif %}
+            <th style="width:auto;">Désignations</th>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:8%;">Unité</th>{% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
             <th style="width:10%; font-size:8pt;">N° Lot</th>
+            {% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
             <th style="width:10%; font-size:8pt;">Péremption</th>
             {% endif %}
             {% if est_reception_partielle %}
@@ -324,25 +365,39 @@ img { max-width: 100%; height: auto; }
             {% if est_reception_partielle %}
             <th style="width:10%;">Reliquat</th>
             {% endif %}
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <th style="width:10%;">P.U.</th>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <th style="width:12%;">Montant</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
           {% for ligne in page.lignes %}
           <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
-            <td style="text-align:center;">{{ ligne.idx }}</td>
-            <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+            {% if pdf_config.colonnes_visibles.numero %}<td style="text-align:center;">{{ ligne.idx }}</td>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>{% endif %}
             <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
-            <td style="text-align:center;">{{ ligne.unite|default:"Unité" }}</td>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<td style="text-align:center;">{{ ligne.unite|default:"Unité" }}</td>{% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+            {% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+            {% endif %}
             {% if est_reception_partielle %}
             <td style="text-align:center; font-weight:bold;">{{ ligne.quantite|intspace }}</td>
-            {% endif %}
-            {% if a_lots %}
-            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
-            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
             {% endif %}
             <td style="text-align:center; font-weight:bold;">{{ ligne.quantite_recue|intspace }}</td>
             {% if est_reception_partielle %}
             <td style="text-align:center; font-weight:bold; color:#c0392b;">{{ ligne.reliquat|intspace }}</td>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <td style="text-align:right;">{{ ligne.prix_unitaire|default:"&mdash;" }}</td>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <td style="text-align:right;">{{ ligne.montant|default:"&mdash;" }}</td>
             {% endif %}
           </tr>
           {% endfor %}
@@ -363,12 +418,14 @@ img { max-width: 100%; height: auto; }
         <table class="data-table">
           <thead>
             <tr>
-              <th style="width:8%;">N°</th>
-              <th style="width:14%;">Ref.</th>
-              <th style="{% if a_lots %}{% if est_reception_partielle %}width:24%;{% else %}width:34%;{% endif %}{% elif est_reception_partielle %}width:44%;{% else %}width:54%;{% endif %}">Désignations</th>
-              <th style="width:10%;">Unité</th>
-              {% if a_lots %}
+              {% if pdf_config.colonnes_visibles.numero %}<th style="width:6%;">N°</th>{% endif %}
+              {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:14%;">Ref.</th>{% endif %}
+              <th style="width:auto;">Désignations</th>
+              {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:8%;">Unité</th>{% endif %}
+              {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
               <th style="width:10%; font-size:8pt;">N° Lot</th>
+              {% endif %}
+              {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
               <th style="width:10%; font-size:8pt;">Péremption</th>
               {% endif %}
               {% if est_reception_partielle %}
@@ -378,25 +435,39 @@ img { max-width: 100%; height: auto; }
               {% if est_reception_partielle %}
               <th style="width:10%;">Reliquat</th>
               {% endif %}
+              {% if pdf_config.colonnes_visibles.prix_unitaire %}
+              <th style="width:10%;">P.U.</th>
+              {% endif %}
+              {% if pdf_config.colonnes_visibles.montant %}
+              <th style="width:12%;">Montant</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
             {% for ligne in page.lignes %}
             <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
-              <td style="text-align:center;">{{ ligne.idx }}</td>
-              <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+              {% if pdf_config.colonnes_visibles.numero %}<td style="text-align:center;">{{ ligne.idx }}</td>{% endif %}
+              {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>{% endif %}
               <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
-              <td style="text-align:center;">{{ ligne.unite|default:"Unité" }}</td>
+              {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<td style="text-align:center;">{{ ligne.unite|default:"Unité" }}</td>{% endif %}
+              {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
+              <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+              {% endif %}
+              {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
+              <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+              {% endif %}
               {% if est_reception_partielle %}
               <td style="text-align:center; font-weight:bold;">{{ ligne.quantite|intspace }}</td>
-              {% endif %}
-              {% if a_lots %}
-              <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
-              <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
               {% endif %}
               <td style="text-align:center; font-weight:bold;">{{ ligne.quantite_recue|intspace }}</td>
               {% if est_reception_partielle %}
               <td style="text-align:center; font-weight:bold; color:#c0392b;">{{ ligne.reliquat|intspace }}</td>
+              {% endif %}
+              {% if pdf_config.colonnes_visibles.prix_unitaire %}
+              <td style="text-align:right;">{{ ligne.prix_unitaire|default:"&mdash;" }}</td>
+              {% endif %}
+              {% if pdf_config.colonnes_visibles.montant %}
+              <td style="text-align:right;">{{ ligne.montant|default:"&mdash;" }}</td>
               {% endif %}
             </tr>
             {% endfor %}
@@ -416,12 +487,14 @@ img { max-width: 100%; height: auto; }
       <table class="data-table">
         <thead>
           <tr>
-            <th style="width:8%;">N°</th>
-            <th style="width:14%;">Ref.</th>
-            <th style="{% if a_lots %}{% if est_reception_partielle %}width:24%;{% else %}width:34%;{% endif %}{% elif est_reception_partielle %}width:44%;{% else %}width:54%;{% endif %}">Désignations</th>
-            <th style="width:10%;">Unité</th>
-            {% if a_lots %}
+            {% if pdf_config.colonnes_visibles.numero %}<th style="width:6%;">N°</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th style="width:14%;">Ref.</th>{% endif %}
+            <th style="width:auto;">Désignations</th>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th style="width:8%;">Unité</th>{% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
             <th style="width:10%; font-size:8pt;">N° Lot</th>
+            {% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
             <th style="width:10%; font-size:8pt;">Péremption</th>
             {% endif %}
             {% if est_reception_partielle %}
@@ -431,25 +504,39 @@ img { max-width: 100%; height: auto; }
             {% if est_reception_partielle %}
             <th style="width:10%;">Reliquat</th>
             {% endif %}
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <th style="width:10%;">P.U.</th>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <th style="width:12%;">Montant</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
           {% for ligne in page.lignes %}
           <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
-            <td style="text-align:center;">{{ ligne.idx }}</td>
-            <td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>
+            {% if pdf_config.colonnes_visibles.numero %}<td style="text-align:center;">{{ ligne.idx }}</td>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<td style="text-align:center;">{{ ligne.reference|default:"&mdash;" }}</td>{% endif %}
             <td style="word-wrap:break-word; overflow-wrap:break-word;">{{ ligne.designation }}</td>
-            <td style="text-align:center;">{{ ligne.unite|default:"Unité" }}</td>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<td style="text-align:center;">{{ ligne.unite|default:"Unité" }}</td>{% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.lot|default_if_none:True %}
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
+            {% endif %}
+            {% if a_lots and pdf_config.colonnes_visibles.peremption|default_if_none:True %}
+            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
+            {% endif %}
             {% if est_reception_partielle %}
             <td style="text-align:center; font-weight:bold;">{{ ligne.quantite|intspace }}</td>
-            {% endif %}
-            {% if a_lots %}
-            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.numero_lot|default:"&mdash;" }}</td>
-            <td style="text-align:center; font-weight:bold; font-size:8pt;">{{ ligne.date_peremption|date:"d/m/Y"|default:"&mdash;" }}</td>
             {% endif %}
             <td style="text-align:center; font-weight:bold;">{{ ligne.quantite_recue|intspace }}</td>
             {% if est_reception_partielle %}
             <td style="text-align:center; font-weight:bold; color:#c0392b;">{{ ligne.reliquat|intspace }}</td>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <td style="text-align:right;">{{ ligne.prix_unitaire|default:"&mdash;" }}</td>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <td style="text-align:right;">{{ ligne.montant|default:"&mdash;" }}</td>
             {% endif %}
           </tr>
           {% endfor %}

@@ -525,6 +525,34 @@
                             </div>
                         </div>
                         {% endif %}
+
+                        {% if nb_signatures_max >= 5 %}
+                        <div class="signature-block">
+                            <h4>Signature #5</h4>
+                            <div class="sig-grid">
+                                <div class="form-group"><label>Label</label><input type="text" name="signatures_5_label" value="{{ signatures_5_label|default:'' }}" placeholder="ex: Réceptionnaire"></div>
+                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_5_role" value="{{ signatures_5_role|default:'' }}" placeholder="ex: Contrôleur"></div>
+                                <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_5_visible %}checked{% endif %}"><input type="checkbox" name="signatures_5_visible" {% if signatures_5_visible %}checked{% endif %}> Afficher</label></div></div>
+                                <div class="form-group"><label>Position</label><select name="signatures_5_position"><option value="left" {% if signatures_5_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_5_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_5_position == 'right' %}selected{% endif %}>Droite</option></select></div>
+                                <div class="form-group"><label>Style</label><select name="signatures_5_style"><option value="ligne_pointillee" {% if signatures_5_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_5_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_5_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_5_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
+                                <div class="form-group"><label>Condition</label><select name="signatures_5_condition"><option value="toujours" {% if signatures_5_condition == 'toujours' %}selected{% endif %}>Toujours</option><option value="si_valide" {% if signatures_5_condition == 'si_valide' %}selected{% endif %}>Si validé</option><option value="si_rejete" {% if signatures_5_condition == 'si_rejete' %}selected{% endif %}>Si rejeté</option></select></div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if nb_signatures_max >= 6 %}
+                        <div class="signature-block">
+                            <h4>Signature #6</h4>
+                            <div class="sig-grid">
+                                <div class="form-group"><label>Label</label><input type="text" name="signatures_6_label" value="{{ signatures_6_label|default:'' }}" placeholder="ex: Visa Direction"></div>
+                                <div class="form-group"><label>Rôle / Fonction</label><input type="text" name="signatures_6_role" value="{{ signatures_6_role|default:'' }}" placeholder="ex: Directeur Général"></div>
+                                <div class="form-group"><label>Visible</label><div class="checkbox-group"><label class="checkbox-item {% if signatures_6_visible %}checked{% endif %}"><input type="checkbox" name="signatures_6_visible" {% if signatures_6_visible %}checked{% endif %}> Afficher</label></div></div>
+                                <div class="form-group"><label>Position</label><select name="signatures_6_position"><option value="left" {% if signatures_6_position == 'left' %}selected{% endif %}>Gauche</option><option value="center" {% if signatures_6_position == 'center' %}selected{% endif %}>Centre</option><option value="right" {% if signatures_6_position == 'right' %}selected{% endif %}>Droite</option></select></div>
+                                <div class="form-group"><label>Style</label><select name="signatures_6_style"><option value="ligne_pointillee" {% if signatures_6_style == 'ligne_pointillee' %}selected{% endif %}>Ligne pointillée</option><option value="ligne_pleine" {% if signatures_6_style == 'ligne_pleine' %}selected{% endif %}>Ligne pleine</option><option value="encadre" {% if signatures_6_style == 'encadre' %}selected{% endif %}>Encadré</option><option value="sans_trait" {% if signatures_6_style == 'sans_trait' %}selected{% endif %}>Sans trait</option></select></div>
+                                <div class="form-group"><label>Condition</label><select name="signatures_6_condition"><option value="toujours" {% if signatures_6_condition == 'toujours' %}selected{% endif %}>Toujours</option><option value="si_valide" {% if signatures_6_condition == 'si_valide' %}selected{% endif %}>Si validé</option><option value="si_rejete" {% if signatures_6_condition == 'si_rejete' %}selected{% endif %}>Si rejeté</option></select></div>
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                 </div>
 

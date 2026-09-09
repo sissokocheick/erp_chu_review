@@ -1913,61 +1913,84 @@ class ModeleDocumentMagasin(TracabiliteModel):
         """
         cfg_doc = dict(cfg_doc_json) if cfg_doc_json else {}
 
-        mapping = {
-            'BON_SORTIE': 'BS', 'BON_ENTREE': 'BE', 'BON_RETOUR': 'BR',
-            'BON_HS': 'BSHS', 'COMMANDE': 'BC'
+        norm_map = {
+            'BS': 'BON_SORTIE', 'BON_SORTIE': 'BON_SORTIE',
+            'BE': 'BON_ENTREE', 'BON_ENTREE': 'BON_ENTREE',
+            'BC': 'COMMANDE', 'COMMANDE': 'COMMANDE',
+            'BDM': 'DEMANDE', 'DEMANDE': 'DEMANDE',
+            'BR': 'BON_RETOUR', 'BON_RETOUR': 'BON_RETOUR',
+            'BSHS': 'BON_HS', 'BON_HS': 'BON_HS',
         }
-        code = mapping.get(type_doc, 'BS')
+        norm_type = norm_map.get(type_doc, 'BON_SORTIE')
 
-        if type_doc == 'BON_SORTIE':
+        if norm_type == 'BON_SORTIE':
             sigs = [
-                {'ordre': 1, 'role': 'demandeur',      'label': 'Émission',                           'visible': True, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 2, 'role': 'sous_directeur', 'label': 'Sous-Directeur de la Logistique',    'visible': True, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 3, 'role': 'responsable',    'label': 'Vu pour exécution',                  'visible': True, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 4, 'role': 'magasinier',     'label': 'Sortie effectuée le',                'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 5, 'role': 'receptionnaire', 'label': 'Réception',                          'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 6, 'role': 'economat',       'label': 'Le Service Economique',              'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 1, 'role': 'demandeur',      'label': 'Émission',                           'visible': True,  'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'sous_directeur', 'label': 'Sous-Directeur de la Logistique',    'visible': True,  'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 3, 'role': 'responsable',    'label': 'Vu pour exécution',                  'visible': True,  'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 4, 'role': 'magasinier',     'label': 'Sortie effectuée le',                'visible': True,  'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 5, 'role': 'receptionnaire', 'label': 'Réception',                          'visible': False, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 6, 'role': 'economat',       'label': 'Le Service Economique',              'visible': False, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
             ]
             colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite', 'quantite_servie']
             ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
             code_iso = "ENR-BSM/DAF-001"
-        elif type_doc == 'BON_ENTREE':
+        elif norm_type == 'BON_ENTREE':
             sigs = [
-                {'ordre': 1, 'role': 'responsable', 'label': 'Responsable', 'visible': True, 'position': 'left',  'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 2, 'role': 'magasinier',  'label': 'Magasinier',  'visible': True, 'position': 'right', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 1, 'role': 'responsable',    'label': 'Responsable',                        'visible': True,  'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'magasinier',     'label': 'Magasinier',                         'visible': True,  'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 3, 'role': 'controleur',     'label': 'Contrôleur Réception',               'visible': False, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 4, 'role': 'sous_directeur', 'label': 'Sous-Directeur de la Logistique',    'visible': False, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 5, 'role': 'fournisseur',    'label': 'Le Livreur / Fournisseur',           'visible': False, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 6, 'role': 'direction',      'label': 'Visa Direction',                     'visible': False, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
             ]
             colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite', 'lot', 'peremption', 'prix_unitaire', 'montant']
             ps2 = "PS2 : GERER LES APPROVISIONNEMENTS"
             code_iso = "ENR-BEM/DAF-001"
-        elif type_doc == 'COMMANDE':
+        elif norm_type == 'COMMANDE':
             sigs = [
-                {'ordre': 1, 'role': 'chef_service',  'label': 'CHEF DE SERVICE',                         'visible': True, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 2, 'role': 'demandeur',     'label': 'Le demandeur',                             'visible': True, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 3, 'role': 'communication', 'label': 'COMMUNICATION & RELATIONS P (Signature et Cachet)', 'visible': True, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 1, 'role': 'chef_service',   'label': 'CHEF DE SERVICE',                    'visible': True,  'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'demandeur',      'label': 'Le demandeur',                        'visible': True,  'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 3, 'role': 'communication',  'label': 'COMMUNICATION & RELATIONS P',        'visible': True,  'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 4, 'role': 'direction',      'label': 'Direction des Affaires Financières', 'visible': False, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 5, 'role': 'fournisseur',    'label': 'Accusé de réception Fournisseur',    'visible': False, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 6, 'role': 'directeur_general','label': 'Directeur Général',                 'visible': False, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
             ]
             colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite']
-            ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
+            ps2 = "PS2 : GERER LES APPROVISIONNEMENTS"
             code_iso = "ENR-BCM/DAF-002"
-        elif type_doc == 'BON_HS':
+        elif norm_type == 'BON_HS':
             sigs = [
-                {'ordre': 1, 'role': 'demandeur',   'label': 'Demandeur',   'visible': True, 'position': 'left',  'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 2, 'role': 'responsable', 'label': 'Responsable', 'visible': True, 'position': 'right', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 1, 'role': 'demandeur',      'label': 'Demandeur',                          'visible': True,  'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'responsable',    'label': 'Responsable',                        'visible': True,  'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 3, 'role': 'magasinier',     'label': 'Magasinier',                         'visible': False, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 4, 'role': 'sous_directeur', 'label': 'Sous-Directeur de la Logistique',    'visible': False, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 5, 'role': 'receptionnaire', 'label': 'Réceptionnaire',                      'visible': False, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 6, 'role': 'direction',      'label': 'Visa Direction',                     'visible': False, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
             ]
             colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite']
             ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
             code_iso = "ENR-BSHS/DAF-002"
-        elif type_doc == 'DEMANDE':
+        elif norm_type == 'DEMANDE':
             sigs = [
-                {'ordre': 1, 'role': 'demandeur',   'label': 'Demandeur',   'visible': True, 'position': 'left',  'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 2, 'role': 'responsable', 'label': 'Responsable', 'visible': True, 'position': 'right', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 1, 'role': 'demandeur',      'label': 'Demandeur',                          'visible': True,  'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'responsable',    'label': 'Responsable',                        'visible': True,  'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 3, 'role': 'chef_service',   'label': 'Chef de Service',                    'visible': False, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 4, 'role': 'sous_directeur', 'label': 'Sous-Directeur de la Logistique',    'visible': False, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 5, 'role': 'magasinier',     'label': 'Magasinier',                         'visible': False, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 6, 'role': 'direction',      'label': 'Visa Direction',                     'visible': False, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
             ]
             colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite']
             ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
             code_iso = "ENR-BDM/DAF-001"
         else:
             sigs = [
-                {'ordre': 1, 'role': 'economat',  'label': 'Le Service Economique', 'visible': True, 'position': 'left',  'style': 'ligne_pointillee', 'condition': 'toujours'},
-                {'ordre': 2, 'role': 'demandeur', 'label': 'Le demandeur',          'visible': True, 'position': 'right', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 1, 'role': 'economat',       'label': 'Le Service Economique',              'visible': True,  'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 2, 'role': 'demandeur',      'label': 'Le demandeur',                        'visible': True,  'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 3, 'role': 'magasinier',     'label': 'Magasinier Récepteur',               'visible': False, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 4, 'role': 'responsable',    'label': 'Responsable Magasin',                'visible': False, 'position': 'center', 'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 5, 'role': 'fournisseur',    'label': 'Le Fournisseur',                     'visible': False, 'position': 'left',   'style': 'ligne_pointillee', 'condition': 'toujours'},
+                {'ordre': 6, 'role': 'direction',      'label': 'Visa Direction',                     'visible': False, 'position': 'right',  'style': 'ligne_pointillee', 'condition': 'toujours'},
             ]
             colonnes_defaut = ['numero', 'reference', 'designation', 'unite', 'quantite']
             ps2 = "PS2 : GERER LES PRESTATIONS EXTERNES"
@@ -2070,12 +2093,13 @@ class ModeleDocumentMagasin(TracabiliteModel):
             return tuple(ModeleDocumentMagasin._freeze_dict(v) for v in obj)
         return obj
 
-    def get_config_complete(self, type_doc_legacy='BON_SORTIE'):
+    def get_config_complete(self, type_doc_legacy=None):
         """
         Retourne la configuration fusionnée avec les valeurs par défaut.
         """
         cfg = self.config or {}
-        defaults = self._default_config_structured((), type_doc_legacy)
+        doc_type = type_doc_legacy or getattr(self, 'type_document', None) or 'BON_SORTIE'
+        defaults = self._default_config_structured((), doc_type)
         return self._deep_merge(defaults, cfg)
 
 # ══════════════════════════════════════════════════════════════════════════════

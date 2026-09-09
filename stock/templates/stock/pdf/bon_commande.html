@@ -18,7 +18,11 @@
 
     }
     @bottom-right {
+        {% if pdf_config.pied_de_page.afficher_numero_page|default_if_none:True %}
         content: counter(page) " / " counter(pages);
+        {% else %}
+        content: "";
+        {% endif %}
         font-size: 7pt;
         color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
         font-weight: bold;
@@ -195,9 +199,20 @@ body {
 }
 .data-table .col-n { width: 8%; }
 .data-table .col-ref { width: 15%; }
-.data-table .col-des { width: 52%; }
+.data-table .col-des { width: auto; }
 .data-table .col-un { width: 12%; }
 .data-table .col-qt { width: 13%; }
+{% if pdf_config.tableau.alternance_couleurs %}
+.data-table tbody tr:nth-child(even) { background-color: #f7f9fa; }
+{% endif %}
+{% if pdf_config.tableau.bordure_style and pdf_config.tableau.bordure_style != 'solid' %}
+.data-table th, .data-table td { border-style: {{ pdf_config.tableau.bordure_style }}; }
+{% endif %}
+{% if pdf_config.tableau.bordure_epaisseur == 'fine' %}
+.data-table th, .data-table td { border-width: 0.5px; }
+{% elif pdf_config.tableau.bordure_epaisseur == 'strong' %}
+.data-table th, .data-table td { border-width: 1.8px; }
+{% endif %}
 
 .texte-legal {
     font-size: 9pt;
@@ -260,12 +275,16 @@ img { max-width: 100%; height: auto; }
             </span>
           </div>
         </td>
+        {% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}
         <td class="code-cell">
           Code : {{ pdf_config.metadonnees.code_document|default:"ENR-BDC/DAF-001" }}<br>
           Créé le : {{ pdf_config.metadonnees.date_creation_doc|default:"10/06/2024" }}<br>
           Révisé le : {{ pdf_config.metadonnees.date_revision_doc|default:"" }}<br>
           Version : {{ pdf_config.metadonnees.version_doc|default:"001" }}
         </td>
+        {% else %}
+        <td class="code-cell" style="border-left:none;"></td>
+        {% endif %}
       </tr>
     </table>
 
@@ -303,21 +322,33 @@ img { max-width: 100%; height: auto; }
     <table class="data-table">
       <thead>
         <tr>
-          <th class="col-n">N°</th>
-          <th class="col-ref">Réf.</th>
+          {% if pdf_config.colonnes_visibles.numero %}<th class="col-n">N°</th>{% endif %}
+          {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th class="col-ref">Réf.</th>{% endif %}
           <th class="col-des">DESCRIPTION</th>
-          <th class="col-un">UNITE</th>
+          {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th class="col-un">UNITE</th>{% endif %}
           <th class="col-qt">QUANTITE</th>
+          {% if pdf_config.colonnes_visibles.prix_unitaire %}
+          <th style="width:12%;">P.U.</th>
+          {% endif %}
+          {% if pdf_config.colonnes_visibles.montant %}
+          <th style="width:14%;">MONTANT</th>
+          {% endif %}
         </tr>
       </thead>
       <tbody>
         {% for ligne in pages.0.lignes %}
         <tr{% if pages.0.hauteur_ligne %} style="height: {{ pages.0.hauteur_ligne }}mm"{% endif %}>
-          <td>{{ ligne.idx }}</td>
-          <td>{{ ligne.reference|default:"" }}</td>
+          {% if pdf_config.colonnes_visibles.numero %}<td>{{ ligne.idx }}</td>{% endif %}
+          {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<td>{{ ligne.reference|default:"" }}</td>{% endif %}
           <td class="desig">{{ ligne.designation }}</td>
-          <td>{{ ligne.unite|default:"U" }}</td>
+          {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<td>{{ ligne.unite|default:"U" }}</td>{% endif %}
           <td class="qt-bold">{{ ligne.quantite|intspace }}</td>
+          {% if pdf_config.colonnes_visibles.prix_unitaire %}
+          <td style="text-align:right;">{{ ligne.prix_unitaire|default:"&mdash;" }}</td>
+          {% endif %}
+          {% if pdf_config.colonnes_visibles.montant %}
+          <td style="text-align:right;">{{ ligne.montant|default:"&mdash;" }}</td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>
@@ -381,12 +412,16 @@ img { max-width: 100%; height: auto; }
               </span>
             </div>
           </td>
+          {% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}
           <td class="code-cell">
             Code : {{ pdf_config.metadonnees.code_document|default:"ENR-BDC/DAF-001" }}<br>
             Créé le : {{ pdf_config.metadonnees.date_creation_doc|default:"10/06/2024" }}<br>
             Révisé le : {{ pdf_config.metadonnees.date_revision_doc|default:"" }}<br>
             Version : {{ pdf_config.metadonnees.version_doc|default:"001" }}
           </td>
+          {% else %}
+          <td class="code-cell" style="border-left:none;"></td>
+          {% endif %}
         </tr>
       </table>
       <table class="infos-commande">
@@ -423,21 +458,33 @@ img { max-width: 100%; height: auto; }
       <table class="data-table">
         <thead>
           <tr>
-            <th class="col-n">N°</th>
-            <th class="col-ref">Réf.</th>
+            {% if pdf_config.colonnes_visibles.numero %}<th class="col-n">N°</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th class="col-ref">Réf.</th>{% endif %}
             <th class="col-des">DESCRIPTION</th>
-            <th class="col-un">UNITE</th>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th class="col-un">UNITE</th>{% endif %}
             <th class="col-qt">QUANTITE</th>
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <th style="width:12%;">P.U.</th>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <th style="width:14%;">MONTANT</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
           {% for ligne in page.lignes %}
           <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
-            <td>{{ ligne.idx }}</td>
-            <td>{{ ligne.reference|default:"" }}</td>
+            {% if pdf_config.colonnes_visibles.numero %}<td>{{ ligne.idx }}</td>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<td>{{ ligne.reference|default:"" }}</td>{% endif %}
             <td class="desig">{{ ligne.designation }}</td>
-            <td>{{ ligne.unite|default:"U" }}</td>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<td>{{ ligne.unite|default:"U" }}</td>{% endif %}
             <td class="qt-bold">{{ ligne.quantite|intspace }}</td>
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <td style="text-align:right;">{{ ligne.prix_unitaire|default:"&mdash;" }}</td>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <td style="text-align:right;">{{ ligne.montant|default:"&mdash;" }}</td>
+            {% endif %}
           </tr>
           {% endfor %}
         </tbody>
@@ -457,21 +504,33 @@ img { max-width: 100%; height: auto; }
         <table class="data-table">
           <thead>
             <tr>
-              <th class="col-n">N°</th>
-              <th class="col-ref">Réf.</th>
+              {% if pdf_config.colonnes_visibles.numero %}<th class="col-n">N°</th>{% endif %}
+              {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th class="col-ref">Réf.</th>{% endif %}
               <th class="col-des">DESCRIPTION</th>
-              <th class="col-un">UNITE</th>
+              {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th class="col-un">UNITE</th>{% endif %}
               <th class="col-qt">QUANTITE</th>
+              {% if pdf_config.colonnes_visibles.prix_unitaire %}
+              <th style="width:12%;">P.U.</th>
+              {% endif %}
+              {% if pdf_config.colonnes_visibles.montant %}
+              <th style="width:14%;">MONTANT</th>
+              {% endif %}
             </tr>
           </thead>
           <tbody>
             {% for ligne in page.lignes %}
             <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
-              <td>{{ ligne.idx }}</td>
-              <td>{{ ligne.reference|default:"" }}</td>
+              {% if pdf_config.colonnes_visibles.numero %}<td>{{ ligne.idx }}</td>{% endif %}
+              {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<td>{{ ligne.reference|default:"" }}</td>{% endif %}
               <td class="desig">{{ ligne.designation }}</td>
-              <td>{{ ligne.unite|default:"U" }}</td>
+              {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<td>{{ ligne.unite|default:"U" }}</td>{% endif %}
               <td class="qt-bold">{{ ligne.quantite|intspace }}</td>
+              {% if pdf_config.colonnes_visibles.prix_unitaire %}
+              <td style="text-align:right;">{{ ligne.prix_unitaire|default:"&mdash;" }}</td>
+              {% endif %}
+              {% if pdf_config.colonnes_visibles.montant %}
+              <td style="text-align:right;">{{ ligne.montant|default:"&mdash;" }}</td>
+              {% endif %}
             </tr>
             {% endfor %}
           </tbody>
@@ -493,21 +552,33 @@ img { max-width: 100%; height: auto; }
       <table class="data-table">
         <thead>
           <tr>
-            <th class="col-n">N°</th>
-            <th class="col-ref">Réf.</th>
+            {% if pdf_config.colonnes_visibles.numero %}<th class="col-n">N°</th>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<th class="col-ref">Réf.</th>{% endif %}
             <th class="col-des">DESCRIPTION</th>
-            <th class="col-un">UNITE</th>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<th class="col-un">UNITE</th>{% endif %}
             <th class="col-qt">QUANTITE</th>
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <th style="width:12%;">P.U.</th>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <th style="width:14%;">MONTANT</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody>
           {% for ligne in page.lignes %}
           <tr{% if page.hauteur_ligne %} style="height: {{ page.hauteur_ligne }}mm"{% endif %}>
-            <td>{{ ligne.idx }}</td>
-            <td>{{ ligne.reference|default:"" }}</td>
+            {% if pdf_config.colonnes_visibles.numero %}<td>{{ ligne.idx }}</td>{% endif %}
+            {% if pdf_config.colonnes_visibles.reference|default_if_none:True %}<td>{{ ligne.reference|default:"" }}</td>{% endif %}
             <td class="desig">{{ ligne.designation }}</td>
-            <td>{{ ligne.unite|default:"U" }}</td>
+            {% if pdf_config.colonnes_visibles.unite|default_if_none:True %}<td>{{ ligne.unite|default:"U" }}</td>{% endif %}
             <td class="qt-bold">{{ ligne.quantite|intspace }}</td>
+            {% if pdf_config.colonnes_visibles.prix_unitaire %}
+            <td style="text-align:right;">{{ ligne.prix_unitaire|default:"&mdash;" }}</td>
+            {% endif %}
+            {% if pdf_config.colonnes_visibles.montant %}
+            <td style="text-align:right;">{{ ligne.montant|default:"&mdash;" }}</td>
+            {% endif %}
           </tr>
           {% endfor %}
         </tbody>

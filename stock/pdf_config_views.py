@@ -68,9 +68,8 @@ def _colonnes_par_type(type_doc):
 
 
 def _nb_signatures_max(type_doc):
-    # Aligné sur les formats officiels CHU Angré (voir pdf/)
-    mapping = {'BDM': 2, 'BS': 6, 'BE': 2, 'BR': 2, 'BSHS': 2, 'BC': 3}
-    return mapping.get(type_doc, 6)
+    # Permet jusqu'à 6 signatures personnalisables pour tous les types de documents
+    return 6
 
 
 def _parse_post_to_config(request_post, type_doc='BS'):
@@ -85,7 +84,7 @@ def _parse_post_to_config(request_post, type_doc='BS'):
         'service_demandeur': {},
     }
 
-        # CARTOUCHE
+    # CARTOUCHE
     cfg['cartouche']['afficher_code_iso'] = request_post.get('cartouche_afficher_code_iso') == 'on'
     cfg['cartouche']['position_logo'] = request_post.get('cartouche_position_logo', 'left')
     cfg['cartouche']['trait_separation_epaisseur'] = int(request_post.get('cartouche_trait_separation_epaisseur', 1) or 1)
@@ -98,6 +97,7 @@ def _parse_post_to_config(request_post, type_doc='BS'):
         {**c, 'visible': c['code'] in colonnes_codes or c.get('obligatoire', False)}
         for c in all_colonnes_def
     ]
+    cfg['colonnes_visibles'] = {c['code']: c['visible'] for c in cfg['tableau']['colonnes']}
     cfg['tableau']['lignes_dynamiques'] = request_post.get('tableau_lignes_dynamiques') == 'on'
     cfg['tableau']['lignes_minimum'] = int(request_post.get('tableau_lignes_minimum', 10) or 10)
     cfg['tableau']['alternance_couleurs'] = request_post.get('tableau_alternance_couleurs') == 'on'
@@ -299,22 +299,75 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
 
     def _generer_apercu(self, request, magasin, modele, override_config=None):
         """Génère un PDF d'aperçu avec des données factices."""
+        base_config = modele.get_config_complete()
         if override_config is not None:
-            config_preview = override_config
+            config_preview = ModeleDocumentMagasin._deep_merge(base_config, override_config)
+        elif request.method == 'POST' and request.POST:
+            posted_config = _parse_post_to_config(request.POST, type_doc=modele.type_document)
+            config_preview = ModeleDocumentMagasin._deep_merge(base_config, posted_config)
         else:
-            config_preview = _parse_post_to_config(request.POST, type_doc=modele.type_document)
-            if not config_preview or not any(config_preview.values()):
-                try:
-                    config_preview = modele.get_config_complete()
-                except Exception:
-                    config_preview = {}
+            config_preview = base_config
 
         # Parité avec pdf_utils : texte institutionnel manquant -> VariableDoesNotExist en DEBUG
-        config_preview['texte_institutionnel'] = (
-            config_preview.get('texte_institutionnel')
-            or (config_preview.get('pied_de_page') or {}).get('texte_personnalise')
-            or "Direction des Affaires Financières / Sous-Direction de la Logistique"
-        )
+        if isinstance(config_preview.get('pied_de_page'), dict):
+            config_preview['texte_institutionnel'] = (
+                config_preview.get('texte_institutionnel')
+                or config_preview['pied_de_page'].get('texte_personnalise')
+                or "Direction des Affaires Financières / Sous-Direction de la Logistique"
+            )
+        elif isinstance(config_preview.get('pied_de_page'), str):
+            config_preview['texte_institutionnel'] = config_preview['pied_de_page']
+        else:
+            config_preview['texte_institutionnel'] = "Direction des Affaires Financières / Sous-Direction de la Logistique"
+
+        # Code document plat pour les templates
+        if 'code_document' not in config_preview:
+            config_preview['code_document'] = (config_preview.get('metadonnees') or {}).get('code_document', '')
+
+        # Construction universelle des cases de signatures pour l'aperçu
+        signature_cases = []
+        mock_signataires = [
+            ('Jean DUPONT', 'Magasinier'),
+            ('Marie MARTIN', 'Chef de Service'),
+            ('Paul KOUAME', 'Sous-Directeur Logistique'),
+            ('Dr. KOUASSI', 'Directeur DAF'),
+            ('A. TRAORE', 'Contrôleur'),
+            ('Direction Générale', 'Directeur Général'),
+        ]
+
+        cfg_signatures = config_preview.get('signatures') or []
+        for i, sig in enumerate(cfg_signatures):
+            if sig.get('visible', True):
+                label = sig.get('label') or sig.get('role') or f'Signature #{i+1}'
+                role = sig.get('role', '')
+                mock_nom, mock_fct = mock_signataires[min(i, len(mock_signataires) - 1)]
+                fonction = role.replace('_', ' ').capitalize() if role else mock_fct
+                case = {
+                    'label': label,
+                    'role': role,
+                    'user_name': mock_nom,
+                    'has_signature': False,
+                    'signature_path': None,
+                    'fonction': fonction if config_preview.get('afficher_fonction_signataire', True) else '',
+                    'default_text': '(Signature)',
+                    'date': timezone.now(),
+                    'position': sig.get('position', 'left'),
+                    'style': sig.get('style', 'ligne_pointillee'),
+                }
+                signature_cases.append(case)
+
+        # Assurer que colonnes_visibles est injecté pour les templates
+        if 'colonnes_visibles' not in config_preview or not config_preview['colonnes_visibles']:
+            colonnes_cfg = (config_preview.get('tableau') or {}).get('colonnes') or []
+            if colonnes_cfg:
+                config_preview['colonnes_visibles'] = {
+                    c['code']: c.get('visible', True)
+                    for c in colonnes_cfg
+                    if isinstance(c, dict) and 'code' in c
+                }
+            else:
+                all_cols = _colonnes_par_type(modele.type_document)
+                config_preview['colonnes_visibles'] = {c['code']: True for c in all_cols}
 
         try:
             template_name = _TEMPLATE_MAP.get(modele.type_document, 'stock/pdf/bon_sortie.html')
@@ -331,25 +384,23 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                     commentaire='Exemple de commentaire pour la demande.',
                 )
                 lignes_data = [
-                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 10},
-                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 50},
+                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 10, 'numero_lot': 'LOT-2026-A', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('2500.00'), 'montant': Decimal('25000.00')},
+                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 50, 'numero_lot': 'LOT-2026-B', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('500.00'), 'montant': Decimal('25000.00')},
                 ]
-                signatures_config = [
-                    {'label': 'Le demandeur', 'sous_label': service.nom, 'user_name': 'Jean DUPONT', 'signature_path': None, 'date': timezone.now()},
-                    {'label': 'Vu pour exécution', 'sous_label': 'Chef de Service', 'user_name': 'Marie MARTIN', 'signature_path': None, 'date': timezone.now()},
-                ]
+                pages = [{'numero': 1, 'lignes': lignes_data, 'est_derniere_page': True, 'hauteur_ligne': '12.00'}]
                 context = {
                     'pdf_config': config_preview,
                     'demande': demande_apercu,
                     'lignes_data': lignes_data,
-                    'pages': [{'numero': 1, 'lignes': lignes_data, 'est_derniere_page': True}],
+                    'pages': pages,
                     'est_multi_page': False,
                     'total_qte': sum(l['quantite'] for l in lignes_data),
                     'magasin': magasin,
                     'service': service,
                     'service_code': service_code,
                     'service_poste': service_poste,
-                    'signatures_config': signatures_config,
+                    'signatures_config': signature_cases,
+                    'signature_cases': signature_cases,
                     'espaceur_mm': 0.0,
                     'logo_url': logo_url,
                     'type_bon_label': "BON DE DEMANDE",
@@ -374,19 +425,20 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                 )
                 commande.fournisseur = fournisseur
                 lignes_data = [
-                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 100},
-                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 500},
+                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 100, 'prix_unitaire': Decimal('2500.00'), 'montant': Decimal('250000.00')},
+                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 500, 'prix_unitaire': Decimal('500.00'), 'montant': Decimal('250000.00')},
                 ]
-                signatures_config = [
-                    {'label': 'Demandeur', 'user_name': 'Jean DUPONT', 'signature_path': None, 'date': timezone.now()},
-                    {'label': 'Vu pour exécution', 'user_name': 'Marie MARTIN', 'signature_path': None, 'date': timezone.now()},
-                ]
+                pages = [{'numero': 1, 'lignes': lignes_data, 'est_derniere_page': True, 'hauteur_ligne': '12.00'}]
                 context = {
                     'pdf_config': config_preview,
                     'commande': commande,
                     'magasin': magasin,
                     'lignes_data': lignes_data,
-                    'signatures_config': signatures_config,
+                    'pages': pages,
+                    'est_multi_page': False,
+                    'total_qte': sum(l['quantite'] for l in lignes_data),
+                    'signatures_config': signature_cases,
+                    'signature_cases': signature_cases,
                     'logo_url': logo_url,
                 }
 
@@ -403,17 +455,24 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                 bon.fournisseur = fournisseur
                 commande = SimpleNamespace(numero_commande='BC-2026-0001')
                 lignes_data = [
-                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 100, 'quantite_recue': 100},
-                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 500, 'quantite_recue': 500},
+                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 100, 'quantite_recue': 100, 'numero_lot': 'LOT-2026-A', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('2500.00'), 'montant': Decimal('250000.00')},
+                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 500, 'quantite_recue': 500, 'numero_lot': 'LOT-2026-B', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('500.00'), 'montant': Decimal('250000.00')},
                 ]
+                pages = [{'numero': 1, 'lignes': lignes_data, 'est_derniere_page': True, 'hauteur_ligne': '12.00'}]
                 context = {
                     'pdf_config': config_preview,
                     'bon': bon,
                     'magasin': magasin,
                     'lignes_data': lignes_data,
+                    'pages': pages,
+                    'est_multi_page': False,
                     'est_reception_partielle': False,
                     'numero_livraison': None,
                     'commande': commande,
+                    'a_lots': True,
+                    'signatures_config': signature_cases,
+                    'signature_cases': signature_cases,
+                    'total_qte': sum(l['quantite'] for l in lignes_data),
                     'saisisseur_nom': 'Jean DUPONT',
                     'saisisseur_signature': None,
                     'saisisseur_fonction': 'Magasinier',
@@ -427,16 +486,10 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                     date_bon=timezone.now(),
                 )
                 lignes_data = [
-                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 5},
-                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 20},
+                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 5, 'numero_lot': 'LOT-2026-A', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('2500.00'), 'montant': Decimal('12500.00')},
+                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 20, 'numero_lot': 'LOT-2026-B', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('500.00'), 'montant': Decimal('10000.00')},
                 ]
-                signatures_config = [
-                    {'label': 'Demandeur', 'user_name': 'Jean DUPONT', 'sous_label': 'Infirmier', 'date': timezone.now()},
-                    {'label': 'Responsable', 'user_name': 'Marie MARTIN', 'sous_label': 'Chef de Service', 'date': timezone.now()},
-                ]
-                if modele.type_document == 'BR':
-                    signatures_config.append({'label': 'Magasinier', 'user_name': 'Paul KOUAME', 'sous_label': 'Responsable Stock', 'date': timezone.now()})
-
+                pages = [{'numero': 1, 'lignes': lignes_data, 'est_derniere_page': True, 'hauteur_ligne': '12.00'}]
                 context = {
                     'pdf_config': config_preview,
                     'bon': bon,
@@ -445,7 +498,12 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                     'service_code': service_code,
                     'service_poste': service_poste,
                     'lignes_data': lignes_data,
-                    'signatures_config': signatures_config,
+                    'pages': pages,
+                    'est_multi_page': False,
+                    'a_lots': True,
+                    'total_qte': sum(l['quantite'] for l in lignes_data),
+                    'signatures_config': signature_cases,
+                    'signature_cases': signature_cases,
                     'logo_url': logo_url,
                 }
 
@@ -456,36 +514,11 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                 )
                 demande = SimpleNamespace(numero_demande='DEM-2026-0001')
                 lignes_data = [
-                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 10, 'quantite_servie': 10, 'numero_lot': 'LOT-2026-A', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('2500.00')},
-                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 50, 'quantite_servie': 50, 'numero_lot': 'LOT-2026-B', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('500.00')},
+                    {'idx': 1, 'reference': 'ART-001', 'designation': 'Gants chirurgicaux stériles T7', 'unite': 'Boîte', 'quantite': 10, 'quantite_servie': 10, 'numero_lot': 'LOT-2026-A', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('2500.00'), 'montant': Decimal('25000.00')},
+                    {'idx': 2, 'reference': 'ART-002', 'designation': 'Compresses stériles 10x10cm', 'unite': 'Sachet', 'quantite': 50, 'quantite_servie': 50, 'numero_lot': 'LOT-2026-B', 'date_peremption': timezone.now(), 'prix_unitaire': Decimal('500.00'), 'montant': Decimal('25000.00')},
                 ]
-                signatures_config = []
-                for sig in config_preview.get('signatures', []):
-                    if sig.get('visible'):
-                        signatures_config.append({
-                            'label': sig.get('label', ''),
-                            'sous_label': sig.get('role', ''),
-                            'position': sig.get('position', 'left'),
-                            'style': sig.get('style', 'ligne_pointillee'),
-                            'user_name': 'Jean DUPONT',
-                            'date': timezone.now(),
-                            'signature_path': None,
-                        })
-
                 sondage_data = {'satisfaction': 'satisfait', 'observations': 'Délai respecté, matériel conforme.'}
-
-                signature_cases = []
-                for sig in config_preview.get('signatures', []):
-                    if sig.get('visible'):
-                        signature_cases.append({
-                            'label': sig.get('label', ''),
-                            'has_signature': False,
-                            'user_name': 'Jean DUPONT',
-                            'signature_path': None,
-                            'fonction': sig.get('role', ''),
-                            'default_text': '(Signature)',
-                            'date': timezone.now(),
-                        })
+                pages = [{'numero': 1, 'lignes': lignes_data, 'est_derniere_page': True, 'hauteur_ligne': '12.00'}]
 
                 context = {
                     'pdf_config': config_preview,
@@ -496,12 +529,14 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
                     'service_poste': service_poste,
                     'demande': demande,
                     'lignes_data': lignes_data,
-                    'pages': [{'numero': 1, 'lignes': lignes_data, 'est_derniere_page': True}],
+                    'pages': pages,
                     'est_multi_page': False,
+                    'a_lots': True,
                     'espaceur_mm': 0.0,
                     'total_qte_demandee': sum(l['quantite'] for l in lignes_data),
                     'total_qte_servie': sum(l['quantite_servie'] for l in lignes_data),
-                    'signatures_config': signatures_config,
+                    'total_qte': sum(l['quantite_servie'] for l in lignes_data),
+                    'signatures_config': signature_cases,
                     'signature_cases': signature_cases,
                     'sondage_data': sondage_data,
                     'est_livraison_partielle': False,

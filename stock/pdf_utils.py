@@ -225,13 +225,26 @@ def get_pdf_config(magasin, type_doc_code, request):
     # La signature reste parametrable par bon/document
     pdf_config['afficher_signatures'] = pdf_config.get('afficher_signatures', True)
 
-    # Pied de page unifie globalement
+    # Pied de page unifie globalement (en préservant la personnalisation du magasin si présente)
+    existing_pied = pdf_config.get('pied_de_page') or {}
+    if not isinstance(existing_pied, dict):
+        existing_pied = {'texte_personnalise': str(existing_pied)}
+
+    texte_perso = existing_pied.get('texte_personnalise') or (getattr(hopital, 'pied_page_pdf', None) if hopital else None) or _pied_de_page_par_defaut()
     pdf_config['pied_de_page'] = {
-        'texte_personnalise': getattr(hopital, 'pied_page_pdf', _pied_de_page_par_defaut()) if hopital else _pied_de_page_par_defaut(),
-        'afficher_numero_page': True,
-        'afficher_date_generation': True,
-        'afficher_trait_couleur': True,
-        'trait_couleur': pdf_config.get('couleur_principale', '#17a2b8'),
+        'texte_personnalise': texte_perso,
+        'afficher_numero_page': existing_pied.get('afficher_numero_page', True),
+        'afficher_date_generation': existing_pied.get('afficher_date_generation', True),
+        'afficher_trait_couleur': existing_pied.get('afficher_trait_couleur', True),
+        'trait_couleur': existing_pied.get('trait_couleur') or pdf_config.get('couleur_principale', '#17a2b8'),
+    }
+
+    # Injecter le dictionnaire de visibilité des colonnes pour les templates
+    colonnes_cfg = (pdf_config.get('tableau') or {}).get('colonnes') or []
+    pdf_config['colonnes_visibles'] = {
+        c.get('code'): c.get('visible', True)
+        for c in colonnes_cfg
+        if isinstance(c, dict) and 'code' in c
     }
 
     pdf_config['logo_url'] = logo_url
@@ -664,6 +677,12 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
     for sig in signatures:
         if not sig.get('visible', True):
             continue
+        condition = sig.get('condition', 'toujours')
+        if condition == 'si_valide' and bon is not None and not getattr(bon, 'valide_par', None):
+            continue
+        if condition == 'si_rejete' and bon is not None and getattr(bon, 'statut', None) != 'REJETE':
+            continue
+
         role = sig.get('role', '')
         user = _role_utilisateur(bon, role) if bon is not None else None
         user_name = ''
@@ -690,12 +709,14 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
                     if user == valide_par
                     else getattr(bon, 'date_creation', None) or getattr(bon, 'date_demande', None))
             signature_path = _get_signature_url(request, user) if request is not None else None
+
+        afficher_fct = pdf_config.get('afficher_fonction_signataire', True)
         cases.append({
             'label': sig.get('label', ''),
             'sous_label': sig.get('role', ''),
             'role': role,
             'user_name': user_name,
-            'fonction': fonction if user is not None else '',
+            'fonction': fonction if (user is not None and afficher_fct) else (sig.get('role', '').replace('_', ' ').capitalize() if (role and afficher_fct) else ''),
             'date': date,
             'has_signature': user is not None and signature_path is not None,
             'signature_path': signature_path,
