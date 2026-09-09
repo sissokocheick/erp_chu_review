@@ -66,17 +66,70 @@
   .btn-add-motif  { background: #dc3545; color: white; } .btn-add-motif:hover  { background: #b02a37; }
   .btn-add-benef  { background: #6f42c1; color: white; } .btn-add-benef:hover  { background: #59339d; }
   .btn-add-ref    { background: #1c5b96; color: white; } .btn-add-ref:hover    { background: #0d3b6e; }
+
+  /* ── Référentiel Familles Modernisé ── */
+  .ref-kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  @media (max-width: 992px) { .ref-kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 540px) { .ref-kpi-grid { grid-template-columns: 1fr; } }
+  .ref-kpi-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 9px; padding: 12px 15px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all .18s ease; }
+  .ref-kpi-card:hover { transform: translateY(-2px); border-color: var(--border-color); box-shadow: 0 4px 12px var(--shadow); }
+  .ref-kpi-card.active { border-width: 2px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); }
+  .ref-kpi-card.active-typ { border-color: #1c5b96; background: rgba(28,91,150,0.05); }
+  .ref-kpi-card.active-val { border-color: #0f766e; background: rgba(15,118,110,0.05); }
+  .ref-kpi-card.active-cat { border-color: #fd7e14; background: rgba(253,126,20,0.05); }
+  .ref-kpi-card.active-lig { border-color: #6f42c1; background: rgba(111,66,193,0.05); }
+  .ref-kpi-left { display: flex; align-items: center; gap: 12px; }
+  .ref-kpi-icon { width: 38px; height: 38px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+  .ref-kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .3px; color: var(--text-medium); margin-bottom: 2px; }
+  .ref-kpi-val { font-size: 20px; font-weight: 700; color: var(--text-dark); line-height: 1.1; }
+  .ref-kpi-add { border: none; background: var(--bg-stripe); color: var(--text-medium); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; cursor: pointer; transition: .15s; }
+  .ref-kpi-add:hover { background: var(--primary-blue); color: white; transform: scale(1.08); }
+
+  .ref-toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+  .ref-pills { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .ref-pill { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-dark); border-radius: 20px; padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s ease; user-select: none; }
+  .ref-pill:hover { background: var(--bg-hover); border-color: var(--primary-blue); transform: translateY(-1px); }
+  .ref-pill.active { background: var(--primary-blue); color: white; border-color: var(--primary-blue); box-shadow: 0 2px 8px rgba(28,91,150,0.25); }
+  .ref-pill .pill-badge { background: rgba(0,0,0,0.08); border-radius: 10px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+  .ref-pill.active .pill-badge { background: rgba(255,255,255,0.25); color: white; }
+  body.dark-mode .ref-pill .pill-badge { background: rgba(255,255,255,0.12); }
+
+  .ref-controls { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .search-clear-btn { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); border: none; background: transparent; color: var(--text-medium); cursor: pointer; font-size: 13px; display: none; padding: 2px 6px; }
+  .search-clear-btn:hover { color: var(--text-dark); }
+
+  .view-switch { display: inline-flex; border: 1px solid var(--border-color); border-radius: 7px; overflow: hidden; background: var(--bg-card); }
+  .view-btn { padding: 6px 12px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--text-medium); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: .15s; }
+  .view-btn.active { background: var(--primary-blue); color: white; }
+  .view-btn:hover:not(.active) { background: var(--bg-hover); color: var(--text-dark); }
+
+  .badge-ref { display: inline-flex; align-items: center; gap: 5px; padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-type-famille { background: rgba(28,91,150,0.12); color: #1c5b96; border: 1px solid rgba(28,91,150,0.22); }
+  .badge-valorisation { background: rgba(15,118,110,0.12); color: #0f766e; border: 1px solid rgba(15,118,110,0.22); }
+  .badge-categorie { background: rgba(253,126,20,0.12); color: #c45a00; border: 1px solid rgba(253,126,20,0.22); }
+  .badge-ligne-budgetaire { background: rgba(111,66,193,0.12); color: #6f42c1; border: 1px solid rgba(111,66,193,0.22); }
+  body.dark-mode .badge-type-famille { background: rgba(28,91,150,0.25); color: #8ecae6; border-color: rgba(142,202,230,0.3); }
+  body.dark-mode .badge-valorisation { background: rgba(15,118,110,0.25); color: #5eead4; border-color: rgba(94,234,212,0.3); }
+  body.dark-mode .badge-categorie { background: rgba(253,126,20,0.25); color: #ffbe76; border-color: rgba(255,190,118,0.3); }
+  body.dark-mode .badge-ligne-budgetaire { background: rgba(111,66,193,0.25); color: #d1b3ff; border-color: rgba(209,179,255,0.3); }
+
+  .valeur-chip { font-weight: 600; color: var(--text-dark); background: var(--bg-stripe); border: 1px solid var(--border-color); padding: 3px 10px; border-radius: 6px; display: inline-block; font-size: 12px; }
+
   .ref-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
-  .ref-card { border: 1px solid var(--border-light); border-radius: 9px; overflow: hidden; background: var(--bg-card); }
+  .ref-card { border: 1px solid var(--border-light); border-radius: 9px; overflow: hidden; background: var(--bg-card); display: flex; flex-direction: column; }
   .ref-card-head { padding: 11px 14px; display: flex; justify-content: space-between; align-items: center; background: var(--bg-stripe); border-bottom: 1px solid var(--border-light); }
   .ref-card-head strong { font-size: 13px; color: var(--text-dark); }
-  .ref-card-body { padding: 10px 14px; }
+  .ref-card-body { padding: 10px 14px; flex: 1; }
   .ref-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border-light); color: var(--text-dark); font-size: 13px; }
   .ref-row:last-child { border-bottom: 0; }
   .ref-actions { white-space: nowrap; }
   .ref-actions button { border: 0; background: transparent; cursor: pointer; padding: 4px 6px; }
   .ref-actions .edit { color: #28a745; } .ref-actions .delete { color: #dc3545; }
   .ref-empty { color: var(--text-medium); font-size: 12px; font-style: italic; padding: 8px 0; }
+  .card-pag { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; border-top: 1px solid var(--border-light); font-size: 11px; color: var(--text-medium); background: var(--bg-stripe); }
+  .card-pag button { border: 1px solid var(--border-color); background: var(--bg-card); color: var(--text-dark); border-radius: 4px; padding: 3px 8px; cursor: pointer; font-size: 11px; transition: .15s; }
+  .card-pag button:hover:not(:disabled) { background: var(--bg-hover); }
+  .card-pag button:disabled { opacity: 0.35; cursor: not-allowed; }
   @media (max-width: 700px) { .ref-grid { grid-template-columns: 1fr; } }
 
   .btn-ed-sm { color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px; border-radius: 5px; transition: .2s; }
@@ -280,59 +333,323 @@
       <i class="fas fa-chevron-down chevron"></i>
     </div>
     <div class="acc-body {% if request.GET.open == 'famille-parametres' %}open{% endif %}" id="acc-ref-familles">
-      <div class="sec-bar">
-        <div style="font-size:12px;color:var(--text-medium);">
-          Gérez ici les valeurs proposées dans les formulaires de familles et d'articles.
+      <!-- 1. Indicateurs KPI / Filtres rapides -->
+      <div class="ref-kpi-grid">
+        <div class="ref-kpi-card" data-ref-type="TYPE_FAMILLE" onclick="RefManager.filterByType('TYPE_FAMILLE')" title="Filtrer par types de famille">
+          <div class="ref-kpi-left">
+            <div class="ref-kpi-icon" style="background:rgba(28,91,150,0.12); color:#1c5b96;">
+              <i class="fas fa-layer-group"></i>
+            </div>
+            <div>
+              <div class="ref-kpi-label">Types de famille</div>
+              <div class="ref-kpi-val">{{ params_types_famille|length }}</div>
+            </div>
+          </div>
+          <button type="button" class="ref-kpi-add" title="Ajouter un type de famille" onclick="event.stopPropagation(); ouvrirModalParamFamille('', 'TYPE_FAMILLE', '')">
+            <i class="fas fa-plus"></i>
+          </button>
         </div>
-        <button class="btn-add btn-add-ref" type="button" onclick="ouvrirModalParamFamille('', 'TYPE_FAMILLE', '')">
-          <i class="fas fa-plus"></i> Ajouter une valeur
-        </button>
+
+        <div class="ref-kpi-card" data-ref-type="VALORISATION" onclick="RefManager.filterByType('VALORISATION')" title="Filtrer par méthodes de valorisation">
+          <div class="ref-kpi-left">
+            <div class="ref-kpi-icon" style="background:rgba(15,118,110,0.12); color:#0f766e;">
+              <i class="fas fa-calculator"></i>
+            </div>
+            <div>
+              <div class="ref-kpi-label">Valorisation</div>
+              <div class="ref-kpi-val">{{ params_valorisation|length }}</div>
+            </div>
+          </div>
+          <button type="button" class="ref-kpi-add" title="Ajouter une méthode de valorisation" onclick="event.stopPropagation(); ouvrirModalParamFamille('', 'VALORISATION', '')">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+
+        <div class="ref-kpi-card" data-ref-type="CATEGORIE" onclick="RefManager.filterByType('CATEGORIE')" title="Filtrer par catégories">
+          <div class="ref-kpi-left">
+            <div class="ref-kpi-icon" style="background:rgba(253,126,20,0.12); color:#fd7e14;">
+              <i class="fas fa-tags"></i>
+            </div>
+            <div>
+              <div class="ref-kpi-label">Catégories</div>
+              <div class="ref-kpi-val">{{ params_categories|length }}</div>
+            </div>
+          </div>
+          <button type="button" class="ref-kpi-add" title="Ajouter une catégorie" onclick="event.stopPropagation(); ouvrirModalParamFamille('', 'CATEGORIE', '')">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
+
+        <div class="ref-kpi-card" data-ref-type="LIGNE_BUDGETAIRE" onclick="RefManager.filterByType('LIGNE_BUDGETAIRE')" title="Filtrer par lignes budgétaires">
+          <div class="ref-kpi-left">
+            <div class="ref-kpi-icon" style="background:rgba(111,66,193,0.12); color:#6f42c1;">
+              <i class="fas fa-coins"></i>
+            </div>
+            <div>
+              <div class="ref-kpi-label">Lignes budgétaires</div>
+              <div class="ref-kpi-val">{{ params_lignes_budgetaires|length }}</div>
+            </div>
+          </div>
+          <button type="button" class="ref-kpi-add" title="Ajouter une ligne budgétaire" onclick="event.stopPropagation(); ouvrirModalParamFamille('', 'LIGNE_BUDGETAIRE', '')">
+            <i class="fas fa-plus"></i>
+          </button>
+        </div>
       </div>
-      <div class="ref-grid">
-        {% with ref_type='TYPE_FAMILLE' ref_title='Types de famille' ref_icon='fa-layer-group' %}
-        <div class="ref-card">
-          <div class="ref-card-head"><strong><i class="fas {{ ref_icon }}" style="color:#1c5b96;margin-right:6px;"></i>{{ ref_title }}</strong><span style="font-size:11px;color:var(--text-medium);">{{ params_types_famille|length }}</span></div>
-          <div class="ref-card-body">
-            {% for p in params_types_famille %}
-            <div class="ref-row"><span>{{ p.valeur }}</span><span class="ref-actions"><button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button><button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button></span></div>
-            <form method="POST" id="del-param-{{ p.id }}" style="display:none;">{% csrf_token %}<input type="hidden" name="supprimer_param_famille" value="1"><input type="hidden" name="parametre_id" value="{{ p.id }}"></form>
-            {% empty %}<div class="ref-empty">Aucun type enregistré.</div>{% endfor %}
+
+      <!-- 2. Barre d'outils et de filtres -->
+      <div class="ref-toolbar">
+        <div class="ref-pills">
+          <button type="button" class="ref-pill active" data-ref-type="ALL" onclick="RefManager.filterByType('ALL')">
+            <i class="fas fa-th-list"></i> Tous <span class="pill-badge" id="ref-count-all">{{ params_familles_all|length }}</span>
+          </button>
+          <button type="button" class="ref-pill" data-ref-type="TYPE_FAMILLE" onclick="RefManager.filterByType('TYPE_FAMILLE')">
+            <i class="fas fa-layer-group" style="color:#1c5b96;"></i> Types <span class="pill-badge">{{ params_types_famille|length }}</span>
+          </button>
+          <button type="button" class="ref-pill" data-ref-type="VALORISATION" onclick="RefManager.filterByType('VALORISATION')">
+            <i class="fas fa-calculator" style="color:#0f766e;"></i> Valorisation <span class="pill-badge">{{ params_valorisation|length }}</span>
+          </button>
+          <button type="button" class="ref-pill" data-ref-type="CATEGORIE" onclick="RefManager.filterByType('CATEGORIE')">
+            <i class="fas fa-tags" style="color:#fd7e14;"></i> Catégories <span class="pill-badge">{{ params_categories|length }}</span>
+          </button>
+          <button type="button" class="ref-pill" data-ref-type="LIGNE_BUDGETAIRE" onclick="RefManager.filterByType('LIGNE_BUDGETAIRE')">
+            <i class="fas fa-coins" style="color:#6f42c1;"></i> Lignes Budgétaires <span class="pill-badge">{{ params_lignes_budgetaires|length }}</span>
+          </button>
+        </div>
+
+        <div class="ref-controls">
+          <div class="search-wrap" style="max-width:260px;">
+            <i class="fas fa-search ico"></i>
+            <input type="text" id="ref-search-input" class="search-input" placeholder="Rechercher une valeur…" oninput="RefManager.onSearch(this.value)">
+            <button type="button" id="ref-search-clear" class="search-clear-btn" onclick="RefManager.clearSearch()" title="Effacer"><i class="fas fa-times"></i></button>
+          </div>
+
+          <div class="view-switch" title="Changer le mode d'affichage">
+            <button type="button" id="btn-view-table" class="view-btn active" onclick="RefManager.switchView('table')"><i class="fas fa-table"></i> Tableau</button>
+            <button type="button" id="btn-view-cards" class="view-btn" onclick="RefManager.switchView('cards')"><i class="fas fa-grip-horizontal"></i> Cartes</button>
+          </div>
+
+          <button class="btn-add btn-add-ref" type="button" onclick="RefManager.openModalForCurrent()">
+            <i class="fas fa-plus"></i> Ajouter une valeur
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. VUE TABLEAU (Par défaut, pro et paginée) -->
+      <div id="ref-view-table">
+        <div style="overflow-x: auto; border: 1px solid var(--border-light); border-radius: 8px;">
+          <table class="param-table">
+            <thead>
+              <tr>
+                <th style="width: 25%;">Type de Référentiel</th>
+                <th style="width: 35%;">Valeur</th>
+                <th style="width: 20%;">Date d'ajout</th>
+                <th style="width: 10%;">Statut</th>
+                <th class="c" style="width: 10%;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="ref-table-body">
+              {% for p in params_familles_all %}
+              <tr class="ref-table-row" data-type="{{ p.type_parametre }}" data-valeur="{{ p.valeur|lower }}">
+                <td>
+                  {% if p.type_parametre == 'TYPE_FAMILLE' %}
+                    <span class="badge-ref badge-type-famille"><i class="fas fa-layer-group"></i> Type de famille</span>
+                  {% elif p.type_parametre == 'VALORISATION' %}
+                    <span class="badge-ref badge-valorisation"><i class="fas fa-calculator"></i> Méthode de valorisation</span>
+                  {% elif p.type_parametre == 'CATEGORIE' %}
+                    <span class="badge-ref badge-categorie"><i class="fas fa-tags"></i> Catégorie</span>
+                  {% elif p.type_parametre == 'LIGNE_BUDGETAIRE' %}
+                    <span class="badge-ref badge-ligne-budgetaire"><i class="fas fa-coins"></i> Ligne budgétaire</span>
+                  {% else %}
+                    <span class="badge-ref">{{ p.get_type_parametre_display|default:p.type_parametre }}</span>
+                  {% endif %}
+                </td>
+                <td>
+                  <span class="valeur-chip">{{ p.valeur }}</span>
+                </td>
+                <td>
+                  <span style="font-size: 11px; color: var(--text-medium);"><i class="far fa-calendar-alt me-1"></i>{{ p.date_creation|date:"d/m/Y H:i"|default:"-" }}</span>
+                </td>
+                <td>
+                  <span class="badge-actif"><i class="fas fa-check-circle"></i> Actif</span>
+                </td>
+                <td class="c" style="white-space: nowrap;">
+                  <button type="button" class="btn-ed-sm" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')">
+                    <i class="fas fa-trash-alt"></i>
+                  </button>
+                  <form method="POST" id="del-param-{{ p.id }}" style="display:none;">
+                    {% csrf_token %}
+                    <input type="hidden" name="supprimer_param_famille" value="1">
+                    <input type="hidden" name="parametre_id" value="{{ p.id }}">
+                  </form>
+                </td>
+              </tr>
+              {% empty %}
+              <tr id="ref-table-server-empty">
+                <td colspan="5" style="text-align: center; padding: 30px; color: var(--text-medium); font-size: 13px; font-style: italic;">
+                  <i class="fas fa-folder-open me-2"></i>Aucun paramètre enregistré pour le moment.
+                </td>
+              </tr>
+              {% endfor %}
+              <tr id="ref-table-filter-empty" style="display:none;">
+                <td colspan="5" style="text-align: center; padding: 35px; color: var(--text-medium); font-size: 13px; font-style: italic;">
+                  <i class="fas fa-search me-2" style="font-size:18px;"></i>Aucune valeur ne correspond à votre filtre ou recherche.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination de la table -->
+        <div class="pag-bar" id="ref-pag-bar">
+          <span class="pag-info" id="ref-pag-info">Chargement...</span>
+          <div style="display:flex; gap:16px; align-items:center;">
+            <div class="pag-per">
+              Afficher
+              <select id="ref-per-page-select" onchange="RefManager.setPerPage(this.value)">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="all">Tous</option>
+              </select>
+            </div>
+            <div class="pag-ctrl" id="ref-pag-ctrl">
+              <!-- Dynamique via RefManager -->
+            </div>
           </div>
         </div>
-        {% endwith %}
-        {% with ref_type='VALORISATION' ref_title='Méthodes de valorisation' ref_icon='fa-calculator' %}
-        <div class="ref-card">
-          <div class="ref-card-head"><strong><i class="fas {{ ref_icon }}" style="color:#0f766e;margin-right:6px;"></i>{{ ref_title }}</strong><span style="font-size:11px;color:var(--text-medium);">{{ params_valorisation|length }}</span></div>
-          <div class="ref-card-body">
-            {% for p in params_valorisation %}
-            <div class="ref-row"><span>{{ p.valeur }}</span><span class="ref-actions"><button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button><button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button></span></div>
-            <form method="POST" id="del-param-{{ p.id }}" style="display:none;">{% csrf_token %}<input type="hidden" name="supprimer_param_famille" value="1"><input type="hidden" name="parametre_id" value="{{ p.id }}"></form>
-            {% empty %}<div class="ref-empty">Aucune méthode enregistrée.</div>{% endfor %}
+      </div>
+
+      <!-- 4. VUE CARTES PAR CATÉGORIE (Optimisée et synchronisée) -->
+      <div id="ref-view-cards" style="display:none;">
+        <div class="ref-grid">
+          <!-- Carte: Types de famille -->
+          <div class="ref-card" data-ref-card="TYPE_FAMILLE">
+            <div class="ref-card-head">
+              <strong><i class="fas fa-layer-group" style="color:#1c5b96;margin-right:6px;"></i>Types de famille</strong>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="badge-ref badge-type-famille" id="card-count-TYPE_FAMILLE">{{ params_types_famille|length }}</span>
+                <button type="button" class="btn-ed-sm" title="Ajouter un type" onclick="ouvrirModalParamFamille('','TYPE_FAMILLE','')"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="ref-card-body" id="card-body-TYPE_FAMILLE">
+              {% for p in params_types_famille %}
+              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
+                <span class="fw-semibold">{{ p.valeur }}</span>
+                <span class="ref-actions">
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                </span>
+              </div>
+              {% empty %}
+              <div class="ref-empty">Aucun type enregistré.</div>
+              {% endfor %}
+            </div>
+            <div class="card-pag" id="card-pag-TYPE_FAMILLE" style="display:none;">
+              <span class="card-pag-info">1 / 1</span>
+              <div>
+                <button type="button" class="card-prev" onclick="RefCards.prev('TYPE_FAMILLE')"><i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="card-next" onclick="RefCards.next('TYPE_FAMILLE')"><i class="fas fa-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carte: Méthodes de valorisation -->
+          <div class="ref-card" data-ref-card="VALORISATION">
+            <div class="ref-card-head">
+              <strong><i class="fas fa-calculator" style="color:#0f766e;margin-right:6px;"></i>Méthodes de valorisation</strong>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="badge-ref badge-valorisation" id="card-count-VALORISATION">{{ params_valorisation|length }}</span>
+                <button type="button" class="btn-ed-sm" title="Ajouter une méthode" onclick="ouvrirModalParamFamille('','VALORISATION','')"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="ref-card-body" id="card-body-VALORISATION">
+              {% for p in params_valorisation %}
+              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
+                <span class="fw-semibold">{{ p.valeur }}</span>
+                <span class="ref-actions">
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                </span>
+              </div>
+              {% empty %}
+              <div class="ref-empty">Aucune méthode enregistrée.</div>
+              {% endfor %}
+            </div>
+            <div class="card-pag" id="card-pag-VALORISATION" style="display:none;">
+              <span class="card-pag-info">1 / 1</span>
+              <div>
+                <button type="button" class="card-prev" onclick="RefCards.prev('VALORISATION')"><i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="card-next" onclick="RefCards.next('VALORISATION')"><i class="fas fa-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carte: Catégories -->
+          <div class="ref-card" data-ref-card="CATEGORIE">
+            <div class="ref-card-head">
+              <strong><i class="fas fa-tags" style="color:#fd7e14;margin-right:6px;"></i>Catégories</strong>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="badge-ref badge-categorie" id="card-count-CATEGORIE">{{ params_categories|length }}</span>
+                <button type="button" class="btn-ed-sm" title="Ajouter une catégorie" onclick="ouvrirModalParamFamille('','CATEGORIE','')"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="ref-card-body" id="card-body-CATEGORIE">
+              {% for p in params_categories %}
+              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
+                <span class="fw-semibold">{{ p.valeur }}</span>
+                <span class="ref-actions">
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                </span>
+              </div>
+              {% empty %}
+              <div class="ref-empty">Aucune catégorie enregistrée.</div>
+              {% endfor %}
+            </div>
+            <div class="card-pag" id="card-pag-CATEGORIE" style="display:none;">
+              <span class="card-pag-info">1 / 1</span>
+              <div>
+                <button type="button" class="card-prev" onclick="RefCards.prev('CATEGORIE')"><i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="card-next" onclick="RefCards.next('CATEGORIE')"><i class="fas fa-chevron-right"></i></button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Carte: Lignes budgétaires -->
+          <div class="ref-card" data-ref-card="LIGNE_BUDGETAIRE">
+            <div class="ref-card-head">
+              <strong><i class="fas fa-coins" style="color:#6f42c1;margin-right:6px;"></i>Lignes budgétaires</strong>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span class="badge-ref badge-ligne-budgetaire" id="card-count-LIGNE_BUDGETAIRE">{{ params_lignes_budgetaires|length }}</span>
+                <button type="button" class="btn-ed-sm" title="Ajouter une ligne" onclick="ouvrirModalParamFamille('','LIGNE_BUDGETAIRE','')"><i class="fas fa-plus"></i></button>
+              </div>
+            </div>
+            <div class="ref-card-body" id="card-body-LIGNE_BUDGETAIRE">
+              {% for p in params_lignes_budgetaires %}
+              <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
+                <span class="fw-semibold">{{ p.valeur }}</span>
+                <span class="ref-actions">
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                </span>
+              </div>
+              {% empty %}
+              <div class="ref-empty">Aucune ligne budgétaire enregistrée.</div>
+              {% endfor %}
+            </div>
+            <div class="card-pag" id="card-pag-LIGNE_BUDGETAIRE" style="display:none;">
+              <span class="card-pag-info">1 / 1</span>
+              <div>
+                <button type="button" class="card-prev" onclick="RefCards.prev('LIGNE_BUDGETAIRE')"><i class="fas fa-chevron-left"></i></button>
+                <button type="button" class="card-next" onclick="RefCards.next('LIGNE_BUDGETAIRE')"><i class="fas fa-chevron-right"></i></button>
+              </div>
+            </div>
           </div>
         </div>
-        {% endwith %}
-        {% with ref_type='CATEGORIE' ref_title='Catégories' ref_icon='fa-tags' %}
-        <div class="ref-card">
-          <div class="ref-card-head"><strong><i class="fas {{ ref_icon }}" style="color:#fd7e14;margin-right:6px;"></i>{{ ref_title }}</strong><span style="font-size:11px;color:var(--text-medium);">{{ params_categories|length }}</span></div>
-          <div class="ref-card-body">
-            {% for p in params_categories %}
-            <div class="ref-row"><span>{{ p.valeur }}</span><span class="ref-actions"><button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button><button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button></span></div>
-            <form method="POST" id="del-param-{{ p.id }}" style="display:none;">{% csrf_token %}<input type="hidden" name="supprimer_param_famille" value="1"><input type="hidden" name="parametre_id" value="{{ p.id }}"></form>
-            {% empty %}<div class="ref-empty">Aucune catégorie enregistrée.</div>{% endfor %}
-          </div>
-        </div>
-        {% endwith %}
-        {% with ref_type='LIGNE_BUDGETAIRE' ref_title='Lignes budgétaires' ref_icon='fa-coins' %}
-        <div class="ref-card">
-          <div class="ref-card-head"><strong><i class="fas {{ ref_icon }}" style="color:#6f42c1;margin-right:6px;"></i>{{ ref_title }}</strong><span style="font-size:11px;color:var(--text-medium);">{{ params_lignes_budgetaires|length }}</span></div>
-          <div class="ref-card-body">
-            {% for p in params_lignes_budgetaires %}
-            <div class="ref-row"><span>{{ p.valeur }}</span><span class="ref-actions"><button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button><button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button></span></div>
-            <form method="POST" id="del-param-{{ p.id }}" style="display:none;">{% csrf_token %}<input type="hidden" name="supprimer_param_famille" value="1"><input type="hidden" name="parametre_id" value="{{ p.id }}"></form>
-            {% empty %}<div class="ref-empty">Aucune ligne budgétaire enregistrée.</div>{% endfor %}
-          </div>
-        </div>
-        {% endwith %}
       </div>
     </div>
   </div>
@@ -635,7 +952,301 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 400);
         });
     });
+
+    // Initialiser la gestion réactive du Référentiel des familles
+    if (typeof RefManager !== 'undefined') {
+        RefManager.init();
+    }
 });
+
+// ── Référentiel des familles d'articles (Recherche, Filtres, Vues, Pagination) ──
+var RefManager = (function() {
+    var state = {
+        activeType: 'ALL',
+        searchQuery: '',
+        perPage: 10,
+        currentPage: 1,
+        viewMode: 'table'
+    };
+
+    function init() {
+        var container = document.getElementById('acc-ref-familles');
+        if (!container) return;
+        render();
+        RefCards.init();
+    }
+
+    function filterByType(type) {
+        state.activeType = type;
+        state.currentPage = 1;
+
+        // Mise à jour des pills
+        document.querySelectorAll('.ref-pill').forEach(function(pill) {
+            pill.classList.toggle('active', pill.dataset.refType === type);
+        });
+
+        // Mise à jour des mini-cartes KPI
+        document.querySelectorAll('.ref-kpi-card').forEach(function(card) {
+            var cardType = card.dataset.refType;
+            card.classList.toggle('active', cardType === type);
+            card.classList.remove('active-typ', 'active-val', 'active-cat', 'active-lig');
+            if (cardType === type) {
+                if (type === 'TYPE_FAMILLE') card.classList.add('active-typ');
+                else if (type === 'VALORISATION') card.classList.add('active-val');
+                else if (type === 'CATEGORIE') card.classList.add('active-cat');
+                else if (type === 'LIGNE_BUDGETAIRE') card.classList.add('active-lig');
+            }
+        });
+
+        // Mode cartes : filtrer les cartes visibles
+        if (state.viewMode === 'cards') {
+            document.querySelectorAll('.ref-card[data-ref-card]').forEach(function(c) {
+                c.style.display = (type === 'ALL' || c.dataset.refCard === type) ? '' : 'none';
+            });
+        }
+
+        render();
+    }
+
+    function onSearch(query) {
+        state.searchQuery = (query || '').trim().toLowerCase();
+        state.currentPage = 1;
+        var clearBtn = document.getElementById('ref-search-clear');
+        if (clearBtn) clearBtn.style.display = state.searchQuery ? 'block' : 'none';
+        render();
+        RefCards.filter(state.searchQuery);
+    }
+
+    function clearSearch() {
+        var input = document.getElementById('ref-search-input');
+        if (input) input.value = '';
+        onSearch('');
+        if (input) input.focus();
+    }
+
+    function setPerPage(val) {
+        state.perPage = val === 'all' ? 'all' : parseInt(val, 10);
+        state.currentPage = 1;
+        render();
+    }
+
+    function setPage(page) {
+        state.currentPage = page;
+        render();
+    }
+
+    function switchView(mode) {
+        state.viewMode = mode;
+        var viewTable = document.getElementById('ref-view-table');
+        var viewCards = document.getElementById('ref-view-cards');
+        var btnTable = document.getElementById('btn-view-table');
+        var btnCards = document.getElementById('btn-view-cards');
+
+        if (mode === 'table') {
+            if (viewTable) viewTable.style.display = 'block';
+            if (viewCards) viewCards.style.display = 'none';
+            if (btnTable) btnTable.classList.add('active');
+            if (btnCards) btnCards.classList.remove('active');
+            render();
+        } else {
+            if (viewTable) viewTable.style.display = 'none';
+            if (viewCards) viewCards.style.display = 'block';
+            if (btnTable) btnTable.classList.remove('active');
+            if (btnCards) btnCards.classList.add('active');
+            filterByType(state.activeType);
+            RefCards.filter(state.searchQuery);
+        }
+    }
+
+    function openModalForCurrent() {
+        var type = (state.activeType && state.activeType !== 'ALL') ? state.activeType : 'TYPE_FAMILLE';
+        ouvrirModalParamFamille('', type, '');
+    }
+
+    function render() {
+        var rows = Array.from(document.querySelectorAll('#ref-table-body .ref-table-row'));
+        var emptyFilter = document.getElementById('ref-table-filter-empty');
+        var pagBar = document.getElementById('ref-pag-bar');
+
+        if (!rows.length) {
+            if (pagBar) pagBar.style.display = 'none';
+            return;
+        }
+
+        // Filtrer les lignes
+        var filteredRows = rows.filter(function(row) {
+            var matchesType = (state.activeType === 'ALL' || row.dataset.type === state.activeType);
+            var matchesQuery = (!state.searchQuery || (row.dataset.valeur && row.dataset.valeur.includes(state.searchQuery)));
+            return matchesType && matchesQuery;
+        });
+
+        var total = filteredRows.length;
+
+        if (total === 0) {
+            rows.forEach(function(r) { r.style.display = 'none'; });
+            if (emptyFilter) emptyFilter.style.display = '';
+            if (pagBar) pagBar.style.display = 'none';
+            return;
+        }
+
+        if (emptyFilter) emptyFilter.style.display = 'none';
+        if (pagBar) pagBar.style.display = 'flex';
+
+        // Pagination
+        var perPage = state.perPage === 'all' ? total : state.perPage;
+        var totalPages = Math.max(1, Math.ceil(total / perPage));
+        if (state.currentPage > totalPages) state.currentPage = totalPages;
+        if (state.currentPage < 1) state.currentPage = 1;
+
+        var start = (state.currentPage - 1) * perPage;
+        var end = Math.min(start + perPage, total);
+
+        rows.forEach(function(r) { r.style.display = 'none'; });
+        for (var i = start; i < end; i++) {
+            filteredRows[i].style.display = '';
+        }
+
+        // Info text
+        var pagInfo = document.getElementById('ref-pag-info');
+        if (pagInfo) {
+            pagInfo.textContent = 'Affichage ' + (start + 1) + ' à ' + end + ' sur ' + total + ' valeur' + (total > 1 ? 's' : '');
+        }
+
+        // Contrôles pagination
+        var pagCtrl = document.getElementById('ref-pag-ctrl');
+        if (pagCtrl) {
+            if (totalPages <= 1) {
+                pagCtrl.innerHTML = '';
+            } else {
+                var html = '';
+                if (state.currentPage > 1) {
+                    html += '<button type="button" class="pag-link" onclick="RefManager.setPage(' + (state.currentPage - 1) + ')">Préc.</button>';
+                }
+                for (var p = 1; p <= totalPages; p++) {
+                    if (p === state.currentPage) {
+                        html += '<span class="pag-cur" style="background:#1c5b96;">' + p + '</span>';
+                    } else if (p === 1 || p === totalPages || (p >= state.currentPage - 1 && p <= state.currentPage + 1)) {
+                        html += '<button type="button" class="pag-link" onclick="RefManager.setPage(' + p + ')">' + p + '</button>';
+                    } else if (p === state.currentPage - 2 || p === state.currentPage + 2) {
+                        html += '<span style="padding:4px 6px;color:var(--text-medium);font-size:12px;">…</span>';
+                    }
+                }
+                if (state.currentPage < totalPages) {
+                    html += '<button type="button" class="pag-link" onclick="RefManager.setPage(' + (state.currentPage + 1) + ')">Suiv.</button>';
+                }
+                pagCtrl.innerHTML = html;
+            }
+        }
+    }
+
+    return {
+        init: init,
+        filterByType: filterByType,
+        onSearch: onSearch,
+        clearSearch: clearSearch,
+        setPerPage: setPerPage,
+        setPage: setPage,
+        switchView: switchView,
+        openModalForCurrent: openModalForCurrent,
+        render: render
+    };
+})();
+
+var RefCards = (function() {
+    var cards = {
+        'TYPE_FAMILLE': { page: 1, perPage: 5 },
+        'VALORISATION': { page: 1, perPage: 5 },
+        'CATEGORIE': { page: 1, perPage: 5 },
+        'LIGNE_BUDGETAIRE': { page: 1, perPage: 5 }
+    };
+
+    function init() {
+        Object.keys(cards).forEach(function(type) {
+            updateCard(type);
+        });
+    }
+
+    function filter(query) {
+        Object.keys(cards).forEach(function(type) {
+            cards[type].page = 1;
+            updateCard(type, query);
+        });
+    }
+
+    function prev(type) {
+        if (cards[type].page > 1) {
+            cards[type].page--;
+            updateCard(type);
+        }
+    }
+
+    function next(type) {
+        cards[type].page++;
+        updateCard(type);
+    }
+
+    function updateCard(type, query) {
+        var q = (query !== undefined ? query : (document.getElementById('ref-search-input') ? document.getElementById('ref-search-input').value.toLowerCase().trim() : ''));
+        var body = document.getElementById('card-body-' + type);
+        var pagEl = document.getElementById('card-pag-' + type);
+        if (!body) return;
+
+        var rows = Array.from(body.querySelectorAll('.card-row'));
+        var emptyEl = body.querySelector('.ref-empty');
+
+        var filtered = rows.filter(function(r) {
+            var val = r.dataset.valeur || '';
+            return !q || val.includes(q);
+        });
+
+        var total = filtered.length;
+        var perPage = cards[type].perPage;
+        var totalPages = Math.max(1, Math.ceil(total / perPage));
+        if (cards[type].page > totalPages) cards[type].page = totalPages;
+        if (cards[type].page < 1) cards[type].page = 1;
+
+        rows.forEach(function(r) { r.style.display = 'none'; });
+
+        if (total === 0) {
+            if (emptyEl) {
+                emptyEl.style.display = 'block';
+                emptyEl.textContent = q ? 'Aucun résultat.' : 'Aucun élément enregistré.';
+            }
+            if (pagEl) pagEl.style.display = 'none';
+            return;
+        }
+
+        if (emptyEl) emptyEl.style.display = 'none';
+
+        var start = (cards[type].page - 1) * perPage;
+        var end = Math.min(start + perPage, total);
+        for (var i = start; i < end; i++) {
+            filtered[i].style.display = 'flex';
+        }
+
+        if (pagEl) {
+            if (totalPages > 1) {
+                pagEl.style.display = 'flex';
+                var info = pagEl.querySelector('.card-pag-info');
+                if (info) info.textContent = cards[type].page + ' / ' + totalPages + ' (' + total + ')';
+                var btnPrev = pagEl.querySelector('.card-prev');
+                var btnNext = pagEl.querySelector('.card-next');
+                if (btnPrev) btnPrev.disabled = (cards[type].page === 1);
+                if (btnNext) btnNext.disabled = (cards[type].page >= totalPages);
+            } else {
+                pagEl.style.display = 'none';
+            }
+        }
+    }
+
+    return {
+        init: init,
+        filter: filter,
+        prev: prev,
+        next: next,
+        updateCard: updateCard
+    };
+})();
 
 // ── Radio selection visual ────────────────────────────────────────────────
 function updateRadioSelection(radio) {

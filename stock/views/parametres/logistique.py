@@ -166,6 +166,9 @@ def _handle_get(request):
         'params_lignes_budgetaires': FamilleParametre.objects.filter(
             type_parametre='LIGNE_BUDGETAIRE', actif=True
         ).order_by('valeur'),
+        'params_familles_all': FamilleParametre.objects.filter(
+            actif=True
+        ).order_by('type_parametre', 'valeur'),
         'form_param_famille': FamilleParametreForm(),
         'perm_familles': request.user.has_perm('accounts.menu_familles') or request.user.is_superuser,
     }
