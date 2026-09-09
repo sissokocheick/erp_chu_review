@@ -85,7 +85,10 @@ def _parse_post_to_config(request_post, type_doc='BS'):
     }
 
     # CARTOUCHE
-    cfg['cartouche']['afficher_code_iso'] = request_post.get('cartouche_afficher_code_iso') == 'on'
+    if 'cartouche_form_present' in request_post or 'cartouche_afficher_code_iso' in request_post:
+        cfg['cartouche']['afficher_code_iso'] = request_post.get('cartouche_afficher_code_iso') == 'on'
+    else:
+        cfg['cartouche']['afficher_code_iso'] = True
     cfg['cartouche']['position_logo'] = request_post.get('cartouche_position_logo', 'left')
     cfg['cartouche']['trait_separation_epaisseur'] = int(request_post.get('cartouche_trait_separation_epaisseur', 1) or 1)
     cfg['cartouche']['trait_separation_couleur'] = request_post.get('cartouche_trait_separation_couleur', '#000000')
@@ -320,9 +323,30 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
         else:
             config_preview['texte_institutionnel'] = "Direction des Affaires Financières / Sous-Direction de la Logistique"
 
-        # Code document plat pour les templates
-        if 'code_document' not in config_preview:
-            config_preview['code_document'] = (config_preview.get('metadonnees') or {}).get('code_document', '')
+        # Métadonnées et cartouche pour les templates
+        meta = config_preview.get('metadonnees') or {}
+        if not isinstance(meta, dict):
+            meta = {}
+            config_preview['metadonnees'] = meta
+
+        cart = config_preview.get('cartouche') or {}
+        if not isinstance(cart, dict):
+            cart = {}
+            config_preview['cartouche'] = cart
+        if 'afficher_code_iso' not in cart:
+            cart['afficher_code_iso'] = True
+
+        config_preview['code_document'] = meta.get('code_document') or config_preview.get('code_document', '')
+        config_preview['date_creation_doc'] = meta.get('date_creation_doc') or config_preview.get('date_creation_doc', '')
+        config_preview['date_revision_doc'] = meta.get('date_revision_doc') or config_preview.get('date_revision_doc', '')
+        config_preview['version_doc'] = meta.get('version_doc') or config_preview.get('version_doc', '')
+        config_preview['ps2_label'] = meta.get('ps2_label') or config_preview.get('ps2_label', '')
+
+        meta['code_document'] = config_preview['code_document']
+        meta['date_creation_doc'] = config_preview['date_creation_doc']
+        meta['date_revision_doc'] = config_preview['date_revision_doc']
+        meta['version_doc'] = config_preview['version_doc']
+        meta['ps2_label'] = config_preview['ps2_label']
 
         # Construction universelle des cases de signatures pour l'aperçu
         signature_cases = []

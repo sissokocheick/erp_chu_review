@@ -263,10 +263,10 @@ img { max-width: 100%; height: auto; }
             <img src="{{ logo_url }}" alt="Logo">
           {% endif %}
         </td>
-        <td class="title-cell" style="padding:0; vertical-align:top;">
+        <td class="title-cell" style="{% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}width:50%{% else %}width:75%{% endif %}; padding:0; vertical-align:top;">
           <div style="height:11mm; line-height:11mm; width:100%; border-bottom:1.5px solid #000; box-sizing:border-box; text-align:center;">
             <span style="font-size:10pt; font-weight:bold; text-transform:uppercase; display:inline-block; vertical-align:middle; line-height:normal;">
-              {{ pdf_config.metadonnees.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
+              {{ pdf_config.metadonnees.ps2_label|default:pdf_config.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
             </span>
           </div>
           <div style="height:17mm; line-height:17mm; width:100%; box-sizing:border-box; text-align:center;">
@@ -277,13 +277,11 @@ img { max-width: 100%; height: auto; }
         </td>
         {% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}
         <td class="code-cell">
-          Code : {{ pdf_config.metadonnees.code_document|default:"ENR-BDC/DAF-001" }}<br>
-          Créé le : {{ pdf_config.metadonnees.date_creation_doc|default:"10/06/2024" }}<br>
-          Révisé le : {{ pdf_config.metadonnees.date_revision_doc|default:"" }}<br>
-          Version : {{ pdf_config.metadonnees.version_doc|default:"001" }}
+          Code : {{ pdf_config.metadonnees.code_document|default:pdf_config.code_document|default:"ENR-BDC/DAF-001" }}<br>
+          Créé le : {{ pdf_config.metadonnees.date_creation_doc|default:pdf_config.date_creation_doc|default:"10/06/2024" }}<br>
+          Révisé le : {{ pdf_config.metadonnees.date_revision_doc|default:pdf_config.date_revision_doc|default:"" }}<br>
+          Version : {{ pdf_config.metadonnees.version_doc|default:pdf_config.version_doc|default:"001" }}
         </td>
-        {% else %}
-        <td class="code-cell" style="border-left:none;"></td>
         {% endif %}
       </tr>
     </table>
@@ -400,10 +398,10 @@ img { max-width: 100%; height: auto; }
               <img src="{{ logo_url }}" alt="Logo">
             {% endif %}
           </td>
-          <td class="title-cell" style="padding:0; vertical-align:top;">
+          <td class="title-cell" style="{% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}width:50%{% else %}width:75%{% endif %}; padding:0; vertical-align:top;">
             <div style="height:11mm; line-height:11mm; width:100%; border-bottom:1.5px solid #000; box-sizing:border-box; text-align:center;">
               <span style="font-size:10pt; font-weight:bold; text-transform:uppercase; display:inline-block; vertical-align:middle; line-height:normal;">
-                {{ pdf_config.metadonnees.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
+                {{ pdf_config.metadonnees.ps2_label|default:pdf_config.ps2_label|default:"PS2 : GERER LES APPROVISIONNEMENTS" }}
               </span>
             </div>
             <div style="height:17mm; line-height:17mm; width:100%; box-sizing:border-box; text-align:center;">
@@ -414,13 +412,11 @@ img { max-width: 100%; height: auto; }
           </td>
           {% if pdf_config.cartouche.afficher_code_iso|default_if_none:True %}
           <td class="code-cell">
-            Code : {{ pdf_config.metadonnees.code_document|default:"ENR-BDC/DAF-001" }}<br>
-            Créé le : {{ pdf_config.metadonnees.date_creation_doc|default:"10/06/2024" }}<br>
-            Révisé le : {{ pdf_config.metadonnees.date_revision_doc|default:"" }}<br>
-            Version : {{ pdf_config.metadonnees.version_doc|default:"001" }}
+            Code : {{ pdf_config.metadonnees.code_document|default:pdf_config.code_document|default:"ENR-BDC/DAF-001" }}<br>
+            Créé le : {{ pdf_config.metadonnees.date_creation_doc|default:pdf_config.date_creation_doc|default:"10/06/2024" }}<br>
+            Révisé le : {{ pdf_config.metadonnees.date_revision_doc|default:pdf_config.date_revision_doc|default:"" }}<br>
+            Version : {{ pdf_config.metadonnees.version_doc|default:pdf_config.version_doc|default:"001" }}
           </td>
-          {% else %}
-          <td class="code-cell" style="border-left:none;"></td>
           {% endif %}
         </tr>
       </table>

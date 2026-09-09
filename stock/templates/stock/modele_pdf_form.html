@@ -639,6 +639,16 @@
                         <span class="toggle-icon">▼</span>
                     </div>
                     <div class="config-card-body open">
+                        <input type="hidden" name="cartouche_form_present" value="1">
+                        <div class="form-group">
+                            <label>Bloc qualité ISO (en haut à droite)</label>
+                            <div class="checkbox-group">
+                                <label class="checkbox-item {% if cartouche_afficher_code_iso|default_if_none:True %}checked{% endif %}">
+                                    <input type="checkbox" name="cartouche_afficher_code_iso" {% if cartouche_afficher_code_iso|default_if_none:True %}checked{% endif %}>
+                                    Afficher le bloc qualité (Code, Dates, Version)
+                                </label>
+                            </div>
+                        </div>
                         <div class="form-group">
                             <label>Code document</label>
                             <input type="text" name="metadonnees_code_document" value="{{ metadonnees_code_document|default:'' }}" placeholder="ENR-BDC/DAF-001">

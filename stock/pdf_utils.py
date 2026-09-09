@@ -200,6 +200,22 @@ def get_pdf_config(magasin, type_doc_code, request):
     pdf_config['date_revision_doc'] = metadonnees.get('date_revision_doc') or ''
     pdf_config['version_doc'] = metadonnees.get('version_doc') or '1.0'
     pdf_config['ps2_label'] = metadonnees.get('ps2_label') or ''
+
+    if 'metadonnees' not in pdf_config or not isinstance(pdf_config['metadonnees'], dict):
+        pdf_config['metadonnees'] = {}
+    pdf_config['metadonnees']['code_document'] = pdf_config['code_document']
+    pdf_config['metadonnees']['date_creation_doc'] = pdf_config['date_creation_doc']
+    pdf_config['metadonnees']['date_revision_doc'] = pdf_config['date_revision_doc']
+    pdf_config['metadonnees']['version_doc'] = pdf_config['version_doc']
+    pdf_config['metadonnees']['ps2_label'] = pdf_config['ps2_label']
+
+    cart = pdf_config.get('cartouche') or {}
+    if not isinstance(cart, dict):
+        cart = {}
+        pdf_config['cartouche'] = cart
+    if 'afficher_code_iso' not in cart:
+        cart['afficher_code_iso'] = True
+
     pdf_config['texte_institutionnel'] = (
         pdf_config.get('texte_institutionnel')
         or (pied_texte or '')
