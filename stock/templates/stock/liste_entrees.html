@@ -258,7 +258,7 @@
         <form id="form-saisie-entree" method="POST" enctype="multipart/form-data">
             {% csrf_token %}
             <div class="modal-body">
-                <div class="vd-section" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                <div class="vd-section" style="display: grid; grid-template-columns: repeat({% if magasin_gere_projets %}5{% else %}4{% endif %}, 1fr); gap: 20px;">
                     <div>
                         <label class="vd-label">Magasin Destination *</label>
                         {% if magasins|length == 1 %}
@@ -271,22 +271,77 @@
                         {% else %}
                             {% if magasin_actif %}
 <input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="vd-magasin">
-<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
+<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fixé au magasin actif actuel">
 {% else %}
 <select name="magasin" id="vd-magasin" required class="vd-input select2" style="width: 100%; background: var(--bg-input); color: var(--text-dark);">
                                 <option value="">-- Choisir le magasin --</option>
-                                {% for m in magasins %}<option value="{{ m.id }}">{{ m.nom }}</option>{% endfor %}
+                                {% for m in magasins %}<option value="{{ m.id }}" data-gere-projets="{{ m.gere_projets|yesno:'1,0' }}">{{ m.nom }}</option>{% endfor %}
                             </select>
 {% endif %}
                         {% endif %}
                     </div>
                     <div>
                         <label class="vd-label">Fournisseur *</label>
-                        <select name="fournisseur" required class="vd-input select2">
+                        <select name="fournisseur" id="vd-fournisseur" required class="vd-input select2">
                             <option value="">-- Chercher un fournisseur --</option>
                             {% for f in fournisseurs %}<option value="{{ f.id }}">{{ f.raison_sociale }}</option>{% endfor %}
                         </select>
                     </div>
+                    {% if magasin_gere_projets %}
+                    <div id="div-entree-projet">
+                        <label class="vd-label">Projet (Optionnel)</label>
+                        <select name="projet" id="vd-projet-entree" class="vd-input select2" onchange="onProjetEntreeChange(this)">
+                            <option value="">-- Aucun projet lié --</option>
+                            {% for p in projets_list %}
+                                <option value="{{ p.id }}" data-fournisseur-id="{{ p.fournisseur_id|default:'' }}" data-meme-fournisseur="{{ p.meme_fournisseur_livreur|yesno:'1,0' }}">
+                                    {{ p.nom }}{% if p.fournisseur %} ({{ p.fournisseur.raison_sociale }}){% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <script>
+                    function onProjetEntreeChange(selectEl) {
+                        if (!selectEl) return;
+                        const opt = selectEl.options[selectEl.selectedIndex];
+                        if (opt) {
+                            const fourId = opt.getAttribute('data-fournisseur-id');
+                            const memeFournisseur = opt.getAttribute('data-meme-fournisseur') === '1';
+                            if (fourId && memeFournisseur) {
+                                const fournSelect = document.getElementById('vd-fournisseur');
+                                if (fournSelect) {
+                                    $(fournSelect).val(fourId).trigger('change');
+                                }
+                            }
+                        }
+                        mettreAJourPlaceholderSearchEntree();
+                        const projetId = selectEl.value;
+                        if (projetId && typeof assurerArticlesProjetCharges === 'function') {
+                            assurerArticlesProjetCharges(projetId).then(() => {
+                                if (document.getElementById('vd-search-input') && document.getElementById('vd-search-input').value.trim().length >= 1) {
+                                    filtrerProduits();
+                                }
+                            });
+                        } else if (document.getElementById('vd-search-input') && document.getElementById('vd-search-input').value.trim().length >= 1) {
+                            filtrerProduits();
+                        }
+                    }
+
+                    function mettreAJourPlaceholderSearchEntree() {
+                        const searchInput = document.getElementById('vd-search-input');
+                        if (!searchInput || searchInput.disabled) return;
+                        const selectProjet = document.getElementById('vd-projet-entree');
+                        const projetId = selectProjet ? selectProjet.value : '';
+
+                        if (typeof MAGASIN_FILTRE_PROJET !== 'undefined' && MAGASIN_FILTRE_PROJET && projetId) {
+                            const opt = selectProjet.options[selectProjet.selectedIndex];
+                            const projetText = opt ? opt.text.split('(')[0].trim() : 'ce projet';
+                            searchInput.placeholder = `Rechercher parmi les matériels du projet (${projetText})...`;
+                        } else {
+                            searchInput.placeholder = "Taper le nom ou la référence de l'article reçu...";
+                        }
+                    }
+                    </script>
+                    {% endif %}
                     <div>
                         <label class="vd-label">N° Facture / BL *</label>
                         <input type="text" name="reference_externe" required placeholder="Ex: BL-2026-001" class="vd-input">
@@ -333,6 +388,12 @@
                                     <td style="padding: 12px; width: 20%; text-align: right;"><span class="badge-stock">Calcul...</span></td>
                                 </tr>
                                 {% endfor %}
+                                <tr id="vd-dropdown-aucun-projet" style="display: none;">
+                                    <td colspan="3" style="text-align: center; padding: 20px; color: var(--text-light); font-size: 13px;">
+                                        <i class="fas fa-filter" style="color: #28a745; margin-right: 6px;"></i>
+                                        Aucun article correspondant affecté à ce projet.
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -420,6 +481,25 @@
 </div>
 
 <script>
+/* ═════ CONSTANTES ET RESTRICTION PROJETS ═════ */
+const PROJETS_ARTICLES_MAP = {{ projets_articles_json|default:'{}'|safe }};
+const MAGASIN_FILTRE_PROJET = {{ magasin_filtre_projet|yesno:'true,false' }};
+const CACHE_ARTICLES_PROJETS = {...PROJETS_ARTICLES_MAP};
+
+async function assurerArticlesProjetCharges(projetId) {
+    if (!projetId || CACHE_ARTICLES_PROJETS[projetId]) return;
+    try {
+        const resp = await fetch(`/api/projets/${projetId}/articles/`);
+        if (resp.ok) {
+            const data = await resp.json();
+            CACHE_ARTICLES_PROJETS[projetId] = data.article_ids || [];
+            PROJETS_ARTICLES_MAP[projetId] = CACHE_ARTICLES_PROJETS[projetId];
+        }
+    } catch (e) {
+        console.error("Erreur chargement articles projet :", e);
+    }
+}
+
 /* ═════ MODAL PDF (lecteur natif) ═════ */
 window.imprimerModal = function(url, titre) {
         if (window.nxOpenPdfModal) { nxOpenPdfModal(url, titre); return; }
@@ -446,6 +526,7 @@ window.imprimerModal = function(url, titre) {
         document.getElementById('form-saisie-entree').reset();
         if ($('#vd-magasin').is('select')) { $('#vd-magasin').val(null).trigger('change'); }
         $('select[name="fournisseur"]').val(null).trigger('change');
+        if ($('#vd-projet-entree').length) { $('#vd-projet-entree').val(null).trigger('change'); }
         viderTableau();
         if ($('#vd-magasin').is('select')) {
             document.getElementById('vd-search-input').disabled = true;
@@ -455,6 +536,10 @@ window.imprimerModal = function(url, titre) {
     }
 
     document.addEventListener('DOMContentLoaded', function() {
+        $('#vd-projet-entree').on('change', function() {
+            onProjetEntreeChange(this);
+        });
+
         $('#vd-magasin').on('change', function() {
             let searchInput = document.getElementById('vd-search-input');
             let magasinId = $(this).val();
@@ -653,6 +738,7 @@ window.imprimerModal = function(url, titre) {
     function filtrerProduits() {
         let input = document.getElementById('vd-search-input');
         let dropdown = document.getElementById('vd-dropdown');
+        let aucunProjetRow = document.getElementById('vd-dropdown-aucun-projet');
         let magasinId = document.getElementById('vd-magasin').value;
         let rows = document.querySelectorAll('.dropdown-item');
         let hasVisible = false;
@@ -664,19 +750,53 @@ window.imprimerModal = function(url, titre) {
         }
 
         let inputValue = input.value.toLowerCase();
-        if (inputValue.length < 1) { dropdown.style.display = 'none'; return; }
+        if (inputValue.length < 1) {
+            dropdown.style.display = 'none';
+            if (aucunProjetRow) aucunProjetRow.style.display = 'none';
+            return;
+        }
+
+        const selectProjet = document.getElementById('vd-projet-entree');
+        const projetId = selectProjet ? selectProjet.value : '';
+        const restrictionProjetActive = Boolean(MAGASIN_FILTRE_PROJET && projetId);
+        const articlesAutorises = restrictionProjetActive ? (CACHE_ARTICLES_PROJETS[projetId] || PROJETS_ARTICLES_MAP[projetId] || []) : null;
+
+        let nbMatchesSansFiltreProjet = 0;
 
         rows.forEach(row => {
-            let ref = row.getAttribute('data-ref').toLowerCase();
-            let nom = row.getAttribute('data-nom').toLowerCase();
+            let ref = (row.getAttribute('data-ref') || '').toLowerCase();
+            let nom = (row.getAttribute('data-nom') || '').toLowerCase();
+            let articleId = parseInt(row.getAttribute('data-id'), 10);
+
             if (ref.includes(inputValue) || nom.includes(inputValue)) {
-                let stocksData = JSON.parse(row.getAttribute('data-stocks') || '{}');
+                nbMatchesSansFiltreProjet++;
+                if (restrictionProjetActive && (!articlesAutorises || !articlesAutorises.includes(articleId))) {
+                    row.style.display = 'none';
+                    return;
+                }
+                let stocksData = {};
+                try {
+                    stocksData = JSON.parse(row.getAttribute('data-stocks') || '{}');
+                } catch (e) {
+                    stocksData = {};
+                }
                 let dispo = stocksData[magasinId] || 0;
                 row.querySelector('.badge-stock').innerText = dispo;
                 row.style.display = ''; hasVisible = true;
             } else { row.style.display = 'none'; }
         });
-        dropdown.style.display = hasVisible ? 'block' : 'none';
+
+        if (aucunProjetRow) {
+            if (!hasVisible && nbMatchesSansFiltreProjet > 0 && restrictionProjetActive) {
+                aucunProjetRow.style.display = '';
+                dropdown.style.display = 'block';
+            } else {
+                aucunProjetRow.style.display = 'none';
+                dropdown.style.display = hasVisible ? 'block' : 'none';
+            }
+        } else {
+            dropdown.style.display = hasVisible ? 'block' : 'none';
+        }
     }
 
     function ajouterArticleDirect(rowElement) {

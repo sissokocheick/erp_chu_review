@@ -4,87 +4,433 @@
 {% block title %}Nouvelle mission — {{ vehicule.immatriculation }}{% endblock %}
 
 {% block contenu %}
-<div class="container-fluid">
-    <div class="mb-4">
-        <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour au véhicule</a>
-        <h4 class="mb-0 mt-1"><i class="fas fa-route me-2"></i>Nouvelle mission — {{ vehicule.immatriculation }}</h4>
+<style>
+  :root {
+    --mis-rad: 12px;
+    --mis-rad-sm: 8px;
+  }
+
+  .mis-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding-bottom: 50px;
+  }
+
+  /* ── BANNIÈRE EN-TÊTE ── */
+  .mis-hero {
+    background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #4f46e5 100%);
+    color: white;
+    border-radius: var(--mis-rad);
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.25);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .mis-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .mis-hero-icon {
+    width: 58px;
+    height: 58px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+  .mis-hero h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .mis-hero p {
+    margin: 4px 0 0 0;
+    opacity: 0.9;
+    font-size: 13px;
+  }
+  .btn-retour-mis {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    padding: 10px 18px;
+    border-radius: var(--mis-rad-sm);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .btn-retour-mis:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: translateY(-1px);
+  }
+
+  /* ── LAYOUT 2 COLONNES ── */
+  .mis-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .mis-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── CARTE FORMULAIRE ── */
+  .mis-card {
+    background: var(--bg-card);
+    border-radius: var(--mis-rad);
+    box-shadow: 0 2px 12px var(--shadow);
+    border: 1px solid var(--border-light);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .mis-card-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-hover);
+  }
+  .mis-card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    background: rgba(79, 70, 229, 0.12);
+    color: #4f46e5;
+    flex-shrink: 0;
+  }
+  .mis-card-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+  .mis-card-body {
+    padding: 24px 22px;
+  }
+
+  .mis-fg {
+    margin-bottom: 16px;
+  }
+  .mis-fg:last-child {
+    margin-bottom: 0;
+  }
+  .mis-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-medium);
+    margin-bottom: 6px;
+  }
+  .mis-label .req {
+    color: #dc2626;
+    font-weight: 800;
+    margin-left: 3px;
+  }
+  .mis-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .mis-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 600px) {
+    .mis-grid-2, .mis-grid-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .mis-input,
+  .mis-select,
+  .mis-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--mis-rad-sm);
+    font-size: 13.5px;
+    background: var(--bg-hover);
+    color: var(--text-dark);
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .mis-input:focus,
+  .mis-select:focus,
+  .mis-textarea:focus {
+    border-color: #4f46e5;
+    background: var(--bg-card);
+    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  }
+  .mis-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 4 5'%3E%3Cpath fill='%234f46e5' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 34px;
+  }
+  .mis-textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .mis-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .mis-input-wrap .mis-input {
+    padding-right: 50px;
+  }
+  .mis-input-unit {
+    position: absolute;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-light);
+    pointer-events: none;
+    text-transform: uppercase;
+  }
+
+  /* ── CARTE RÉSUMÉ VÉHICULE (DROITE) ── */
+  .veh-summary-card {
+    background: var(--bg-card);
+    border-radius: var(--mis-rad);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 10px var(--shadow);
+    padding: 22px;
+  }
+  .veh-summary-card h5 {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #4f46e5;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .veh-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+  }
+  .veh-summary-row:last-child {
+    border-bottom: none;
+  }
+  .veh-summary-label {
+    color: var(--text-medium);
+  }
+  .veh-summary-val {
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+
+  /* ── BOUTONS ACTIONS ── */
+  .mis-actions-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .btn-mis-cancel {
+    background: var(--bg-hover);
+    color: var(--text-medium);
+    border: 1px solid var(--border-color);
+    padding: 11px 22px;
+    border-radius: var(--mis-rad-sm);
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  .btn-mis-cancel:hover {
+    background: var(--bg-card);
+    color: var(--text-dark);
+  }
+  .btn-mis-submit {
+    background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
+    color: white;
+    border: none;
+    padding: 11px 28px;
+    border-radius: var(--mis-rad-sm);
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    transition: all 0.2s ease;
+  }
+  .btn-mis-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(79, 70, 229, 0.4);
+    background: linear-gradient(135deg, #3730a3 0%, #4338ca 100%);
+  }
+</style>
+
+<div class="mis-container">
+  <!-- EN-TÊTE HERO -->
+  <div class="mis-hero">
+    <div class="mis-hero-left">
+      <div class="mis-hero-icon">
+        <i class="fas fa-route"></i>
+      </div>
+      <div>
+        <h3>Nouvelle mission — {{ vehicule.immatriculation }}</h3>
+        <p>Ordre de mission automobile, itinéraire, relevé kilométrique et suivi du chauffeur</p>
+      </div>
+    </div>
+    <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn-retour-mis">
+      <i class="fas fa-arrow-left"></i> Retour au véhicule
+    </a>
+  </div>
+
+  <div class="mis-layout">
+    <!-- COLONNE GAUCHE : FORMULAIRE -->
+    <div>
+      <div class="mis-card">
+        <div class="mis-card-head">
+          <div class="mis-card-icon">
+            <i class="fas fa-map-marked-alt"></i>
+          </div>
+          <h4 class="mis-card-title">Détails de l'ordre de mission</h4>
+        </div>
+        <div class="mis-card-body">
+          <form method="POST" novalidate>
+            {% csrf_token %}
+
+            <div class="mis-fg">
+              <label class="mis-label">Objet de la mission <span class="req">*</span></label>
+              <input type="text" name="objet" class="mis-input" required placeholder="Ex: Transport de matériel médical, déplacement officiel, évacuation...">
+            </div>
+
+            <div class="mis-fg">
+              <label class="mis-label">Destination <span class="req">*</span></label>
+              <input type="text" name="destination" class="mis-input" required placeholder="Ex: CHU de Cocody, Aéroport FHB, Direction Régionale...">
+            </div>
+
+            <div class="mis-grid-2 mis-fg">
+              <div>
+                <label class="mis-label">Date & Heure de départ <span class="req">*</span></label>
+                <input type="datetime-local" name="date_depart" class="mis-input" required>
+              </div>
+              <div>
+                <label class="mis-label">Date & Heure de retour estimée</label>
+                <input type="datetime-local" name="date_retour" class="mis-input">
+              </div>
+            </div>
+
+            <div class="mis-grid-3 mis-fg">
+              <div>
+                <label class="mis-label">KM au départ</label>
+                <div class="mis-input-wrap">
+                  <input type="number" name="km_depart" class="mis-input" value="{{ vehicule.kilometrage }}">
+                  <span class="mis-input-unit">km</span>
+                </div>
+              </div>
+              <div>
+                <label class="mis-label">KM au retour</label>
+                <div class="mis-input-wrap">
+                  <input type="number" name="km_retour" class="mis-input" placeholder="À l'arrivée">
+                  <span class="mis-input-unit">km</span>
+                </div>
+              </div>
+              <div>
+                <label class="mis-label">Statut</label>
+                <select name="statut" class="mis-select">
+                  <option value="EN_COURS">🔵 En cours</option>
+                  <option value="TERMINEE">🟢 Terminée</option>
+                  <option value="ANNULEE">⚪ Annulée</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="mis-fg">
+              <label class="mis-label">Demandeur / Responsable de la mission</label>
+              <select name="demandeur" class="mis-select">
+                <option value="">-- Sélectionner un utilisateur --</option>
+                {% for u in users %}
+                <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div class="mis-fg">
+              <label class="mis-label">Observations & Remarques</label>
+              <textarea name="observation" class="mis-textarea" rows="3" placeholder="Incidents de parcours, carburant consommé, péages..."></textarea>
+            </div>
+
+            <div class="mis-actions-bar">
+              <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn-mis-cancel">
+                <i class="fas fa-times"></i> Annuler
+              </a>
+              <button type="submit" class="btn-mis-submit">
+                <i class="fas fa-save"></i> Enregistrer la mission
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body">
-                    <form method="POST" novalidate>
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Objet de la mission *</label>
-                            <input type="text" name="objet" class="form-control" required placeholder="Ex: Transport de matériel médical">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Destination *</label>
-                            <input type="text" name="destination" class="form-control" required placeholder="Ex: CHU de Cocody">
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Date/heure départ *</label>
-                                <input type="datetime-local" name="date_depart" class="form-control" required>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Date/heure retour</label>
-                                <input type="datetime-local" name="date_retour" class="form-control">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">KM au départ</label>
-                                <input type="number" name="km_depart" class="form-control" value="{{ vehicule.kilometrage }}">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">KM au retour</label>
-                                <input type="number" name="km_retour" class="form-control">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Statut</label>
-                                <select name="statut" class="form-select">
-                                    <option value="EN_COURS">En cours</option>
-                                    <option value="TERMINEE">Terminée</option>
-                                    <option value="ANNULEE">Annulée</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Demandeur</label>
-                            <select name="demandeur" class="form-select">
-                                <option value="">-- Choisir --</option>
-                                {% for u in users %}
-                                <option value="{{ u.pk }}">{{ u.get_full_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Observations</label>
-                            <textarea name="observation" class="form-control" rows="3" placeholder="Notes sur la mission..."></textarea>
-                        </div>
-                        <div class="d-flex justify-content-end">
-                            <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn btn-secondary me-2">Annuler</a>
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Enregistrer la mission</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <!-- COLONNE DROITE : RÉSUMÉ VÉHICULE -->
+    <div>
+      <div class="veh-summary-card">
+        <h5><i class="fas fa-car-side"></i> Véhicule Mobilisé</h5>
+        <div class="veh-summary-row">
+          <span class="veh-summary-label">Immatriculation</span>
+          <span class="veh-summary-val">{{ vehicule.immatriculation }}</span>
         </div>
-        <div class="col-md-4">
-            <div class="card bg-light">
-                <div class="card-body">
-                    <h6><i class="fas fa-info-circle me-1"></i>Résumé du véhicule</h6>
-                    <table class="table table-borderless table-sm mb-0">
-                        <tr><td class="text-muted">Immatriculation</td><td>{{ vehicule.immatriculation }}</td></tr>
-                        <tr><td class="text-muted">Kilométrage</td><td>{{ vehicule.kilometrage|floatformat:0 }} km</td></tr>
-                        <tr><td class="text-muted">Statut</td><td>{{ vehicule.get_statut_display }}</td></tr>
-                    </table>
-                </div>
-            </div>
+        <div class="veh-summary-row">
+          <span class="veh-summary-label">Compteur actuel</span>
+          <span class="veh-summary-val">{{ vehicule.kilometrage|floatformat:0 }} km</span>
         </div>
+        <div class="veh-summary-row">
+          <span class="veh-summary-label">Statut</span>
+          <span class="veh-summary-val">{{ vehicule.get_statut_display }}</span>
+        </div>
+        <div class="veh-summary-row">
+          <span class="veh-summary-label">Chauffeur titulaire</span>
+          <span class="veh-summary-val">{{ vehicule.conducteur_titulaire.get_full_name|default:"Non assigné" }}</span>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

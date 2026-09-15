@@ -1,0 +1,115 @@
+{% load projets_tags %}
+{% for projet in projets %}
+<tr class="projet-row" data-statut="{{ projet.statut }}">
+  <td>
+    <a href="{% url 'projets:detail' projet.id %}" class="proj-title">
+      <i class="fas fa-hard-hat" style="opacity: 0.7; font-size: 13px;"></i> {{ projet.nom }}
+    </a>
+    {% if projet.description %}
+      <div style="font-size: 11px; color: var(--text-light); margin-top: 3px; max-width: 320px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{{ projet.description }}">
+        {{ projet.description }}
+      </div>
+    {% endif %}
+  </td>
+  <td>
+    {% if projet.statut == 'EN_COURS' %}
+      <span class="badge-statut stat-cours"><i class="fas fa-spinner fa-spin"></i> En cours</span>
+    {% elif projet.statut == 'PREPARATION' %}
+      <span class="badge-statut stat-prep"><i class="fas fa-tools"></i> En préparation</span>
+    {% elif projet.statut == 'TERMINE' %}
+      <span class="badge-statut stat-term"><i class="fas fa-check-circle"></i> Terminé</span>
+    {% elif projet.statut == 'SUSPENDU' %}
+      <span class="badge-statut stat-susp"><i class="fas fa-pause-circle"></i> Suspendu</span>
+    {% else %}
+      <span class="badge-statut stat-ann"><i class="fas fa-times-circle"></i> Annulé</span>
+    {% endif %}
+  </td>
+  <td>
+    <div style="font-weight: 600; font-size: 13px;">
+      {{ projet.date_debut|date:"d/m/Y"|default:"Non débuté" }}
+    </div>
+    <small style="color: var(--text-light); font-size: 11px;">
+      Fin prévue : {{ projet.date_fin_prevue|date:"d/m/Y"|default:"Indéfinie" }}
+    </small>
+  </td>
+  <td>
+    {% if projet.budget_alloue %}
+      <strong style="color: #1c5b96; font-size: 13.5px; letter-spacing: 0.2px;">{{ projet.budget_alloue|format_milliers }} FCFA</strong>
+    {% else %}
+      <span style="color: var(--text-light);">Non défini</span>
+    {% endif %}
+  </td>
+  <td>
+    <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 500;">
+      <i class="fas fa-user-circle" style="color: var(--text-light);"></i>
+      {% if projet.chef_de_projet %}{{ projet.chef_de_projet.get_full_name|default:projet.chef_de_projet.username }}{% else %}Non assigné{% endif %}
+    </span>
+  </td>
+  <td>
+    <div class="actions-cell">
+      <a href="{% url 'projets:detail' projet.id %}" class="btn-action btn-action-view" title="Consulter le tableau de bord et bilan matière">
+        <i class="fas fa-chart-pie"></i> Bilan
+      </a>
+      <a href="{% url 'projets:modifier' projet.id %}" class="btn-action btn-action-edit" title="Modifier le projet et ses prévisions">
+        <i class="fas fa-edit"></i>
+      </a>
+    </div>
+  </td>
+</tr>
+{% empty %}
+<tr>
+  <td colspan="6" style="text-align: center; padding: 50px 20px; color: var(--text-light);">
+    <i class="fas fa-folder-open" style="font-size: 38px; opacity: 0.3; margin-bottom: 12px; display: block;"></i>
+    <p style="margin: 0; font-size: 14.5px; font-weight: 600;">Aucun projet ne correspond à vos critères.</p>
+    <p style="margin: 5px 0 0; font-size: 12px;">Modifiez vos termes de recherche ou réinitialisez les filtres.</p>
+  </td>
+</tr>
+{% endfor %}
+
+{% if projets_page.has_other_pages or total_filtre > 0 %}
+<tr id="row-pagination" style="background: var(--bg-card); border-top: 2px solid var(--border-color);">
+  <td colspan="6" style="padding: 14px 18px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div style="font-size: 12.5px; color: var(--text-medium); font-weight: 600;">
+        Affichage de <span style="color: #1c5b96; font-weight: 700;">{{ projets_page.start_index }}</span> à <span style="color: #1c5b96; font-weight: 700;">{{ projets_page.end_index }}</span> sur <span style="color: #1c5b96; font-weight: 700;">{{ total_filtre }}</span> projet(s)
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 14px;">
+        <label style="font-size: 12px; color: var(--text-medium); display: flex; align-items: center; gap: 6px; margin: 0;">
+          <span>Lignes :</span>
+          <select id="select-per-page" onchange="changerPerPage(this.value)" style="padding: 4px 8px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--bg-input); color: var(--text-dark); font-size: 12px; font-weight: 600;">
+            <option value="15" {% if per_page == '15' %}selected{% endif %}>15</option>
+            <option value="25" {% if per_page == '25' %}selected{% endif %}>25</option>
+            <option value="50" {% if per_page == '50' %}selected{% endif %}>50</option>
+            <option value="100" {% if per_page == '100' %}selected{% endif %}>100</option>
+          </select>
+        </label>
+
+        <div style="display: flex; gap: 5px;">
+          {% if projets_page.has_previous %}
+            <button type="button" onclick="chargerPageProjets(1)" class="btn-pagin" title="Première page">
+              <i class="fas fa-angle-double-left"></i>
+            </button>
+            <button type="button" onclick="chargerPageProjets({{ projets_page.previous_page_number }})" class="btn-pagin">
+              <i class="fas fa-angle-left"></i> Précédent
+            </button>
+          {% endif %}
+
+          <span style="padding: 6px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; background: rgba(28, 91, 150, 0.12); color: #1c5b96; border: 1px solid rgba(28, 91, 150, 0.25);">
+            {{ projets_page.number }} / {{ projets_page.paginator.num_pages }}
+          </span>
+
+          {% if projets_page.has_next %}
+            <button type="button" onclick="chargerPageProjets({{ projets_page.next_page_number }})" class="btn-pagin">
+              Suivant <i class="fas fa-angle-right"></i>
+            </button>
+            <button type="button" onclick="chargerPageProjets({{ projets_page.paginator.num_pages }})" class="btn-pagin" title="Dernière page">
+              <i class="fas fa-angle-double-right"></i>
+            </button>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </td>
+</tr>
+{% endif %}

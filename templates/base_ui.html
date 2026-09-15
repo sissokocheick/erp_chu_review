@@ -512,15 +512,46 @@
 
         /* Select2 overrides */
         .select2-container .select2-selection--single { height: 40px !important; border: 1px solid var(--border-color) !important; border-radius: 5px !important; display: flex; align-items: center; background: var(--bg-input); }
-        body.dark-mode .select2-container .select2-selection--single { border-color: var(--border-color) !important; background: var(--bg-input); }
+        .select2-container .select2-selection--multiple { min-height: 40px !important; border: 1px solid var(--border-color) !important; border-radius: 5px !important; background: var(--bg-input); }
+        body.dark-mode .select2-container .select2-selection--single,
+        body.dark-mode .select2-container .select2-selection--multiple { border-color: var(--border-color) !important; background: var(--bg-input) !important; }
         .select2-container--default .select2-selection--single .select2-selection__arrow { height: 38px !important; }
         .select2-container--default .select2-selection--single .select2-selection__rendered { color: var(--text-dark); }
+        .select2-container--default .select2-selection--multiple .select2-selection__rendered { color: var(--text-dark); }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice { background-color: var(--bg-hover) !important; border-color: var(--border-color) !important; color: var(--text-dark) !important; }
+        .select2-container--default .select2-selection--multiple .select2-selection__choice__remove { color: var(--text-medium) !important; margin-right: 5px; }
+        .select2-container--default .select2-selection--single .select2-selection__clear { color: var(--text-medium) !important; cursor: pointer; }
+        .select2-container--default .select2-selection--single .select2-selection__clear:hover { color: var(--text-white) !important; }
+        .select2-container--default .select2-search--dropdown .select2-search__field { background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-dark); border-radius: 4px; padding: 6px 10px; }
         .select2-container--open { z-index: 9999999 !important; }
         .select2-container { width: 100% !important; }
-        .select2-dropdown { background: var(--bg-card); border-color: var(--border-color); }
+        .select2-dropdown { background: var(--bg-card); border-color: var(--border-color); color: var(--text-dark); }
         .select2-results__option { color: var(--text-dark); }
         .select2-container--default .select2-results__option--highlighted[aria-selected] { background: var(--primary-blue); color: white; }
         .swal2-container { z-index: 9999999 !important; }
+
+        /* Dark mode universal button & modal text fallbacks */
+        body.dark-mode .btn-cancel,
+        body.dark-mode .btn-nok,
+        body.dark-mode .btn-close,
+        body.dark-mode .btn-veh-cancel,
+        body.dark-mode .btn-int-cancel,
+        body.dark-mode .close,
+        body.dark-mode .modal-close {
+            color: var(--text-dark) !important;
+        }
+        body.dark-mode .modal-content {
+            background-color: var(--bg-card) !important;
+            color: var(--text-dark) !important;
+            border-color: var(--border-color) !important;
+        }
+        body.dark-mode .modal-header {
+            border-bottom-color: var(--border-light) !important;
+        }
+        body.dark-mode .modal-footer {
+            border-top-color: var(--border-light) !important;
+            background-color: var(--bg-card) !important;
+        }
 
         
         .selector-magasin {
@@ -655,6 +686,9 @@
            style="text-decoration:none; display:block;">
             <div class="logo-full">
                 <div class="logo-graphic">
+                    {% if config_hopital.logo %}
+                        <img src="{{ config_hopital.logo.url }}" alt="{{ etablissement_nom }}" style="max-height: 42px; max-width: 42px; object-fit: contain; border-radius: 6px;">
+                    {% else %}
                     <svg width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="24" cy="24" r="7" fill="white" opacity="0.15"/>
                         <circle cx="24" cy="24" r="3.5" fill="white"/>
@@ -673,10 +707,11 @@
                         <line x1="10.8" y1="30.8" x2="20.5" y2="25.5" stroke="white" stroke-width="1.5" opacity="0.5"/>
                         <line x1="10.8" y1="17.2" x2="20.5" y2="22.5" stroke="white" stroke-width="1.5" opacity="0.5"/>
                     </svg>
+                    {% endif %}
                 </div>
                 <div class="logo-text">
                     <div class="logo-title"><span>Nexus</span>ERP</div>
-                    <div class="logo-subtitle">Suite de Gestion Integree</div>
+                    <div class="logo-subtitle" title="{{ etablissement_nom }}">{{ etablissement_nom|default:"Suite de Gestion Integree" }}</div>
                 </div>
             </div>
         </a>
@@ -798,8 +833,21 @@
         </div>
         {% endif %}
 
+        <!-- PROJETS -->
+        {% if perms.accounts.menu_projets %}
+        <div class="module-title" onclick="toggleMenu('menu-projets')" data-title="Projets">
+            <span style="display:flex;align-items:center;"><i class="fas fa-project-diagram nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Projets</span></span>
+            <i class="fas fa-chevron-down nav-chevron" id="icon-menu-projets"></i>
+        </div>
+        <div class="submenu" id="menu-projets">
+            <a href="{% url 'projets:liste' %}" class="menu-item" data-title="Suivi de Projets">
+                <i class="fas fa-list nav-icon" style="color:#6f42c1;"></i><span class="nav-text">Suivi de Projets</span>
+            </a>
+        </div>
+        {% endif %}
+
         <!-- PATRIMOINE & SAV -->
-        {% if perms.accounts.menu_pat_tickets or perms.accounts.menu_pat_tech or perms.accounts.menu_pat_dispatch or perms.accounts.menu_pat_historique or perms.accounts.menu_pat_registre or perms.accounts.menu_pat_sas or perms.accounts.menu_pat_contrats or perms.accounts.menu_pat_import or perms.accounts.menu_pat_inventaire or perms.accounts.menu_pat_rebuts or perms.accounts.menu_pat_pertes or perms.accounts.menu_pat_parametres %}
+        {% if perms.accounts.menu_pat_tickets or perms.accounts.menu_pat_tech or perms.accounts.menu_pat_dispatch or perms.accounts.menu_pat_historique or perms.accounts.menu_pat_registre or perms.accounts.menu_pat_sas or perms.accounts.menu_pat_contrats or perms.accounts.menu_pat_import or perms.accounts.menu_pat_inventaire or perms.accounts.menu_pat_rebuts or perms.accounts.menu_pat_pertes %}
         <div class="module-title" onclick="toggleMenu('menu-patrimoine')" data-title="Patrimoine">
             <span style="display:flex;align-items:center;"><i class="fas fa-building nav-icon" style="color:#20c997;"></i><span class="nav-text">Patrimoine & SAV</span></span>
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-patrimoine"></i>
@@ -842,9 +890,6 @@
             {% endif %}
             {% if perms.accounts.menu_pat_pertes %}
             <a href="{% url 'patrimoine_pertes' %}" class="menu-item" data-title="Pertes"><i class="fas fa-search-minus nav-icon" style="color:#f59e0b;"></i><span class="nav-text">Equipements Perdus</span></a>
-            {% endif %}
-            {% if perms.accounts.menu_pat_parametres %}
-            <a href="{% url 'patrimoine_parametres' %}" class="menu-item" data-title="Parametres"><i class="fas fa-sliders-h nav-icon" style="color:#ffda6a;"></i><span class="nav-text">Parametres</span></a>
             {% endif %}
             <div style="border-top:1px solid rgba(255,255,255,0.08);margin:4px 15px;"></div>
             <div style="padding:4px 14px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:rgba(255,255,255,0.35);font-weight:700;">Mes demandes</div>
@@ -902,7 +947,7 @@
         {% endif %}
 
         <!-- PARAMETRES -->
-        {% if perms.accounts.menu_parametres or perms.accounts.menu_param_admin or perms.accounts.menu_services or perms.accounts.menu_specialites or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation or perms.accounts.menu_parametres_doc or perms.accounts.menu_modeles_pdf or perms.accounts.menu_fonctions or perms.accounts.menu_beneficiaires or perms.accounts.menu_lots or perms.accounts.menu_notifications_config %}
+        {% if perms.accounts.menu_parametres or perms.accounts.menu_param_admin or perms.accounts.menu_services or perms.accounts.menu_specialites or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation or perms.accounts.menu_parametres_doc or perms.accounts.menu_modeles_pdf or perms.accounts.menu_fonctions or perms.accounts.menu_beneficiaires or perms.accounts.menu_lots or perms.accounts.menu_notifications_config or perms.accounts.menu_pat_parametres %}
         <div class="module-title" onclick="toggleMenu('menu-parametres')" data-title="Parametres">
             <span style="display:flex;align-items:center;"><i class="fas fa-cogs nav-icon" style="color:#6c757d;"></i><span class="nav-text">Parametres</span></span>
             <i class="fas fa-chevron-down nav-chevron" id="icon-menu-parametres"></i>
@@ -913,6 +958,9 @@
             {% endif %}
             {% if perms.accounts.menu_parametres or perms.accounts.menu_param_logistique or perms.accounts.menu_magasins or perms.accounts.menu_fournisseurs or perms.accounts.menu_motifs_annulation or perms.accounts.menu_beneficiaires %}
             <a href="{% url 'parametres_logistique' %}" class="menu-item" data-title="Logistique"><i class="fas fa-truck nav-icon" style="color:#fd7e14;"></i><span class="nav-text">Logistique</span></a>
+            {% endif %}
+            {% if perms.accounts.menu_pat_parametres %}
+            <a href="{% url 'patrimoine_parametres' %}" class="menu-item" data-title="Patrimoine"><i class="fas fa-sliders-h nav-icon" style="color:#ffda6a;"></i><span class="nav-text">Patrimoine</span></a>
             {% endif %}
             {% if perms.accounts.menu_modeles_pdf or perms.accounts.menu_parametres_doc %}
             {% if magasin_actif %}
@@ -969,6 +1017,9 @@
                         <i class="fas fa-bars" style="color: var(--text-medium); font-size: 20px;"></i>
                     </div>
                     <div style="display: flex; align-items: center; gap: 10px;">
+                        {% if config_hopital.logo %}
+                            <img src="{{ config_hopital.logo.url }}" alt="{{ etablissement_nom }}" style="height: 28px; width: 28px; object-fit: contain; border-radius: 4px; flex-shrink: 0;">
+                        {% else %}
                         <svg width="28" height="28" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
                             <circle cx="24" cy="24" r="7" fill="#1c5b96" opacity="0.2"/>
                             <circle cx="24" cy="24" r="3.5" fill="#1c5b96"/>
@@ -986,9 +1037,10 @@
                             <line x1="10.8" y1="30.8" x2="20.5" y2="25.5" stroke="#1c5b96" stroke-width="1.2" opacity="0.3"/>
                             <line x1="10.8" y1="17.2" x2="20.5" y2="22.5" stroke="#1c5b96" stroke-width="1.2" opacity="0.3"/>
                         </svg>
+                        {% endif %}
                         <div style="line-height:1;">
                             <div style="font-size:15px; font-weight:800; letter-spacing:1px; color: var(--text-dark);"><span style="color:#1c5b96;">Nexus</span><span style="color: var(--text-medium);">ERP</span></div>
-                            <div style="font-size:9px; color: var(--text-medium); letter-spacing:1px; text-transform:uppercase; font-weight:500;">Tout connecté, tout maîtrisé</div>
+                            <div style="font-size:9px; color: var(--text-medium); letter-spacing:0.5px; text-transform:uppercase; font-weight:600; max-width:260px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="{{ etablissement_nom }}">{{ etablissement_nom|default:"Tout connecté, tout maîtrisé" }}</div>
                         </div>
                     </div>
                 </div>
@@ -1620,6 +1672,28 @@
             document.querySelectorAll('.sidebar a[target="_blank"], .menu-item[target="_blank"], .module-title[target="_blank"]').forEach(function(a) {
                 a.removeAttribute('target');
             });
+        });
+
+        // ── Fermeture universelle des modales par Escape & Clic Backdrop (Modern UX) ──
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' || e.keyCode === 27) {
+                if (window.Swal && Swal.isVisible && Swal.isVisible()) {
+                    Swal.close();
+                    return;
+                }
+                document.querySelectorAll('.nx-modal.open, .modal.open, .modal-backdrop-custom.open, [id^="modal-"].open, [id^="mo-"].open, [id^="modal"].open').forEach(function(m) {
+                    m.classList.remove('open');
+                });
+                var pdfModal = document.getElementById('modal-pdf-global');
+                if (pdfModal && pdfModal.classList.contains('open')) {
+                    pdfModal.classList.remove('open');
+                }
+            }
+        });
+        document.addEventListener('click', function(e) {
+            if (e.target && (e.target.classList.contains('nx-modal') || e.target.classList.contains('modal-backdrop-custom'))) {
+                e.target.classList.remove('open');
+            }
         });
     </script>
 

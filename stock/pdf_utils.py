@@ -668,29 +668,72 @@ def ajouter_hauteurs_lignes(pages, pdf_config, type_doc='', bloc_bas=True):
 # Rôles de signataires connus et utilisateur associé sur un document.
 def _role_utilisateur(doc, role):
     """Retourne l'utilisateur associé à un rôle de signature pour un document.
-    Supporte BonMouvement (cree_par) et DemandeMateriel (demandeur).
+    Supporte BonMouvement, DemandeMateriel, Commande, Ajustement, CampagneInventaire.
     Tolère les variantes de saisie (majuscules, espaces, tirets).
     """
+    if doc is None:
+        return None
+
     cree_par = getattr(doc, 'cree_par', None)
     demandeur = getattr(doc, 'demandeur', None)
     valide_par = getattr(doc, 'valide_par', None)
-    
+    valide_par_chef = getattr(doc, 'valide_par_chef', None)
+
+    # Résolution avancée du demandeur sur un BonMouvement issu d'une demande
+    if demandeur is None and hasattr(doc, 'type_bon'):
+        if hasattr(doc, 'demande_origine') and doc.demande_origine.exists():
+            d = doc.demande_origine.first()
+            demandeur = getattr(d, 'demandeur', None)
+        elif hasattr(doc, 'livraison_origine') and doc.livraison_origine.exists():
+            liv = doc.livraison_origine.first()
+            if hasattr(liv, 'demande') and liv.demande:
+                demandeur = getattr(liv.demande, 'demandeur', None)
+        elif hasattr(doc, 'demande') and doc.demande:
+            demandeur = getattr(doc.demande, 'demandeur', None)
+
     r = (role or '').lower().replace(' ', '_').replace('-', '_').strip()
-    
-    if r in ('demandeur', 'le_demandeur', 'emission', 'service_demandeur'):
-        return demandeur or (cree_par if hasattr(doc, 'service_demandeur') else None)
-    if r in ('magasinier', 'le_magasinier', 'sortie_effectuee', 'gestionnaire'):
+
+    if r in ('demandeur', 'le_demandeur', 'emission', 'service_demandeur', 'auteur'):
+        return demandeur or cree_par
+    if r in ('magasinier', 'le_magasinier', 'sortie_effectuee', 'gestionnaire', 'saisisseur', 'compteur'):
         return cree_par
-    if r in ('responsable', 'sous_directeur', 'chef_service', 'chef_de_service', 'validateur', 'direction'):
+    if r in ('responsable', 'sous_directeur', 'chef_service', 'chef_de_service', 'validateur', 'direction', 'approbateur', 'approbation'):
+        if valide_par_chef and r in ('chef_service', 'chef_de_service', 'approbateur'):
+            return valide_par_chef
         if valide_par:
             return valide_par
-        magasin = getattr(doc, 'magasin', None)
+        if valide_par_chef:
+            return valide_par_chef
+        magasin = getattr(doc, 'magasin', None) or getattr(doc, 'magasin_cible', None)
         if magasin:
             return getattr(magasin, 'responsable', None)
         return None
     if r in ('receptionnaire', 'recepteur', 'destinataire'):
-        return getattr(doc, 'receptionnaire', None)
-        
+        if hasattr(doc, 'receptionnaire') and doc.receptionnaire:
+            return doc.receptionnaire
+        # Si bon de sortie lié à une livraison avec accusé de réception signé
+        if hasattr(doc, 'livraison_origine') and doc.livraison_origine.exists():
+            liv = doc.livraison_origine.first()
+            if hasattr(liv, 'accuse') and liv.accuse and getattr(liv.accuse, 'receptionne_par', None):
+                return liv.accuse.receptionne_par
+        # Si transfert : le responsable ou validateur du magasin de destination
+        if getattr(doc, 'type_bon', None) == 'TRANSFERT':
+            if doc.valide_par:
+                return doc.valide_par
+            if doc.magasin_destination:
+                return getattr(doc.magasin_destination, 'responsable', None)
+        return None
+
+    # Résolution spécifique pour un document rattaché à un Projet
+    projet = getattr(doc, 'projet', None)
+    if projet:
+        if r in ('chef_projet', 'chef_de_projet', 'demandeur', 'le_demandeur', 'service_demandeur', 'auteur'):
+            if getattr(projet, 'chef_de_projet', None):
+                return projet.chef_de_projet
+        if r in ('direction', 'direction_responsable', 'responsable_direction', 'responsable', 'approbateur', 'approbation', 'direction_technique', 'sous_directeur'):
+            if getattr(projet, 'responsable_direction', None):
+                return projet.responsable_direction
+
     return None
 
 
@@ -710,12 +753,19 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
         if not sig.get('visible', True):
             continue
         condition = sig.get('condition', 'toujours')
-        if condition == 'si_valide' and bon is not None and not getattr(bon, 'valide_par', None):
-            continue
+        if condition == 'si_valide' and bon is not None:
+            est_valide = (
+                bool(getattr(bon, 'valide_par', None))
+                or getattr(bon, 'statut_validation', None) == 'VALIDE'
+                or getattr(bon, 'statut', None) in ('VALIDE', 'TRAITEE', 'LIVREE', 'RECEPTIONNE', 'CLOTUREE')
+            )
+            if not est_valide:
+                continue
         if condition == 'si_rejete' and bon is not None and getattr(bon, 'statut', None) != 'REJETE':
             continue
 
         role = sig.get('role', '')
+        r_norm = (role or '').lower().replace(' ', '_').replace('-', '_').strip()
         user = _role_utilisateur(bon, role) if bon is not None else None
         user_name = ''
         fonction = ''
@@ -733,18 +783,31 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
                 fonction = getattr(fct_obj, 'nom', str(fct_obj))
 
             # Titre de responsable de magasin si défini
-            r_norm = (role or '').lower().replace(' ', '_').replace('-', '_').strip()
             if not fonction and r_norm in ('responsable', 'sous_directeur', 'chef_service', 'chef_de_service') and bon is not None:
-                magasin = getattr(bon, 'magasin', None)
+                magasin = getattr(bon, 'magasin', None) or getattr(bon, 'magasin_cible', None)
                 titre_resp = getattr(magasin, 'titre_responsable', None) if magasin else None
                 if titre_resp:
                     fonction = titre_resp
 
             valide_par = getattr(bon, 'valide_par', None)
-            date = (getattr(bon, 'date_validation', None)
-                    if user == valide_par
-                    else getattr(bon, 'date_creation', None) or getattr(bon, 'date_demande', None))
+            valide_par_chef = getattr(bon, 'valide_par_chef', None)
+            if user == valide_par and getattr(bon, 'date_validation', None):
+                date = bon.date_validation
+            elif user == valide_par_chef and getattr(bon, 'date_validation_chef', None):
+                date = bon.date_validation_chef
+            else:
+                date = (getattr(bon, 'date_creation', None)
+                        or getattr(bon, 'date_demande', None)
+                        or getattr(bon, 'date_bon', None)
+                        or getattr(bon, 'date_commande', None))
+
             signature_path = _get_signature_url(request, user) if request is not None else None
+            # Si réceptionnaire et accusé de réception avec image spécifique
+            if not signature_path and bon is not None and r_norm in ('receptionnaire', 'recepteur', 'destinataire'):
+                if hasattr(bon, 'livraison_origine') and bon.livraison_origine.exists():
+                    liv = bon.livraison_origine.first()
+                    if hasattr(liv, 'accuse') and liv.accuse and liv.accuse.signature_image:
+                        signature_path = _make_absolute_url(request, liv.accuse.signature_image.url)
 
         # Titre par défaut si aucun utilisateur ou aucune fonction profil
         if not fonction and role:
@@ -768,11 +831,80 @@ def _build_cases_depuis_config(pdf_config, bon=None, request=None):
     return cases
 
 
+def _build_cases_projet(projet, bon=None, request=None):
+    """
+    Construit la formule standard à 2 signatures pour les documents de projet :
+    1. Chef de Projet
+    2. Direction Responsable (Direction Technique par défaut)
+    Avec incorporation automatique des signatures numérisées si enregistrées.
+    """
+    cases = []
+    # 1. Chef de Projet
+    chef = getattr(projet, 'chef_de_projet', None)
+    chef_name = (chef.get_full_name() or chef.username) if chef else ''
+    chef_fct = ''
+    chef_sig = None
+    if chef:
+        profil = getattr(chef, 'profil', None)
+        if profil:
+            if getattr(profil, 'fonction', None):
+                chef_fct = getattr(profil.fonction, 'nom', str(profil.fonction))
+            if getattr(profil, 'a_signature', False) or getattr(profil, 'signature', None):
+                chef_sig = _get_signature_url(request, chef)
+
+    cases.append({
+        'label': 'LE CHEF DE PROJET',
+        'sous_label': 'Chef de Projet',
+        'role': 'chef_de_projet',
+        'user_name': chef_name,
+        'fonction': chef_fct or 'Chef de Projet',
+        'date': getattr(bon, 'date_bon', None) or getattr(bon, 'date_creation', None) if bon else None,
+        'has_signature': chef is not None and chef_sig is not None,
+        'signature_path': chef_sig,
+        'position': 'left',
+        'style': 'encadre',
+        'default_text': '',
+    })
+
+    # 2. Direction Responsable
+    dir_svc = getattr(projet, 'direction_responsable', None)
+    dir_label = dir_svc.nom.upper() if dir_svc else 'DIRECTION TECHNIQUE'
+    resp = getattr(projet, 'responsable_direction', None)
+    resp_name = (resp.get_full_name() or resp.username) if resp else ''
+    resp_fct = ''
+    resp_sig = None
+    if resp:
+        profil = getattr(resp, 'profil', None)
+        if profil:
+            if getattr(profil, 'fonction', None):
+                resp_fct = getattr(profil.fonction, 'nom', str(profil.fonction))
+            if getattr(profil, 'a_signature', False) or getattr(profil, 'signature', None):
+                resp_sig = _get_signature_url(request, resp)
+
+    cases.append({
+        'label': dir_label,
+        'sous_label': 'Direction Responsable',
+        'role': 'direction_responsable',
+        'user_name': resp_name,
+        'fonction': resp_fct or (dir_svc.nom if dir_svc else 'Direction Responsable'),
+        'date': getattr(bon, 'date_bon', None) or getattr(bon, 'date_creation', None) if bon else None,
+        'has_signature': resp is not None and resp_sig is not None,
+        'signature_path': resp_sig,
+        'position': 'right',
+        'style': 'encadre',
+        'default_text': '',
+    })
+    return cases
+
+
 def build_signature_cases(bon, pdf_config, request):
     """
     Construit les cases de signature pour un bon de mouvement,
     à partir de la configuration du document (labels configurables).
+    Pour un document lié à un projet, applique la formule standard à 2 signatures.
     """
+    if bon is not None and getattr(bon, 'projet', None):
+        return _build_cases_projet(bon.projet, bon=bon, request=request)
     return _build_cases_depuis_config(pdf_config, bon=bon, request=request)
 
 
@@ -785,7 +917,7 @@ def build_signatures_config(pdf_config, request):
 
 
 def _get_signature_url(request, user):
-    """Retourne l'URL absolue de la signature d'un utilisateur."""
+    """Retourne l'URL ou le Data URI de la signature d'un utilisateur."""
     if not user:
         return None
     profil = getattr(user, 'profil', None)
@@ -795,20 +927,36 @@ def _get_signature_url(request, user):
     if not signature:
         return None
     try:
+        import os, base64, mimetypes
+        if hasattr(signature, 'path') and os.path.isfile(signature.path):
+            mime = mimetypes.guess_type(signature.path)[0] or 'image/png'
+            with open(signature.path, 'rb') as f:
+                b64 = base64.b64encode(f.read()).decode('ascii')
+            return f"data:{mime};base64,{b64}"
         return _make_absolute_url(request, signature.url)
     except Exception:
-        return None
+        try:
+            return _make_absolute_url(request, signature.url)
+        except Exception:
+            return None
 
 
 # ═════════════════════════════════════════════════════════════════════════════
 # CACHE PDF (helpers pour stockage dans FileField)
 # ═════════════════════════════════════════════════════════════════════════════
 
-def servir_pdf_cache(bon, filename):
+def servir_pdf_cache(bon, filename, request=None):
     """
     Lit un PDF depuis le stockage Django et retourne HttpResponse.
     Retourne None si le cache est absent ou invalide.
+    Si request contient refresh=1, force=1 ou nocache=1, invalide le cache et retourne None.
     """
+    if request is not None:
+        if request.GET.get('refresh') or request.GET.get('force') or request.GET.get('nocache'):
+            if hasattr(bon, 'invalider_cache_pdf'):
+                bon.invalider_cache_pdf()
+            return None
+
     if not getattr(bon, 'fichier_pdf', None) or not bon.fichier_pdf.name:
         return None
     try:

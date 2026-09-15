@@ -79,6 +79,11 @@ VALEURS_INTERFACE = {
     "HEBDOMADAIRE", "BIMENSUEL", "MENSUEL",
     "videoconf", "ecran", "wifi", "clim",
     "ESSENCE", "DIESEL", "HYBRIDE",
+    # Rôles de signature prédéfinis du cartouche PDF (modele_pdf_form.html,
+    # <datalist roles_predefinis>) : vocabulaire fixe des cases de signature,
+    # résolu par alias dans stock/pdf_utils.py — pas des données d'exploitation.
+    "demandeur", "magasinier", "responsable", "chef_service",
+    "sous_directeur", "receptionnaire", "fournisseur", "direction", "economat",
 }
 
 RE_CREATION = re.compile(

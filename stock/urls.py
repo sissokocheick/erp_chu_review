@@ -82,6 +82,7 @@ urlpatterns = [
     # ═══════════════════════════════════════════════════════════════════════
     path('articles/', catalogue.liste_articles, name='liste_articles'),
     path('articles/<int:article_id>/historique/', catalogue.historique_article, name='historique_article'),
+    path('articles/<int:article_id>/tarifs/', catalogue.api_tarifs_article, name='api_tarifs_article'),
     path('api/verifier-article/', catalogue.verifier_article, name='verifier_article'),
     path('familles/', catalogue.liste_familles, name='liste_familles'),
 
@@ -276,6 +277,8 @@ urlpatterns = [
     path('upload/<str:app_label>/<str:model_name>/<int:obj_id>/<str:field_name>/', api.upload_fichier_generique, name='upload_fichier_generique'),
     # API liste articles (pour inventaire personnalisé)
     path('api/articles/', api.api_articles_json, name='api_articles_json'),
+    path('api/projets/<int:projet_id>/articles/', api.api_articles_projet, name='api_articles_projet'),
+    path('stock/api/projets/<int:projet_id>/articles/', api.api_articles_projet),
 
     # ═══════════════════════════════════════════════════════════════════════
     # SÉCURITÉ / AUDIT

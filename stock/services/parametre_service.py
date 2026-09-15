@@ -255,6 +255,8 @@ def save_magasin_logistique(form, instance, user):
         magasin.cree_par = user
     magasin.modifie_par = user
     magasin.save()
+    from django.core.cache import cache
+    cache.clear()
     return True, "✅ Magasin enregistré.", magasin
 
 

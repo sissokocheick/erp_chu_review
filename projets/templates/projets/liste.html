@@ -1,0 +1,485 @@
+{% extends 'base_ui.html' %}
+{% load static %}
+{% load projets_tags %}
+
+{% block title %}Suivi de Projets — NexusERP{% endblock %}
+
+{% block contenu %}
+<style>
+  /* ══════════ DESIGN SYSTEM PROJETS ══════════ */
+  .proj-header {
+    background: linear-gradient(135deg, #1c5b96 0%, #0d3b6e 100%);
+    color: white;
+    border-radius: 14px;
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 4px 20px rgba(28, 91, 150, 0.25);
+    flex-wrap: wrap;
+  }
+  .proj-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .proj-header-left i.ico {
+    font-size: 32px;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 14px;
+    border-radius: 12px;
+  }
+  .proj-header h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .proj-header p {
+    margin: 4px 0 0;
+    opacity: 0.85;
+    font-size: 13px;
+  }
+  .btn-create-proj {
+    background: #28a745;
+    color: white;
+    padding: 11px 22px;
+    border-radius: 9px;
+    font-weight: 700;
+    font-size: 14px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.35);
+    border: none;
+  }
+  .btn-create-proj:hover {
+    background: #218838;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(40, 167, 69, 0.45);
+  }
+
+  /* ══════════ KPI CARDS ══════════ */
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+  .kpi-box {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 10px var(--shadow);
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .kpi-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px var(--shadow);
+  }
+  .kpi-ico-wrap {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+  }
+  .kpi-box.blue .kpi-ico-wrap { background: rgba(28, 91, 150, 0.12); color: #1c5b96; }
+  .kpi-box.green .kpi-ico-wrap { background: rgba(40, 167, 69, 0.12); color: #28a745; }
+  .kpi-box.amber .kpi-ico-wrap { background: rgba(255, 193, 7, 0.15); color: #d39e00; }
+  .kpi-box.purple .kpi-ico-wrap { background: rgba(111, 66, 193, 0.12); color: #6f42c1; }
+
+  .kpi-info h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-dark);
+  }
+  .kpi-info span {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-light);
+    letter-spacing: 0.4px;
+  }
+
+  /* ══════════ SEARCH & FILTER BAR ══════════ */
+  .toolbar-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 8px var(--shadow);
+    padding: 14px 18px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+  .search-wrap-proj {
+    position: relative;
+    flex: 1;
+    min-width: 260px;
+  }
+  .search-wrap-proj i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+    font-size: 14px;
+  }
+  .search-input-proj {
+    width: 100%;
+    padding: 10px 14px 10px 38px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-dark);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-input-proj:focus {
+    border-color: #1c5b96;
+    box-shadow: 0 0 0 3px rgba(28, 91, 150, 0.15);
+  }
+  .filter-pills {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    background: var(--bg-hover);
+    color: var(--text-medium);
+    border: 1px solid var(--border-color);
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter-btn.active, .filter-btn:hover {
+    background: #1c5b96;
+    color: white;
+    border-color: #1c5b96;
+  }
+
+  /* ══════════ TABLE ══════════ */
+  .table-box-proj {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 12px var(--shadow);
+    overflow: hidden;
+  }
+  .table-proj {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .table-proj thead tr {
+    background: var(--bg-hover);
+    border-bottom: 2px solid var(--border-color);
+  }
+  .table-proj thead th {
+    padding: 14px 18px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    color: var(--text-light);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .table-proj tbody tr {
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.15s ease;
+  }
+  .table-proj tbody tr:hover {
+    background: var(--bg-hover);
+  }
+  .table-proj tbody td {
+    padding: 14px 18px;
+    vertical-align: middle;
+    color: var(--text-dark);
+  }
+
+  .proj-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #1c5b96;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .proj-title:hover {
+    text-decoration: underline;
+  }
+
+  .badge-statut {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  .stat-prep { background: rgba(255, 193, 7, 0.15); color: #b78103; border: 1px solid rgba(255, 193, 7, 0.3); }
+  .stat-cours { background: rgba(0, 123, 255, 0.12); color: #0069d9; border: 1px solid rgba(0, 123, 255, 0.3); }
+  .stat-term { background: rgba(40, 167, 69, 0.12); color: #1e7e34; border: 1px solid rgba(40, 167, 69, 0.3); }
+  .stat-susp { background: rgba(108, 117, 125, 0.12); color: #545b62; border: 1px solid rgba(108, 117, 125, 0.3); }
+  .stat-ann { background: rgba(220, 53, 69, 0.12); color: #bd2130; border: 1px solid rgba(220, 53, 69, 0.3); }
+
+  .actions-cell {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .btn-action {
+    padding: 7px 13px;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    border: 1px solid transparent;
+  }
+  .btn-action-view {
+    background: rgba(23, 162, 184, 0.12);
+    color: #117a8b;
+    border-color: rgba(23, 162, 184, 0.3);
+  }
+  .btn-action-view:hover {
+    background: #17a2b8;
+    color: white;
+  }
+  .btn-action-edit {
+    background: rgba(108, 117, 125, 0.1);
+    color: var(--text-medium);
+    border-color: var(--border-color);
+  }
+  .btn-action-edit:hover {
+    background: var(--bg-hover);
+    color: var(--text-dark);
+    border-color: var(--text-medium);
+  }
+
+  /* ══════════ OPTIMISATION HAUTE PERFORMANCE (MODERN WEB) ══════════ */
+  .projet-row {
+    content-visibility: auto;
+    contain-intrinsic-size: auto none auto 65px;
+  }
+  .btn-pagin {
+    background: var(--bg-card);
+    color: var(--text-dark);
+    border: 1px solid var(--border-color);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .btn-pagin:hover {
+    background: var(--bg-hover);
+    border-color: #1c5b96;
+    color: #1c5b96;
+  }
+  body.dark-mode .btn-pagin {
+    background: var(--bg-card);
+    color: var(--text-dark);
+    border-color: var(--border-light);
+  }
+
+  body.dark-mode .proj-header { background: linear-gradient(135deg, #0d3b6e 0%, #082240 100%); }
+  body.dark-mode .kpi-box { background: var(--bg-card); border-color: var(--border-light); }
+  body.dark-mode .kpi-info h3 { color: #f1f5f9; }
+  body.dark-mode .toolbar-card { background: var(--bg-card); border-color: var(--border-light); }
+  body.dark-mode .table-box-proj { background: var(--bg-card); border-color: var(--border-light); }
+  body.dark-mode .proj-title { color: #5dade2; }
+</style>
+
+<div class="proj-header">
+  <div class="proj-header-left">
+    <i class="fas fa-project-diagram ico"></i>
+    <div>
+      <h2>Gestion & Suivi de Projets</h2>
+      <p>Supervision des chantiers, commandes proforma, réceptions fournisseurs et consommations réelles</p>
+    </div>
+  </div>
+  <a href="{% url 'projets:creer' %}" class="btn-create-proj">
+    <i class="fas fa-plus-circle"></i> Nouveau Projet
+  </a>
+</div>
+
+<!-- ══════════ KPI METRICS ══════════ -->
+<div class="kpi-row">
+  <div class="kpi-box blue">
+    <div class="kpi-ico-wrap"><i class="fas fa-folder-open"></i></div>
+    <div class="kpi-info">
+      <h3>{{ total_projets }}</h3>
+      <span>Total Projets</span>
+    </div>
+  </div>
+  <div class="kpi-box green">
+    <div class="kpi-ico-wrap"><i class="fas fa-play-circle"></i></div>
+    <div class="kpi-info">
+      <h3>{{ en_cours_count }}</h3>
+      <span>En Cours</span>
+    </div>
+  </div>
+  <div class="kpi-box amber">
+    <div class="kpi-ico-wrap"><i class="fas fa-pencil-ruler"></i></div>
+    <div class="kpi-info">
+      <h3>{{ prepa_count }}</h3>
+      <span>En Préparation</span>
+    </div>
+  </div>
+  <div class="kpi-box purple">
+    <div class="kpi-ico-wrap"><i class="fas fa-wallet"></i></div>
+    <div class="kpi-info">
+      <h3>{{ total_budget|format_milliers }} <small style="font-size: 13px;">FCFA</small></h3>
+      <span>Budget Cumulé</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ TOOLBAR ══════════ -->
+<div class="toolbar-card">
+  <div class="search-wrap-proj">
+    <i class="fas fa-search"></i>
+    <input type="text" id="proj-search" class="search-input-proj" value="{{ q|default:'' }}" placeholder="Rechercher par nom de projet, chef de projet, entreprise..." oninput="onSearchInput()">
+  </div>
+  <div class="filter-pills">
+    <button type="button" class="filter-btn {% if statut_actif == 'TOUS' or not statut_actif %}active{% endif %}" onclick="filtrerStatut('TOUS', this)">Tous ({{ total_projets }})</button>
+    <button type="button" class="filter-btn {% if statut_actif == 'EN_COURS' %}active{% endif %}" onclick="filtrerStatut('EN_COURS', this)">En cours ({{ en_cours_count }})</button>
+    <button type="button" class="filter-btn {% if statut_actif == 'PREPARATION' %}active{% endif %}" onclick="filtrerStatut('PREPARATION', this)">En préparation ({{ prepa_count }})</button>
+    <button type="button" class="filter-btn {% if statut_actif == 'TERMINE' %}active{% endif %}" onclick="filtrerStatut('TERMINE', this)">Terminés ({{ termine_count }})</button>
+  </div>
+</div>
+
+<!-- ══════════ TABLEAU DES PROJETS ══════════ -->
+<div class="table-box-proj" style="position: relative;">
+  <div id="loading-overlay" style="display: none; position: absolute; inset: 0; background: rgba(255,255,255,0.7); backdrop-filter: blur(2px); z-index: 10; justify-content: center; align-items: center;">
+    <div style="display: flex; align-items: center; gap: 10px; background: white; padding: 12px 20px; border-radius: 8px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); font-size: 13px; font-weight: 600; color: #1c5b96;">
+      <i class="fas fa-spinner fa-spin"></i> Chargement des projets...
+    </div>
+  </div>
+  <table class="table-proj" id="table-projets">
+    <thead>
+      <tr>
+        <th>Nom du Projet</th>
+        <th>Statut</th>
+        <th>Période d'exécution</th>
+        <th>Budget Alloué</th>
+        <th>Chef de Projet</th>
+        <th style="text-align: right;">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tbody-projets">
+      {% include 'projets/projets_lignes.html' %}
+    </tbody>
+  </table>
+</div>
+
+<script>
+  let statutActif = '{{ statut_actif|default:"TOUS" }}';
+  let perPageActif = '{{ per_page|default:"25" }}';
+  let currentPage = {{ projets_page.number|default:1 }};
+  let searchTimer = null;
+  let currentAbortController = null;
+
+  function onSearchInput() {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      currentPage = 1;
+      chargerProjetsAjax();
+    }, 280); // Debounce de 280ms pour ne jamais bloquer la frappe utilisateur
+  }
+
+  function filtrerStatut(statut, btn) {
+    statutActif = statut;
+    document.querySelectorAll('.filter-pills .filter-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    currentPage = 1;
+    chargerProjetsAjax();
+  }
+
+  function changerPerPage(val) {
+    perPageActif = val;
+    currentPage = 1;
+    chargerProjetsAjax();
+  }
+
+  function chargerPageProjets(page) {
+    currentPage = page;
+    chargerProjetsAjax();
+  }
+
+  async function chargerProjetsAjax() {
+    const q = document.getElementById('proj-search').value.trim();
+    const overlay = document.getElementById('loading-overlay');
+    const tbody = document.getElementById('tbody-projets');
+    
+    if (overlay) overlay.style.display = 'flex';
+
+    if (currentAbortController) {
+      currentAbortController.abort();
+    }
+    currentAbortController = new AbortController();
+
+    const params = new URLSearchParams({
+      ajax: '1',
+      q: q,
+      statut: statutActif,
+      per_page: perPageActif,
+      page: currentPage
+    });
+
+    try {
+      const response = await fetch(`{% url 'projets:liste' %}?${params.toString()}`, {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        signal: currentAbortController.signal
+      });
+      if (response.ok) {
+        const html = await response.text();
+        tbody.innerHTML = html;
+        const newUrl = `${window.location.pathname}?q=${encodeURIComponent(q)}&statut=${encodeURIComponent(statutActif)}&per_page=${perPageActif}&page=${currentPage}`;
+        window.history.replaceState({}, '', newUrl);
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        console.error("Erreur chargement projets :", e);
+      }
+    } finally {
+      if (overlay) overlay.style.display = 'none';
+    }
+  }
+</script>
+{% endblock %}

@@ -1,7 +1,9 @@
 import os
+import json
 import logging
 from datetime import datetime
 from decimal import Decimal
+from itertools import zip_longest
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -47,9 +49,9 @@ def _afficher_retours(request):
     magasin_id = request.session.get('magasin_actif_id')
 
     qs = BonMouvement.objects.filter(
-        type_bon='RETOUR_SERVICE',
+        type_bon__in=['RETOUR_SERVICE', 'RETOUR_PROJET'],
         magasin_id=magasin_id
-    ).select_related('magasin', 'service_demandeur', 'cree_par').prefetch_related(
+    ).select_related('magasin', 'service_demandeur', 'cree_par', 'projet', 'projet__fournisseur', 'fournisseur').prefetch_related(
         'lignes_bon__article'
     ).order_by('-date_bon')
 
@@ -58,17 +60,60 @@ def _afficher_retours(request):
     from ..models import CircuitValidation
     circuit_retour = CircuitValidation.objects.filter(
         type_document='ENTREE', est_actif=True, is_deleted=False
-    ).prefetch_related('valideurs').first()
-    est_valideur = (
-        request.user.is_superuser
-        or (circuit_retour and circuit_retour.valideurs.filter(id=request.user.id).exists())
-    )
+    ).first()
+    est_valideur = False
+    if circuit_retour:
+        est_valideur = (
+            request.user.is_superuser
+            or circuit_retour.valideurs.filter(id=request.user.id).exists()
+        )
+
+    from projets.models import Projet
+    from stock.services.projet_article_service import get_map_articles_projets
+    magasin = get_magasin_actif(request)
+    magasin_gere_projets = bool(magasin and magasin.gere_projets)
+    magasin_filtre_projet = bool(magasin and magasin.gere_projets and getattr(magasin, 'filtrer_articles_par_projet', True))
+
+    projets_list = Projet.objects.filter(is_deleted=False).exclude(statut__in=['TERMINE', 'ANNULE']).select_related('fournisseur').only('id', 'nom', 'fournisseur__id', 'fournisseur__raison_sociale', 'meme_fournisseur_livreur').order_by('nom')
+
+    nb_projets = projets_list.count()
+    if nb_projets <= 30:
+        projets_articles_map = get_map_articles_projets(projets_list)
+    else:
+        projets_articles_map = get_map_articles_projets(projets_list[:20])
+    projets_articles_json = json.dumps(projets_articles_map)
+
+    ids_articles_projets = set()
+    for ids in projets_articles_map.values():
+        ids_articles_projets.update(ids)
+
+    if ids_articles_projets:
+        articles_projets = Article.objects.filter(
+            id__in=ids_articles_projets, is_deleted=False
+        ).select_related('famille').prefetch_related('stocks__magasin')[:200]
+        articles_autres = Article.objects.filter(
+            is_deleted=False
+        ).exclude(id__in=ids_articles_projets).select_related('famille').prefetch_related(
+            'stocks__magasin'
+        )[:200]
+        articles = list(articles_projets) + list(articles_autres)
+    else:
+        articles = Article.objects.filter(is_deleted=False).order_by(
+            'designation'
+        ).select_related('famille').prefetch_related(
+            'stocks__magasin'
+        )[:200]
 
     extra = {
         'services': Service.objects.all().order_by('nom'),
-        'magasins': Magasin.objects.all().order_by('nom'),
-        'articles': Article.objects.filter(is_deleted=False).order_by('designation').select_related('famille').prefetch_related('stocks__magasin')[:200],
-        'magasin_actif': get_magasin_actif(request),
+        'beneficiaires': Beneficiaire.objects.all().order_by('nom_complet'),
+        'articles': articles,
+        'projets_list': projets_list,
+        'projets_articles_json': projets_articles_json,
+        'magasin_actif': magasin,
+        'magasin_gere_projets': magasin_gere_projets,
+        'magasin_filtre_projet': magasin_filtre_projet,
+        'motifs_annulation': MotifAnnulation.objects.filter(actif=True).order_by('libelle'),
         'peut_creer': _has_perm_bon(request.user, 'add', 'RETOUR_SERVICE'),
         'peut_annuler': _has_perm_bon(request.user, 'cancel', 'RETOUR_SERVICE'),
         'circuit_retour': circuit_retour,
@@ -83,6 +128,8 @@ def _afficher_retours(request):
         texte_champs=[
             'numero_bon__icontains',
             'service_demandeur__nom__icontains',
+            'projet__nom__icontains',
+            'fournisseur__raison_sociale__icontains',
             'reference_externe__icontains',
         ],
         context_extra=extra
@@ -142,18 +189,18 @@ def _creer_retour(request):
     magasin = get_object_or_404(Magasin, id=magasin_id_effectif)
 
     service = None
-    if service_id:
-        service = get_object_or_404(Service, id=service_id)
+    if service_id and str(service_id).strip().isdigit():
+        service = get_object_or_404(Service, id=int(service_id))
 
     # Validation des articles
     articles_valides = set(
         Article.objects.filter(
-            id__in=[aid for aid in article_ids if aid]
+            id__in=[aid for aid in article_ids if aid and str(aid).strip().isdigit()]
         ).values_list('id', flat=True)
     )
 
     lignes = []
-    for aid, qte, lot, peremp in zip(article_ids, quantites, lots, peremptions):
+    for aid, qte, lot, peremp in zip_longest(article_ids, quantites, lots, peremptions, fillvalue=''):
         try:
             qte_val = int(qte) if qte and str(qte).strip() else 0
         except (TypeError, ValueError):
@@ -166,7 +213,7 @@ def _creer_retour(request):
                 )
                 return redirect('liste_retours_services')
             lignes.append({
-                'article_id': aid,
+                'article_id': int(aid),
                 'quantite': qte_val,
                 'numero_lot': lot or None,
                 'date_peremption': peremp or None,
@@ -177,6 +224,36 @@ def _creer_retour(request):
         type_document='ENTREE', est_actif=True, is_deleted=False
     ).first()
 
+    type_retour = request.POST.get('type_retour', 'RETOUR_SERVICE')
+    projet_id = request.POST.get('projet')
+    projet = None
+    if type_retour == 'RETOUR_PROJET':
+        if not magasin.gere_projets:
+            messages.error(request, f"❌ Le magasin '{magasin.nom}' n'est pas configuré pour gérer les projets.")
+            return redirect('liste_retours_services')
+        if not projet_id or not str(projet_id).strip().isdigit():
+            messages.error(request, "❌ Veuillez sélectionner un projet pour ce retour.")
+            return redirect('liste_retours_services')
+        from projets.models import Projet
+        projet = get_object_or_404(Projet.objects.select_related('fournisseur'), id=int(projet_id))
+
+        if getattr(magasin, 'filtrer_articles_par_projet', True):
+            from stock.services.projet_article_service import get_articles_ids_pour_projet
+            allowed_articles_ids = get_articles_ids_pour_projet(projet.id)
+            for l in lignes:
+                if l['article_id'] not in allowed_articles_ids:
+                    art_nom = getattr(l.get('article'), 'designation', f"ID #{l['article_id']}")
+                    messages.error(
+                        request,
+                        f"❌ L'article '{art_nom}' n'est pas affecté au projet '{projet.nom}'. "
+                        f"Ce magasin n'autorise que les matériels entrés ou prévus pour le projet."
+                    )
+                    return redirect('liste_retours_services')
+    else:
+        if not service:
+            messages.error(request, "❌ Veuillez sélectionner un service demandeur pour ce retour.")
+            return redirect('liste_retours_services')
+
     try:
         bon = BonService.creer_bon_retour(
             lignes=lignes,
@@ -185,6 +262,8 @@ def _creer_retour(request):
             service=service,
             reference_externe=ref_ext,
             circuit_validation=circuit_retour,
+            projet=projet,
+            type_bon=type_retour
         )
     except IntegrityError as e:
         logger.exception("[RETOUR] IntegrityError création bon : %s", e)
@@ -210,7 +289,7 @@ def apercu_bon_retour(request, bon_id):
     bon = get_object_or_404(
         BonMouvement,
         id=bon_id,
-        type_bon='RETOUR_SERVICE',
+        type_bon__in=['RETOUR_SERVICE', 'RETOUR_PROJET'],
     )
     reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_retours_services")
     if reponse_refus:
@@ -323,7 +402,7 @@ def valider_bon_retour(request, bon_id):
             # validation concurrente).
             bon = get_object_or_404(
                 BonMouvement.objects.select_for_update(),
-                id=bon_id, type_bon='RETOUR_SERVICE'
+                id=bon_id, type_bon__in=['RETOUR_SERVICE', 'RETOUR_PROJET']
             )
 
             if bon.est_annule:
@@ -341,7 +420,7 @@ def valider_bon_retour(request, bon_id):
 
             for ligne in bon.lignes_bon.all():
                 mouvement = Mouvement(
-                    type_mouvement='RETOUR_SERVICE',
+                    type_mouvement=bon.type_bon,
                     article=ligne.article,
                     magasin=bon.magasin,
                     quantite=ligne.quantite,

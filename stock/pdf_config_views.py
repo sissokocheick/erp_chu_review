@@ -302,6 +302,16 @@ class ModelePDFConfigView(LoginRequiredMixin, UserPassesTestMixin, View):
         modele.modifie_par = request.user
         modele.save()
 
+        # Invalider le cache des PDF existants pour ce magasin
+        try:
+            from stock.models import BonMouvement, DemandeMateriel
+            for b in BonMouvement.objects.filter(magasin=magasin, fichier_pdf__isnull=False).exclude(fichier_pdf=''):
+                b.invalider_cache_pdf()
+            for d in DemandeMateriel.objects.filter(magasin_cible=magasin, fichier_pdf__isnull=False).exclude(fichier_pdf=''):
+                d.invalider_cache_pdf()
+        except Exception as e_inv:
+            logger.warning(f"Erreur invalidation cache PDF: {e_inv}")
+
         messages.success(request, f"Modèle {modele.get_type_document_display()} sauvegardé avec succès pour {magasin.nom}.")
         return redirect('modele_pdf_config', magasin_id=magasin.id, type_doc=type_doc)
 

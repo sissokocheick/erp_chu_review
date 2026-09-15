@@ -20,6 +20,8 @@ class ConfigurationHopitalForm(forms.ModelForm):
             'nom', 'couleur_principale', 'logo',
             # Contact
             'telephone', 'email_contact', 'ville', 'adresse', 'pays',
+            # Paramètres fonctionnels
+            'devise_monetaire', 'seuil_alerte_peremption_jours',
             # Documents / Pied de page PDF
             'pied_page_pdf',
         ]
@@ -32,6 +34,8 @@ class ConfigurationHopitalForm(forms.ModelForm):
             'ville': forms.TextInput(attrs={'class': 'form-control'}),
             'adresse': forms.Textarea(attrs={'class': 'form-control', 'rows': '2'}),
             'pays': forms.TextInput(attrs={'class': 'form-control'}),
+            'devise_monetaire': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: FCFA'}),
+            'seuil_alerte_peremption_jours': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '365'}),
             'pied_page_pdf': forms.Textarea(attrs={'class': 'form-control', 'rows': '2'}),
         }
 

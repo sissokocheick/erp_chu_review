@@ -59,7 +59,7 @@
   .param-table tbody td { padding: 11px 12px; vertical-align: middle; color: var(--text-dark); }
   .param-table tbody td.c { text-align: center; }
 
-  .btn-add { border: none; padding: 8px 16px; border-radius: 7px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: .2s; white-space: nowrap; }
+  .btn-add { border: none; padding: 8px 16px; border-radius: 7px; font-weight: 700; font-size: 13px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: .2s; white-space: nowrap; color: white; }
   .btn-add:hover { transform: translateY(-1px); }
   .btn-add-mag    { background: #fd7e14; color: white; } .btn-add-mag:hover    { background: #e8660a; }
   .btn-add-fourn  { background: #17a2b8; color: white; } .btn-add-fourn:hover  { background: #117a8b; }
@@ -250,7 +250,7 @@
     <i class="fas fa-truck-loading"></i>
     <div>
       <h4>Paramètres Logistiques</h4>
-      <small>Magasins · Fournisseurs · Bénéficiaires · Motifs d'annulation</small>
+      <small>Magasins · Fournisseurs · Bénéficiaires · Motifs d'annulation · Unités de mesure · Motifs d'ajustement</small>
     </div>
   </div>
 
@@ -735,6 +735,58 @@
       </div>
     </div>
   </div>{% endif %}
+
+  {% if perm_unites %}<div class="acc-card acc-unites">
+    <div class="acc-head {% if request.GET.open == 'unites-mesure' or q_unite %}open{% endif %}" onclick="toggleAcc('acc-unites')">
+      <h5><i class="fas fa-ruler-combined"></i> Unités de Mesure & Conditionnement</h5>
+      <i class="fas fa-chevron-down chevron"></i>
+    </div>
+    <div class="acc-body {% if request.GET.open == 'unites-mesure' or q_unite %}open{% endif %}" id="acc-unites">
+      <div class="sec-bar">
+        <form method="GET" id="form-q-unites">
+          <input type="hidden" name="open" value="unites-mesure">
+          <input type="hidden" name="per_page_unite" id="pp-unite" value="{{ per_page_unite|default:'10' }}">
+          <div class="search-wrap">
+            <i class="fas fa-search ico"></i>
+            <input type="text" name="q_unite" value="{{ q_unite|default:'' }}" class="search-input input-recherche-auto" data-target="#zone-unites" data-spinner="#spin-unite" placeholder="Rechercher une unité…">
+            <i class="fas fa-circle-notch fa-spin spin-ico text-info" id="spin-unite"></i>
+          </div>
+        </form>
+        <button class="btn-add" style="background:#0ea5e9; color:#fff;" onclick="ouvrirModalNouveau('modal-unite')">
+          <i class="fas fa-plus"></i> Ajouter une Unité
+        </button>
+      </div>
+      <div id="zone-unites">
+        {% include "stock/parametres_logistique_lignes.html" with section="unites" items=unites per_page=per_page_unite q=q_unite page_param="page_unite" open="unites-mesure" color="#0ea5e9" %}
+      </div>
+    </div>
+  </div>{% endif %}
+
+  {% if perm_motifs_ajustement %}<div class="acc-card acc-motifs-ajustement">
+    <div class="acc-head {% if request.GET.open == 'motifs-ajustement' or q_motif_ajust %}open{% endif %}" onclick="toggleAcc('acc-motifs-ajustement')">
+      <h5><i class="fas fa-sliders-h"></i> Motifs d'Ajustement de Stock</h5>
+      <i class="fas fa-chevron-down chevron"></i>
+    </div>
+    <div class="acc-body {% if request.GET.open == 'motifs-ajustement' or q_motif_ajust %}open{% endif %}" id="acc-motifs-ajustement">
+      <div class="sec-bar">
+        <form method="GET" id="form-q-motifs-ajust">
+          <input type="hidden" name="open" value="motifs-ajustement">
+          <input type="hidden" name="per_page_motif_ajust" id="pp-motif-ajust" value="{{ per_page_motif_ajust|default:'10' }}">
+          <div class="search-wrap">
+            <i class="fas fa-search ico"></i>
+            <input type="text" name="q_motif_ajust" value="{{ q_motif_ajust|default:'' }}" class="search-input input-recherche-auto" data-target="#zone-motifs-ajustement" data-spinner="#spin-motif-ajust" placeholder="Rechercher un motif d'ajustement…">
+            <i class="fas fa-circle-notch fa-spin spin-ico text-warning" id="spin-motif-ajust"></i>
+          </div>
+        </form>
+        <button class="btn-add" style="background:#f59e0b; color:#fff;" onclick="ouvrirModalNouveau('modal-motif-ajustement')">
+          <i class="fas fa-plus"></i> Ajouter un Motif d'Ajustement
+        </button>
+      </div>
+      <div id="zone-motifs-ajustement">
+        {% include "stock/parametres_logistique_lignes.html" with section="motifs_ajustement" items=motifs_ajustement per_page=per_page_motif_ajust q=q_motif_ajust page_param="page_motif_ajust" open="motifs-ajustement" color="#f59e0b" %}
+      </div>
+    </div>
+  </div>{% endif %}
 </div>
 
 <script>
@@ -801,6 +853,10 @@ function ouvrirModalNouveau(id) {
         document.getElementById('titre-modal-benef').innerHTML = '<i class="fas fa-user-plus me-2"></i>Nouveau Bénéficiaire';
     } else if (id === 'modal-motif') {
         document.getElementById('titre-modal-motif').innerHTML = '<i class="fas fa-ban me-2"></i>Nouveau Motif';
+    } else if (id === 'modal-unite') {
+        document.getElementById('titre-modal-unite').innerHTML = '<i class="fas fa-ruler-combined me-2"></i>Nouvelle Unité de Mesure';
+    } else if (id === 'modal-motif-ajustement') {
+        document.getElementById('titre-modal-motif-ajustement').innerHTML = '<i class="fas fa-sliders-h me-2"></i>Nouveau Motif d\'Ajustement';
     }
 
     // Ouvrir proprement
@@ -814,6 +870,28 @@ document.querySelectorAll('.mo').forEach(function(m) {
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') document.querySelectorAll('.mo').forEach(function(m){ m.classList.remove('open'); });
 });
+
+// ── Modal unité de mesure ────────────────────────────────────────────────
+function ouvrirModalUnite(id, nom, code, description) {
+    document.getElementById('input-unite-id').value = id || '';
+    document.getElementById('input-unite-nom').value = nom || '';
+    document.getElementById('input-unite-code').value = code || '';
+    document.getElementById('input-unite-description').value = description || '';
+    document.getElementById('titre-modal-unite').innerHTML = '<i class="fas fa-ruler-combined me-2"></i>' + (id ? 'Modifier l\'unité' : 'Nouvelle unité de mesure');
+    ouvrirModal('modal-unite');
+    setTimeout(function(){ document.getElementById('input-unite-nom').focus(); }, 150);
+}
+
+// ── Modal motif d'ajustement ──────────────────────────────────────────────
+function ouvrirModalMotifAjustement(id, libelle, code, description) {
+    document.getElementById('input-motif-ajust-id').value = id || '';
+    document.getElementById('input-motif-ajust-libelle').value = libelle || '';
+    document.getElementById('input-motif-ajust-code').value = code || '';
+    document.getElementById('input-motif-ajust-desc').value = description || '';
+    document.getElementById('titre-modal-motif-ajustement').innerHTML = '<i class="fas fa-sliders-h me-2"></i>' + (id ? 'Modifier le motif' : 'Nouveau motif d\'ajustement');
+    ouvrirModal('modal-motif-ajustement');
+    setTimeout(function(){ document.getElementById('input-motif-ajust-libelle').focus(); }, 150);
+}
 
 // ── Modal motif ──────────────────────────────────────────────────────────
 function ouvrirModalMotif(id, libelle) {
@@ -1444,6 +1522,70 @@ function updateRadioSelection(radio) {
         <div class="mfoot">
           <button type="button" class="btn-nok" onclick="fermerModal('modal-benef')">Annuler</button>
           <button type="submit" class="btn-ok" style="background:#6f42c1;"><i class="fas fa-save me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ── MODAL UNITÉ DE MESURE ── #}
+  <div class="mo" id="modal-unite">
+    <div class="mb mb-sm">
+      <div class="mh" style="background:linear-gradient(135deg,#0284c7,#0ea5e9);">
+        <h5 id="titre-modal-unite"><i class="fas fa-ruler-combined me-2"></i>Nouvelle Unité de Mesure</h5>
+        <button class="mc" onclick="fermerModal('modal-unite')"><i class="fas fa-times"></i></button>
+      </div>
+      <form method="POST" action="?open=unites-mesure" onsubmit="confirmerEnregistrement(event,this,'enregistrer_unite_mesure','Enregistrer cette unité ?')">
+        {% csrf_token %}
+        <input type="hidden" name="unite_id" id="input-unite-id" value="">
+        <div class="mbody">
+          <div class="fg">
+            <label>Nom de l'unité *</label>
+            <input type="text" name="nom" id="input-unite-nom" required maxlength="50" placeholder="Ex: Flacon, Boîte, Rouleau, Carton...">
+          </div>
+          <div class="fg">
+            <label>Code abrégé</label>
+            <input type="text" name="code" id="input-unite-code" maxlength="30" placeholder="Ex: BTE, FL, ROULEAU..." style="text-transform:uppercase;">
+          </div>
+          <div class="fg">
+            <label>Description / Remarque</label>
+            <input type="text" name="description" id="input-unite-description" maxlength="255" placeholder="Optionnel">
+          </div>
+        </div>
+        <div class="mfoot">
+          <button type="button" class="btn-nok" onclick="fermerModal('modal-unite')">Annuler</button>
+          <button type="submit" class="btn-ok" style="background:#0ea5e9;"><i class="fas fa-save me-1"></i>Enregistrer</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  {# ── MODAL MOTIF D'AJUSTEMENT ── #}
+  <div class="mo" id="modal-motif-ajustement">
+    <div class="mb mb-sm">
+      <div class="mh" style="background:linear-gradient(135deg,#d97706,#f59e0b);">
+        <h5 id="titre-modal-motif-ajustement"><i class="fas fa-sliders-h me-2"></i>Nouveau Motif d'Ajustement</h5>
+        <button class="mc" onclick="fermerModal('modal-motif-ajustement')"><i class="fas fa-times"></i></button>
+      </div>
+      <form method="POST" action="?open=motifs-ajustement" onsubmit="confirmerEnregistrement(event,this,'enregistrer_motif_ajustement','Enregistrer ce motif d\'ajustement ?')">
+        {% csrf_token %}
+        <input type="hidden" name="motif_ajust_id" id="input-motif-ajust-id" value="">
+        <div class="mbody">
+          <div class="fg">
+            <label>Libellé du motif *</label>
+            <input type="text" name="libelle" id="input-motif-ajust-libelle" required maxlength="100" placeholder="Ex: Casse, Produit périmé, Don, Inventaire...">
+          </div>
+          <div class="fg">
+            <label>Code (ex: CASSE)</label>
+            <input type="text" name="code" id="input-motif-ajust-code" maxlength="30" placeholder="Auto si vide" style="text-transform:uppercase;">
+          </div>
+          <div class="fg">
+            <label>Description</label>
+            <input type="text" name="description" id="input-motif-ajust-desc" maxlength="255" placeholder="Optionnel">
+          </div>
+        </div>
+        <div class="mfoot">
+          <button type="button" class="btn-nok" onclick="fermerModal('modal-motif-ajustement')">Annuler</button>
+          <button type="submit" class="btn-ok" style="background:#f59e0b;"><i class="fas fa-save me-1"></i>Enregistrer</button>
         </div>
       </form>
     </div>

@@ -238,6 +238,48 @@ class FamilleParametre(models.Model):
         return f'{self.get_type_parametre_display()} : {self.valeur}'
 
 
+class UniteMesure(TracabiliteModel, SoftDeleteModel):
+    """Unités de mesure et de distribution des articles (Pièce, Carton, Boîte, Flacon, etc.)."""
+    nom = models.CharField(max_length=100, unique=True, verbose_name="Nom de l'unité")
+    symbole = models.CharField(max_length=20, blank=True, verbose_name="Symbole / Abréviation")
+    description = models.CharField(max_length=200, blank=True, verbose_name="Description")
+    actif = models.BooleanField(default=True, verbose_name="Actif")
+    history = HistoricalRecords()
+
+    objects = BaseManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        verbose_name = "Unité de mesure"
+        verbose_name_plural = "Unités de mesure"
+        ordering = ['nom']
+
+    def __str__(self):
+        if self.symbole:
+            return f"{self.nom} ({self.symbole})"
+        return self.nom
+
+
+class MotifAjustement(TracabiliteModel, SoftDeleteModel):
+    """Motifs paramétrables d'ajustement de stock (Casse, Perte, Don, Périmé, etc.)."""
+    code = models.CharField(max_length=30, unique=True, verbose_name="Code")
+    libelle = models.CharField(max_length=150, unique=True, verbose_name="Libellé")
+    description = models.CharField(max_length=250, blank=True, verbose_name="Description")
+    actif = models.BooleanField(default=True, verbose_name="Actif")
+    history = HistoricalRecords()
+
+    objects = BaseManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        verbose_name = "Motif d'ajustement"
+        verbose_name_plural = "Motifs d'ajustement"
+        ordering = ['libelle']
+
+    def __str__(self):
+        return self.libelle
+
+
 # ==========================================================
 # 3. LE CATALOGUE
 # ==========================================================
@@ -355,6 +397,18 @@ class Article(TracabiliteModel, SoftDeleteModel):
             return f"[{self.reference}] {self.designation}"
         return self.designation
 
+    def get_prix_fournisseur(self, fournisseur_id=None):
+        """Retourne le prix négocié pour un fournisseur spécifique, ou le prix de référence par défaut."""
+        if fournisseur_id:
+            try:
+                f_id = int(fournisseur_id)
+                tf = self.tarifs_fournisseurs.filter(fournisseur_id=f_id, is_deleted=False).first()
+                if tf and tf.prix_achat is not None and tf.prix_achat > 0:
+                    return tf.prix_achat
+            except (ValueError, TypeError):
+                pass
+        return self.prix_reference or Decimal('0.00')
+
     class Meta:
         verbose_name = "Article"
         verbose_name_plural = "Articles"
@@ -368,6 +422,46 @@ class Article(TracabiliteModel, SoftDeleteModel):
         indexes = [
             models.Index(fields=['famille'], name='idx_article_famille'),
         ]
+
+class ArticleFournisseur(TracabiliteModel, SoftDeleteModel):
+    article = models.ForeignKey(Article, on_delete=models.CASCADE, related_name='tarifs_fournisseurs')
+    fournisseur = models.ForeignKey(Fournisseur, on_delete=models.CASCADE, related_name='articles_fournisseur')
+    prix_achat = models.DecimalField(
+        max_digits=12, decimal_places=2, default=0,
+        verbose_name="Prix d'achat fournisseur (FCFA)",
+        validators=[MinValueValidator(Decimal('0.00'))]
+    )
+    reference_fournisseur = models.CharField(
+        max_length=100, blank=True, null=True,
+        verbose_name="Référence chez le fournisseur"
+    )
+    delai_livraison_jours = models.PositiveIntegerField(
+        blank=True, null=True,
+        verbose_name="Délai de livraison (jours)"
+    )
+    est_principal = models.BooleanField(
+        default=False,
+        verbose_name="Fournisseur principal"
+    )
+    history = HistoricalRecords()
+
+    objects = BaseManager()
+    all_objects = models.Manager()
+
+    def __str__(self):
+        return f"{self.article.designation} - {self.fournisseur.raison_sociale} ({self.prix_achat} FCFA)"
+
+    class Meta:
+        verbose_name = "Tarif Fournisseur par Article"
+        verbose_name_plural = "Tarifs Fournisseurs par Article"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['article', 'fournisseur'],
+                condition=models.Q(is_deleted=False),
+                name='unique_article_fournisseur_actif'
+            ),
+        ]
+        ordering = ['-est_principal', 'prix_achat']
 
 # ==========================================================
 # 3. LE STOCK PHYSIQUE
@@ -400,6 +494,17 @@ class Magasin(TracabiliteModel, SoftDeleteModel):
     code_bon_entree     = models.CharField(max_length=50, default="ENR-BEM/DAF-001", verbose_name="Code ISO - Bon d'Entrée")
     code_bon_retour     = models.CharField(max_length=50, default="ENR-BRM/DAF-003", verbose_name="Code ISO - Bon de Retour")
     code_bon_hors_stock = models.CharField(max_length=50, default="ENR-BSHS/DAF-002", verbose_name="Code ISO - Bon Hors Stock")
+
+    gere_projets = models.BooleanField(
+        default=False,
+        verbose_name="Gère les projets",
+        help_text="Si coché, ce magasin peut affecter du stock aux projets (entrées, sorties et retours de projets)."
+    )
+    filtrer_articles_par_projet = models.BooleanField(
+        default=True,
+        verbose_name="Restreindre les articles aux matériels du projet",
+        help_text="Si activé, lorsqu'un magasinier choisit un projet, seuls les articles entrés ou prévus pour ce projet apparaissent dans la recherche."
+    )
 
     history = HistoricalRecords()
 
@@ -478,9 +583,11 @@ class Mouvement(models.Model):
     TYPE_MOUVEMENT_CHOICES = [
         ('ENTREE',             'Entrée en stock'),
         ('SORTIE',             'Sortie de stock'),
+        ('SORTIE_PROJET',      'Sortie pour Projet'),
         ('SORTIE_HORS_STOCK',  'Sortie Hors Stock (livraison directe)'),
         ('RETOUR_FOURNISSEUR', 'Retour au Fournisseur'),
         ('RETOUR_SERVICE',     'Retour depuis un Service'),
+        ('RETOUR_PROJET',      'Retour depuis un Projet'),
         ('AJUSTEMENT_POS',     'Ajustement Positif'),
         ('AJUSTEMENT_NEG',     'Ajustement Négatif'),
         ('AJUSTEMENT_NEG_FORCE', 'Ajustement Négatif Forcé (annulation)'),
@@ -921,6 +1028,10 @@ class Beneficiaire(SoftDeleteModel):
     objects     = BaseManager()
     all_objects = models.Manager()
 
+    @property
+    def nom(self):
+        return self.nom_complet
+
     def __str__(self):
         if self.poste:
             return f"{self.nom_complet} ({self.poste})"
@@ -942,9 +1053,11 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
     TYPE_BON_CHOICES = [
         ('ENTREE',             "Bon d'Entrée (Réception)"),
         ('SORTIE',             'Bon de Sortie (Distribution)'),
+        ('SORTIE_PROJET',      'Sortie pour Projet'),
         ('SORTIE_HORS_STOCK',  'Bon de Sortie Hors Stock (ENR-BSHS/DAF-002)'),
         ('RETOUR_FOURNISSEUR', 'Retour Fournisseur (Litige)'),
         ('RETOUR_SERVICE',     "Retour d'un Service"),
+        ('RETOUR_PROJET',      "Retour de Projet (Reliquat)"),
         ('AJUSTEMENT',         "Ajustement d'Inventaire"),
         ('TRANSFERT',          'Transfert inter-magasins'),
     ]
@@ -952,6 +1065,8 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
     type_bon            = models.CharField(max_length=30, choices=TYPE_BON_CHOICES, db_index=True)
     numero_bon          = models.CharField(max_length=50, editable=False, db_index=True)
     date_bon            = models.DateTimeField(default=timezone.now, db_index=True)
+    
+    projet              = models.ForeignKey('projets.Projet', on_delete=models.PROTECT, null=True, blank=True, related_name='bons_mouvement')
 
     est_annule          = models.BooleanField(default=False, db_index=True)
 
@@ -1091,6 +1206,20 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
             ('can_delete_bon_hors_stock','Peut supprimer des bons hors stock'),
         ]
 
+    def invalider_cache_pdf(self):
+        """Supprime le fichier PDF pré-généré du stockage et réinitialise le champ."""
+        if self.fichier_pdf and self.fichier_pdf.name:
+            try:
+                from django.core.files.storage import default_storage
+                if default_storage.exists(self.fichier_pdf.name):
+                    default_storage.delete(self.fichier_pdf.name)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning("[PDF Cache] Erreur suppression PDF %s : %s", self.fichier_pdf.name, e)
+            self.fichier_pdf = None
+            if self.pk:
+                BonMouvement.objects.filter(pk=self.pk).update(fichier_pdf=None)
+
     def save(self, *args, **kwargs):
         """
         Sauvegarde du bon avec génération automatique du numéro.
@@ -1099,6 +1228,11 @@ class BonMouvement(TracabiliteModel, SoftDeleteModel):
         kwargs.pop('update_stock', None)  # consommé par SoftDeleteModel.soft_delete()
         if not self.magasin_id:
             raise ValidationError("Un bon doit être rattaché à un magasin.")
+
+        if self.pk:
+            anc = BonMouvement.objects.filter(pk=self.pk).values('statut_validation', 'est_annule').first()
+            if anc and (anc['statut_validation'] != self.statut_validation or anc['est_annule'] != self.est_annule):
+                self.invalider_cache_pdf()
 
         if not self.numero_bon:
             mapping = {
@@ -1156,6 +1290,23 @@ class LigneBon(models.Model):
         if self.prix_unitaire and qte:
             return Decimal(str(self.prix_unitaire)) * qte
         return None
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.bon_id:
+            try:
+                self.bon.invalider_cache_pdf()
+            except Exception:
+                pass
+
+    def delete(self, *args, **kwargs):
+        bon = self.bon if self.bon_id else None
+        super().delete(*args, **kwargs)
+        if bon:
+            try:
+                bon.invalider_cache_pdf()
+            except Exception:
+                pass
 
     def __str__(self):
         return f"{self.article.designation} x {self.quantite}"
@@ -1493,6 +1644,27 @@ class DemandeMateriel(SoftDeleteModel):
             self.statut = nouveau_statut
             self.save(update_fields=['statut'])
 
+    def invalider_cache_pdf(self):
+        """Supprime le fichier PDF pré-généré du stockage et réinitialise le champ."""
+        if self.fichier_pdf and self.fichier_pdf.name:
+            try:
+                from django.core.files.storage import default_storage
+                if default_storage.exists(self.fichier_pdf.name):
+                    default_storage.delete(self.fichier_pdf.name)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).warning("[PDF Cache] Erreur suppression PDF demande %s : %s", self.fichier_pdf.name, e)
+            self.fichier_pdf = None
+            if self.pk:
+                DemandeMateriel.objects.filter(pk=self.pk).update(fichier_pdf=None)
+
+    def save(self, *args, **kwargs):
+        if self.pk:
+            anc = DemandeMateriel.objects.filter(pk=self.pk).values('statut').first()
+            if anc and anc['statut'] != self.statut:
+                self.invalider_cache_pdf()
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.numero_demande} - {self.service_demandeur.nom}"
 
@@ -1517,6 +1689,23 @@ class LigneDemande(models.Model):
     article           = models.ForeignKey(Article, on_delete=models.PROTECT, related_name='lignes_demande_article')
     quantite_demandee = models.PositiveIntegerField(default=1)
     quantite_accordee = models.PositiveIntegerField(default=0)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        if self.demande_id:
+            try:
+                self.demande.invalider_cache_pdf()
+            except Exception:
+                pass
+
+    def delete(self, *args, **kwargs):
+        demande = self.demande if self.demande_id else None
+        super().delete(*args, **kwargs)
+        if demande:
+            try:
+                demande.invalider_cache_pdf()
+            except Exception:
+                pass
 
     @property
     def quantite_livree(self):

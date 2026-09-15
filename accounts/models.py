@@ -210,6 +210,7 @@ MENU_ACCESS_PERMISSIONS = [
     # === MODULE CORE ===
     ('menu_accueil', 'Accueil'),
     ('menu_dashboard', 'Tableau de bord'),
+    ('menu_projets', 'Projets (Suivi & Matériel)'),
     
     # === MODULE STOCK - DEMANDES ===
     ('menu_demandes', 'Demandes'),

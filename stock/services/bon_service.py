@@ -69,6 +69,17 @@ class BonService:
         ids_int = [int(aid) for aid in article_ids if aid is not None]
         return Article._base_manager.filter(id__in=ids_int).in_bulk()
 
+    @staticmethod
+    def _resoudre_pu_article(article, magasin, prix_fourni=None):
+        """Résout le prix unitaire d'un article : prix explicite, CMUP stock, ou prix_reference."""
+        if prix_fourni is not None:
+            return prix_fourni
+        from stock.models import StockItem
+        si = StockItem.objects.filter(article=article, magasin=magasin).first() if magasin else None
+        if si and si.valeur_cmup:
+            return si.valeur_cmup
+        return getattr(article, 'prix_reference', None)
+
     # ═══════════════════════════════════════════════════════════════════════
     # BON D'ENTRÉE
     # ═══════════════════════════════════════════════════════════════════════
@@ -77,7 +88,7 @@ class BonService:
     def creer_bon_entree(cls, lignes, utilisateur, magasin,
                          commentaire="", reference_document=None,
                          fournisseur=None, reference_externe=None,
-                         circuit_validation=None):
+                         circuit_validation=None, projet=None):
         """Crée un bon d'entrée avec mouvements de stock.
 
         Args:
@@ -93,6 +104,7 @@ class BonService:
             circuit_validation: CircuitValidation instance|None — si un circuit
                 ENTREE est actif, le bon est créé en ATTENTE sans mouvement de
                 stock (validation par un validateur requise ensuite).
+            projet: Projet instance|None
         """
         # ✅ CORRECTION MONO-TENANT : vérification utilisateur
         cls._verifier_utilisateur_actif(utilisateur, magasin)
@@ -120,6 +132,7 @@ class BonService:
             'cree_par': utilisateur,
             'commentaire': commentaire,
             'statut_validation': statut,
+            'projet': projet,
         }
         if reference_externe:
             bon_kwargs['reference_externe'] = reference_externe
@@ -127,6 +140,8 @@ class BonService:
             bon_kwargs['reference_document'] = reference_document
         if fournisseur:
             bon_kwargs['fournisseur'] = fournisseur
+        elif projet and getattr(projet, 'fournisseur', None):
+            bon_kwargs['fournisseur'] = projet.fournisseur
 
         bon = BonMouvement.objects.create(**bon_kwargs)
 
@@ -169,10 +184,16 @@ class BonService:
             if not article:
                 raise ValidationError(f"Article ID {article_id} introuvable.")
 
+            if prix_unitaire is None:
+                prix_unitaire = cls._resoudre_pu_article(article, magasin, None)
+
             ligne_kwargs = {
                 'bon': bon,
                 'article': article,
                 'quantite': quantite,
+                'quantite_demandee': quantite,
+                'quantite_servie': quantite,
+                'reste': 0,
             }
             if prix_unitaire is not None:
                 ligne_kwargs['prix_unitaire'] = prix_unitaire
@@ -249,7 +270,8 @@ class BonService:
     def creer_bon_sortie(cls, lignes, utilisateur, magasin,
                          circuit_validation=None, commentaire="",
                          reference_document=None, demande=None,
-                         service_demandeur=None, reference_externe=None):
+                         service_demandeur=None, reference_externe=None,
+                         projet=None, type_bon='SORTIE'):
         """Crée un bon de sortie.
 
         Args:
@@ -262,6 +284,8 @@ class BonService:
             demande: DemandeMateriel instance|None
             service_demandeur: Service instance|None
             reference_externe: str|None
+            projet: Projet instance|None
+            type_bon: str ('SORTIE' ou 'SORTIE_PROJET')
         """
         # ✅ CORRECTION MONO-TENANT : vérification utilisateur
         cls._verifier_utilisateur_actif(utilisateur, magasin)
@@ -317,7 +341,8 @@ class BonService:
             service_demandeur = demande.service_demandeur
 
         bon_kwargs = {
-            'type_bon': 'SORTIE',
+            'type_bon': type_bon,
+            'projet': projet,
             'magasin': magasin,
             'cree_par': utilisateur,
             'commentaire': commentaire,
@@ -329,6 +354,8 @@ class BonService:
             bon_kwargs['reference_document'] = reference_document
         if service_demandeur:
             bon_kwargs['service_demandeur'] = service_demandeur
+        if projet and getattr(projet, 'fournisseur', None):
+            bon_kwargs['fournisseur'] = projet.fournisseur
 
         bon = BonMouvement.objects.create(**bon_kwargs)
 
@@ -351,6 +378,18 @@ class BonService:
                 if not article:
                     continue
 
+                pu = cls._resoudre_pu_article(article, magasin, ligne_data.get('prix_unitaire'))
+                qte_demandee = ligne_data.get('quantite_demandee')
+                if not qte_demandee and demande:
+                    ld = getattr(demande, 'lignes_demande', None)
+                    if ld:
+                        ld_match = ld.filter(article=article).first()
+                        if ld_match:
+                            qte_demandee = ld_match.quantite_demandee
+                if not qte_demandee:
+                    qte_demandee = quantite
+                reste = max(0, qte_demandee - quantite)
+
                 # ✅ FEFO : découpage de la sortie par lot (péremption la plus
                 # proche d'abord, lots périmés bloqués). Une ligne par lot
                 # pour une traçabilité complète sur le bon.
@@ -361,11 +400,15 @@ class BonService:
                         LigneBon.objects.create(
                             bon=bon, article=article,
                             quantite=conso['quantite'],
+                            quantite_servie=conso['quantite'],
+                            quantite_demandee=conso['quantite'],
+                            reste=0,
+                            prix_unitaire=pu,
                             numero_lot=conso['numero_lot'],
                             date_peremption=conso['date_peremption'],
                         )
                         mouvement = Mouvement(
-                            type_mouvement='SORTIE',
+                            type_mouvement=bon.type_bon,
                             article=article,
                             magasin=magasin,
                             quantite=conso['quantite'],
@@ -378,11 +421,16 @@ class BonService:
                     continue
 
                 LigneBon.objects.create(
-                    bon=bon, article=article, quantite=quantite
+                    bon=bon, article=article,
+                    quantite=quantite,
+                    quantite_servie=quantite,
+                    quantite_demandee=qte_demandee,
+                    reste=reste,
+                    prix_unitaire=pu,
                 )
 
                 mouvement = Mouvement(
-                    type_mouvement='SORTIE',
+                    type_mouvement=bon.type_bon,
                     article=article,
                     magasin=magasin,
                     quantite=quantite,
@@ -400,8 +448,25 @@ class BonService:
                 article = articles_map.get(int(article_id))
                 if not article:
                     continue
+                pu = cls._resoudre_pu_article(article, magasin, ligne_data.get('prix_unitaire'))
+                qte_demandee = ligne_data.get('quantite_demandee')
+                if not qte_demandee and demande:
+                    ld = getattr(demande, 'lignes_demande', None)
+                    if ld:
+                        ld_match = ld.filter(article=article).first()
+                        if ld_match:
+                            qte_demandee = ld_match.quantite_demandee
+                if not qte_demandee:
+                    qte_demandee = quantite
+                reste = max(0, qte_demandee - quantite)
+
                 LigneBon.objects.create(
-                    bon=bon, article=article, quantite=quantite
+                    bon=bon, article=article,
+                    quantite=quantite,
+                    quantite_servie=quantite,
+                    quantite_demandee=qte_demandee,
+                    reste=reste,
+                    prix_unitaire=pu,
                 )
 
         # ── Traçabilité livraison : si le bon est lié à une demande interne,
@@ -545,8 +610,15 @@ class BonService:
             if not article:
                 continue
 
+            pu = cls._resoudre_pu_article(article, magasin, ligne_data.get('prix_unitaire'))
             LigneBon.objects.create(
-                bon=bon, article=article, quantite=quantite
+                bon=bon,
+                article=article,
+                quantite=quantite,
+                quantite_servie=quantite,
+                quantite_demandee=ligne_data.get('quantite_demandee') or quantite,
+                reste=0,
+                prix_unitaire=pu,
             )
 
             mouvement = Mouvement(
@@ -573,8 +645,8 @@ class BonService:
     def creer_bon_retour(cls, lignes, utilisateur, magasin,
                          commentaire="", reference_document=None,
                          service=None, reference_externe=None,
-                         circuit_validation=None):
-        """Crée un bon de retour service (entrée de stock).
+                         circuit_validation=None, projet=None, type_bon='RETOUR_SERVICE'):
+        """Crée un bon de retour service ou projet (entrée de stock).
 
         Args:
             lignes: list[dict] — [{'article_id': int, 'quantite': int,
@@ -588,6 +660,8 @@ class BonService:
             circuit_validation: CircuitValidation instance|None — si un circuit
                 ENTREE actif est passé, le bon est créé en ATTENTE sans
                 mouvement de stock (validation différée), sinon VALIDE immédiat.
+            projet: Projet instance|None
+            type_bon: str ('RETOUR_SERVICE' ou 'RETOUR_PROJET')
         """
         # ✅ CORRECTION MONO-TENANT : vérification utilisateur
         cls._verifier_utilisateur_actif(utilisateur, magasin)
@@ -601,18 +675,21 @@ class BonService:
         statut = 'ATTENTE' if circuit_validation and circuit_validation.est_actif else 'VALIDE'
 
         bon_kwargs = {
-            'type_bon': 'RETOUR_SERVICE',
+            'type_bon': type_bon,
+            'projet': projet,
             'magasin': magasin,
             'cree_par': utilisateur,
             'commentaire': commentaire,
             'statut_validation': statut,
         }
-        if service:
-            bon_kwargs['service_demandeur'] = service
         if reference_externe:
             bon_kwargs['reference_externe'] = reference_externe
         if reference_document:
             bon_kwargs['reference_document'] = reference_document
+        if service:
+            bon_kwargs['service_demandeur'] = service
+        if projet and getattr(projet, 'fournisseur', None):
+            bon_kwargs['fournisseur'] = projet.fournisseur
 
         bon = BonMouvement.objects.create(**bon_kwargs)
 
@@ -634,10 +711,15 @@ class BonService:
             if not article:
                 continue
 
+            pu = cls._resoudre_pu_article(article, magasin, ligne_data.get('prix_unitaire'))
             ligne_kwargs = {
                 'bon': bon,
                 'article': article,
                 'quantite': quantite,
+                'quantite_servie': quantite,
+                'quantite_demandee': quantite,
+                'reste': 0,
+                'prix_unitaire': pu,
             }
             if numero_lot:
                 ligne_kwargs['numero_lot'] = numero_lot
@@ -735,10 +817,15 @@ class BonService:
             if not article:
                 continue
 
+            pu = cls._resoudre_pu_article(article, magasin, ligne_data.get('prix_unitaire'))
             ligne_kwargs = {
                 'bon': bon,
                 'article': article,
                 'quantite': quantite,
+                'quantite_servie': quantite,
+                'quantite_demandee': quantite,
+                'reste': 0,
+                'prix_unitaire': pu,
             }
             if numero_lot:
                 ligne_kwargs['numero_lot'] = numero_lot
@@ -825,7 +912,7 @@ class BonService:
             if consommations:
                 for conso in consommations:
                     mouvement = Mouvement(
-                        type_mouvement='SORTIE',
+                        type_mouvement=bon.type_bon,
                         article=ligne.article,
                         magasin=bon.magasin,
                         quantite=conso['quantite'],
@@ -838,7 +925,7 @@ class BonService:
                 continue
 
             mouvement = Mouvement(
-                type_mouvement='SORTIE',
+                type_mouvement=bon.type_bon,
                 article=ligne.article,
                 magasin=bon.magasin,
                 quantite=ligne.quantite,
@@ -964,6 +1051,22 @@ class BonService:
         # ✅ CORRECTION : vérifier utilisateur/magasin
         cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
 
+        # ✅ VÉRIFICATION & NETTOYAGE SAS PATRIMOINE
+        try:
+            from patrimoine.models import Immobilisation
+            immos = Immobilisation.objects.filter(bon_sortie_origine=bon)
+            for immo in immos:
+                if immo.statut != 'EN_ATTENTE':
+                    nom = immo.nom_affichage or "Équipement"
+                    code = immo.code_patrimoine or "N/A"
+                    raise ValidationError(
+                        f"⛔ Impossible d'annuler ce bon : l'équipement '{nom}' (code: {code}) "
+                        f"issu de ce bon est déjà actif dans le patrimoine."
+                    )
+            immos.delete()
+        except ImportError:
+            pass
+
         # ✅ CORRECTION : vérifier si une demande est liée et mettre à jour son statut
         motif_libelle = getattr(motif, 'libelle', str(motif)) if motif else "Non spécifié"
 
@@ -1049,6 +1152,22 @@ class BonService:
 
         # ✅ CORRECTION : vérifier utilisateur/magasin
         cls._verifier_utilisateur_actif(utilisateur, bon.magasin)
+
+        # ✅ VÉRIFICATION & NETTOYAGE SAS PATRIMOINE
+        try:
+            from patrimoine.models import Immobilisation
+            immos = Immobilisation.objects.filter(bon_sortie_origine=bon)
+            for immo in immos:
+                if immo.statut != 'EN_ATTENTE':
+                    nom = immo.nom_affichage or "Équipement"
+                    code = immo.code_patrimoine or "N/A"
+                    raise ValidationError(
+                        f"⛔ Impossible d'annuler ce bon : l'équipement '{nom}' (code: {code}) "
+                        f"issu de ce bon est déjà actif dans le patrimoine."
+                    )
+            immos.delete()
+        except ImportError:
+            pass
 
         # ✅ CORRECTION : soft delete des mouvements hors stock (pas de hard delete)
         mouvements_hs = Mouvement.objects.filter(

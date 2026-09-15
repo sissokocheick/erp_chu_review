@@ -83,11 +83,13 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.humanize',
 
     # mes modules :
     'core',
     'stock',
     'accounts',
+    'projets',
     'simple_history',
     'patrimoine.apps.PatrimoineConfig',
 ]
@@ -117,6 +119,10 @@ TEMPLATES = [
         'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
+            'builtins': [
+                'django.contrib.humanize.templatetags.humanize',
+                'accounts.templatetags.custom_filters',
+            ],
             'context_processors': [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
@@ -128,6 +134,7 @@ TEMPLATES = [
                 'stock.context_processors.menu_validation_context',
                 # ✅ CORRECTION : sélecteur d'établissement supprimé (mono-tenant)
                 'accounts.context_processors.theme_context',
+                'core.context_processors.contexte_hopital',
             ],
         },
     },
@@ -156,7 +163,7 @@ else:
             'USER': os.environ.get('DB_USER', 'postgres'),
             'PASSWORD': os.environ.get('DB_PASSWORD', 'admin'),
             'HOST': os.environ.get('DB_HOST', 'localhost'),
-            'PORT': os.environ.get('DB_PORT', '5432'),
+            'PORT': os.environ.get('DB_PORT', '5433'),
             'CONN_MAX_AGE': int(os.environ.get('DB_CONN_MAX_AGE', '600')),  # pool connexions (10 min)
             'CONN_HEALTH_CHECKS': True,  # Django 5.1+ : vérifie la santé des connexions
         }
@@ -185,6 +192,9 @@ LANGUAGE_CODE = 'fr'
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
+USE_THOUSAND_SEPARATOR = True
+THOUSAND_SEPARATOR = ' '
+NUMBER_GROUPING = 3
 
 
 # Static files (CSS, JavaScript, Images)

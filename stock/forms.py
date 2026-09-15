@@ -3,7 +3,7 @@ from django.contrib.auth.models import User
 from .models import (
     Mouvement, Article, Fournisseur, FamilleArticle,
     Ajustement, Magasin, BonMouvement, Beneficiaire, MotifAnnulation,
-    FamilleParametre,
+    FamilleParametre, UniteMesure, MotifAjustement,
 )
 from core.models import Service
 from accounts.models import Specialite, Fonction
@@ -171,7 +171,8 @@ class ArticleForm(forms.ModelForm):
             'famille':            forms.Select(attrs={'class': 'form-control'}),
             'unite_distribution': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'Ex: Pot, Paquet de 100, Rouleau, Paire'
+                'placeholder': 'Ex: Boîte, Flacon, Sachet, Pièce...',
+                'list': 'liste-unites-mesure'
             }),
             'seuil_minimum':      forms.NumberInput(attrs={
                 'class': 'form-control', 'min': '0',
@@ -477,6 +478,12 @@ class AjustementForm(forms.ModelForm):
             is_deleted=False).order_by('designation')
         _limiter_choix_article(self.fields['article'], qs_articles)
         self.fields['magasin'].queryset = Magasin.objects.all()
+        try:
+            motifs_db = list(MotifAjustement.objects.filter(actif=True).values_list('code', 'libelle'))
+            if motifs_db:
+                self.fields['motif'].choices = [('', '---------')] + motifs_db
+        except Exception:
+            pass
         for champ in ['magasin', 'commentaire', 'motif']:
             if champ in self.fields:
                 self.fields[champ].required = False
@@ -498,7 +505,7 @@ class AjustementForm(forms.ModelForm):
 class MagasinForm(forms.ModelForm):
     class Meta:
         model  = Magasin
-        fields = ['nom', 'localisation']
+        fields = ['nom', 'localisation', 'gere_projets', 'filtrer_articles_par_projet']
         widgets = {
             'nom':         forms.TextInput(attrs={
                 'class': 'form-control',
@@ -508,6 +515,18 @@ class MagasinForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Ex: Bâtiment A, Rez-de-chaussée'
             }),
+            'gere_projets': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'style': 'width: 20px; height: 20px; cursor: pointer;'
+            }),
+            'filtrer_articles_par_projet': forms.CheckboxInput(attrs={
+                'class': 'form-check-input',
+                'style': 'width: 20px; height: 20px; cursor: pointer;'
+            }),
+        }
+        labels = {
+            'gere_projets': 'Gérer les projets pour ce magasin',
+            'filtrer_articles_par_projet': 'Restreindre les articles aux matériels du projet',
         }
 
     def __init__(self, *args, **kwargs):
@@ -594,14 +613,22 @@ class MagasinParametresForm(forms.ModelForm):
     class Meta:
         model = Magasin
         fields = [
-            'titre_responsable', 'responsable'
+            'titre_responsable', 'responsable', 'gere_projets', 'filtrer_articles_par_projet'
         ]
         widgets = {
             'titre_responsable': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: Pharmacien Chef', 'title': 'Ce texte apparaît dans la case "Vu pour exécution" du PDF'}),
             'responsable': forms.Select(attrs={'class': 'form-control', 'title': 'Utilisateur qui signe numériquement dans la case magasinier'}),
+            'gere_projets': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'width: 20px; height: 20px; cursor: pointer;'}),
+            'filtrer_articles_par_projet': forms.CheckboxInput(attrs={'class': 'form-check-input', 'style': 'width: 20px; height: 20px; cursor: pointer;'}),
+        }
+        labels = {
+            'gere_projets': 'Gérer les projets pour ce magasin',
+            'filtrer_articles_par_projet': 'Restreindre les articles aux matériels du projet',
         }
         help_texts = {
             'titre_responsable': 'Ex: Sous-Directeur de la Logistique — affiché dans la case "Vu pour exécution" du PDF.',
+            'gere_projets': "Si coché, ce magasin permet d'affecter du stock aux projets dans les entrées, sorties et retours.",
+            'filtrer_articles_par_projet': "Si coché, lorsqu'un projet est sélectionné, seuls les articles entrés ou prévus pour ce projet sont affichés dans la recherche d'articles.",
         }
 
     def __init__(self, *args, **kwargs):

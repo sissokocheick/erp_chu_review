@@ -7,14 +7,15 @@ from django.http import JsonResponse
 from django.core.paginator import Paginator
 from core.utils import paginer
 from django.urls import reverse
+from decimal import Decimal
 from urllib.parse import urlencode
 from django.contrib import messages
 import logging
 
 from accounts.permissions import verifier_permission
 from ..models import (
-    Article, Mouvement, FamilleArticle, FamilleParametre,
-    StockItem, LigneBon, LigneCommande)
+    Article, ArticleFournisseur, Fournisseur, Mouvement, FamilleArticle, FamilleParametre,
+    StockItem, LigneBon, LigneCommande, UniteMesure)
 from ..forms import ArticleForm, FamilleArticleForm
 from ..decorators import magasin_requis, catch_errors
 from .common_views import filtrer_texte
@@ -66,7 +67,7 @@ def build_redirect_url(base_name, query=None, per_page=None, default_per_page=15
 def liste_articles(request):
     articles = Article.objects.all().select_related(
         'famille', 'cree_par', 'modifie_par'
-    ).prefetch_related('stocks__magasin')
+    ).prefetch_related('stocks__magasin', 'tarifs_fournisseurs__fournisseur')
 
     articles, tri, ordre = appliquer_tri(
         articles, request,
@@ -119,6 +120,37 @@ def liste_articles(request):
 
             try:
                 article.save()
+
+                # Traitement des tarifs fournisseurs saisis dans le formulaire article
+                fournisseur_ids = request.POST.getlist('tarif_fournisseur_id[]')
+                prix_achats = request.POST.getlist('tarif_prix_achat[]')
+                refs_fourn = request.POST.getlist('tarif_ref_fournisseur[]')
+                delais = request.POST.getlist('tarif_delai[]')
+                principal_val = request.POST.get('tarif_principal_val')
+
+                if fournisseur_ids:
+                    article.tarifs_fournisseurs.all().delete()
+                    for idx, (f_id, prix) in enumerate(zip(fournisseur_ids, prix_achats)):
+                        if f_id and prix:
+                            try:
+                                f_int = int(f_id)
+                                p_dec = Decimal(str(prix).replace(',', '.'))
+                                r_f = refs_fourn[idx] if idx < len(refs_fourn) else ''
+                                d_j = int(delais[idx]) if idx < len(delais) and str(delais[idx]).isdigit() else None
+                                is_p = (str(idx) == str(principal_val))
+                                ArticleFournisseur.objects.create(
+                                    article=article,
+                                    fournisseur_id=f_int,
+                                    prix_achat=p_dec,
+                                    reference_fournisseur=r_f,
+                                    delai_livraison_jours=d_j,
+                                    est_principal=is_p,
+                                    cree_par=request.user,
+                                    modifie_par=request.user
+                                )
+                            except (ValueError, TypeError):
+                                pass
+
                 action_text = "modifié" if edit_article_id else "ajouté"
                 messages.success(
                     request,
@@ -136,6 +168,8 @@ def liste_articles(request):
             messages.error(request, "Veuillez corriger les erreurs dans le formulaire.")
 
     familles = FamilleArticle.objects.all().order_by('intitule')
+    fournisseurs = Fournisseur.objects.filter(is_deleted=False).order_by('raison_sociale')
+    article_tarifs = list(instance_a.tarifs_fournisseurs.filter(is_deleted=False).select_related('fournisseur')) if instance_a else []
 
     # Le statut est déjà annoté dans la requête principale : aucun accès DB
     # supplémentaire dans la boucle d'affichage.
@@ -158,17 +192,80 @@ def liste_articles(request):
         'form': form,
         'per_page': per_page,
         'familles': familles,
+        'fournisseurs': fournisseurs,
+        'article_tarifs': article_tarifs,
         'familles_data_json': json.dumps(familles_data),
         'famille_id': famille_id,
         'articles_lies': ids_lies,
         'tri': tri,
         'ordre': ordre,
+        'unites_mesure': UniteMesure.objects.filter(actif=True).order_by('nom'),
     }
 
     is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     if is_ajax:
         return render(request, 'stock/articles_contenu.html', context)
     return render(request, 'stock/liste_articles.html', context)
+
+
+@login_required(login_url='/auth/login/')
+@verifier_permission('accounts.menu_articles')
+def api_tarifs_article(request, article_id):
+    """API AJAX : consultation et mise à jour des tarifs fournisseurs d'un article."""
+    article = get_object_or_404(Article, id=article_id, is_deleted=False)
+
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            tarifs_list = data.get('tarifs', [])
+            article.tarifs_fournisseurs.all().delete()
+            for t in tarifs_list:
+                f_id = t.get('fournisseur_id')
+                prix = t.get('prix_achat')
+                if f_id and prix is not None:
+                    ArticleFournisseur.objects.create(
+                        article=article,
+                        fournisseur_id=int(f_id),
+                        prix_achat=Decimal(str(prix)),
+                        reference_fournisseur=t.get('reference_fournisseur', '').strip(),
+                        delai_livraison_jours=int(t.get('delai_livraison_jours')) if str(t.get('delai_livraison_jours', '')).isdigit() else None,
+                        est_principal=bool(t.get('est_principal', False)),
+                        cree_par=request.user,
+                        modifie_par=request.user
+                    )
+            return JsonResponse({'success': True, 'message': 'Tarifs fournisseurs enregistrés avec succès.'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+    # GET
+    tarifs = []
+    for tf in article.tarifs_fournisseurs.filter(is_deleted=False).select_related('fournisseur').order_by('-est_principal', 'prix_achat'):
+        tarifs.append({
+            'id': tf.id,
+            'fournisseur_id': tf.fournisseur_id,
+            'fournisseur_code': tf.fournisseur.code,
+            'fournisseur_nom': tf.fournisseur.raison_sociale,
+            'prix_achat': float(tf.prix_achat),
+            'reference_fournisseur': tf.reference_fournisseur or '',
+            'delai_livraison_jours': tf.delai_livraison_jours or '',
+            'est_principal': tf.est_principal,
+        })
+
+    fournisseurs = [
+        {'id': f.id, 'code': f.code, 'nom': f.raison_sociale}
+        for f in Fournisseur.objects.filter(is_deleted=False).order_by('raison_sociale')
+    ]
+
+    return JsonResponse({
+        'article': {
+            'id': article.id,
+            'designation': article.designation,
+            'reference': article.reference or '',
+            'prix_reference': float(article.prix_reference or 0),
+        },
+        'tarifs': tarifs,
+        'fournisseurs': fournisseurs,
+    })
 
 
 @login_required(login_url='/auth/login/')

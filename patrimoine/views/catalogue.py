@@ -187,30 +187,23 @@ def fiche_detail(request, pk):
 
 def modifier_immo(request, pk):
 
-    immo  = get_object_or_404(Immobilisation, pk=pk)
+    immo = get_object_or_404(Immobilisation, pk=pk)
 
     if request.method == 'POST':
-
         try:
+            ancien_bureau_id = immo.bureau_id
+            ancien_service_id = immo.service_affectation_id
+            ancien_statut = immo.statut
 
             immo.code_patrimoine        = request.POST.get('code_patrimoine') or immo.code_patrimoine
-
             immo.numero_serie           = request.POST.get('numero_serie', immo.numero_serie)
-
             immo.nom_affichage          = request.POST.get('nom_affichage', immo.nom_affichage)
-
             immo.type_equipement_id     = request.POST.get('type_equipement', immo.type_equipement_id)
-
             immo.marque_id              = request.POST.get('marque') or None
-
             immo.modele_id              = request.POST.get('modele') or None
-
             immo.bureau_id              = request.POST.get('bureau') or None
-
             immo.service_affectation_id = request.POST.get('service') or None
-
             immo.emplacement_exact      = request.POST.get('emplacement_exact', '')
-
             immo.garantie_expiration    = request.POST.get('garantie_expiration') or None
 
             # Liste blanche : le select HTML limite l'UI, pas un POST forgé.
@@ -224,37 +217,57 @@ def modifier_immo(request, pk):
 
             immo.notes                  = request.POST.get('notes', '')
 
-
             if request.POST.get('valeur_acquisition'):
-
                 immo.valeur_acquisition = Decimal(request.POST.get('valeur_acquisition'))
 
-
             if immo.type_equipement_id:
-
                 te = TypeEquipement.objects.get(pk=immo.type_equipement_id)
-
                 specs = dict(immo.specs_techniques)
-
                 for champ in te.specs_schema:
-
                     key = champ['key']
-
                     val = request.POST.get(f'spec_{key}', '')
-
                     if val: specs[key] = val
-
                 immo.specs_techniques = specs
 
-
             immo.modifie_par = request.user
-
             immo.save()
 
+            # Traçabilité des mutations de localisation
+            nouveau_bureau_id = immo.bureau_id
+            nouveau_service_id = immo.service_affectation_id
+            if nouveau_bureau_id != ancien_bureau_id or nouveau_service_id != ancien_service_id:
+                user_nom = request.user.get_full_name() or request.user.username
+                MouvementPatrimoine.objects.create(
+                    immobilisation=immo,
+                    type_mouvement='MUTATION',
+                    bureau_depart_id=ancien_bureau_id,
+                    bureau_arrivee_id=nouveau_bureau_id,
+                    service_depart_id=ancien_service_id,
+                    service_arrivee_id=nouveau_service_id,
+                    date_mouvement=timezone.now().date(),
+                    motif=f"Changement de localisation manuel par {user_nom}",
+                    effectue_par=request.user,
+                )
+
+            # Traçabilité des changements de statut (rebuts, pertes, cessions)
+            STATUT_VERS_MOUVEMENT = {
+                'REFORME': 'REFORME',
+                'DISPARU': 'PERTE',
+                'CEDE': 'CESSION',
+            }
+            type_mvt = STATUT_VERS_MOUVEMENT.get(immo.statut)
+            if type_mvt and immo.statut != ancien_statut:
+                user_nom = request.user.get_full_name() or request.user.username
+                MouvementPatrimoine.objects.create(
+                    immobilisation=immo,
+                    type_mouvement=type_mvt,
+                    date_mouvement=timezone.now().date(),
+                    motif=f"Passage au statut {immo.get_statut_display()} par {user_nom}",
+                    effectue_par=request.user,
+                )
+
             messages.success(request, "✅ Bien mis à jour.")
-
             audit(request, f"Modification de l'immobilisation {immo.code_patrimoine}", 'UPDATE', instance=immo)
-
             return redirect('patrimoine_detail', pk=immo.pk)
 
         except Exception as e:

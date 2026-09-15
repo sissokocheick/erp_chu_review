@@ -150,6 +150,7 @@ def valider_bon(request, bon_id):
         bon.valide_par = request.user
         bon.date_validation = timezone.now()
         bon.save(update_fields=['statut_validation', 'valide_par', 'date_validation'])
+        bon.invalider_cache_pdf()
 
         # Exécuter les mouvements de stock liés aux lignes du bon
         for ligne in bon.lignes_bon.all():

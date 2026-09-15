@@ -32,7 +32,20 @@ DEPLOY_YML = RACINE / ".github" / "workflows" / "deploy.yml"
 CI_YML = RACINE / ".github" / "workflows" / "ci.yml"
 REQUIREMENTS = RACINE / "requirements.txt"
 
-BASHE = shutil.which("bash")
+def _trouver_bash():
+    for chemin in [
+        r"C:\Program Files\Git\bin\bash.exe",
+        r"C:\Program Files (x86)\Git\bin\bash.exe",
+    ]:
+        if os.path.exists(chemin):
+            return chemin
+    b = shutil.which("bash")
+    if b and "windowsapps" not in b.lower():
+        return b
+    return None
+
+
+BASHE = _trouver_bash()
 
 
 def _requirements_contient(nom_dependance):

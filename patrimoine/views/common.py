@@ -32,7 +32,7 @@ def patrimoine_required(view_func):
             for permission in request.user.get_all_permissions()
         )
 
-        if not (request.user.is_superuser or has_any):
+        if not (request.user.is_superuser or has_any or request.user.has_perm('accounts.menu_dashboard')):
 
             messages.error(request, "⛔ Accès non autorisé au module Patrimoine.")
 

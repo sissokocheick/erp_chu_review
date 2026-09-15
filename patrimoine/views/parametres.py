@@ -20,7 +20,8 @@ from ..models import (
     TypeEquipement, CategoriePatrimoine,
     Batiment, Etage, Bureau, Marque, Modele,
     ParametresPatrimoine, TechnicienPrestataire,
-    TypeContrat, Immobilisation
+    TypeContrat, Immobilisation,
+    TypeVehicule, TypeInterventionVehicule, CompagnieAssurance
 )
 from stock.models import Fournisseur
 from .common import patrimoine_required
@@ -351,6 +352,145 @@ def parametres(request):
 
                 messages.success(request, "Marque supprimée.")
 
+            elif action == 'save_modele':
+                marque_id = request.POST.get('marque_id')
+                nom = request.POST.get('nom', '').strip().upper()
+                if not marque_id or not nom:
+                    messages.error(request, "Veuillez préciser une marque et un nom de modèle.")
+                else:
+                    marque = get_object_or_404(Marque, pk=marque_id)
+                    if item_id:
+                        Modele.objects.filter(pk=item_id).update(marque=marque, nom=nom, modifie_par=request.user)
+                        audit(request, f"Modèle modifié : {nom}", 'UPDATE', modele_concerne='Modele', id_objet=item_id)
+                        messages.success(request, f"Modèle {nom} mis à jour.")
+                    else:
+                        modele, cree = Modele.objects.get_or_create(marque=marque, nom=nom, defaults={'cree_par': request.user})
+                        if cree:
+                            audit(request, f"Modèle créé : {nom} ({marque.nom})", 'CREATE', instance=modele)
+                            messages.success(request, f"Modèle {nom} ajouté à la marque {marque.nom}.")
+                        else:
+                            messages.info(request, f"Le modèle {nom} existe déjà pour la marque {marque.nom}.")
+
+            elif action == 'delete_modele':
+                try:
+                    modele = Modele.objects.get(pk=item_id)
+                    nom_modele = modele.nom
+                    modele.delete()
+                    audit(request, f"Modèle supprimé : {nom_modele}", 'DELETE', modele_concerne='Modele', id_objet=item_id)
+                    messages.success(request, f"Modèle {nom_modele} supprimé.")
+                except Modele.DoesNotExist:
+                    messages.error(request, "Modèle introuvable.")
+
+            elif action == 'save_type_vehicule':
+                nom = request.POST.get('nom', '').strip()
+                code = request.POST.get('code', '').strip().upper()
+                desc = request.POST.get('description', '').strip()
+                icone = request.POST.get('icone', 'fas fa-car').strip()
+                ordre = int(request.POST.get('ordre', 0) or 0)
+                if not nom:
+                    messages.error(request, "Le nom du type de véhicule est requis.")
+                else:
+                    if not code:
+                        code = nom.upper().replace(' ', '_')[:30]
+                    if item_id:
+                        TypeVehicule.objects.filter(pk=item_id).update(
+                            nom=nom, code=code, description=desc, icone=icone, ordre=ordre, modifie_par=request.user
+                        )
+                        audit(request, f"Type de véhicule modifié : {nom}", 'UPDATE', modele_concerne='TypeVehicule', id_objet=item_id)
+                        messages.success(request, f"🚗 Type de véhicule '{nom}' mis à jour.")
+                    else:
+                        tv, cree = TypeVehicule.objects.get_or_create(
+                            code=code,
+                            defaults={'nom': nom, 'description': desc, 'icone': icone, 'ordre': ordre, 'cree_par': request.user}
+                        )
+                        if cree:
+                            audit(request, f"Type de véhicule créé : {nom}", 'CREATE', instance=tv)
+                            messages.success(request, f"🚗 Type de véhicule '{nom}' créé.")
+                        else:
+                            messages.info(request, f"Un type de véhicule avec le code {code} existe déjà.")
+
+            elif action == 'delete_type_vehicule':
+                try:
+                    tv = TypeVehicule.objects.get(pk=item_id)
+                    nom_tv = tv.nom
+                    tv.delete()
+                    audit(request, f"Type de véhicule supprimé : {nom_tv}", 'DELETE', modele_concerne='TypeVehicule', id_objet=item_id)
+                    messages.success(request, f"Type de véhicule '{nom_tv}' supprimé.")
+                except TypeVehicule.DoesNotExist:
+                    messages.error(request, "Type de véhicule introuvable.")
+
+            elif action == 'save_type_intervention_vehicule':
+                nom = request.POST.get('nom', '').strip()
+                code = request.POST.get('code', '').strip().upper()
+                desc = request.POST.get('description', '').strip()
+                if not nom:
+                    messages.error(request, "Le nom du type d'intervention est requis.")
+                else:
+                    if not code:
+                        code = nom.upper().replace(' ', '_')[:30]
+                    if item_id:
+                        TypeInterventionVehicule.objects.filter(pk=item_id).update(
+                            nom=nom, code=code, description=desc, modifie_par=request.user
+                        )
+                        audit(request, f"Type d'intervention véhicule modifié : {nom}", 'UPDATE', modele_concerne='TypeInterventionVehicule', id_objet=item_id)
+                        messages.success(request, f"🔧 Type d'intervention '{nom}' mis à jour.")
+                    else:
+                        tiv, cree = TypeInterventionVehicule.objects.get_or_create(
+                            code=code,
+                            defaults={'nom': nom, 'description': desc, 'cree_par': request.user}
+                        )
+                        if cree:
+                            audit(request, f"Type d'intervention véhicule créé : {nom}", 'CREATE', instance=tiv)
+                            messages.success(request, f"🔧 Type d'intervention '{nom}' créé.")
+                        else:
+                            messages.info(request, f"Ce type d'intervention existe déjà ({code}).")
+
+            elif action == 'delete_type_intervention_vehicule':
+                try:
+                    tiv = TypeInterventionVehicule.objects.get(pk=item_id)
+                    nom_tiv = tiv.nom
+                    tiv.delete()
+                    audit(request, f"Type d'intervention véhicule supprimé : {nom_tiv}", 'DELETE', modele_concerne='TypeInterventionVehicule', id_objet=item_id)
+                    messages.success(request, f"Type d'intervention '{nom_tiv}' supprimé.")
+                except TypeInterventionVehicule.DoesNotExist:
+                    messages.error(request, "Type d'intervention introuvable.")
+
+            elif action == 'save_compagnie_assurance':
+                nom = request.POST.get('nom', '').strip()
+                code = request.POST.get('code', '').strip().upper()
+                tel = request.POST.get('telephone', '').strip()
+                email = request.POST.get('email', '').strip()
+                adr = request.POST.get('adresse', '').strip()
+                if not nom:
+                    messages.error(request, "Le nom de la compagnie d'assurance est requis.")
+                else:
+                    if item_id:
+                        CompagnieAssurance.objects.filter(pk=item_id).update(
+                            nom=nom, code=code, telephone=tel, email=email, adresse=adr, modifie_par=request.user
+                        )
+                        audit(request, f"Compagnie d'assurance modifiée : {nom}", 'UPDATE', modele_concerne='CompagnieAssurance', id_objet=item_id)
+                        messages.success(request, f"🛡️ Compagnie d'assurance '{nom}' mise à jour.")
+                    else:
+                        ca, cree = CompagnieAssurance.objects.get_or_create(
+                            nom=nom,
+                            defaults={'code': code, 'telephone': tel, 'email': email, 'adresse': adr, 'cree_par': request.user}
+                        )
+                        if cree:
+                            audit(request, f"Compagnie d'assurance créée : {nom}", 'CREATE', instance=ca)
+                            messages.success(request, f"🛡️ Compagnie d'assurance '{nom}' enregistrée.")
+                        else:
+                            messages.info(request, f"La compagnie {nom} existe déjà.")
+
+            elif action == 'delete_compagnie_assurance':
+                try:
+                    ca = CompagnieAssurance.objects.get(pk=item_id)
+                    nom_ca = ca.nom
+                    ca.delete()
+                    audit(request, f"Compagnie d'assurance supprimée : {nom_ca}", 'DELETE', modele_concerne='CompagnieAssurance', id_objet=item_id)
+                    messages.success(request, f"Compagnie d'assurance '{nom_ca}' supprimée.")
+                except CompagnieAssurance.DoesNotExist:
+                    messages.error(request, "Compagnie d'assurance introuvable.")
+
 
             elif action == 'save_tech_externe':
 
@@ -440,7 +580,8 @@ def parametres(request):
 
         'types': TypeEquipement.objects.select_related('categorie').order_by('categorie', 'nom'),
 
-        'marques': Marque.objects.all().order_by('nom'),
+        'marques': Marque.objects.prefetch_related('modeles').order_by('nom'),
+        'modeles': Modele.objects.select_related('marque').order_by('marque__nom', 'nom'),
 
         'batiments': Batiment.objects.prefetch_related('etages__bureaux').order_by('code'),
 
@@ -457,6 +598,9 @@ def parametres(request):
         'techniciens': TechnicienPrestataire.objects.all().select_related('fournisseur').order_by('fournisseur__raison_sociale', 'nom'),
 
         'types_contrat': TypeContrat.objects.all().order_by('nom'),
+        'types_vehicules': TypeVehicule.objects.all().order_by('ordre', 'nom'),
+        'types_interventions_vehicules': TypeInterventionVehicule.objects.all().order_by('nom'),
+        'compagnies_assurance': CompagnieAssurance.objects.all().order_by('nom'),
 
         'etages_connus': list(Etage.objects.values_list('nom', flat=True).distinct().order_by('nom')),
 

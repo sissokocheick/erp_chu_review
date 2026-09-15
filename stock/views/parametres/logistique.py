@@ -26,7 +26,7 @@ from ...services.parametre_service import (
 )
 from ...models import (
     FamilleArticle, FamilleParametre, Fournisseur, MotifAnnulation,
-    Magasin, Beneficiaire,
+    Magasin, Beneficiaire, UniteMesure, MotifAjustement,
 )
 from core.models import Service
 from ...forms import FamilleArticleForm, FamilleParametreForm, MagasinForm
@@ -39,7 +39,8 @@ from ...forms import FamilleArticleForm, FamilleParametreForm, MagasinForm
     'accounts.menu_magasins',
     'accounts.menu_fournisseurs',
     'accounts.menu_motifs_annulation',
-    'accounts.menu_familles')
+    'accounts.menu_familles',
+    'accounts.menu_beneficiaires')
 @catch_errors(redirect_url='/')
 def parametres_logistique(request):
     if request.method == 'POST':
@@ -78,11 +79,23 @@ def _handle_get(request):
             Q(nom_complet__icontains=q_beneficiaire) | Q(poste__icontains=q_beneficiaire)
         )
 
+    q_unite = request.GET.get('q_unite', '').strip()
+    unites = UniteMesure.objects.all().order_by('nom')
+    if q_unite:
+        unites = unites.filter(Q(nom__icontains=q_unite) | Q(code__icontains=q_unite))
+
+    q_motif_ajust = request.GET.get('q_motif_ajust', '').strip()
+    motifs_ajustement = MotifAjustement.objects.all().order_by('libelle')
+    if q_motif_ajust:
+        motifs_ajustement = motifs_ajustement.filter(Q(libelle__icontains=q_motif_ajust) | Q(code__icontains=q_motif_ajust))
+
     familles_paginees, per_page_famille = paginer(familles, request, per_page_key='famille')
     fournisseurs_pagines, per_page_fournisseur = paginer(fournisseurs, request, per_page_key='fournisseur')
     motifs_pagines, per_page_motif = paginer(motifs, request, per_page_key='motif')
     magasins_pagines, per_page_magasin = paginer(magasins, request, per_page_key='magasin')
     beneficiaires_pagines, per_page_beneficiaire = paginer(beneficiaires, request, per_page_key='beneficiaire')
+    unites_paginees, per_page_unite = paginer(unites, request, per_page_key='unite')
+    motifs_ajustement_pagines, per_page_motif_ajust = paginer(motifs_ajustement, request, per_page_key='motif_ajust')
 
     # Batch : 1 requête par modèle relationnel au lieu de N×M requêtes individuelles
     get_dependances_batch(list(magasins_pagines))
@@ -171,6 +184,14 @@ def _handle_get(request):
         ).order_by('type_parametre', 'valeur'),
         'form_param_famille': FamilleParametreForm(),
         'perm_familles': request.user.has_perm('accounts.menu_familles') or request.user.is_superuser,
+        'unites': unites_paginees,
+        'q_unite': q_unite,
+        'per_page_unite': per_page_unite,
+        'motifs_ajustement': motifs_ajustement_pagines,
+        'q_motif_ajust': q_motif_ajust,
+        'per_page_motif_ajust': per_page_motif_ajust,
+        'perm_unites': request.user.has_perm('accounts.menu_param_logistique') or request.user.is_superuser,
+        'perm_motifs_ajustement': request.user.has_perm('accounts.menu_param_logistique') or request.user.is_superuser,
     }
 
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -179,6 +200,7 @@ def _handle_get(request):
 
 
 def _handle_post(request):
+    action = request.POST.get('action', '').strip()
     dispatch = {
         'enregistrer_famille': _post_famille,
         'enregistrer_fournisseur': _post_fournisseur,
@@ -187,9 +209,11 @@ def _handle_post(request):
         'enregistrer_motif': _post_motif,
         'enregistrer_config': _post_config,
         'enregistrer_param_famille': _post_param_famille,
+        'enregistrer_unite_mesure': _post_unite_mesure,
+        'enregistrer_motif_ajustement': _post_motif_ajustement,
     }
     for key, handler in dispatch.items():
-        if key in request.POST:
+        if key in request.POST or action == key:
             return handler(request)
 
     action = request.POST.get('action', '').strip()
@@ -197,7 +221,19 @@ def _handle_post(request):
         return _post_supprimer_motif(request)
     if action == 'toggle_motif':
         return _post_toggle_motif(request)
+    if action == 'supprimer_unite_mesure':
+        return _post_supprimer_unite_mesure(request)
+    if action == 'toggle_unite_mesure':
+        return _post_toggle_unite_mesure(request)
+    if action == 'supprimer_motif_ajustement':
+        return _post_supprimer_motif_ajustement(request)
+    if action == 'toggle_motif_ajustement':
+        return _post_toggle_motif_ajustement(request)
 
+    if 'supprimer_unite_mesure' in request.POST:
+        return _post_supprimer_unite_mesure(request)
+    if 'supprimer_motif_ajustement' in request.POST:
+        return _post_supprimer_motif_ajustement(request)
     if 'supprimer_param_famille' in request.POST:
         return _post_supprimer_param_famille(request)
     if 'supprimer_famille' in request.POST:
@@ -527,3 +563,117 @@ def _post_supprimer_beneficiaire(request):
         safe_delete_entity(benef, request.user)
         messages.success(request, "🗑️ Le bénéficiaire a été supprimé.")
     return redirect(redirect_url_with_tab('parametres_logistique', 'beneficiaires'))
+
+
+def _post_unite_mesure(request):
+    if not request.user.has_perm('accounts.menu_param_logistique') and not request.user.is_superuser:
+        messages.error(request, "⛔ Accès refusé.")
+        return redirect('parametres_logistique')
+    edit_id = parse_optional_id(request, 'unite_id') or parse_optional_id(request, 'item_id')
+    nom = request.POST.get('nom', '').strip()
+    symbole = request.POST.get('symbole', '').strip()
+    description = request.POST.get('description', '').strip()
+    if not nom:
+        messages.error(request, "❌ Le nom de l'unité de mesure est obligatoire.")
+        return redirect(redirect_url_with_tab('parametres_logistique', 'unites-mesure'))
+    
+    if edit_id:
+        u = get_object_or_404(UniteMesure, id=edit_id)
+        u.nom = nom
+        u.symbole = symbole
+        u.description = description
+        u.modifie_par = request.user
+        u.save()
+        messages.success(request, f"✅ Unité de mesure « {nom} » mise à jour.")
+    else:
+        u, cree = UniteMesure.objects.get_or_create(
+            nom=nom,
+            defaults={'symbole': symbole, 'description': description, 'cree_par': request.user}
+        )
+        if cree:
+            messages.success(request, f"✅ Unité de mesure « {nom} » enregistrée.")
+        else:
+            messages.info(request, f"ℹ️ L'unité « {nom} » existe déjà.")
+    return redirect(redirect_url_with_tab('parametres_logistique', 'unites-mesure'))
+
+
+def _post_supprimer_unite_mesure(request):
+    if not request.user.has_perm('accounts.menu_param_logistique') and not request.user.is_superuser:
+        messages.error(request, "⛔ Accès refusé.")
+        return redirect('parametres_logistique')
+    pk = parse_optional_id(request, 'unite_id') or parse_optional_id(request, 'item_id')
+    u = get_object_or_404(UniteMesure, id=pk)
+    nom = u.nom
+    u.delete()
+    messages.success(request, f"🗑️ Unité « {nom} » supprimée.")
+    return redirect(redirect_url_with_tab('parametres_logistique', 'unites-mesure'))
+
+
+def _post_toggle_unite_mesure(request):
+    if not request.user.has_perm('accounts.menu_param_logistique') and not request.user.is_superuser:
+        messages.error(request, "⛔ Accès refusé.")
+        return redirect('parametres_logistique')
+    pk = parse_optional_id(request, 'unite_id') or parse_optional_id(request, 'item_id')
+    u = get_object_or_404(UniteMesure, id=pk)
+    u.actif = not u.actif
+    u.save(update_fields=['actif'])
+    messages.success(request, f"Statut de l'unité « {u.nom} » mis à jour ({'Activée' if u.actif else 'Désactivée'}).")
+    return redirect(redirect_url_with_tab('parametres_logistique', 'unites-mesure'))
+
+
+def _post_motif_ajustement(request):
+    if not request.user.has_perm('accounts.menu_param_logistique') and not request.user.is_superuser:
+        messages.error(request, "⛔ Accès refusé.")
+        return redirect('parametres_logistique')
+    edit_id = parse_optional_id(request, 'motif_ajust_id') or parse_optional_id(request, 'item_id')
+    libelle = request.POST.get('libelle', '').strip()
+    code = request.POST.get('code', '').strip().upper()
+    description = request.POST.get('description', '').strip()
+    if not libelle:
+        messages.error(request, "❌ Le libellé du motif d'ajustement est obligatoire.")
+        return redirect(redirect_url_with_tab('parametres_logistique', 'motifs-ajustement'))
+    if not code:
+        code = libelle.upper().replace(' ', '_')[:30]
+    
+    if edit_id:
+        m = get_object_or_404(MotifAjustement, id=edit_id)
+        m.libelle = libelle
+        m.code = code
+        m.description = description
+        m.modifie_par = request.user
+        m.save()
+        messages.success(request, f"✅ Motif d'ajustement « {libelle} » mis à jour.")
+    else:
+        m, cree = MotifAjustement.objects.get_or_create(
+            code=code,
+            defaults={'libelle': libelle, 'description': description, 'cree_par': request.user}
+        )
+        if cree:
+            messages.success(request, f"✅ Motif d'ajustement « {libelle} » créé.")
+        else:
+            messages.info(request, f"ℹ️ Le motif {code} existe déjà.")
+    return redirect(redirect_url_with_tab('parametres_logistique', 'motifs-ajustement'))
+
+
+def _post_supprimer_motif_ajustement(request):
+    if not request.user.has_perm('accounts.menu_param_logistique') and not request.user.is_superuser:
+        messages.error(request, "⛔ Accès refusé.")
+        return redirect('parametres_logistique')
+    pk = parse_optional_id(request, 'motif_ajust_id') or parse_optional_id(request, 'item_id')
+    m = get_object_or_404(MotifAjustement, id=pk)
+    libelle = m.libelle
+    m.delete()
+    messages.success(request, f"🗑️ Motif « {libelle} » supprimé.")
+    return redirect(redirect_url_with_tab('parametres_logistique', 'motifs-ajustement'))
+
+
+def _post_toggle_motif_ajustement(request):
+    if not request.user.has_perm('accounts.menu_param_logistique') and not request.user.is_superuser:
+        messages.error(request, "⛔ Accès refusé.")
+        return redirect('parametres_logistique')
+    pk = parse_optional_id(request, 'motif_ajust_id') or parse_optional_id(request, 'item_id')
+    m = get_object_or_404(MotifAjustement, id=pk)
+    m.actif = not m.actif
+    m.save(update_fields=['actif'])
+    messages.success(request, f"Statut du motif « {m.libelle} » mis à jour ({'Activé' if m.actif else 'Désactivé'}).")
+    return redirect(redirect_url_with_tab('parametres_logistique', 'motifs-ajustement'))

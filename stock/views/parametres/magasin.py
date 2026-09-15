@@ -17,6 +17,8 @@ def parametres_magasin(request, magasin_id):
         form = MagasinParametresForm(request.POST, instance=magasin)
         if form.is_valid():
             form.save()
+            from django.core.cache import cache
+            cache.clear()
             messages.success(
                 request,
                 f"✅ Les paramètres du magasin '{magasin.nom}' ont été mis à jour."

@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from datetime import datetime
 from decimal import Decimal
@@ -51,9 +52,9 @@ def liste_sorties(request):
 
     sorties_bons = (
         BonMouvement.objects.filter(
-            type_bon='SORTIE', magasin__in=magasins_autorises
+            type_bon__in=['SORTIE', 'SORTIE_PROJET'], magasin__in=magasins_autorises
         )
-        .select_related('magasin', 'service_demandeur', 'cree_par', 'valide_par')
+        .select_related('magasin', 'service_demandeur', 'cree_par', 'valide_par', 'projet', 'projet__fournisseur', 'fournisseur')
         .prefetch_related('lignes_bon__article')
         .annotate(nb_lignes=Count('lignes_bon', distinct=True))
     )
@@ -94,6 +95,8 @@ def liste_sorties(request):
         sorties_bons = sorties_bons.filter(
             Q(numero_bon__icontains=q) |
             Q(service_demandeur__nom__icontains=q) |
+            Q(projet__nom__icontains=q) |
+            Q(fournisseur__raison_sociale__icontains=q) |
             Q(reference_externe__icontains=q) |
             Q(magasin__nom__icontains=q) |
             Q(lignes_bon__article__designation__icontains=q)
@@ -107,89 +110,164 @@ def liste_sorties(request):
             messages.error(request, "⛔ Vous n'avez pas accès à ce magasin source.")
             return redirect('liste_sorties')
 
+        type_sortie = request.POST.get('type_sortie', 'SORTIE')
         service_id = request.POST.get('service_demandeur')
+        projet_id = request.POST.get('projet')
         ref_ext = request.POST.get('reference_externe')
         article_ids = request.POST.getlist('articles[]')
         quantites = request.POST.getlist('quantites[]')
 
         if not article_ids:
             messages.error(request, "❌ Impossible d'enregistrer un bon de sortie vide.")
-        else:
-            if ref_ext and BonMouvement.objects.filter(
-                type_bon='SORTIE', service_demandeur_id=service_id,
-                reference_externe__iexact=ref_ext
-            ).exists():
-                nom_service = Service.objects.get(id=service_id).nom
-                messages.error(
-                    request,
-                    f"La référence '{ref_ext}' a déjà été traitée pour le service '{nom_service}'."
-                )
-                return redirect('liste_sorties')
+            return redirect('liste_sorties')
 
-            # Validation des articles
-            articles_valides = set(
-                Article.objects.filter(
-                    id__in=[aid for aid in article_ids if aid]
-                ).values_list('id', flat=True)
-            )
-
-            lignes = []
-            for aid, qte in zip(article_ids, quantites):
-                if aid and qte:
-                    try:
-                        qte_int = int(qte)
-                        if qte_int > 0:
-                            if int(aid) not in articles_valides:
-                                messages.error(
-                                    request,
-                                    "⛔ Un ou plusieurs articles sélectionnés ne sont pas valides."
-                                )
-                                return redirect('liste_sorties')
-                            lignes.append({'article_id': aid, 'quantite': qte_int})
-                    except ValueError:
-                        messages.error(request, f"❌ Quantité invalide pour l'article.")
+        # Vérification doublon référence externe
+        if ref_ext and ref_ext.strip():
+            ref_ext_clean = ref_ext.strip()
+            if type_sortie == 'SORTIE_PROJET':
+                if projet_id and str(projet_id).strip().isdigit():
+                    if BonMouvement.objects.filter(
+                        type_bon='SORTIE_PROJET', projet_id=int(projet_id),
+                        reference_externe__iexact=ref_ext_clean
+                    ).exists():
+                        messages.error(request, f"La référence '{ref_ext_clean}' a déjà été enregistrée pour ce projet.")
+                        return redirect('liste_sorties')
+            else:
+                if service_id and str(service_id).strip().isdigit():
+                    if BonMouvement.objects.filter(
+                        type_bon='SORTIE', service_demandeur_id=int(service_id),
+                        reference_externe__iexact=ref_ext_clean
+                    ).exists():
+                        nom_service = Service.objects.filter(id=int(service_id)).values_list('nom', flat=True).first() or "ce service"
+                        messages.error(request, f"La référence '{ref_ext_clean}' a déjà été traitée pour le service '{nom_service}'.")
                         return redirect('liste_sorties')
 
-            # Conversion IDs → objets
-            magasin = get_object_or_404(Magasin, id=magasin_id)
-            service_demandeur = None
-            if service_id:
-                service_demandeur = get_object_or_404(Service, id=service_id)
+        # Validation des articles
+        articles_valides = set(
+            Article.objects.filter(
+                id__in=[aid for aid in article_ids if aid and str(aid).strip().isdigit()]
+            ).values_list('id', flat=True)
+        )
 
-            try:
-                bon = BonService.creer_bon_sortie(
-                    lignes=lignes,
-                    utilisateur=request.user,
-                    magasin=magasin,
-                    service_demandeur=service_demandeur,
-                    reference_externe=ref_ext,
-                    circuit_validation=circuit_sortie
-                )
-            except IntegrityError as e:
-                logger.exception("[SORTIE] IntegrityError création bon : %s", e)
-                messages.error(request, "⛔ Erreur lors de la création du bon. Vérifiez la console pour le détail.")
+        lignes = []
+        for aid, qte in zip(article_ids, quantites):
+            if aid and qte:
+                try:
+                    qte_int = int(qte)
+                    if qte_int > 0:
+                        if int(aid) not in articles_valides:
+                            messages.error(
+                                request,
+                                "⛔ Un ou plusieurs articles sélectionnés ne sont pas valides."
+                            )
+                            return redirect('liste_sorties')
+                        lignes.append({'article_id': int(aid), 'quantite': qte_int})
+                except ValueError:
+                    messages.error(request, "❌ Quantité invalide pour l'article.")
+                    return redirect('liste_sorties')
+
+        # Conversion IDs → objets
+        magasin = get_object_or_404(Magasin, id=magasin_id)
+        
+        service_demandeur = None
+        projet = None
+        if type_sortie == 'SORTIE_PROJET':
+            if not magasin.gere_projets:
+                messages.error(request, f"❌ Le magasin '{magasin.nom}' n'est pas configuré pour gérer les projets.")
+                return redirect('liste_sorties')
+            if not projet_id or not str(projet_id).strip().isdigit():
+                messages.error(request, "❌ Veuillez sélectionner un projet pour une sortie projet.")
+                return redirect('liste_sorties')
+            from projets.models import Projet
+            projet = get_object_or_404(Projet.objects.select_related('fournisseur'), id=int(projet_id))
+
+            if projet.statut in ['TERMINE', 'ANNULE', 'SUSPENDU']:
+                messages.error(request, f"❌ Impossible d'effectuer une sortie : le projet '{projet.nom}' est {projet.get_statut_display().lower()}.")
                 return redirect('liste_sorties')
 
-            messages.success(
-                request,
-                f"✅ Bon de sortie {bon.numero_bon} créé !"
-                + (" En attente de validation." if circuit_sortie else "")
+            # Sécurité backend : restriction aux articles du projet si activé
+            if getattr(magasin, 'filtrer_articles_par_projet', True):
+                from stock.services.projet_article_service import get_articles_ids_pour_projet
+                allowed_articles_ids = get_articles_ids_pour_projet(projet.id)
+                for l in lignes:
+                    if l['article_id'] not in allowed_articles_ids:
+                        art_nom = getattr(l.get('article'), 'designation', f"ID #{l['article_id']}")
+                        messages.error(
+                            request,
+                            f"❌ L'article '{art_nom}' n'est pas affecté au projet '{projet.nom}'. "
+                            f"Ce magasin n'autorise que les matériels entrés ou prévus pour le projet."
+                        )
+                        return redirect('liste_sorties')
+        else:
+            if not service_id or not str(service_id).strip().isdigit():
+                messages.error(request, "❌ Veuillez sélectionner un service demandeur.")
+                return redirect('liste_sorties')
+            service_demandeur = get_object_or_404(Service, id=int(service_id))
+
+        try:
+            bon = BonService.creer_bon_sortie(
+                lignes=lignes,
+                utilisateur=request.user,
+                magasin=magasin,
+                service_demandeur=service_demandeur,
+                reference_externe=ref_ext,
+                circuit_validation=circuit_sortie,
+                projet=projet,
+                type_bon=type_sortie
             )
-            if circuit_sortie:
-                return redirect('liste_sorties')
-            else:
-                return redirect(f"{reverse('liste_sorties')}?print_bon={bon.id}")
+        except IntegrityError as e:
+            logger.exception("[SORTIE] IntegrityError création bon : %s", e)
+            messages.error(request, "⛔ Erreur lors de la création du bon. Vérifiez la console pour le détail.")
+            return redirect('liste_sorties')
+
+        messages.success(
+            request,
+            f"✅ Bon de sortie {bon.numero_bon} créé !"
+            + (" En attente de validation." if circuit_sortie else "")
+        )
+        if circuit_sortie:
+            return redirect('liste_sorties')
+        else:
+            return redirect(f"{reverse('liste_sorties')}?print_bon={bon.id}")
 
     magasins = magasins_autorises.order_by('nom')
     services = Service.objects.all().order_by('nom')
-    # ✅ CORRECTION PERF : conserver prefetch_related('stocks__magasin') —
-    # sans lui, chaque ligne de la modale interroge la base (N+1 mesuré :
-    # 115 requêtes / page). Le filtre is_deleted + plafond 200 sont conservés.
-    articles = Article.objects.filter(is_deleted=False).order_by(
-        'designation'
-    ).select_related('famille').prefetch_related(
-        'stocks__magasin'
-    )[:200]
+
+    from projets.models import Projet
+    from stock.services.projet_article_service import get_map_articles_projets
+    projets_list = Projet.objects.filter(is_deleted=False).exclude(statut__in=['TERMINE', 'ANNULE', 'SUSPENDU']).select_related('fournisseur').only('id', 'nom', 'fournisseur__id', 'fournisseur__raison_sociale', 'meme_fournisseur_livreur').order_by('nom')
+    magasin_gere_projets = bool(magasin_actif and magasin_actif.gere_projets)
+    magasin_filtre_projet = bool(magasin_actif and magasin_actif.gere_projets and getattr(magasin_actif, 'filtrer_articles_par_projet', True))
+
+    nb_projets = projets_list.count()
+    if nb_projets <= 30:
+        projets_articles_map = get_map_articles_projets(projets_list)
+    else:
+        projets_articles_map = get_map_articles_projets(projets_list[:20])
+    projets_articles_json = json.dumps(projets_articles_map)
+
+    # Récupérer tous les IDs d'articles liés aux projets actifs pour les inclure dans la sélection
+    ids_articles_projets = set()
+    for ids in projets_articles_map.values():
+        ids_articles_projets.update(ids)
+
+    if ids_articles_projets:
+        articles_projets = Article.objects.filter(
+            id__in=ids_articles_projets, is_deleted=False
+        ).select_related('famille').prefetch_related('stocks__magasin')[:200]
+        articles_autres = Article.objects.filter(
+            is_deleted=False
+        ).exclude(id__in=ids_articles_projets).select_related('famille').prefetch_related(
+            'stocks__magasin'
+        )[:200]
+        articles = list(articles_projets) + list(articles_autres)
+    else:
+        articles = Article.objects.filter(is_deleted=False).order_by(
+            'designation'
+        ).select_related('famille').prefetch_related(
+            'stocks__magasin'
+        )[:200]
+
     motifs_annulation = MotifAnnulation.objects.filter(
         actif=True
     ).order_by('libelle')
@@ -198,17 +276,22 @@ def liste_sorties(request):
         'sorties_bons': sorties_bons_pagines,
         'magasins': magasins,
         'services': services,
+        'projets_list': projets_list,
         'articles': articles,
-        'q_bon': q,
-        'date_range': date_range,
-        'per_page': per_page,
-        'tri': tri,
-        'ordre': ordre,
+        'projets_articles_json': projets_articles_json,
         'motifs_annulation': motifs_annulation,
-        'circuit_sortie': circuit_sortie,
-        'est_valideur': est_valideur,
+        'tri_actuel': tri,
+        'ordre_actuel': ordre,
+        'q': q,
+        'date_range': date_range,
+        'magasin_actif': magasin_actif,
+        'magasin_gere_projets': magasin_gere_projets,
+        'magasin_filtre_projet': magasin_filtre_projet,
+        'per_page': per_page,
         'peut_creer': _has_perm_bon(request.user, 'add', 'SORTIE'),
         'peut_annuler': _has_perm_bon(request.user, 'cancel', 'SORTIE'),
+        'est_valideur': est_valideur,
+        'circuit_sortie': circuit_sortie,
     }
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         return render(request, 'stock/sorties_lignes.html', context)

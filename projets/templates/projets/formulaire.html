@@ -1,0 +1,1454 @@
+{% extends 'base_ui.html' %}
+{% load static %}
+{% load projets_tags %}
+
+{% block title %}{{ action }} un Projet — NexusERP{% endblock %}
+
+{% block contenu %}
+<style>
+  /* ══════════ DESIGN SYSTEM FORMULAIRE PROJET ══════════ */
+  .form-header-bar {
+    background: linear-gradient(135deg, #1c5b96 0%, #0d3b6e 100%);
+    color: white;
+    border-radius: 14px;
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 4px 20px rgba(28, 91, 150, 0.25);
+    flex-wrap: wrap;
+  }
+  .form-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .form-header-left i.ico {
+    font-size: 28px;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 12px;
+    border-radius: 12px;
+  }
+  .form-header-bar h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 800;
+  }
+  .form-header-bar p {
+    margin: 3px 0 0;
+    opacity: 0.85;
+    font-size: 13px;
+  }
+  .btn-back {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.2s;
+  }
+  .btn-back:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+  }
+
+  /* ══════════ CARDS & INPUTS ══════════ */
+  .form-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 12px var(--shadow);
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .card-title-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1.5px solid var(--border-light);
+  }
+  .card-title-bar i {
+    font-size: 18px;
+    color: #1c5b96;
+  }
+  .card-title-bar h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+
+  .form-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+  }
+  @media (max-width: 768px) {
+    .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+  }
+
+  .form-group-item {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .form-label-custom {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .form-label-custom .req {
+    color: #dc3545;
+  }
+  .input-custom {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border-color);
+    background: var(--bg-input);
+    color: var(--text-dark);
+    font-size: 13.5px;
+    outline: none;
+    transition: all 0.2s;
+    font-family: inherit;
+    box-sizing: border-box;
+  }
+  .input-custom:focus {
+    border-color: #1c5b96;
+    box-shadow: 0 0 0 3px rgba(28, 91, 150, 0.15);
+  }
+
+  /* ══════════ PROFORMA TABLE ══════════ */
+  .proforma-container {
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1.5px solid var(--border-color);
+    margin-bottom: 16px;
+  }
+  .proforma-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .proforma-table thead tr {
+    background: var(--bg-hover);
+    border-bottom: 2px solid var(--border-color);
+  }
+  .proforma-table thead th {
+    padding: 12px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-light);
+    text-align: left;
+  }
+  .proforma-table tbody td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-light);
+    vertical-align: middle;
+  }
+  .btn-del-row {
+    background: rgba(220, 53, 69, 0.1);
+    color: #dc3545;
+    border: 1px solid rgba(220, 53, 69, 0.3);
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn-del-row:hover {
+    background: #dc3545;
+    color: white;
+  }
+  .btn-add-item {
+    background: rgba(40, 167, 69, 0.1);
+    color: #28a745;
+    border: 1.5px dashed #28a745;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+  }
+  .btn-add-item:hover {
+    background: #28a745;
+    color: white;
+  }
+
+  /* ══════════ FORM FOOTER ACTIONS ══════════ */
+  .form-actions-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .btn-cancel {
+    background: var(--bg-hover);
+    color: var(--text-medium);
+    border: 1px solid var(--border-color);
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .btn-cancel:hover {
+    background: var(--border-color);
+    color: var(--text-dark);
+  }
+  .btn-submit-proj {
+    background: #1c5b96;
+    color: white;
+    border: none;
+    padding: 11px 26px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 12px rgba(28, 91, 150, 0.3);
+  }
+  .btn-submit-proj:hover {
+    background: #0d3b6e;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(28, 91, 150, 0.4);
+  }
+
+  .select2-container .select2-selection--single {
+    height: 42px !important;
+    padding: 6px 10px !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: 8px !important;
+    background: var(--bg-input) !important;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: var(--text-dark) !important;
+    line-height: 28px !important;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px !important;
+  }
+</style>
+
+<div class="form-header-bar">
+  <div class="form-header-left">
+    <i class="fas fa-project-diagram ico"></i>
+    <div>
+      <h2>{{ action }} un Projet</h2>
+      <p>Paramétrez les informations du projet et dressez la liste prévisionnelle du matériel demandé (Proforma)</p>
+    </div>
+  </div>
+  <a href="{% url 'projets:liste' %}" class="btn-back" onclick="return confirmerAnnulerFormulaire(event, '{% url 'projets:liste' %}')">
+    <i class="fas fa-arrow-left"></i> Retour à la liste
+  </a>
+</div>
+
+<form method="post" id="form-projet" onsubmit="return confirmerEnregistrementProjet(event)">
+  {% csrf_token %}
+
+  <!-- ══════════ BLOC 1 : INFORMATIONS GÉNÉRALES ══════════ -->
+  <div class="form-card">
+    <div class="card-title-bar">
+      <i class="fas fa-info-circle"></i>
+      <h3>Informations Générales du Chantier / Projet</h3>
+    </div>
+
+    <div class="form-grid-2" style="margin-bottom: 20px;">
+      <div class="form-group-item">
+        <label class="form-label-custom">Nom du projet <span class="req">*</span></label>
+        <input type="text" name="nom" class="input-custom" required 
+               value="{{ projet.nom|default:'' }}" 
+               placeholder="Ex: Construction Bâtiment Maternité, Réhabilitation Salle...">
+      </div>
+      <div class="form-group-item">
+        <label class="form-label-custom">Statut du Projet <span class="req">*</span></label>
+        <select name="statut" class="input-custom" required>
+          {% for code, label in statut_choices %}
+            <option value="{{ code }}" {% if projet.statut == code or not projet and code == statut_default %}selected{% endif %}>
+              {{ label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-grid-2" style="margin-bottom: 20px;">
+      <!-- CHEF DE PROJET -->
+      <div class="form-group-item">
+        <label class="form-label-custom">
+          <i class="fas fa-user-tie text-primary me-1"></i> Chef de Projet <span class="req">*</span>
+        </label>
+        <select name="chef_de_projet" id="select-chef-de-projet" class="input-custom" required>
+          {% for u in users %}
+            <option value="{{ u.id }}" 
+                    {% if projet and projet.chef_de_projet_id == u.id or not projet and request.user.id == u.id %}selected{% endif %}>
+              {{ u.get_full_name|default:u.username }} ({{ u.username }}){% if request.user.id == u.id %} — Vous{% endif %}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- DIRECTION RESPONSABLE -->
+      <div class="form-group-item">
+        <label class="form-label-custom">
+          <i class="fas fa-building text-primary me-1"></i> Direction Responsable
+        </label>
+        
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+          <div>
+            <select name="direction_responsable" id="select-direction-responsable" class="input-custom" onchange="onChangementDirection()">
+              {% for svc in services %}
+                <option value="{{ svc.id }}" 
+                        {% if projet and projet.direction_responsable_id == svc.id or not projet and dir_technique_defaut and dir_technique_defaut.id == svc.id %}selected{% endif %}>
+                  {{ svc.nom }} ({{ svc.code }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div>
+            <select name="responsable_direction" id="select-responsable-direction" class="input-custom">
+              <option value="">-- Sélectionner un agent --</option>
+              {% with active_dir_id=projet.direction_responsable_id|default:dir_technique_defaut.id|stringformat:"s" %}
+                {% for u in users %}
+                  {% if u.profil.service_id|stringformat:"s" == active_dir_id %}
+                    <option value="{{ u.id }}" 
+                            data-service-id="{{ u.profil.service_id|default:'' }}"
+                            {% if projet and projet.responsable_direction_id == u.id or not projet and forloop.first %}selected{% endif %}>
+                      {{ u.get_full_name|default:u.username }} ({{ u.username }})
+                    </option>
+                  {% endif %}
+                {% endfor %}
+              {% endwith %}
+            </select>
+          </div>
+        </div>
+        <script id="users-services-data" type="application/json">
+        [
+          {% for u in users %}
+          {
+            "id": "{{ u.id }}",
+            "nom": "{{ u.get_full_name|default:u.username|escapejs }} ({{ u.username|escapejs }})",
+            "service_id": "{{ u.profil.service_id|default:'' }}"
+          }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ]
+        </script>
+      </div>
+    </div>
+
+    <div class="form-grid-2" style="margin-bottom: 20px;">
+      <div class="form-group-item">
+        <label class="form-label-custom"><i class="fas fa-truck text-primary me-1"></i> Fournisseur / Entreprise en charge du chantier</label>
+        <select name="fournisseur" id="select-projet-fournisseur" class="input-custom select2-fournisseur" style="width: 100%;">
+          <option value="">-- Aucun fournisseur / prestataire lié --</option>
+          {% for f in fournisseurs %}
+            <option value="{{ f.id }}" {% if projet.fournisseur_id == f.id %}selected{% endif %}>
+              {{ f.code }} - {{ f.raison_sociale }}
+            </option>
+          {% endfor %}
+        </select>
+        <small style="color: var(--text-medium); font-size: 11px; margin-top: 4px; display: block;">
+          Ce fournisseur sera utilisé par défaut lors des réceptions et figurera comme entreprise destinataire/en charge sur les bons de sortie de ce projet.
+        </small>
+        <div id="div-meme-fournisseur-livreur" style="margin-top: 10px; background: rgba(28, 91, 150, 0.05); border: 1px solid rgba(28, 91, 150, 0.15); border-radius: 8px; padding: 10px 14px; display: {% if projet.fournisseur_id %}block{% else %}none{% endif %};">
+          <label style="display: flex; align-items: center; gap: 10px; margin: 0; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--text-dark);">
+            <input type="checkbox" name="meme_fournisseur_livreur" id="id_meme_fournisseur_livreur" value="1"
+                   {% if projet is None or projet.meme_fournisseur_livreur %}checked{% endif %}
+                   style="width: 18px; height: 18px; accent-color: #1c5b96; cursor: pointer;">
+            <span><i class="fas fa-shipping-fast text-primary me-1"></i> Même fournisseur pour la livraison du matériel</span>
+          </label>
+          <small style="color: var(--text-medium); font-size: 11.5px; margin-left: 28px; margin-top: 3px; display: block;">
+            Si activé, ce fournisseur sera automatiquement sélectionné sur les bons d'entrée de stock lors de la sélection de ce projet.
+          </small>
+        </div>
+      </div>
+
+      <div class="form-group-item">
+        <label class="form-label-custom">Budget alloué (FCFA)</label>
+        <input type="number" step="1" min="0" name="budget_alloue" id="id_budget_alloue" class="input-custom" 
+               value="{{ projet.budget_alloue|default:'' }}" 
+               placeholder="Ex: 15000000"
+               oninput="actualiserApercuBudget(this.value)">
+        <div id="budget-preview" style="font-size: 12px; color: #1c5b96; font-weight: 700; margin-top: 4px; min-height: 18px;">
+          {% if projet.budget_alloue %}
+            <i class="fas fa-coins me-1"></i> {{ projet.budget_alloue|format_milliers }} FCFA
+          {% endif %}
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px;">
+          <div>
+            <label class="form-label-custom">Date de début</label>
+            <input type="date" name="date_debut" class="input-custom" 
+                   value="{{ projet.date_debut|date:'Y-m-d'|default:'' }}">
+          </div>
+          <div>
+            <label class="form-label-custom">Date de fin prévue</label>
+            <input type="date" name="date_fin_prevue" class="input-custom" 
+                   value="{{ projet.date_fin_prevue|date:'Y-m-d'|default:'' }}">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group-item">
+      <label class="form-label-custom">Description / Contexte du Projet</label>
+      <textarea name="description" class="input-custom" rows="3" 
+                placeholder="Précisez les objectifs, le lieu du chantier, les contraintes particulières...">{{ projet.description|default:'' }}</textarea>
+    </div>
+  </div>
+
+  <!-- ══════════ BLOC 2 : BESOINS PRÉVISIONNELS (PROFORMAS & DEVIS) ══════════ -->
+  <div class="form-card">
+    <div class="card-title-bar" style="border-bottom-color: rgba(40, 167, 69, 0.3); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-file-invoice" style="color: #28a745; font-size: 18px;"></i>
+        <h3 style="margin: 0;">Besoins Prévisionnels en Matériel (Proformas & Devis Fournisseurs)</h3>
+      </div>
+      <button type="button" class="btn-add-item" onclick="ouvrirModalProformaForm(-1)" style="padding: 8px 16px; font-size: 13px;">
+        <i class="fas fa-plus-circle"></i> Ajouter des articles ou proforma
+      </button>
+    </div>
+
+    <!-- Champ caché contenant les proformas sérialisées pour la soumission -->
+    <input type="hidden" name="proformas_json" id="input-proformas-json" value="[]">
+    <!-- Conteneur pour inputs hidden legacy (articles[], quantites[], etc.) pour compatibilité totale -->
+    <div id="hidden-legacy-inputs" style="display: none;"></div>
+
+    <!-- Tableau récapitulatif des proformas -->
+    <div class="proforma-container">
+      <table class="proforma-table" style="width: 100%;">
+        <thead>
+          <tr>
+            <th style="width: 44px; text-align: center;"></th>
+            <th style="width: 150px;">N° Proforma</th>
+            <th style="width: 120px;">Date</th>
+            <th>Fournisseur / Prestataire</th>
+            <th style="text-align: center; width: 140px;">Articles Chiffrés</th>
+            <th style="text-align: right; width: 140px;">Montant Estimé</th>
+            <th style="text-align: center; width: 100px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-proformas-liste">
+          <!-- Injecté par JavaScript -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══════════ BOUTONS DE VALIDATION ══════════ -->
+  <div class="form-actions-bar">
+    <a href="{% url 'projets:liste' %}" class="btn-cancel" onclick="return confirmerAnnulerFormulaire(event, '{% url 'projets:liste' %}')">Annuler</a>
+    <button type="submit" class="btn-submit-proj">
+      <i class="fas fa-check-circle"></i> Enregistrer le Projet
+    </button>
+  </div>
+</form>
+
+<!-- ══════════ MODALE DE SAISIE PROFORMA & ARTICLES ══════════ -->
+<div id="modal-form-proforma" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); backdrop-filter: blur(4px); z-index: 10000; justify-content: center; align-items: center; padding: 20px;">
+  <div style="background: var(--bg-card, #ffffff); width: 100%; max-width: 960px; max-height: 90vh; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.35); display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--border-color);">
+    <!-- En-tête Modale -->
+    <div style="padding: 16px 22px; background: linear-gradient(135deg, #1c5b96, #0d3b6e); color: white; display: flex; justify-content: space-between; align-items: center;">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <i class="fas fa-file-invoice" style="font-size: 20px; color: #a5d8ff;"></i>
+        <div>
+          <h3 id="modal-pf-title" style="margin: 0; font-size: 16px; font-weight: 700; color: white;">Ajouter des Articles ou Proforma</h3>
+          <p style="margin: 2px 0 0 0; font-size: 12px; opacity: 0.85;">Renseignez les informations de la proforma et recherchez les articles à intégrer</p>
+        </div>
+      </div>
+      <button type="button" onclick="fermerModalProformaForm()" style="background: rgba(255,255,255,0.15); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: all 0.2s;">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+
+    <!-- Corps de la Modale (Scrollable) -->
+    <div style="padding: 20px 24px; overflow-y: auto; flex: 1;">
+      <input type="hidden" id="modal-pf-index" value="-1">
+      <input type="hidden" id="modal-pf-id" value="">
+
+      <!-- Métadonnées de la Proforma -->
+      <div class="form-grid-2" style="margin-bottom: 16px;">
+        <div class="form-group-item">
+          <label class="form-label-custom">N° Proforma / Devis <span class="req">*</span></label>
+          <input type="text" id="modal-pf-numero" class="input-custom" placeholder="Ex: PF-2026-001 ou DEV-0458">
+        </div>
+        <div class="form-group-item">
+          <label class="form-label-custom">Date du Document <span class="req">*</span></label>
+          <input type="date" id="modal-pf-date" class="input-custom" value="{% now 'Y-m-d' %}">
+        </div>
+      </div>
+
+      <div class="form-grid-2" style="margin-bottom: 18px;">
+        <div class="form-group-item">
+          <label class="form-label-custom">Fournisseur / Émetteur</label>
+          <select id="modal-pf-fournisseur" class="input-custom">
+            <option value="">-- Même fournisseur que le chantier --</option>
+            {% for f in fournisseurs %}
+              <option value="{{ f.id }}" data-nom="{{ f.raison_sociale }}">{{ f.code }} - {{ f.raison_sociale }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group-item">
+          <label class="form-label-custom">Objet / Lot de Travaux</label>
+          <input type="text" id="modal-pf-objet" class="input-custom" placeholder="Ex: Lot Gros Œuvre, Fourniture Sanitaire, Électricité...">
+        </div>
+      </div>
+
+      <!-- Barre de Recherche et Ajout Direct -->
+      <div style="position: relative; z-index: 50; background: rgba(40, 167, 69, 0.05); border-left: 4px solid #28a745; padding: 12px 16px; border-radius: 8px; margin-bottom: 18px;">
+        <label style="display: block; font-size: 11.5px; font-weight: 700; color: #1e7e34; margin-bottom: 5px; text-transform: uppercase;">
+          <i class="fas fa-search me-1"></i> Rechercher et ajouter un article
+        </label>
+        <div style="position: relative;">
+          <input type="text" id="modal-pf-search-input" class="input-custom" 
+                 placeholder="Tapez le nom ou la référence de l'article (ex: Ciment, Tuyau, Disjoncteur...)" 
+                 autocomplete="off" 
+                 oninput="filtrerArticlesModalPf()"
+                 style="border: 2px solid #28a745; height: 42px; font-size: 13.5px; background: var(--bg-card, #fff); padding-left: 36px; border-radius: 8px; width: 100%; box-sizing: border-box;">
+          <i class="fas fa-search" style="position: absolute; left: 12px; top: 13px; color: #28a745; pointer-events: none; font-size: 14px;"></i>
+          <span id="modal-pf-search-spinner" style="display: none; position: absolute; right: 12px; top: 12px; color: #28a745;">
+            <i class="fas fa-spinner fa-spin"></i>
+          </span>
+        </div>
+
+        <div id="modal-pf-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; width: 100%; background: var(--bg-card, #ffffff); border: 1.5px solid #28a745; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.25); max-height: 240px; overflow-y: auto; z-index: 99999;">
+          <table style="width: 100%; border-collapse: collapse; margin: 0; font-size: 12.5px;">
+            <thead style="background: var(--bg-hover); position: sticky; top: 0; border-bottom: 1px solid var(--border-color); z-index: 2;">
+              <tr>
+                <th style="padding: 7px 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-light); width: 130px;">Réf.</th>
+                <th style="padding: 7px 10px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Désignation</th>
+                <th style="padding: 7px 10px; text-align: right; font-size: 11px; text-transform: uppercase; color: var(--text-light); width: 110px;">P.U Réf.</th>
+                <th style="padding: 7px 10px; text-align: center; width: 70px;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="modal-pf-dropdown-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Tableau des Lignes de Fournitures dans la Modale -->
+      <div style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+          <thead style="background: var(--bg-hover); border-bottom: 2px solid var(--border-color);">
+            <tr>
+              <th style="padding: 9px 12px; width: 35px; text-align: center; font-size: 11px; color: var(--text-light);">#</th>
+              <th style="padding: 9px 12px; width: 120px; text-align: left; font-size: 11px; color: var(--text-light);">Réf.</th>
+              <th style="padding: 9px 12px; text-align: left; font-size: 11px; color: var(--text-light);">Désignation <span class="req">*</span></th>
+              <th style="padding: 9px 12px; width: 110px; text-align: center; font-size: 11px; color: var(--text-light);">Quantité <span class="req">*</span></th>
+              <th style="padding: 9px 12px; width: 130px; text-align: right; font-size: 11px; color: var(--text-light);">P.U Estimé (FCFA)</th>
+              <th style="padding: 9px 12px; width: 130px; text-align: right; font-size: 11px; color: var(--text-light);">Total Ligne</th>
+              <th style="padding: 9px 12px; width: 50px; text-align: center;"></th>
+            </tr>
+          </thead>
+          <tbody id="modal-pf-lignes-body">
+            <!-- Lignes d'articles insérées -->
+          </tbody>
+          <tfoot id="modal-pf-tfoot" style="background: var(--bg-hover); border-top: 2px solid var(--border-color); font-weight: 700;">
+            <tr>
+              <td colspan="3" style="padding: 10px 14px; text-align: right; font-size: 12px; color: var(--text-medium);">TOTAUX DE LA PROFORMA :</td>
+              <td id="modal-pf-total-qte" style="padding: 10px 14px; text-align: center; color: #28a745; font-size: 13px;">0 unités</td>
+              <td></td>
+              <td id="modal-pf-total-montant" style="padding: 10px 14px; text-align: right; color: #1e7e34; font-size: 13px;">0 FCFA</td>
+              <td></td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>
+
+    <!-- Pied de Modale -->
+    <div style="padding: 14px 22px; background: var(--bg-hover); border-top: 1px solid var(--border-color); display: flex; justify-content: flex-end; gap: 10px;">
+      <button type="button" onclick="fermerModalProformaForm()" class="btn-cancel" style="padding: 9px 18px;">Annuler</button>
+      <button type="button" onclick="validerModalProforma()" class="btn-submit-proj" style="background: #28a745; box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3); padding: 9px 20px;">
+        <i class="fas fa-check"></i> <span id="modal-pf-btn-save">Valider et Enregistrer</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Script contenant les proformas initiales en JSON -->
+<script id="data-proformas-initiales" type="application/json">{{ proformas_initiales_json|safe }}</script>
+
+<script>
+  let proformasData = [];
+  let timerModalPf = null;
+
+  function escapeHtml(text) {
+    if (!text) return '';
+    return String(text)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  function initialiserProformas() {
+    const rawData = document.getElementById('data-proformas-initiales');
+    if (rawData && rawData.textContent.trim()) {
+      try {
+        proformasData = JSON.parse(rawData.textContent);
+      } catch (e) {
+        console.error("Erreur parsing proformas_initiales_json:", e);
+        proformasData = [];
+      }
+    }
+    renderProformasTable();
+  }
+
+  function togglePfAccordion(idx) {
+    const detailRow = document.getElementById(`pf-detail-row-${idx}`);
+    const chevron = document.getElementById(`pf-chevron-${idx}`);
+    if (!detailRow) return;
+
+    if (detailRow.style.display === 'none' || detailRow.style.display === '') {
+      detailRow.style.display = 'table-row';
+      if (chevron) chevron.style.transform = 'rotate(90deg)';
+    } else {
+      detailRow.style.display = 'none';
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+  }
+
+  function renderProformasTable() {
+    const tbody = document.getElementById('tbody-proformas-liste');
+    const inputHiddenJson = document.getElementById('input-proformas-json');
+    const legacyInputs = document.getElementById('hidden-legacy-inputs');
+    
+    if (inputHiddenJson) {
+      inputHiddenJson.value = JSON.stringify(proformasData);
+    }
+
+    // Rétrocompatibilité : synchronisation des inputs traditionnels articles[] et quantites[]
+    if (legacyInputs) {
+      legacyInputs.innerHTML = '';
+      if (proformasData.length > 0) {
+        const premierePf = proformasData[0];
+        const numInput = document.createElement('input');
+        numInput.type = 'hidden';
+        numInput.name = 'numero_proforma';
+        numInput.value = premierePf.numero_proforma || '';
+        legacyInputs.appendChild(numInput);
+
+        const dateInput = document.createElement('input');
+        dateInput.type = 'hidden';
+        dateInput.name = 'date_proforma';
+        dateInput.value = premierePf.date_proforma || '';
+        legacyInputs.appendChild(dateInput);
+
+        proformasData.forEach(pf => {
+          (pf.lignes || []).forEach(l => {
+            const artInp = document.createElement('input');
+            artInp.type = 'hidden';
+            artInp.name = 'articles[]';
+            artInp.value = l.article_id;
+            legacyInputs.appendChild(artInp);
+
+            const qteInp = document.createElement('input');
+            qteInp.type = 'hidden';
+            qteInp.name = 'quantites[]';
+            qteInp.value = l.quantite;
+            legacyInputs.appendChild(qteInp);
+          });
+        });
+      }
+    }
+
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (proformasData.length === 0) {
+      tbody.innerHTML = `
+        <tr id="row-proformas-vide">
+          <td colspan="7" style="text-align: center; padding: 36px 20px; color: var(--text-light);">
+            <i class="fas fa-file-invoice" style="font-size: 32px; opacity: 0.35; margin-bottom: 10px; display: block; color: #28a745;"></i>
+            <span style="font-weight: 600; font-size: 14px; color: var(--text-dark); display: block; margin-bottom: 4px;">
+              Aucune proforma ou devis ajouté pour le moment
+            </span>
+            <small style="color: var(--text-medium); display: block; margin-bottom: 14px;">
+              Renseignez les devis et fournitures chiffrées en ouvrant la modale ci-dessous.
+            </small>
+            <button type="button" class="btn-add-item" onclick="ouvrirModalProformaForm(-1)" style="padding: 7px 16px; font-size: 12.5px;">
+              <i class="fas fa-plus-circle"></i> Ajouter des articles ou proforma
+            </button>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    proformasData.forEach((pf, idx) => {
+      const totalQte = (pf.lignes || []).reduce((acc, l) => acc + (parseInt(l.quantite) || 0), 0);
+      const totalMontant = (pf.lignes || []).reduce((acc, l) => acc + (parseFloat(l.montant_total) || ((parseInt(l.quantite) || 0) * (parseFloat(l.prix_unitaire) || 0))), 0);
+      const nbRefs = (pf.lignes || []).length;
+
+      // Master Row
+      const masterTr = document.createElement('tr');
+      masterTr.className = 'pf-master-row';
+      masterTr.style.cssText = 'cursor: pointer; background: var(--bg-card); transition: background 0.15s; border-bottom: 1px solid var(--border-light);';
+      masterTr.onmouseenter = () => masterTr.style.background = 'rgba(40, 167, 69, 0.04)';
+      masterTr.onmouseleave = () => masterTr.style.background = 'var(--bg-card)';
+      masterTr.onclick = () => togglePfAccordion(idx);
+
+      masterTr.innerHTML = `
+        <td style="text-align: center; color: #28a745; vertical-align: middle;">
+          <i class="fas fa-chevron-right pf-chevron" id="pf-chevron-${idx}" style="transition: transform 0.2s; font-size: 13px;"></i>
+        </td>
+        <td style="font-family: monospace; font-weight: 700; color: #1c5b96; vertical-align: middle;">
+          ${escapeHtml(pf.numero_proforma || 'PF-SANS-NUM')}
+        </td>
+        <td style="color: var(--text-medium); font-size: 12.5px; vertical-align: middle;">
+          ${escapeHtml(pf.date_proforma || '—')}
+        </td>
+        <td style="vertical-align: middle;">
+          <strong style="color: var(--text-dark);">${escapeHtml(pf.fournisseur_nom || 'Fournisseur du chantier')}</strong>
+          ${pf.objet ? `<div style="font-size: 11.5px; color: var(--text-muted);">${escapeHtml(pf.objet)}</div>` : ''}
+        </td>
+        <td style="text-align: center; vertical-align: middle;">
+          <span style="background: rgba(40, 167, 69, 0.12); color: #1e7e34; font-weight: 700; padding: 4px 10px; border-radius: 12px; font-size: 12px; display: inline-block;">
+            ${totalQte} unités (${nbRefs} réf.)
+          </span>
+        </td>
+        <td style="text-align: right; font-weight: 700; color: #1e7e34; vertical-align: middle; font-size: 13.5px;">
+          ${totalMontant > 0 ? Math.round(totalMontant).toLocaleString('fr-FR') + ' F' : '—'}
+        </td>
+        <td style="text-align: center; vertical-align: middle;" onclick="event.stopPropagation()">
+          <button type="button" onclick="editerProforma(${idx})" title="Modifier cette proforma" 
+                  style="background: rgba(28, 91, 150, 0.1); color: #1c5b96; border: 1px solid rgba(28, 91, 150, 0.25); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; margin-right: 4px; transition: all 0.15s;">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button type="button" onclick="supprimerProforma(${idx})" title="Supprimer cette proforma" 
+                  style="background: rgba(220, 53, 69, 0.1); color: #dc3545; border: 1px solid rgba(220, 53, 69, 0.25); width: 32px; height: 32px; border-radius: 6px; cursor: pointer; transition: all 0.15s;">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(masterTr);
+
+      // Detail Row (Accordion)
+      const detailTr = document.createElement('tr');
+      detailTr.id = `pf-detail-row-${idx}`;
+      detailTr.style.display = 'none';
+      detailTr.style.background = 'rgba(0,0,0,0.015)';
+
+      let lignesHtml = '';
+      (pf.lignes || []).forEach((l, lIdx) => {
+        const ligneTotal = (parseFloat(l.montant_total) || ((parseInt(l.quantite) || 0) * (parseFloat(l.prix_unitaire) || 0)));
+        lignesHtml += `
+          <tr style="border-bottom: 1px solid var(--border-light);">
+            <td style="padding: 7px 12px; font-family: monospace; font-weight: 700; color: #1e7e34; font-size: 11.5px;">${escapeHtml(l.reference || '—')}</td>
+            <td style="padding: 7px 12px; font-weight: 600; color: var(--text-dark);">${escapeHtml(l.designation)}</td>
+            <td style="padding: 7px 12px; text-align: center; font-weight: 700; color: #1c5b96;">${l.quantite}</td>
+            <td style="padding: 7px 12px; text-align: right; color: var(--text-medium);">${l.prix_unitaire ? Math.round(l.prix_unitaire).toLocaleString('fr-FR') + ' F' : '—'}</td>
+            <td style="padding: 7px 12px; text-align: right; font-weight: 700; color: #1e7e34;">${ligneTotal ? Math.round(ligneTotal).toLocaleString('fr-FR') + ' F' : '—'}</td>
+          </tr>
+        `;
+      });
+
+      detailTr.innerHTML = `
+        <td colspan="7" style="padding: 0 14px 16px 14px; border-bottom: 2px solid var(--border-color);">
+          <div style="background: var(--bg-card); border: 1.5px solid var(--border-color); border-radius: 8px; overflow: hidden; margin-top: 6px; box-shadow: inset 0 2px 6px rgba(0,0,0,0.03);">
+            <div style="padding: 8px 14px; background: rgba(40, 167, 69, 0.07); border-bottom: 1px solid var(--border-color); font-size: 12px; font-weight: 700; color: #1e7e34; display: flex; justify-content: space-between; align-items: center;">
+              <span><i class="fas fa-list me-1"></i> Fournitures Chiffrées de la Proforma (${nbRefs} articles)</span>
+              <span style="font-size: 11px; color: var(--text-muted); font-weight: normal;"><i class="fas fa-info-circle me-1"></i> Cliquez sur la ligne pour replier</span>
+            </div>
+            <div style="max-height: 280px; overflow-y: auto;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+                <thead style="background: var(--bg-hover); border-bottom: 1px solid var(--border-color); position: sticky; top: 0; z-index: 2;">
+                  <tr>
+                    <th style="padding: 6px 12px; text-align: left; width: 130px; font-size: 11px; color: var(--text-light);">RÉFÉRENCE</th>
+                    <th style="padding: 6px 12px; text-align: left; font-size: 11px; color: var(--text-light);">DÉSIGNATION DE L'ARTICLE</th>
+                    <th style="padding: 6px 12px; text-align: center; width: 100px; font-size: 11px; color: var(--text-light);">QUANTITÉ</th>
+                    <th style="padding: 6px 12px; text-align: right; width: 120px; font-size: 11px; color: var(--text-light);">P.U ESTIMÉ</th>
+                    <th style="padding: 6px 12px; text-align: right; width: 130px; font-size: 11px; color: var(--text-light);">TOTAL ESTIMÉ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${lignesHtml || '<tr><td colspan="5" style="text-align: center; padding: 14px; color: var(--text-light);">Aucun article dans cette proforma.</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </td>
+      `;
+      tbody.appendChild(detailTr);
+    });
+  }
+
+  function ouvrirModalProformaForm(idx = -1) {
+    const modal = document.getElementById('modal-form-proforma');
+    const title = document.getElementById('modal-pf-title');
+    const inputIdx = document.getElementById('modal-pf-index');
+    const inputId = document.getElementById('modal-pf-id');
+    const inputNumero = document.getElementById('modal-pf-numero');
+    const inputDate = document.getElementById('modal-pf-date');
+    const selectFournisseur = document.getElementById('modal-pf-fournisseur');
+    const inputObjet = document.getElementById('modal-pf-objet');
+    const tbodyLignes = document.getElementById('modal-pf-lignes-body');
+    const searchInput = document.getElementById('modal-pf-search-input');
+    const dropdown = document.getElementById('modal-pf-dropdown');
+
+    inputIdx.value = idx;
+    if (searchInput) searchInput.value = '';
+    if (dropdown) dropdown.style.display = 'none';
+
+    if (idx === -1) {
+      // Nouvelle proforma
+      title.textContent = "Ajouter des Articles ou Proforma";
+      document.getElementById('modal-pf-btn-save').textContent = "Valider et Ajouter la Proforma";
+      inputId.value = '';
+      const now = new Date();
+      const moisStr = now.getFullYear() + String(now.getMonth() + 1).padStart(2, '0');
+      inputNumero.value = `PF-${moisStr}-${String(proformasData.length + 1).padStart(2, '0')}`;
+      inputDate.value = now.toISOString().slice(0, 10);
+      
+      // Préremplissage avec le fournisseur du projet si sélectionné
+      const fProjetSelect = document.getElementById('select-projet-fournisseur');
+      if (fProjetSelect && fProjetSelect.value) {
+        selectFournisseur.value = fProjetSelect.value;
+      } else {
+        selectFournisseur.value = '';
+      }
+      inputObjet.value = '';
+      tbodyLignes.innerHTML = `
+        <tr id="modal-pf-ligne-vide">
+          <td colspan="7" style="text-align: center; padding: 25px; color: var(--text-light);">
+            <i class="fas fa-box-open" style="font-size: 24px; opacity: 0.35; margin-bottom: 6px; display: block;"></i>
+            Aucun article dans cette proforma.<br>
+            <small>Recherchez un article dans la barre ci-dessus pour l'ajouter à la liste.</small>
+          </td>
+        </tr>
+      `;
+    } else {
+      // Édition d'une proforma existante
+      const pf = proformasData[idx];
+      title.textContent = "Modifier la Proforma / Devis";
+      document.getElementById('modal-pf-btn-save').textContent = "Mettre à jour la Proforma";
+      inputId.value = pf.id || '';
+      inputNumero.value = pf.numero_proforma || '';
+      inputDate.value = pf.date_proforma || '';
+      selectFournisseur.value = pf.fournisseur_id || '';
+      inputObjet.value = pf.objet || '';
+
+      tbodyLignes.innerHTML = '';
+      if (!pf.lignes || pf.lignes.length === 0) {
+        tbodyLignes.innerHTML = `
+          <tr id="modal-pf-ligne-vide">
+            <td colspan="7" style="text-align: center; padding: 25px; color: var(--text-light);">
+              <i class="fas fa-box-open" style="font-size: 24px; opacity: 0.35; margin-bottom: 6px; display: block;"></i>
+              Aucun article dans cette proforma.
+            </td>
+          </tr>
+        `;
+      } else {
+        pf.lignes.forEach((l, lIdx) => {
+          ajouterArticleDirectModal({
+            id: l.article_id,
+            reference: l.reference,
+            designation: l.designation,
+            prix_reference: l.prix_unitaire
+          }, l.quantite, l.prix_unitaire);
+        });
+      }
+    }
+
+    recalculerTotauxModalPf();
+    modal.style.display = 'flex';
+  }
+
+  function fermerModalProformaForm() {
+    const modal = document.getElementById('modal-form-proforma');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function filtrerArticlesModalPf() {
+    const input = document.getElementById('modal-pf-search-input');
+    const dropdown = document.getElementById('modal-pf-dropdown');
+    const tbody = document.getElementById('modal-pf-dropdown-body');
+    const spinner = document.getElementById('modal-pf-search-spinner');
+    const term = (input.value || '').trim();
+
+    clearTimeout(timerModalPf);
+
+    if (term.length < 1) {
+      dropdown.style.display = 'none';
+      if (spinner) spinner.style.display = 'none';
+      return;
+    }
+
+    if (spinner) spinner.style.display = 'block';
+
+    const selectFournisseur = document.getElementById('modal-pf-fournisseur');
+    const fId = selectFournisseur ? selectFournisseur.value : '';
+    const fParam = fId ? `&fournisseur_id=${encodeURIComponent(fId)}` : '';
+
+    timerModalPf = setTimeout(() => {
+      fetch(`{% url 'projets:api_articles' %}?q=${encodeURIComponent(term)}${fParam}`)
+        .then(res => res.json())
+        .then(data => {
+          if (spinner) spinner.style.display = 'none';
+          tbody.innerHTML = '';
+          const articles = data.results || [];
+          if (articles.length === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="4" style="text-align: center; padding: 16px; color: var(--text-light);">
+                  Aucun article trouvé pour "<strong>${escapeHtml(term)}</strong>".
+                </td>
+              </tr>
+            `;
+          } else {
+            articles.forEach(a => {
+              const tr = document.createElement('tr');
+              tr.style.cssText = 'cursor: pointer; border-bottom: 1px solid var(--border-light);';
+              tr.onmouseenter = () => tr.style.background = 'rgba(40, 167, 69, 0.08)';
+              tr.onmouseleave = () => tr.style.background = '';
+              const puText = a.prix_reference ? `${Math.round(a.prix_reference).toLocaleString('fr-FR')} F` : '—';
+              const badgeTarif = a.prix_fournisseur_specifique ? `<span style="background: #e7f5ea; color: #1e7e34; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 6px; font-weight: 700; white-space: nowrap;"><i class="fas fa-tag me-1"></i>Tarif fournisseur</span>` : '';
+              tr.innerHTML = `
+                <td style="padding: 7px 10px; font-weight: 700; color: #1e7e34; font-family: monospace;">${escapeHtml(a.reference || '—')}</td>
+                <td style="padding: 7px 10px; font-weight: 600; color: var(--text-dark);">${escapeHtml(a.designation)}${badgeTarif}</td>
+                <td style="padding: 7px 10px; text-align: right; color: var(--text-medium); font-weight: 600;">${puText}</td>
+                <td style="padding: 7px 10px; text-align: center;">
+                  <button type="button" class="dash-btn" style="background: #28a745; color: white; padding: 3px 8px; font-size: 11px; border: none; border-radius: 4px; cursor: pointer;">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </td>
+              `;
+              tr.onclick = function() {
+                ajouterArticleDirectModal(a);
+              };
+              tbody.appendChild(tr);
+            });
+          }
+          dropdown.style.display = 'block';
+        })
+        .catch(err => {
+          if (spinner) spinner.style.display = 'none';
+          console.error(err);
+        });
+    }, 180);
+  }
+
+  function ajouterArticleDirectModal(art, qte = 1, pu = null) {
+    const tbody = document.getElementById('modal-pf-lignes-body');
+    const ligneVide = document.getElementById('modal-pf-ligne-vide');
+    if (ligneVide) ligneVide.remove();
+
+    const existingRow = document.getElementById(`modal-row-art-${art.id}`);
+    if (existingRow) {
+      const qteInput = existingRow.querySelector('.modal-pf-qte');
+      qteInput.value = (parseInt(qteInput.value) || 0) + (parseInt(qte) || 1);
+      existingRow.style.backgroundColor = "rgba(40, 167, 69, 0.25)";
+      setTimeout(() => { existingRow.style.backgroundColor = ""; }, 400);
+      recalculerTotauxModalPf();
+      qteInput.focus();
+    } else {
+      const tr = document.createElement('tr');
+      tr.id = `modal-row-art-${art.id}`;
+      tr.className = 'modal-pf-item-row';
+      tr.dataset.articleId = art.id;
+      tr.dataset.reference = art.reference || '';
+      tr.dataset.designation = art.designation;
+
+      const prixU = (pu !== null && pu !== undefined) ? pu : (art.prix_reference || 0);
+
+      tr.innerHTML = `
+        <td style="padding: 8px 10px; text-align: center; color: var(--text-light); font-size: 11.5px;" class="modal-row-num">1</td>
+        <td style="padding: 8px 10px; font-family: monospace; font-weight: 600; color: var(--text-medium);">${escapeHtml(art.reference || '—')}</td>
+        <td style="padding: 8px 10px; font-weight: 600; color: var(--text-dark);">${escapeHtml(art.designation)}</td>
+        <td style="padding: 8px 10px; text-align: center;">
+          <input type="number" required min="1" class="input-custom modal-pf-qte" value="${qte}" 
+                 oninput="recalculerTotauxModalPf()" style="width: 85px; text-align: center; font-weight: bold; padding: 6px;">
+        </td>
+        <td style="padding: 8px 10px; text-align: right;">
+          <input type="number" step="1" min="0" class="input-custom modal-pf-pu" value="${prixU ? Math.round(prixU) : ''}" 
+                 placeholder="0" oninput="recalculerTotauxModalPf()" style="width: 110px; text-align: right; padding: 6px;">
+        </td>
+        <td style="padding: 8px 10px; text-align: right; font-weight: 700; color: #1e7e34;" class="modal-pf-ligne-total">0 F</td>
+        <td style="padding: 8px 10px; text-align: center;">
+          <button type="button" class="btn-del-row" onclick="supprimerLigneModalPf(this)" title="Supprimer" style="width: 28px; height: 28px; border-radius: 6px;">
+            <i class="fas fa-trash-alt" style="font-size: 11px;"></i>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+      recalculerTotauxModalPf();
+    }
+
+    const inputSearch = document.getElementById('modal-pf-search-input');
+    if (inputSearch) {
+      inputSearch.value = '';
+      inputSearch.focus();
+    }
+    const dropdown = document.getElementById('modal-pf-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }
+
+  function supprimerLigneModalPf(btn) {
+    const tr = btn.closest('tr');
+    if (!tr) return;
+    const designation = tr.querySelector('td:nth-child(3)')?.textContent?.trim() || 'cet article';
+
+    function _executer() {
+      tr.remove();
+      recalculerTotauxModalPf();
+
+      const tbody = document.getElementById('modal-pf-lignes-body');
+      if (!tbody.querySelector('.modal-pf-item-row')) {
+        tbody.innerHTML = `
+          <tr id="modal-pf-ligne-vide">
+            <td colspan="7" style="text-align: center; padding: 25px; color: var(--text-light);">
+              <i class="fas fa-box-open" style="font-size: 24px; opacity: 0.35; margin-bottom: 6px; display: block;"></i>
+              Aucun article dans cette proforma.<br>
+              <small>Recherchez un article dans la barre ci-dessus pour l'ajouter à la liste.</small>
+            </td>
+          </tr>
+        `;
+      }
+    }
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: 'Retirer cet article ?',
+        html: `
+          <div style="text-align: left; font-size: 13.5px;">
+            <p style="margin: 0 0 8px;"><strong>Question :</strong> Voulez-vous retirer cet article de la proforma ?</p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; font-weight: 700; color: #1c5b96;">
+              ${escapeHtml(designation)}
+            </div>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-trash-alt"></i> Oui, retirer',
+        cancelButtonText: 'Conserver',
+        reverseButtons: true,
+        focusConfirm: true
+      }).then((result) => {
+        if (result.isConfirmed) _executer();
+      });
+    } else if (confirm(`Question : Voulez-vous retirer « ${designation} » de la proforma ?`)) {
+      _executer();
+    }
+  }
+
+  function recalculerTotauxModalPf() {
+    const rows = document.querySelectorAll('#modal-pf-lignes-body .modal-pf-item-row');
+    let totalQte = 0;
+    let totalMontant = 0;
+
+    rows.forEach((row, i) => {
+      const numCell = row.querySelector('.modal-row-num');
+      if (numCell) numCell.textContent = i + 1;
+
+      const qte = parseInt(row.querySelector('.modal-pf-qte').value) || 0;
+      const pu = parseFloat(row.querySelector('.modal-pf-pu').value) || 0;
+      const ligneTotal = qte * pu;
+
+      totalQte += qte;
+      totalMontant += ligneTotal;
+
+      const cellTotal = row.querySelector('.modal-pf-ligne-total');
+      if (cellTotal) {
+        cellTotal.textContent = ligneTotal > 0 ? `${Math.round(ligneTotal).toLocaleString('fr-FR')} F` : '—';
+      }
+    });
+
+    const elQte = document.getElementById('modal-pf-total-qte');
+    const elMontant = document.getElementById('modal-pf-total-montant');
+    if (elQte) elQte.textContent = `${totalQte} unités (${rows.length} réf.)`;
+    if (elMontant) elMontant.textContent = `${Math.round(totalMontant).toLocaleString('fr-FR')} FCFA`;
+  }
+
+  function validerModalProforma() {
+    const idx = parseInt(document.getElementById('modal-pf-index').value);
+    const numero = (document.getElementById('modal-pf-numero').value || '').trim();
+    const date = document.getElementById('modal-pf-date').value;
+    const selectFournisseur = document.getElementById('modal-pf-fournisseur');
+    const fId = selectFournisseur.value;
+    const fNom = selectFournisseur.selectedOptions[0] ? selectFournisseur.selectedOptions[0].dataset.nom || selectFournisseur.selectedOptions[0].text : '';
+    const objet = (document.getElementById('modal-pf-objet').value || '').trim();
+
+    if (!numero) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({ icon: 'warning', title: 'Champ requis', text: 'Veuillez saisir un numéro de proforma ou devis.', confirmButtonColor: '#1c5b96' });
+      } else {
+        alert("Veuillez renseigner un numéro de proforma.");
+      }
+      return;
+    }
+
+    const rows = document.querySelectorAll('#modal-pf-lignes-body .modal-pf-item-row');
+    if (rows.length === 0) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({ icon: 'warning', title: 'Aucun article', text: 'Veuillez ajouter au moins un article chiffré à cette proforma.', confirmButtonColor: '#1c5b96' });
+      } else {
+        alert("Veuillez ajouter au moins un article chiffré.");
+      }
+      return;
+    }
+
+    const lignes = [];
+    rows.forEach(row => {
+      const artId = parseInt(row.dataset.articleId);
+      const ref = row.dataset.reference;
+      const des = row.dataset.designation;
+      const qte = parseInt(row.querySelector('.modal-pf-qte').value) || 1;
+      const pu = parseFloat(row.querySelector('.modal-pf-pu').value) || 0;
+      const montant = qte * pu;
+
+      lignes.push({
+        article_id: artId,
+        reference: ref,
+        designation: des,
+        quantite: qte,
+        prix_unitaire: pu,
+        montant_total: montant
+      });
+    });
+
+    const proformaObj = {
+      id: document.getElementById('modal-pf-id').value || null,
+      numero_proforma: numero,
+      date_proforma: date,
+      fournisseur_id: fId || null,
+      fournisseur_nom: fNom,
+      objet: objet,
+      lignes: lignes
+    };
+
+    function _sauvegarderProformaObjet() {
+      let targetIdx = idx;
+      if (idx >= 0 && idx < proformasData.length) {
+        proformasData[idx] = proformaObj;
+      } else {
+        proformasData.push(proformaObj);
+        targetIdx = proformasData.length - 1;
+      }
+
+      fermerModalProformaForm();
+      renderProformasTable();
+
+      // Dérouler automatiquement la ligne nouvellement ajoutée / modifiée
+      setTimeout(() => {
+        togglePfAccordion(targetIdx);
+        const row = document.getElementById(`pf-detail-row-${targetIdx}`);
+        if (row) row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }, 100);
+    }
+
+    const isEdit = (idx >= 0 && idx < proformasData.length);
+    const titre = isEdit ? "Mettre à jour la proforma ?" : "Ajouter cette proforma ?";
+    const totalMontant = lignes.reduce((acc, cur) => acc + (cur.montant_total || 0), 0);
+    const montantFmt = Math.round(totalMontant).toLocaleString('fr-FR') + ' FCFA';
+
+    const questionHtml = `
+      <div style="text-align: left; font-size: 13.5px; line-height: 1.5;">
+        <p style="margin: 0 0 10px; font-weight: 600; color: var(--text-dark, #1e293b);">
+          <strong>Question :</strong> Confirmez-vous ${isEdit ? 'la mise à jour' : "l'ajout"} de cette commande proforma ?
+        </p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12.5px;">
+          <div style="margin-bottom: 4px;"><strong>Réf. Proforma :</strong> <span style="color:#1c5b96; font-weight:bold;">${escapeHtml(numero)}</span></div>
+          <div style="margin-bottom: 4px;"><strong>Articles inclus :</strong> ${lignes.length} article(s)</div>
+          <div><strong>Total estimé :</strong> <span style="color:#1e7e34; font-weight:bold;">${montantFmt}</span></div>
+        </div>
+      </div>
+    `;
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: titre,
+        html: questionHtml,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `<i class="fas fa-check"></i> Oui, ${isEdit ? 'mettre à jour' : 'ajouter'}`,
+        cancelButtonText: 'Vérifier la saisie',
+        reverseButtons: true,
+        focusConfirm: true
+      }).then((result) => {
+        if (result.isConfirmed) _sauvegarderProformaObjet();
+      });
+    } else {
+      _sauvegarderProformaObjet();
+    }
+  }
+
+  function editerProforma(idx) {
+    ouvrirModalProformaForm(idx);
+  }
+
+  function supprimerProforma(idx) {
+    const pf = proformasData[idx];
+    const num = pf ? pf.numero_proforma : '';
+    const questionHtml = `
+      <div style="text-align: left; font-size: 13.5px; line-height: 1.5;">
+        <p style="margin: 0 0 10px; font-weight: 600; color: var(--text-dark, #1e293b);">
+          <strong>Question :</strong> Voulez-vous vraiment supprimer la proforma <strong>« ${escapeHtml(num)} »</strong> ?
+        </p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #dc3545;">
+          <i class="fas fa-exclamation-triangle me-1"></i> Ses articles et prévisions seront immédiatement retirés de la liste des besoins du projet.
+        </div>
+      </div>
+    `;
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: 'Supprimer cette proforma ?',
+        html: questionHtml,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-trash-alt"></i> Oui, supprimer',
+        cancelButtonText: 'Conserver',
+        reverseButtons: true,
+        focusConfirm: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          proformasData.splice(idx, 1);
+          renderProformasTable();
+        }
+      });
+    } else if (confirm(`Question : Supprimer la proforma « ${num} » et ses articles ?`)) {
+      proformasData.splice(idx, 1);
+      renderProformasTable();
+    }
+  }
+
+  function confirmerEnregistrementProjet(e) {
+    const form = document.getElementById('form-projet');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return false;
+    }
+
+    e.preventDefault();
+
+    const nomInput = document.querySelector('[name="nom"]');
+    const nomProjet = nomInput ? nomInput.value.trim() : '';
+    const isModification = {% if projet and projet.id %}true{% else %}false{% endif %};
+    const budgetInput = document.querySelector('[name="budget_alloue"]');
+    const budgetVal = (budgetInput && budgetInput.value) ? Math.round(parseFloat(budgetInput.value)).toLocaleString('fr-FR') + ' FCFA' : 'Non défini';
+    const chefSelect = document.querySelector('[name="chef_de_projet"]');
+    const chefNom = (chefSelect && chefSelect.selectedOptions[0]) ? chefSelect.selectedOptions[0].text.trim() : 'Non assigné';
+
+    const dirSelect = document.querySelector('[name="direction_responsable"]');
+    const dirNom = (dirSelect && dirSelect.selectedOptions[0]) ? dirSelect.selectedOptions[0].text.trim() : 'Direction Technique';
+
+    const respSelect = document.querySelector('[name="responsable_direction"]');
+    const respNom = (respSelect && respSelect.selectedOptions[0] && respSelect.value) ? respSelect.selectedOptions[0].text.trim() : '';
+
+    const questionHtml = `
+      <div style="text-align: left; font-size: 13.5px; line-height: 1.5;">
+        <p style="margin: 0 0 10px; font-weight: 600; color: var(--text-dark, #1e293b);">
+          <strong>Question :</strong> Confirmez-vous ${isModification ? 'la mise à jour des informations du projet' : 'la création de ce nouveau projet'} ?
+        </p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; font-size: 12.5px;">
+          <div style="margin-bottom: 5px;"><strong>Nom du projet :</strong> <span style="color:#1c5b96; font-weight:bold;">${escapeHtml(nomProjet || '—')}</span></div>
+          <div style="margin-bottom: 5px;"><strong>Budget prévisionnel :</strong> ${budgetVal}</div>
+          <div style="margin-bottom: 5px;"><strong>Chef de projet :</strong> ${escapeHtml(chefNom)}</div>
+          <div><strong>Direction responsable :</strong> ${escapeHtml(dirNom)}${respNom ? ' — ' + escapeHtml(respNom) : ''}</div>
+        </div>
+      </div>
+    `;
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: isModification ? 'Enregistrer les modifications ?' : 'Créer ce projet ?',
+        html: questionHtml,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: isModification ? '#1c5b96' : '#28a745',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `<i class="fas fa-check"></i> Oui, ${isModification ? 'enregistrer' : 'créer'}`,
+        cancelButtonText: 'Continuer la saisie',
+        reverseButtons: true,
+        focusConfirm: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          form.removeAttribute('onsubmit');
+          form.submit();
+        }
+      });
+    } else if (confirm(`Confirmez-vous l'enregistrement du projet « ${nomProjet} » ?`)) {
+      form.removeAttribute('onsubmit');
+      form.submit();
+    }
+    return false;
+  }
+
+  function confirmerAnnulerFormulaire(e, url) {
+    e.preventDefault();
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: 'Quitter sans enregistrer ?',
+        html: `
+          <div style="text-align: left; font-size: 13.5px; line-height: 1.5;">
+            <p style="margin: 0 0 8px;"><strong>Question :</strong> Voulez-vous vraiment quitter cette page ?</p>
+            <p style="margin: 0; color: #dc3545; font-size: 12.5px;">
+              <i class="fas fa-exclamation-triangle me-1"></i> Toutes les modifications ou saisies non enregistrées seront perdues.
+            </p>
+          </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-sign-out-alt"></i> Oui, quitter',
+        cancelButtonText: 'Rester sur la page',
+        reverseButtons: true,
+        focusConfirm: false
+      }).then((result) => {
+        if (result.isConfirmed) {
+          window.location.href = url;
+        }
+      });
+    } else if (confirm("Question : Voulez-vous quitter ? Les modifications non enregistrées seront perdues.")) {
+      window.location.href = url;
+    }
+    return false;
+  }
+
+  // ══════════ FILTRAGE STRICT PAR DIRECTION SÉLECTIONNÉE ══════════
+  let USERS_DATA = null;
+
+  function getUsersData() {
+    if (USERS_DATA !== null) return USERS_DATA;
+    try {
+      const dataEl = document.getElementById('users-services-data');
+      if (dataEl && dataEl.textContent) {
+        USERS_DATA = JSON.parse(dataEl.textContent);
+      } else {
+        USERS_DATA = [];
+      }
+    } catch (e) {
+      console.error("Erreur parsing users-services-data:", e);
+      USERS_DATA = [];
+    }
+    return USERS_DATA;
+  }
+
+  function onChangementDirection() {
+    const dirSelect = document.getElementById('select-direction-responsable');
+    const respSelect = document.getElementById('select-responsable-direction');
+    if (!dirSelect || !respSelect) return;
+
+    const allUsers = getUsersData();
+    const selectedServiceId = String(dirSelect.value || '').trim();
+    const currentVal = String(respSelect.value || '').trim();
+
+    // Filtrer STRICTEMENT et UNIQUEMENT les agents rattachés au service sélectionné
+    const serviceUsers = allUsers.filter(u => String(u.service_id).trim() === selectedServiceId);
+
+    let newHtml = '';
+
+    if (serviceUsers.length > 0) {
+      newHtml += '<option value="">-- Sélectionner un agent --</option>';
+      serviceUsers.forEach(u => {
+        const sel = (String(u.id).trim() === currentVal) ? 'selected' : '';
+        newHtml += `<option value="${u.id}" data-service-id="${u.service_id}" ${sel}>${escapeHtml(u.nom)}</option>`;
+      });
+    } else {
+      newHtml += '<option value="">-- Aucun agent rattaché à ce service --</option>';
+    }
+
+    respSelect.innerHTML = newHtml;
+
+    // Conserver la sélection si l'agent est dans le service sélectionné, sinon sélectionner le premier s'il n'y en a qu'un
+    const existe = serviceUsers.some(u => String(u.id).trim() === currentVal);
+    if (existe && currentVal) {
+      respSelect.value = currentVal;
+    } else if (serviceUsers.length === 1) {
+      respSelect.value = serviceUsers[0].id;
+    } else {
+      respSelect.value = '';
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function() {
+    if (typeof jQuery !== 'undefined' && $.fn.select2) {
+      $('.select2-fournisseur').select2();
+    }
+
+    const $fournSelect = $('#select-projet-fournisseur');
+    const divMemeFournisseur = document.getElementById('div-meme-fournisseur-livreur');
+    function toggleMemeFournisseur() {
+      if (divMemeFournisseur) {
+        const val = $fournSelect.val();
+        divMemeFournisseur.style.display = (val && val !== '') ? 'block' : 'none';
+      }
+    }
+    $fournSelect.on('change', toggleMemeFournisseur);
+    toggleMemeFournisseur();
+
+    onChangementDirection();
+
+    initialiserProformas();
+
+    // Fermeture du dropdown de recherche lors d'un clic en dehors
+    document.addEventListener('click', function(e) {
+      const dropdown = document.getElementById('modal-pf-dropdown');
+      const searchInput = document.getElementById('modal-pf-search-input');
+      if (dropdown && searchInput && !dropdown.contains(e.target) && !searchInput.contains(e.target)) {
+        dropdown.style.display = 'none';
+      }
+    });
+
+    // Fermeture de la modale en cliquant sur l'arrière-plan
+    const modal = document.getElementById('modal-form-proforma');
+    if (modal) {
+      modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+          fermerModalProformaForm();
+        }
+      });
+    }
+  });
+
+  function actualiserApercuBudget(val) {
+    const el = document.getElementById('budget-preview');
+    if (!el) return;
+    const num = parseFloat(val);
+    if (!isNaN(num) && num > 0) {
+      el.innerHTML = `<i class="fas fa-coins me-1"></i> ${Math.round(num).toLocaleString('fr-FR')} FCFA`;
+    } else {
+      el.innerHTML = '';
+    }
+  }
+</script>
+{% endblock %}

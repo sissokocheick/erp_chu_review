@@ -10,6 +10,7 @@ from stock.pdf_utils import (
     paginate_lignes, ajouter_hauteurs_lignes,
     build_signature_cases, build_signatures_config,
     servir_pdf_cache, sauver_pdf_cache,
+    _get_signature_url,
 )
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,9 @@ def _verifier_acces_document(request, instance, champ_magasin="magasin",
 BON_TYPE_TO_DOC_CODE = {
     'ENTREE': 'BE',
     'SORTIE': 'BS',
+    'SORTIE_PROJET': 'BS',
     'RETOUR_SERVICE': 'BR',
+    'RETOUR_PROJET': 'BR',
     'RETOUR_FOURNISSEUR': 'BR',
     'SORTIE_HORS_STOCK': 'BSHS',
     'TRANSFERT': 'BS',
@@ -75,7 +78,9 @@ def imprimer_bon_multi_lignes(request, bon_id):
     perm_par_type = {
         'ENTREE': 'accounts.menu_entrees',
         'SORTIE': 'accounts.menu_sorties',
+        'SORTIE_PROJET': 'accounts.menu_sorties',
         'RETOUR_SERVICE': 'accounts.menu_retours_services',
+        'RETOUR_PROJET': 'accounts.menu_retours_services',
         'RETOUR_FOURNISSEUR': 'accounts.menu_retours_fournisseurs',
         'SORTIE_HORS_STOCK': 'accounts.menu_sorties_hors_stock',
         'TRANSFERT': 'accounts.menu_transferts',
@@ -103,18 +108,21 @@ def _imprimer_bon_multi_lignes(request, bon_id):
     """Logique commune d'impression (sans contrôle de permission) — utilisée
     par les vues d'impression dédiées (ex. retours fournisseurs) qui imposent
     leur propre permission."""
-    from stock.models import BonMouvement
+    from stock.models import BonMouvement, StockItem
+    from decimal import Decimal
 
     bon = get_object_or_404(
-        BonMouvement.objects.prefetch_related('lignes_bon__article').select_related('magasin', 'magasin_destination', 'fournisseur', 'service_demandeur'),
+        BonMouvement.objects.prefetch_related('lignes_bon__article').select_related(
+            'magasin', 'magasin_destination', 'fournisseur', 'service_demandeur', 'destinataire', 'projet__fournisseur'
+        ),
         id=bon_id
     )
 
     type_doc_code = BON_TYPE_TO_DOC_CODE.get(bon.type_bon, 'BS')
     pdf_config, logo_url = get_pdf_config(bon.magasin, type_doc_code, request)
 
-    # ── Cache : servir si déjà généré ──
-    cache = servir_pdf_cache(bon, f"{bon.type_bon}_{bon.numero_bon}.pdf")
+    # ── Cache : servir si déjà généré (supporte ?refresh=1 pour forcer) ──
+    cache = servir_pdf_cache(bon, f"{bon.type_bon}_{bon.numero_bon}.pdf", request=request)
     if cache:
         return cache
 
@@ -152,13 +160,28 @@ def _imprimer_bon_multi_lignes(request, bon_id):
 
         # Quantité servie
         qte_servie = getattr(ligne, 'quantite_servie', None)
-        if qte_servie is None and bon.type_bon == 'SORTIE':
+        if qte_servie is None and bon.type_bon in ('SORTIE', 'SORTIE_HORS_STOCK'):
             qte_servie = ligne.quantite
 
         # Reste
         reste = getattr(ligne, 'reste', None)
         if reste is None and qte_demandee is not None and qte_servie is not None:
             reste = max(0, qte_demandee - qte_servie)
+
+        # Prix unitaire et montant (fallback CMUP ou prix_reference si non renseigné)
+        pu = ligne.prix_unitaire
+        if pu is None:
+            si = StockItem.objects.filter(article=article, magasin=bon.magasin).first() if bon.magasin else None
+            if si and si.valeur_cmup:
+                pu = si.valeur_cmup
+            elif getattr(article, 'prix_reference', None):
+                pu = article.prix_reference
+
+        montant = ligne.montant
+        if montant is None and pu is not None:
+            qte_calc = qte_servie if qte_servie is not None else ligne.quantite
+            if qte_calc:
+                montant = Decimal(str(pu)) * qte_calc
 
         lignes_data.append({
             'idx': idx,
@@ -170,10 +193,11 @@ def _imprimer_bon_multi_lignes(request, bon_id):
             'quantite_demandee': qte_demandee,
             'quantite_recue': ligne.quantite,
             'reste': reste,
+            'reliquat': reste,
             'numero_lot': getattr(ligne, 'numero_lot', None),
             'date_peremption': getattr(ligne, 'date_peremption', None),
-            'prix_unitaire': ligne.prix_unitaire,
-            'montant': ligne.montant,
+            'prix_unitaire': pu,
+            'montant': montant,
         })
     a_lots = any(l['numero_lot'] for l in lignes_data)
 
@@ -211,6 +235,7 @@ def _imprimer_bon_multi_lignes(request, bon_id):
         'service': service,
         'service_code': getattr(service, 'code', '') if service else '',
         'service_poste': getattr(service, 'poste', '') if service else '',
+        'destinataire': bon.destinataire,
         'fournisseur': bon.fournisseur,
         'fournisseur_code': getattr(bon.fournisseur, 'code', '') if bon.fournisseur else '',
         'sondage_data': sondage_data,
@@ -223,8 +248,11 @@ def _imprimer_bon_multi_lignes(request, bon_id):
     template_map = {
         'ENTREE': 'stock/pdf/bon_entree.html',
         'SORTIE': 'stock/pdf/bon_sortie.html',
+        'SORTIE_PROJET': 'stock/pdf/bon_sortie.html',
         'RETOUR_SERVICE': 'stock/pdf/bon_retour.html',
+        'RETOUR_PROJET': 'stock/pdf/bon_retour.html',
         'RETOUR_FOURNISSEUR': 'stock/pdf/bon_retour.html',
+        'SORTIE_HORS_STOCK': 'stock/pdf/bon_hors_stock.html',
         'TRANSFERT': 'stock/pdf/bon_transfert.html',
     }
     template = template_map.get(bon.type_bon, 'stock/pdf/bon_sortie.html')
@@ -262,7 +290,7 @@ def imprimer_commande(request, commande_id):
     from stock.models import Commande
 
     commande = get_object_or_404(
-        Commande.objects.prefetch_related('lignes_commande__article').select_related('fournisseur', 'magasin'),
+        Commande.objects.prefetch_related('lignes_commande__article').select_related('fournisseur', 'magasin', 'cree_par', 'valide_par'),
         id=commande_id
     )
     reponse_refus = _verifier_acces_document(request, commande, url_retour="liste_commandes")
@@ -277,10 +305,11 @@ def imprimer_commande(request, commande_id):
             'idx': idx,
             'reference': getattr(article, 'reference', ''),
             'designation': getattr(article, 'designation', ''),
-            'unite': getattr(article, 'unite', 'U') or 'U',
+            'unite': getattr(article, 'unite_distribution', None) or getattr(article, 'unite', 'U') or 'U',
             'quantite': ligne.quantite_demandee,
             'article': article,
             'prix_unitaire': ligne.prix_unitaire,
+            'montant': ligne.montant,
         })
 
     pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc='COMMANDE')
@@ -299,7 +328,7 @@ def imprimer_commande(request, commande_id):
         'est_multi_page': pagination.est_multi_page,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
-        'signature_cases': build_signatures_config(pdf_config, request),
+        'signature_cases': build_signature_cases(commande, pdf_config, request),
     }
     return render_pdf_response(request, 'stock/pdf/bon_commande.html', context, f"CMD_{commande.numero_commande}.pdf")
 
@@ -315,7 +344,9 @@ def imprimer_bon_demande(request, demande_id):
     from stock.models import DemandeMateriel
 
     demande = get_object_or_404(
-        DemandeMateriel.objects.prefetch_related('lignes_demande__article').select_related('magasin_cible', 'service_demandeur'),
+        DemandeMateriel.objects.prefetch_related('lignes_demande__article').select_related(
+            'magasin_cible', 'service_demandeur', 'demandeur', 'valide_par', 'valide_par_chef'
+        ),
         id=demande_id
     )
     reponse_refus = _verifier_acces_document(request, demande, champ_magasin="magasin_cible", url_retour="mes_demandes")
@@ -332,7 +363,8 @@ def imprimer_bon_demande(request, demande_id):
             'designation': getattr(article, 'designation', ''),
             'article': article,
             'quantite': ligne.quantite_demandee,
-            'unite': getattr(article, 'unite', 'U'),
+            'quantite_demandee': ligne.quantite_demandee,
+            'unite': getattr(article, 'unite_distribution', None) or getattr(article, 'unite', 'U') or 'U',
         })
 
     pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18, type_doc='DEMANDE')
@@ -342,16 +374,20 @@ def imprimer_bon_demande(request, demande_id):
     ]
     pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='DEMANDE')
 
+    service = demande.service_demandeur
     context = {
         'demande': demande,
         'magasin': demande.magasin_cible,
+        'service': service,
+        'service_code': getattr(service, 'code', '') if service else '',
+        'service_poste': getattr(service, 'poste', '') if service else '',
         'lignes_data': lignes_data,
         'lignes_pages': pagination.pages,
         'pages': pages,
         'est_multi_page': pagination.est_multi_page,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
-        'signature_cases': build_signatures_config(pdf_config, request),
+        'signature_cases': build_signature_cases(demande, pdf_config, request),
     }
     return render_pdf_response(request, 'stock/pdf/bon_demande.html', context, f"BD_{demande.numero_demande}.pdf")
 
@@ -367,7 +403,7 @@ def imprimer_ajustement(request, ajustement_id):
     from stock.models import Ajustement
 
     ajustement = get_object_or_404(
-        Ajustement.objects.select_related('magasin', 'article'),
+        Ajustement.objects.select_related('magasin', 'article', 'cree_par', 'valide_par'),
         id=ajustement_id
     )
     reponse_refus = _verifier_acces_document(request, ajustement, url_retour="liste_ajustements")
@@ -392,7 +428,8 @@ def imprimer_ajustement(request, ajustement_id):
         'est_multi_page': pagination.est_multi_page,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
-        'signature_cases': build_signatures_config(pdf_config, request),
+        'date_impression': timezone.now(),
+        'signature_cases': build_signature_cases(ajustement, pdf_config, request),
     }
     return render_pdf_response(request, 'stock/pdf/ajustement.html', context, f"AJ_{ajustement.numero_ajustement or ajustement.id}.pdf")
 
@@ -458,6 +495,7 @@ def imprimer_historique_article(request, article_id):
         'pdf_config': pdf_config,
         'logo_url': logo_url,
         'utilisateur': request.user,
+        'date_impression': timezone.now(),
         'signature_cases': build_signatures_config(pdf_config, request),
     }
     return render_pdf_response(request, 'stock/pdf/historique_article.html', context, f"Hist_{article.reference}.pdf")
@@ -474,7 +512,7 @@ def imprimer_fiche_comptage(request, campagne_id):
     from stock.models import CampagneInventaire
 
     campagne = get_object_or_404(
-        CampagneInventaire.objects.prefetch_related('lignes_inventaire__article').select_related('magasin'),
+        CampagneInventaire.objects.prefetch_related('lignes_inventaire__article__famille').select_related('magasin', 'cree_par'),
         id=campagne_id
     )
     reponse_refus = _verifier_acces_document(request, campagne, url_retour="liste_inventaires")
@@ -482,8 +520,9 @@ def imprimer_fiche_comptage(request, campagne_id):
         return reponse_refus
     pdf_config, logo_url = get_pdf_config(campagne.magasin, 'INVENTAIRE', request)
 
+    lignes = list(campagne.lignes_inventaire.select_related('article__famille').all())
     lignes_data = []
-    for ligne in campagne.lignes_inventaire.all():
+    for ligne in lignes:
         lignes_data.append({
             'article': ligne.article,
             'stock_theorique': ligne.quantite_theorique,
@@ -491,14 +530,20 @@ def imprimer_fiche_comptage(request, campagne_id):
         })
 
     pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=20)
+    imprimeur_sig = _get_signature_url(request, request.user)
 
     context = {
         'campagne': campagne,
+        'lignes': lignes,
+        'lignes_data': lignes_data,
         'lignes_pages': pagination.pages,
         'est_multi_page': pagination.est_multi_page,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
-        'signature_cases': build_signatures_config(pdf_config, request),
+        'imprimeur_sig': imprimeur_sig,
+        'edite_par': request.user,
+        'date_impression': timezone.now(),
+        'signature_cases': build_signature_cases(campagne, pdf_config, request),
     }
     return render_pdf_response(request, 'stock/pdf/fiche_comptage.html', context, f"FC_{campagne.id}.pdf")
 
@@ -511,10 +556,11 @@ def imprimer_fiche_comptage(request, campagne_id):
 @verifier_permission('accounts.menu_inventaires')
 def imprimer_resultat_inventaire(request, campagne_id):
     """Génère le PDF du résultat d'une campagne d'inventaire."""
-    from stock.models import CampagneInventaire
+    from stock.models import CampagneInventaire, StockItem
+    from decimal import Decimal
 
     campagne = get_object_or_404(
-        CampagneInventaire.objects.prefetch_related('lignes_inventaire__article').select_related('magasin'),
+        CampagneInventaire.objects.prefetch_related('lignes_inventaire__article__famille').select_related('magasin', 'cree_par', 'valide_par'),
         id=campagne_id
     )
     reponse_refus = _verifier_acces_document(request, campagne, url_retour="liste_inventaires")
@@ -522,25 +568,66 @@ def imprimer_resultat_inventaire(request, campagne_id):
         return reponse_refus
     pdf_config, logo_url = get_pdf_config(campagne.magasin, 'INVENTAIRE', request)
 
+    articles_ids = [l.article_id for l in campagne.lignes_inventaire.all()]
+    stock_items = {
+        si.article_id: si.valeur_cmup
+        for si in StockItem.objects.filter(article_id__in=articles_ids, magasin=campagne.magasin)
+        if si.valeur_cmup
+    }
+
     lignes_data = []
-    for ligne in campagne.lignes_inventaire.all():
+    total_ecarts = 0
+    valeur_totale_ecart = Decimal('0.00')
+
+    for ligne in campagne.lignes_inventaire.select_related('article__famille').all():
+        ecart = ligne.ecart()
+        ecart_val = ecart if ecart is not None else 0
+        if ecart_val != 0:
+            total_ecarts += abs(ecart_val)
+
+        pu = stock_items.get(ligne.article_id) or getattr(ligne.article, 'prix_reference', None) or Decimal('0.00')
+        valeur_ecart = Decimal(str(pu)) * Decimal(str(abs(ecart_val)))
+        valeur_totale_ecart += valeur_ecart
+
+        observation = ''
+        if ecart is None:
+            observation = 'Non compté'
+        elif ecart > 0:
+            observation = 'Surplus'
+        elif ecart < 0:
+            observation = 'Déficit'
+        else:
+            observation = 'Conforme'
+
         lignes_data.append({
+            'ligne': ligne,
             'article': ligne.article,
             'stock_theorique': ligne.quantite_theorique,
-            'stock_reel': ligne.quantite_physique or 0,
-            'ecart': ligne.ecart() or 0,
+            'stock_reel': ligne.quantite_physique if ligne.quantite_physique is not None else 0,
+            'ecart': ecart_val,
+            'valeur_ecart': valeur_ecart,
+            'observation': observation,
             'unite': getattr(ligne.article, 'unite_distribution', 'U'),
         })
 
     pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18)
 
+    saisisseur_sig = _get_signature_url(request, campagne.cree_par)
+    valideur_sig = _get_signature_url(request, campagne.valide_par)
+
     context = {
         'campagne': campagne,
+        'lignes_data': lignes_data,
+        'total_ecarts': total_ecarts,
+        'valeur_totale_ecart': valeur_totale_ecart,
         'lignes_pages': pagination.pages,
         'est_multi_page': pagination.est_multi_page,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
-        'signature_cases': build_signatures_config(pdf_config, request),
+        'saisisseur_sig': saisisseur_sig,
+        'valideur_sig': valideur_sig,
+        'signature_cases': build_signature_cases(campagne, pdf_config, request),
+        'date_impression': timezone.now(),
     }
     return render_pdf_response(request, 'stock/pdf/resultat_inventaire.html', context, f"RI_{campagne.id}.pdf")
 
@@ -554,6 +641,7 @@ def imprimer_resultat_inventaire(request, campagne_id):
 def rapport_consommation_pdf(request):
     """Génère le PDF du rapport de consommation."""
     from stock.models import Mouvement, Magasin
+    from core.models import Service
 
     magasin_id = request.session.get('magasin_actif_id')
     magasin = get_object_or_404(Magasin, id=magasin_id) if magasin_id else None
@@ -561,6 +649,9 @@ def rapport_consommation_pdf(request):
 
     date_debut = request.GET.get('date_debut')
     date_fin = request.GET.get('date_fin')
+    service_id = request.GET.get('service_id')
+    service = Service.objects.filter(id=service_id).first() if service_id else None
+
     try:
         date_debut = datetime.strptime(date_debut, '%Y-%m-%d').date() if date_debut else (
             timezone.now().date() - timedelta(days=30))
@@ -573,10 +664,12 @@ def rapport_consommation_pdf(request):
     mouvements = Mouvement.objects.filter(
         type_mouvement='SORTIE',
         date_mouvement__date__range=(date_debut, date_fin)
-    ).select_related('article', 'magasin')
+    ).select_related('article__famille', 'magasin', 'service_demandeur')
 
     if magasin:
         mouvements = mouvements.filter(magasin=magasin)
+    if service:
+        mouvements = mouvements.filter(service_demandeur=service)
 
     consommation = {}
     for m in mouvements:
@@ -591,10 +684,17 @@ def rapport_consommation_pdf(request):
             }
         consommation[ref]['total_sorti'] += abs(m.quantite)
 
+    # Tri par famille d'abord (obligatoire pour regroupement Django {% regroup %}), puis par quantité décroissante
+    consommations_triees = sorted(
+        consommation.values(),
+        key=lambda x: (x['article__famille__intitule'] or 'ZZZZ', -x['total_sorti'])
+    )
+
     context = {
-        'consommations': sorted(consommation.values(), key=lambda x: x['total_sorti'], reverse=True),
+        'consommations': consommations_triees,
         'date_debut': date_debut,
         'date_fin': date_fin,
+        'service': service,
         'magasin': magasin,
         'pdf_config': pdf_config,
         'logo_url': logo_url,
@@ -625,55 +725,14 @@ def imprimer_bon_hors_stock(request, bon_id):
         return redirect('liste_bons_hors_stock')
 
     bon = get_object_or_404(
-        BonMouvement.objects.prefetch_related('lignes_bon__article').select_related('magasin', 'service_demandeur'),
+        BonMouvement.objects.prefetch_related('lignes_bon__article').select_related('magasin', 'service_demandeur', 'destinataire'),
         id=bon_id, type_bon='SORTIE_HORS_STOCK'
     )
     reponse_refus = _verifier_acces_document(request, bon, url_retour="liste_bons_hors_stock")
     if reponse_refus:
         return reponse_refus
-    pdf_config, logo_url = get_pdf_config(bon.magasin, 'BSHS', request)
 
-    # Construire lignes_data pour le template
-    lignes_data = []
-    for ligne in bon.lignes_bon.all():
-        lignes_data.append({
-            'reference': getattr(ligne.article, 'reference', ''),
-            'designation': ligne.article.designation,
-            'unite': getattr(ligne.article, 'unite', 'U'),
-            'quantite': ligne.quantite,
-        })
-
-    pagination = paginate_lignes(lignes_data, pdf_config, lignes_par_page=18)
-    pages = [
-        {'lignes': page, 'est_derniere_page': i == len(pagination.pages) - 1}
-        for i, page in enumerate(pagination.pages)
-    ]
-    pages = ajouter_hauteurs_lignes(pages, pdf_config, type_doc='SORTIE_HORS_STOCK')
-
-    # Signatures pilotées par la configuration du document (labels/visibilité)
-    signature_cases = build_signatures_config(pdf_config, request)
-
-    # Service destination
-    service = bon.service_demandeur
-    service_poste = getattr(service, 'poste', '') if service else ''
-    service_code = getattr(service, 'code', '') if service else ''
-
-    context = {
-        'bon': bon,
-        'magasin': bon.magasin,
-        'lignes_data': lignes_data,
-        'lignes_pages': pagination.pages,
-        'pages': pages,
-        'est_multi_page': pagination.est_multi_page,
-        'pdf_config': pdf_config,
-        'logo_url': logo_url,
-        'signature_cases': signature_cases,
-        'service': service,
-        'service_poste': service_poste,
-        'service_code': service_code,
-        'fournisseur': None,
-    }
-    return render_pdf_response(request, 'stock/pdf/bon_hors_stock.html', context, f"BS_HS_{bon.numero_bon}.pdf")
+    return _imprimer_bon_multi_lignes(request, bon_id)
 
 
 # ═════════════════════════════════════════════════════════════════════════════

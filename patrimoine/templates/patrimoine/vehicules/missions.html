@@ -4,75 +4,188 @@
 {% block title %}Missions — {{ vehicule.immatriculation }}{% endblock %}
 
 {% block contenu %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour au véhicule</a>
-            <h4 class="mb-0 mt-1"><i class="fas fa-route me-2"></i>Missions — {{ vehicule.immatriculation }}</h4>
-        </div>
-        <a href="{% url 'patrimoine_vehicule_mission_creer' vehicule.pk %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i>Nouvelle mission
-        </a>
-    </div>
+<style>
+  :root {
+    --mis-rad: 12px;
+    --mis-rad-sm: 8px;
+  }
 
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Date départ</th>
-                            <th>Objet</th>
-                            <th>Destination</th>
-                            <th>Chauffeur</th>
-                            <th>KM parcourus</th>
-                            <th>Durée</th>
-                            <th>Statut</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for m in missions %}
-                        <tr>
-                            <td>{{ m.date_depart|date:"d/m/Y H:i" }}</td>
-                            <td>{{ m.objet }}</td>
-                            <td>{{ m.destination }}</td>
-                            <td>{{ m.chauffeur.get_full_name|default:"—" }}</td>
-                            <td>
-                                {% if m.km_parcourus %}
-                                    {{ m.km_parcourus }} km
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if m.duree_heures %}
-                                    {{ m.duree_heures }}h
-                                {% else %}
-                                    —
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if m.statut == 'EN_COURS' %}
-                                    <span class="badge bg-primary">En cours</span>
-                                {% elif m.statut == 'TERMINEE' %}
-                                    <span class="badge bg-success">Terminée</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Annulée</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                <i class="fas fa-route fa-2x mb-2 d-block"></i>
-                                Aucune mission enregistrée.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+  .mis-container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding-bottom: 50px;
+  }
+
+  /* ── BANNIÈRE EN-TÊTE ── */
+  .mis-hero {
+    background: linear-gradient(135deg, #1e1b4b 0%, #3730a3 50%, #4f46e5 100%);
+    color: white;
+    border-radius: var(--mis-rad);
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 6px 20px rgba(79, 70, 229, 0.25);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .mis-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .mis-hero-icon {
+    width: 58px;
+    height: 58px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+  .mis-hero h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .mis-hero p {
+    margin: 4px 0 0 0;
+    opacity: 0.9;
+    font-size: 13px;
+  }
+  .btn-retour-mis {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    padding: 10px 18px;
+    border-radius: var(--mis-rad-sm);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .btn-retour-mis:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: translateY(-1px);
+  }
+
+  .btn-new-mis {
+    background: white;
+    color: #4f46e5;
+    padding: 10px 20px;
+    border-radius: var(--mis-rad-sm);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+  }
+  .btn-new-mis:hover {
+    background: #eef2ff;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  }
+</style>
+
+<div class="mis-container">
+  <!-- EN-TÊTE HERO -->
+  <div class="mis-hero">
+    <div class="mis-hero-left">
+      <div class="mis-hero-icon">
+        <i class="fas fa-route"></i>
+      </div>
+      <div>
+        <h3>Historique des missions — {{ vehicule.immatriculation }}</h3>
+        <p>{{ vehicule.marque|default:"" }} {{ vehicule.modele|default:"" }} • Déplacements, chauffeurs et kilométrages réalisés</p>
+      </div>
     </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn-retour-mis">
+        <i class="fas fa-arrow-left"></i> Fiche véhicule
+      </a>
+      <a href="{% url 'patrimoine_vehicule_mission_creer' vehicule.pk %}" class="btn-new-mis">
+        <i class="fas fa-plus-circle"></i> Nouvelle mission
+      </a>
+    </div>
+  </div>
+
+  <!-- TABLEAU DES MISSIONS -->
+  <div class="nx-card">
+    <div class="nx-card-header">
+      <h4><i class="fas fa-map-signs" style="color: #4f46e5; margin-right: 8px;"></i> Liste des ordres de mission</h4>
+      <span class="nx-badge nx-badge-purple">{{ missions|length }} mission(s)</span>
+    </div>
+    <div class="nx-card-body" style="padding: 0; overflow-x: auto;">
+      <table class="nx-table">
+        <thead>
+          <tr>
+            <th>Date départ</th>
+            <th>Objet de la mission</th>
+            <th>Destination</th>
+            <th>Chauffeur</th>
+            <th>KM parcourus</th>
+            <th>Durée</th>
+            <th>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in missions %}
+          <tr>
+            <td style="white-space: nowrap; font-weight: 600;">
+              <i class="far fa-clock" style="margin-right: 6px; color: var(--text-light);"></i>
+              {{ m.date_depart|date:"d/m/Y H:i" }}
+            </td>
+            <td style="font-weight: 700; color: var(--text-dark);">{{ m.objet }}</td>
+            <td><i class="fas fa-map-marker-alt" style="color: #dc2626; margin-right: 4px;"></i> {{ m.destination }}</td>
+            <td style="font-weight: 600;">{{ m.chauffeur.get_full_name|default:"—" }}</td>
+            <td style="font-weight: 700; color: #4f46e5;">
+              {% if m.km_parcourus %}
+                {{ m.km_parcourus }} km
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if m.duree_heures %}
+                <span class="nx-badge nx-badge-grey">{{ m.duree_heures }}h</span>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>
+              {% if m.statut == 'EN_COURS' %}
+                <span class="nx-badge nx-badge-blue">En cours</span>
+              {% elif m.statut == 'TERMINEE' %}
+                <span class="nx-badge nx-badge-green">Terminée</span>
+              {% else %}
+                <span class="nx-badge nx-badge-red">Annulée</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="nx-empty">
+              <i class="fas fa-route"></i>
+              Aucune mission enregistrée pour ce véhicule.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

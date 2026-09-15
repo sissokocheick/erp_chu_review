@@ -217,10 +217,10 @@
                     <tr>
                         <td style="font-family: monospace; font-size: 12px; color: var(--cmd-text-secondary, #6c757d);">{{ ligne.article.reference|default:"—" }}</td>
                         <td style="font-weight: 600;">{{ ligne.article.designation }}</td>
-                        <td class="center qte-demandee">{{ ligne.quantite_demandee }}</td>
-                        <td class="center qte-recue">{{ ligne.quantite_recue }}</td>
+                        <td class="center qte-demandee">{{ ligne.quantite_demandee|format_milliers }}</td>
+                        <td class="center qte-recue">{{ ligne.quantite_recue|format_milliers }}</td>
                         <td class="center qte-reliquat">
-                            {% if ligne.reliquat > 0 %}{{ ligne.reliquat }}{% else %}<span class="qte-ok">✓</span>{% endif %}
+                            {% if ligne.reliquat > 0 %}{{ ligne.reliquat|format_milliers }}{% else %}<span class="qte-ok">✓</span>{% endif %}
                         </td>
                     </tr>
                     {% empty %}

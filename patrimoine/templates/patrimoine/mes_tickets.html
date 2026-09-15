@@ -170,12 +170,12 @@
           </td>
           
           <td>
-            <div style="color:#555; font-weight: 600;">{{ ticket.date_signalement|date:"d/m/Y" }}</div>
-            <div style="font-size:11px; color:#aaa;">à {{ ticket.date_signalement|date:"H:i" }}</div>
+            <div style="color:var(--text-medium); font-weight: 600;">{{ ticket.date_signalement|date:"d/m/Y" }}</div>
+            <div style="font-size:11px; color:var(--text-light);">à {{ ticket.date_signalement|date:"H:i" }}</div>
           </td>
           
           <td>
-            <div style="display: flex; align-items: center; font-size: 12px; font-weight: 600; color: #555;">
+            <div style="display: flex; align-items: center; font-size: 12px; font-weight: 600; color: var(--text-medium);">
                 {% if ticket.degre_urgence == 'FAIBLE' %}<span class="urgence-dot urg-faible"></span> Faible
                 {% elif ticket.degre_urgence == 'MOYENNE' %}<span class="urgence-dot urg-moyenne"></span> Moyenne
                 {% elif ticket.degre_urgence == 'HAUTE' %}<span class="urgence-dot urg-haute"></span> Haute

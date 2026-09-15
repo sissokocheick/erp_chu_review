@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from simple_history.admin import SimpleHistoryAdmin
 from .models import (
-    Article, Magasin, Fournisseur, FamilleArticle,
+    Article, ArticleFournisseur, Magasin, Fournisseur, FamilleArticle,
     Mouvement, BonMouvement, LigneBon, MotifAnnulation,
     Commande, LigneCommande, StockItem, CircuitValidation,
     CircuitValidateur
@@ -25,12 +25,26 @@ class FamilleArticleAdmin(SimpleHistoryAdmin):
     search_fields = ('code', 'intitule')
 
 
+class ArticleFournisseurInline(admin.TabularInline):
+    model = ArticleFournisseur
+    extra = 1
+    fields = ('fournisseur', 'prix_achat', 'reference_fournisseur', 'delai_livraison_jours', 'est_principal')
+
+
 @admin.register(Article)
 class ArticleAdmin(SimpleHistoryAdmin):
-    list_display = ('designation', 'famille', 'unite_distribution', 'seuil_minimum', 'seuil_critique')
+    list_display = ('designation', 'famille', 'unite_distribution', 'prix_reference', 'seuil_minimum', 'seuil_critique')
     search_fields = ('reference', 'designation')
     list_filter = ('famille',)
     autocomplete_fields = ['famille']
+    inlines = [ArticleFournisseurInline]
+
+
+@admin.register(ArticleFournisseur)
+class ArticleFournisseurAdmin(SimpleHistoryAdmin):
+    list_display = ('article', 'fournisseur', 'prix_achat', 'reference_fournisseur', 'est_principal')
+    list_filter = ('est_principal', 'fournisseur')
+    search_fields = ('article__designation', 'article__reference', 'fournisseur__raison_sociale')
 
 
 @admin.register(Magasin)

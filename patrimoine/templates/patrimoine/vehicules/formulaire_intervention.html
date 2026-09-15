@@ -4,95 +4,593 @@
 {% block title %}Nouvelle intervention — {{ vehicule.immatriculation }}{% endblock %}
 
 {% block contenu %}
-<div class="container-fluid">
-    <div class="mb-4">
-        <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour au véhicule</a>
-        <h4 class="mb-0 mt-1"><i class="fas fa-wrench me-2"></i>Nouvelle intervention — {{ vehicule.immatriculation }}</h4>
+<style>
+  :root {
+    --int-rad: 12px;
+    --int-rad-sm: 8px;
+  }
+
+  .int-container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding-bottom: 50px;
+  }
+
+  /* ── BANNIÈRE EN-TÊTE ── */
+  .int-hero {
+    background: linear-gradient(135deg, #78350f 0%, #b45309 50%, #d97706 100%);
+    color: white;
+    border-radius: var(--int-rad);
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 6px 20px rgba(180, 83, 9, 0.25);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .int-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .int-hero-icon {
+    width: 58px;
+    height: 58px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+  .int-hero h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .int-hero p {
+    margin: 4px 0 0 0;
+    opacity: 0.9;
+    font-size: 13px;
+  }
+  .btn-retour-int {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    padding: 10px 18px;
+    border-radius: var(--int-rad-sm);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .btn-retour-int:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: translateY(-1px);
+  }
+
+  /* ── LAYOUT 2 COLONNES ── */
+  .int-layout {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 900px) {
+    .int-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── CARTE FORMULAIRE ── */
+  .int-card {
+    background: var(--bg-card);
+    border-radius: var(--int-rad);
+    box-shadow: 0 2px 12px var(--shadow);
+    border: 1px solid var(--border-light);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .int-card-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-hover);
+  }
+  .int-card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    background: rgba(217, 119, 6, 0.12);
+    color: #d97706;
+    flex-shrink: 0;
+  }
+  .int-card-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+  .int-card-body {
+    padding: 24px 22px;
+  }
+
+  .int-fg {
+    margin-bottom: 16px;
+  }
+  .int-fg:last-child {
+    margin-bottom: 0;
+  }
+  .int-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-medium);
+    margin-bottom: 6px;
+  }
+  .int-label .req {
+    color: #dc2626;
+    font-weight: 800;
+    margin-left: 3px;
+  }
+  .int-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .int-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 600px) {
+    .int-grid-2, .int-grid-3 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .int-input,
+  .int-select,
+  .int-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--int-rad-sm);
+    font-size: 13.5px;
+    background: var(--bg-hover);
+    color: var(--text-dark);
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .int-input:focus,
+  .int-select:focus,
+  .int-textarea:focus {
+    border-color: #d97706;
+    background: var(--bg-card);
+    box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15);
+  }
+  .int-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 4 5'%3E%3Cpath fill='%23b45309' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 34px;
+  }
+  .int-textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  .int-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .int-input-wrap .int-input {
+    padding-right: 58px;
+  }
+  .int-input-unit {
+    position: absolute;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-light);
+    pointer-events: none;
+    text-transform: uppercase;
+  }
+
+  /* ── CARTE RÉSUMÉ VÉHICULE (DROITE) ── */
+  .veh-summary-card {
+    background: var(--bg-card);
+    border-radius: var(--int-rad);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 10px var(--shadow);
+    padding: 22px;
+  }
+  .veh-summary-card h5 {
+    margin: 0 0 16px 0;
+    font-size: 14px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #b45309;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .veh-summary-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border-light);
+    font-size: 13px;
+  }
+  .veh-summary-row:last-child {
+    border-bottom: none;
+  }
+  .veh-summary-label {
+    color: var(--text-medium);
+  }
+  .veh-summary-val {
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+
+  /* ── BOUTONS ACTIONS ── */
+  .int-actions-bar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 20px;
+  }
+  .btn-int-cancel {
+    background: var(--bg-hover);
+    color: var(--text-medium);
+    border: 1px solid var(--border-color);
+    padding: 11px 22px;
+    border-radius: var(--int-rad-sm);
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  .btn-int-cancel:hover {
+    background: var(--bg-card);
+    color: var(--text-dark);
+  }
+  .btn-int-submit {
+    background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+    color: white;
+    border: none;
+    padding: 11px 28px;
+    border-radius: var(--int-rad-sm);
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(217, 119, 6, 0.3);
+    transition: all 0.2s ease;
+  }
+  .btn-int-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(217, 119, 6, 0.4);
+    background: linear-gradient(135deg, #92400e 0%, #b45309 100%);
+  }
+
+  /* Modale d'ajout rapide */
+  .mo-quick {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  .mo-quick.open {
+    display: flex;
+  }
+  .mb-quick {
+    background: var(--bg-card, #ffffff);
+    border-radius: var(--int-rad, 12px);
+    width: 90%;
+    max-width: 440px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color, #e2e8f0);
+    overflow: hidden;
+    animation: quickModalIn 0.2s ease-out;
+  }
+  @keyframes quickModalIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .mh-quick {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--bg-hover, #f8fafc);
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+  }
+  .mh-quick h5 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dark, #0f172a);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mc-quick {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: var(--text-medium, #64748b);
+    cursor: pointer;
+  }
+  .mbody-quick {
+    padding: 20px;
+  }
+  .mfoot-quick {
+    padding: 14px 20px;
+    background: var(--bg-hover, #f8fafc);
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+</style>
+
+<div class="int-container">
+  <!-- EN-TÊTE HERO -->
+  <div class="int-hero">
+    <div class="int-hero-left">
+      <div class="int-hero-icon">
+        <i class="fas fa-wrench"></i>
+      </div>
+      <div>
+        <h3>Nouvelle intervention — {{ vehicule.immatriculation }}</h3>
+        <p>{{ vehicule.marque|default:"" }} {{ vehicule.modele|default:"" }} • Programmation ou enregistrement d'un entretien mécanique</p>
+      </div>
+    </div>
+    <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn-retour-int">
+      <i class="fas fa-arrow-left"></i> Retour au véhicule
+    </a>
+  </div>
+
+  <div class="int-layout">
+    <!-- COLONNE GAUCHE : FORMULAIRE -->
+    <div>
+      <div class="int-card">
+        <div class="int-card-head">
+          <div class="int-card-icon">
+            <i class="fas fa-tools"></i>
+          </div>
+          <h4 class="int-card-title">Détails de l'intervention technique</h4>
+        </div>
+        <div class="int-card-body">
+          <form method="POST" novalidate>
+            {% csrf_token %}
+
+            <div class="int-grid-2 int-fg">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label class="int-label" style="margin-bottom:0;">Type d'intervention <span class="req">*</span></label>
+                  <button type="button" onclick="ouvrirModalAjoutTypeIntervention()" title="Nouveau type d'intervention" style="background:rgba(217,119,6,0.12); color:#b45309; border:1px solid rgba(217,119,6,0.25); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;">
+                    <i class="fas fa-plus"></i> Nouveau
+                  </button>
+                </div>
+                <select name="type_intervention" class="int-select" id="id_type_intervention" required>
+                  {% for ti in types_interventions %}
+                  <option value="{{ ti.code }}">{{ ti.nom }}</option>
+                  {% empty %}
+                  <option value="" disabled>-- Aucun type d'intervention configuré --</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="int-label">Statut</label>
+                <select name="statut" class="int-select">
+                  <option value="PLANIFIEE">🟡 Planifiée</option>
+                  <option value="EN_COURS">🔵 En cours</option>
+                  <option value="TERMINEE">🟢 Terminée</option>
+                  <option value="ANNULEE">⚪ Annulée</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="int-grid-2 int-fg">
+              <div>
+                <label class="int-label">Date prévue</label>
+                <input type="date" name="date_prevue" class="int-input">
+              </div>
+              <div>
+                <label class="int-label">Date de réalisation</label>
+                <input type="date" name="date_realisation" class="int-input">
+              </div>
+            </div>
+
+            <div class="int-fg">
+              <label class="int-label">Garage / Prestataire prestataire</label>
+              <input type="text" name="garage_prestataire" class="int-input" placeholder="Ex: Garage Central, Concessionnaire Toyota, ATG...">
+            </div>
+
+            <div class="int-fg">
+              <label class="int-label">Description & Travaux effectués</label>
+              <textarea name="description" class="int-textarea" rows="3" placeholder="Précisez la nature des réparations, pièces changées..."></textarea>
+            </div>
+
+            <div class="int-grid-3 int-fg">
+              <div>
+                <label class="int-label">Coût de l'intervention</label>
+                <div class="int-input-wrap">
+                  <input type="number" name="cout" class="int-input" step="0.01" value="0">
+                  <span class="int-input-unit">FCFA</span>
+                </div>
+              </div>
+              <div>
+                <label class="int-label">Kilométrage constaté</label>
+                <div class="int-input-wrap">
+                  <input type="number" name="kilometrage" class="int-input" value="{{ vehicule.kilometrage }}">
+                  <span class="int-input-unit">km</span>
+                </div>
+              </div>
+              <div>
+                <label class="int-label">Prochaine vidange à</label>
+                <div class="int-input-wrap">
+                  <input type="number" name="kilometre_prochaine_vidange" class="int-input" placeholder="Optionnel">
+                  <span class="int-input-unit">km</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="int-actions-bar">
+              <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn-int-cancel">
+                <i class="fas fa-times"></i> Annuler
+              </a>
+              <button type="submit" class="btn-int-submit">
+                <i class="fas fa-save"></i> Enregistrer l'intervention
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card">
-                <div class="card-body">
-                    <form method="POST" novalidate>
-                        {% csrf_token %}
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Type d'intervention *</label>
-                                <select name="type_intervention" class="form-select" required>
-                                    <option value="ENTRETIEN">Entretien courant</option>
-                                    <option value="REPARATION">Réparation</option>
-                                    <option value="VIDANGE">Vidange</option>
-                                    <option value="PNEU">Changement pneus</option>
-                                    <option value="ASSURANCE">Renouvellement assurance</option>
-                                    <option value="CT">Contrôle technique</option>
-                                    <option value="CARROSSERIE">Carrosserie / Peinture</option>
-                                    <option value="ELECTRIQUE">Électronique / Électrique</option>
-                                    <option value="AUTRE">Autre</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Statut</label>
-                                <select name="statut" class="form-select">
-                                    <option value="PLANIFIEE">Planifiée</option>
-                                    <option value="EN_COURS">En cours</option>
-                                    <option value="TERMINEE">Terminée</option>
-                                    <option value="ANNULEE">Annulée</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Date prévue</label>
-                                <input type="date" name="date_prevue" class="form-control">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Date de réalisation</label>
-                                <input type="date" name="date_realisation" class="form-control">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Garage / Prestataire</label>
-                            <input type="text" name="garage_prestataire" class="form-control" placeholder="Ex: Garage Central, ATG...">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Description</label>
-                            <textarea name="description" class="form-control" rows="3" placeholder="Détails de l'intervention..."></textarea>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Coût (FCFA)</label>
-                                <input type="number" name="cout" class="form-control" step="0.01" value="0">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Kilométrage</label>
-                                <input type="number" name="kilometrage" class="form-control" value="{{ vehicule.kilometrage }}">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label class="form-label">Prochaine vidange à (km)</label>
-                                <input type="number" name="kilometre_prochaine_vidange" class="form-control">
-                            </div>
-                        </div>
-                        <div class="d-flex justify-content-end">
-                            <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn btn-secondary me-2">Annuler</a>
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Enregistrer</button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+    <!-- COLONNE DROITE : RÉSUMÉ VÉHICULE -->
+    <div>
+      <div class="veh-summary-card">
+        <h5><i class="fas fa-info-circle"></i> Fiche Véhicule</h5>
+        <div class="veh-summary-row">
+          <span class="veh-summary-label">Immatriculation</span>
+          <span class="veh-summary-val">{{ vehicule.immatriculation }}</span>
         </div>
-        <div class="col-md-4">
-            <div class="card bg-light">
-                <div class="card-body">
-                    <h6><i class="fas fa-info-circle me-1"></i>Résumé du véhicule</h6>
-                    <table class="table table-borderless table-sm mb-0">
-                        <tr><td class="text-muted">Kilométrage</td><td>{{ vehicule.kilometrage|floatformat:0 }} km</td></tr>
-                        <tr><td class="text-muted">Carburant</td><td>{{ vehicule.get_carburant_display }}</td></tr>
-                        <tr><td class="text-muted">Garage habituel</td><td>{{ vehicule.garage|default:"—" }}</td></tr>
-                    </table>
-                </div>
-            </div>
+        <div class="veh-summary-row">
+          <span class="veh-summary-label">Kilométrage actuel</span>
+          <span class="veh-summary-val">{{ vehicule.kilometrage|floatformat:0 }} km</span>
         </div>
+        <div class="veh-summary-row">
+          <span class="veh-summary-label">Carburant</span>
+          <span class="veh-summary-val">{{ vehicule.get_carburant_display }}</span>
+        </div>
+        <div class="veh-summary-row">
+          <span class="veh-summary-label">Garage habituel</span>
+          <span class="veh-summary-val">{{ vehicule.garage|default:"Non spécifié" }}</span>
+        </div>
+        <div class="veh-summary-row">
+          <span class="veh-summary-label">Service affecté</span>
+          <span class="veh-summary-val">{{ vehicule.service_affectation.nom|default:"Flotte générale" }}</span>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
+
+<!-- MODALE AJOUT RAPIDE TYPE D'INTERVENTION -->
+<div class="mo-quick" id="mo-quick-type-intervention" onclick="if(event.target===this)fermerModalAjoutTypeIntervention()">
+  <div class="mb-quick" onclick="event.stopPropagation()">
+    <div class="mh-quick">
+      <h5><i class="fas fa-wrench" style="color:#d97706;"></i> Nouveau Type d'Intervention</h5>
+      <button type="button" class="mc-quick" onclick="fermerModalAjoutTypeIntervention()"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="form-quick-type-intervention" onsubmit="soumettreAjoutTypeIntervention(event)">
+      <div class="mbody-quick">
+        <label class="int-label">Libellé de l'intervention *</label>
+        <input type="text" id="quick-tiv-nom" class="int-input" placeholder="Ex: Vidange boîte, Révision complète, Parallélisme..." required>
+      </div>
+      <div class="mfoot-quick">
+        <button type="button" class="btn-int-cancel" style="padding:8px 16px; font-size:13px;" onclick="fermerModalAjoutTypeIntervention()">Annuler</button>
+        <button type="submit" class="btn-int-submit" style="padding:8px 18px; font-size:13px;" id="btn-save-quick-tiv">
+          <i class="fas fa-save"></i> Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+function ouvrirModalAjoutTypeIntervention() {
+    document.getElementById('quick-tiv-nom').value = '';
+    document.getElementById('mo-quick-type-intervention').classList.add('open');
+    setTimeout(() => document.getElementById('quick-tiv-nom').focus(), 100);
+}
+
+function fermerModalAjoutTypeIntervention() {
+    document.getElementById('mo-quick-type-intervention').classList.remove('open');
+}
+
+function soumettreAjoutTypeIntervention(e) {
+    e.preventDefault();
+    const nom = document.getElementById('quick-tiv-nom').value.trim();
+    if (!nom) return;
+
+    const btn = document.getElementById('btn-save-quick-tiv');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData();
+    formData.append('nom', nom);
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    fetch('/patrimoine/ajax/vehicules/creer-type-intervention/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        if (data.success) {
+            fermerModalAjoutTypeIntervention();
+            const select = document.getElementById('id_type_intervention');
+            let opt = Array.from(select.options).find(o => o.value === data.code);
+            if (!opt) {
+                opt = document.createElement('option');
+                opt.value = data.code;
+                opt.textContent = data.nom;
+                select.appendChild(opt);
+            }
+            select.value = data.code;
+            if (typeof NxUX !== 'undefined' && NxUX.toast) {
+                NxUX.toast('success', `Type d'intervention "${data.nom}" créé et sélectionné.`);
+            }
+        } else {
+            alert(data.error || "Erreur lors de la création.");
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        alert("Erreur réseau lors de la création.");
+    });
+}
+</script>
 {% endblock %}

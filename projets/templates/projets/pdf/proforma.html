@@ -1,0 +1,287 @@
+{% load static custom_filters projets_tags %}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Proforma {{ proforma.numero_proforma }} - {{ projet.nom }}</title>
+<style>
+@page {
+    size: A4;
+    margin: 8mm 10mm 14mm 10mm;
+    @bottom-center {
+        content: "{{ pdf_config.pied_de_page.texte_personnalise|default:pdf_config.texte_institutionnel|default:'Direction des Affaires Financières / Sous-Direction de la Logistique'|css_string }}";
+        white-space: pre-line;
+        font-size: 7.5pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+        text-align: center;
+    }
+    @bottom-right {
+        content: counter(page) " / " counter(pages);
+        font-size: 7.5pt;
+        color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
+        font-weight: bold;
+    }
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: 'Times New Roman', Times, serif;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    color: #111;
+    margin: 0;
+    padding: 0;
+}
+.page-flex {
+    display: flex;
+    flex-direction: column;
+    min-height: 270mm;
+}
+.content-main { flex: 1 1 auto; }
+.en-tete-etatique {
+    width: 100%;
+    font-size: 8pt;
+    margin-bottom: 2mm;
+}
+.cartouche {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 3mm;
+}
+.cartouche td {
+    border: 1px solid #000;
+    padding: 2.5mm;
+    vertical-align: middle;
+}
+.meta-box {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 4mm;
+}
+.meta-box td {
+    border: 1px solid #000;
+    padding: 2.5mm 3mm;
+    vertical-align: top;
+}
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+    margin-bottom: 4mm;
+    table-layout: fixed;
+}
+.data-table th, .data-table td {
+    border: 1px solid #000;
+    padding: 3.5px 5px;
+    vertical-align: middle;
+    word-wrap: break-word;
+}
+.data-table th {
+    background-color: #f2f2f2;
+    text-align: center;
+    font-weight: bold;
+    font-size: 8.5pt;
+    text-transform: uppercase;
+}
+.signatures-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 5mm;
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+.signatures-table td {
+    border: 1px solid #000;
+    width: 50%;
+    height: 32mm;
+    vertical-align: top;
+    padding: 2.5mm;
+    font-size: 8pt;
+}
+</style>
+</head>
+<body>
+
+<div class="page-flex">
+  <div class="content-main">
+    <!-- En-tête étatique -->
+    <table class="en-tete-etatique">
+      <tr>
+        <td style="width:50%; vertical-align:middle; text-align:left;">
+          <div style="display:inline-block; text-align:center;">
+            <strong>Ministère de la Santé, de l'Hygiène Publique<br>et de la Couverture Maladie Universelle</strong><br>
+            <span style="font-size:7.5pt;">Centre Hospitalier et Universitaire (CHU)</span>
+          </div>
+        </td>
+        <td style="width:50%; vertical-align:middle; text-align:right;">
+          <div style="display:inline-block; text-align:center;">
+            <strong>République de Côte d'Ivoire</strong><br>
+            <em>Union - Discipline - Travail</em>
+          </div>
+        </td>
+      </tr>
+    </table>
+
+    <!-- Cartouche Titre -->
+    <table class="cartouche">
+      <tr>
+        <td style="width:25%; text-align:center; vertical-align:middle;">
+          {% if logo_url %}
+            <img src="{{ logo_url }}" style="max-height:18mm;">
+          {% else %}
+            <div style="font-weight:bold; font-size:11pt;">NEXUSERP</div>
+          {% endif %}
+        </td>
+        <td style="width:50%; text-align:center; vertical-align:middle; padding:1.5mm;">
+          <div style="font-size:13pt; font-weight:bold; text-transform:uppercase; letter-spacing:0.5px;">BORDEREAU DES BESOINS PRÉVISIONNELS</div>
+          <div style="font-size:10.5pt; font-weight:bold; text-transform:uppercase; margin-top:1mm; color:#1c5b96;">PROFORMA FOURNISSEUR / DEVIS CHANTIER</div>
+        </td>
+        <td style="width:25%; vertical-align:middle; font-size:8pt; line-height:1.4; padding:2mm;">
+          <strong>Proforma N° :</strong> <span style="font-size:9.5pt; color:#1c5b96;">{{ proforma.numero_proforma }}</span><br>
+          <strong>Date :</strong> {{ proforma.date_proforma|date:"d/m/Y" }}<br>
+          <strong>Statut :</strong> {{ proforma.get_statut_display }}
+        </td>
+      </tr>
+    </table>
+
+    <!-- Bloc Informations Projet & Fournisseur -->
+    <table class="meta-box">
+      <tr>
+        <td style="width:50%; background:#fcfcfc;">
+          <div style="font-size:8pt; font-weight:bold; color:#555; text-transform:uppercase;">PROJET / CHANTIER DESTINATAIRE</div>
+          <div style="font-size:11pt; font-weight:bold; text-transform:uppercase; margin-top:1.5mm; color:#000;">{{ projet.nom }}</div>
+          <div style="font-size:8.5pt; margin-top:1.5mm; color:#333;">
+            <em>Chef de projet :</em> <strong>{% if projet.chef_de_projet %}{{ projet.chef_de_projet.get_full_name|default:projet.chef_de_projet.username }}{% else %}Non assigné{% endif %}</strong><br>
+            <em>Période :</em> {{ projet.date_debut|date:"d/m/Y"|default:"Début n/f" }} au {{ projet.date_fin_prevue|date:"d/m/Y"|default:"Fin n/f" }}
+          </div>
+        </td>
+        <td style="width:50%; background:#fcfcfc;">
+          <div style="font-size:8pt; font-weight:bold; color:#555; text-transform:uppercase;">ENTREPRISE EN CHARGE / FOURNISSEUR</div>
+          <div style="font-size:10.5pt; font-weight:bold; text-transform:uppercase; margin-top:1.5mm; color:#000;">
+            {% if proforma.fournisseur %}
+              {{ proforma.fournisseur.raison_sociale }}
+            {% elif projet.fournisseur %}
+              {{ projet.fournisseur.raison_sociale }}
+            {% else %}
+              Non spécifié
+            {% endif %}
+          </div>
+          {% if proforma.fournisseur or projet.fournisseur %}
+          <div style="font-size:8.5pt; margin-top:1.5mm; color:#333;">
+            {% with f=proforma.fournisseur|default:projet.fournisseur %}
+            {% if f.code %}<em>Code Fournisseur :</em> <strong>{{ f.code }}</strong><br>{% endif %}
+            {% if f.telephone %}<em>Contact :</em> {{ f.telephone }}<br>{% endif %}
+            {% if f.email %}<em>Email :</em> {{ f.email }}{% endif %}
+            {% endwith %}
+          </div>
+          {% endif %}
+        </td>
+      </tr>
+      {% if proforma.objet %}
+      <tr>
+        <td colspan="2" style="font-size:8.5pt; background:#fff;">
+          <strong>Objet / Description :</strong> {{ proforma.objet }}
+        </td>
+      </tr>
+      {% endif %}
+    </table>
+
+    <!-- Tableau des Matériels / Articles -->
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th style="width:5%;">N°</th>
+          <th style="width:18%;">Réf. Article</th>
+          <th style="width:42%; text-align:left; padding-left:5px;">Désignation du Matériel / Fourniture</th>
+          <th style="width:11%;">Qté Prévue</th>
+          <th style="width:11%; text-align:right;">P.U Estimé</th>
+          <th style="width:13%; text-align:right;">Montant Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for ligne in lignes %}
+        <tr>
+          <td style="text-align:center;">{{ forloop.counter }}</td>
+          <td style="text-align:center; font-family:monospace; font-size:8.5pt;">{{ ligne.article.reference|default:"—" }}</td>
+          <td style="text-align:left; padding-left:5px; font-weight:bold;">{{ ligne.article.designation }}</td>
+          <td style="text-align:center; font-weight:bold; font-size:10pt;">{{ ligne.quantite_prevue }}</td>
+          <td style="text-align:right;">
+            {% if ligne.prix_unitaire_estime %}{{ ligne.prix_unitaire_estime|format_milliers }} F{% else %}—{% endif %}
+          </td>
+          <td style="text-align:right; font-weight:bold;">
+            {% if ligne.prix_unitaire_estime %}
+              {% widthratio ligne.prix_unitaire_estime 1 ligne.quantite_prevue as total_ligne %}
+              {{ total_ligne|format_milliers }} F
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="6" style="text-align:center; padding:15px; color:#666;">Aucun article renseigné sur cette proforma.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr style="background:#f2f2f2; font-weight:bold; font-size:9.5pt;">
+          <td colspan="3" style="text-align:right; padding-right:8px; text-transform:uppercase;">TOTAL PRÉVISIONNEL :</td>
+          <td style="text-align:center; color:#1c5b96; font-size:10.5pt;">{{ proforma.total_articles }}</td>
+          <td></td>
+          <td style="text-align:right; color:#1c5b96;">
+            {% if proforma.total_montant_estime %}{{ proforma.total_montant_estime|format_milliers }} FCFA{% else %}—{% endif %}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <div style="font-size:8pt; color:#666; font-style:italic; margin-bottom:4mm;">
+      * Document prévisionnel officiel servant de base d'estimation pour le suivi des livraisons réelles et des consommations du chantier.
+    </div>
+
+    <!-- Signatures (Formule standard à 2 signatures) -->
+    <table class="signatures-table">
+      <tr>
+        <td style="width:50%; vertical-align:top; padding:2.5mm;">
+          <div style="font-weight:bold; font-size:8.5pt; text-transform:uppercase; text-decoration:underline;">LE CHEF DE PROJET</div>
+          <div style="font-size:7pt; color:#666; margin-top:0.5mm;">(Nom, Titre et Signature)</div>
+          <div style="font-weight:bold; margin-top:1.5mm; font-size:9.5pt; color:#000;">
+            {% if projet.chef_de_projet %}{{ projet.chef_de_projet.get_full_name|default:projet.chef_de_projet.username }}{% else %}Non assigné{% endif %}
+          </div>
+          {% if chef_fonction %}
+            <div style="font-size:8pt; font-style:italic; color:#444;">{{ chef_fonction }}</div>
+          {% endif %}
+          <div style="margin-top:2mm; text-align:center; min-height:18mm;">
+            {% if chef_signature_url %}
+              <img src="{{ chef_signature_url }}" style="max-height:20mm; max-width:75%; object-fit:contain;">
+            {% else %}
+              <div style="height:15mm; border-bottom:1px dashed #777; width:65%; margin:4mm auto 1mm auto;"></div>
+            {% endif %}
+          </div>
+        </td>
+        <td style="width:50%; vertical-align:top; padding:2.5mm;">
+          <div style="font-weight:bold; font-size:8.5pt; text-transform:uppercase; text-decoration:underline;">
+            {{ projet.direction_responsable.nom|upper|default:"DIRECTION TECHNIQUE" }}
+          </div>
+          <div style="font-size:7pt; color:#666; margin-top:0.5mm;">(Direction Responsable — Visa et Signature)</div>
+          <div style="font-weight:bold; margin-top:1.5mm; font-size:9.5pt; color:#000;">
+            {% if projet.responsable_direction %}{{ projet.responsable_direction.get_full_name|default:projet.responsable_direction.username }}{% else %}Non assigné{% endif %}
+          </div>
+          {% if dir_fonction %}
+            <div style="font-size:8pt; font-style:italic; color:#444;">{{ dir_fonction }}</div>
+          {% endif %}
+          <div style="margin-top:2mm; text-align:center; min-height:18mm;">
+            {% if dir_signature_url %}
+              <img src="{{ dir_signature_url }}" style="max-height:20mm; max-width:75%; object-fit:contain;">
+            {% else %}
+              <div style="height:15mm; border-bottom:1px dashed #777; width:65%; margin:4mm auto 1mm auto;"></div>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

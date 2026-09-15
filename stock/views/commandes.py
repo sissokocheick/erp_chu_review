@@ -375,11 +375,15 @@ def receptionner_commande(request, commande_id):
                             pu.replace(' ', '').replace(',', '.').strip()
                         ) if pu and pu.strip() else None
 
+                        if pu_val is None:
+                            pu_val = getattr(ligne_cmd, 'prix_unitaire', None) or getattr(article, 'prix_reference', None)
+
                         reliquat_avant = ligne_cmd.reliquat
                         reliquat_apres = max(0, reliquat_avant - qte_recue)
 
                         LigneBon.objects.create(
                             bon=bon, article=article, quantite=qte_recue,
+                            quantite_servie=qte_recue,
                             numero_lot=lot, date_peremption=date_p,
                             prix_unitaire=pu_val,
                             quantite_demandee=reliquat_avant,
@@ -744,9 +748,13 @@ def liste_receptions(request):
         total_lignes += nb_lignes_reliquat
         total_reliquat += reliquat_total
 
+    base_counts = Commande.objects.all()
+    if magasin_actif_id:
+        base_counts = base_counts.filter(magasin_id=magasin_actif_id)
+
     counts = {
-        'en_cours': Commande.objects.filter( statut__in=['EN_ATTENTE', 'LIVRE_PARTIEL']).count(),
-        'terminees': Commande.objects.filter( statut__in=['LIVRE_TOTAL', 'SOLDE', 'ANNULE']).count(),
+        'en_cours': base_counts.filter(statut__in=['EN_ATTENTE', 'LIVRE_PARTIEL']).count(),
+        'terminees': base_counts.filter(statut__in=['LIVRE_TOTAL', 'SOLDE', 'ANNULE']).count(),
     }
 
     context = {

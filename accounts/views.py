@@ -709,12 +709,15 @@ def accueil_personnalise(request):
         'menu_inventaires':         {'url': '/inventaires/', 'icon': 'fa-clipboard-check', 'color': '#28a745', 'label': 'Inventaires', 'category': 'Gestion des Stocks'},
         'menu_lots':                {'url': '/lots/', 'icon': 'fa-boxes', 'color': '#ffc107', 'label': 'Gestion des Lots', 'category': 'Gestion des Stocks'},
         'menu_peremptions':         {'url': '/stock/peremptions/', 'icon': 'fa-calendar-times', 'color': '#ffc107', 'label': 'Suivi Peremptions', 'category': 'Gestion des Stocks'},
-        'menu_historique':          {'url': '/stock/peremptions/historique/', 'icon': 'fa-history', 'color': '#b6c2c9', 'label': 'Historique Mouvements', 'category': 'Gestion des Stocks'},
+        'menu_historique':          {'url': '/administration/historique/', 'icon': 'fa-history', 'color': '#b6c2c9', 'label': 'Historique Mouvements', 'category': 'Gestion des Stocks'},
 
         # ── Achats & Catalogue ──
         'menu_commandes':           {'url': '/commandes/', 'icon': 'fa-shopping-cart', 'color': '#e83e8c', 'label': 'Commandes Fourn.', 'category': 'Achats & Catalogue'},
         'menu_articles':            {'url': '/articles/', 'icon': 'fa-barcode', 'color': '#0d47a1', 'label': 'Catalogue Articles', 'category': 'Achats & Catalogue'},
         'menu_familles':            {'url': '/familles/', 'icon': 'fa-folder-open', 'color': '#fd7e14', 'label': 'Familles d Articles', 'category': 'Achats & Catalogue'},
+
+        # ── Projets ──
+        'menu_projets':             {'url': '/projets/', 'icon': 'fa-project-diagram', 'color': '#6f42c1', 'label': 'Suivi de Projets', 'category': 'Projets'},
 
         # ── Patrimoine & SAV ──
         'menu_pat_tickets':         {'url': '/patrimoine/mes-tickets/', 'icon': 'fa-ticket-alt', 'color': '#20c997', 'label': 'Tickets SAV', 'category': 'Patrimoine & SAV'},
@@ -728,7 +731,6 @@ def accueil_personnalise(request):
         'menu_pat_inventaire':      {'url': '/patrimoine/inventaires/', 'icon': 'fa-barcode', 'color': '#28a745', 'label': 'Inventaire Parc', 'category': 'Patrimoine & SAV'},
         'menu_pat_rebuts':          {'url': '/patrimoine/rebuts/', 'icon': 'fa-trash-alt', 'color': '#ef4444', 'label': 'Registre Rebuts', 'category': 'Patrimoine & SAV'},
         'menu_pat_pertes':          {'url': '/patrimoine/pertes/', 'icon': 'fa-search-minus', 'color': '#f59e0b', 'label': 'Equipements Perdus', 'category': 'Patrimoine & SAV'},
-        'menu_pat_parametres':      {'url': '/patrimoine/parametres/', 'icon': 'fa-sliders-h', 'color': '#ffda6a', 'label': 'Parametres Patrimoine', 'category': 'Patrimoine & SAV'},
 
         # ── Vehicules & Salles ──
         'menu_pat_vehicules':             {'url': '/patrimoine/vehicules/', 'icon': 'fa-car', 'color': '#e74c3c', 'label': 'Parc Vehicules', 'category': 'Vehicules & Salles'},
@@ -752,6 +754,7 @@ def accueil_personnalise(request):
         # ── Parametres ──
         'menu_param_admin':         {'url': '/parametres/administratifs/', 'icon': 'fa-hospital-user', 'color': '#1c5b96', 'label': 'Parametres Admin', 'category': 'Parametres'},
         'menu_param_logistique':    {'url': '/parametres/logistique/', 'icon': 'fa-truck', 'color': '#fd7e14', 'label': 'Param. Logistique', 'category': 'Parametres'},
+        'menu_pat_parametres':      {'url': '/patrimoine/parametres/', 'icon': 'fa-sliders-h', 'color': '#ffda6a', 'label': 'Parametres Patrimoine', 'category': 'Parametres'},
         'menu_modeles_pdf':         {'url': '/parametres/logistique/', 'icon': 'fa-file-pdf', 'color': '#dc3545', 'label': 'Modeles PDF', 'category': 'Parametres'},
         'menu_notifications_config': {'url': '/parametres/notifications/', 'icon': 'fa-bell', 'color': '#ffc107', 'label': 'Notifications Config', 'category': 'Parametres'},
 
@@ -797,7 +800,7 @@ def accueil_personnalise(request):
     # Ordre d'affichage des categories
     cat_order = [
         'Navigation', 'Demandes', 'Mouvements de Stock', 'Gestion des Stocks',
-        'Achats & Catalogue', 'Patrimoine & SAV', 'Vehicules & Salles',
+        'Achats & Catalogue', 'Projets', 'Patrimoine & SAV', 'Vehicules & Salles',
         'Rapports & Exports', 'Parametres', 'Securite & Acces', 'Autres',
     ]
     ordered_categories = []
@@ -1375,15 +1378,31 @@ def page_utilisateurs(request):
                     return render(request, 'accounts/utilisateurs.html',
                                   _ctx_utilisateurs(request, page_obj, q, statut, form_data, show_modal=True, form_error=err))
 
+                new_username = form_data.get('username', '').lower().strip().replace(' ', '')
+                if not new_username:
+                    err = "⛔ Le login ne peut pas être vide."
+                    return render(request, 'accounts/utilisateurs.html',
+                                  _ctx_utilisateurs(request, page_obj, q, statut, form_data, show_modal=True, form_error=err))
+
+                if len(new_username) < MIN_USERNAME_LENGTH:
+                    err = f"⛔ Le login doit contenir au moins {MIN_USERNAME_LENGTH} caractères."
+                    return render(request, 'accounts/utilisateurs.html',
+                                  _ctx_utilisateurs(request, page_obj, q, statut, form_data, show_modal=True, form_error=err))
+
+                if User.objects.filter(username__iexact=new_username).exclude(id=user.id).exists():
+                    err = f"⛔ Le login '{new_username}' est déjà utilisé par un autre compte."
+                    return render(request, 'accounts/utilisateurs.html',
+                                  _ctx_utilisateurs(request, page_obj, q, statut, form_data, show_modal=True, form_error=err))
+
+                ancien_username = user.username
+                if ancien_username != new_username:
+                    user.username = new_username
+                    log_audit(request, f"Modification du login de '{ancien_username}' en '{new_username}'", type_action='UPDATE',
+                              modele_concerne='User', id_objet=user.id)
+
                 user.first_name = first_name
-
-
                 user.last_name = last_name
-
-
                 user.email = email
-
-
                 user.save()
 
 
@@ -2215,6 +2234,9 @@ SOUS_PERMISSIONS = {
     'menu_articles':           ['add_article', 'change_article'],
     'menu_familles':           ['add_famillearticle', 'change_famillearticle'],
 
+    # ── PROJETS ──
+    'menu_projets':            ['add_projet', 'change_projet', 'delete_projet', 'add_projetproforma', 'change_projetproforma', 'delete_projetproforma'],
+
     # ── PATRIMOINE & SAV ──
     'menu_pat_tickets':        ['add_intervention', 'change_intervention'],
     'menu_pat_tech':           ['add_intervention', 'change_intervention', 'add_technicienprestataire', 'change_technicienprestataire'],
@@ -2226,12 +2248,12 @@ SOUS_PERMISSIONS = {
     'menu_pat_inventaire':     ['add_campagneinventairepatrimoine', 'change_campagneinventairepatrimoine', 'add_ligneinventairepatrimoine', 'change_ligneinventairepatrimoine'],
     'menu_pat_rebuts':         ['change_immobilisation'],
     'menu_pat_pertes':         ['change_immobilisation'],
-    'menu_pat_parametres':     ['add_categoriepatrimoine', 'change_categoriepatrimoine', 'add_marque', 'change_marque', 'add_modele', 'change_modele', 'add_batiment', 'change_batiment', 'add_etage', 'change_etage', 'add_bureau', 'change_bureau', 'add_typeequipement', 'change_typeequipement', 'add_parametrespatrimoine', 'change_parametrespatrimoine'],
 
-    # ── PARAMÈTRES (3 pages cochables, fonctionnalités en dessous) ──
+    # ── PARAMÈTRES (pages cochables, fonctionnalités en dessous) ──
     'menu_param_admin':        ['menu_services', 'add_service', 'change_service', 'menu_specialites', 'add_specialite', 'change_specialite', 'menu_fonctions', 'add_fonction', 'change_fonction', 'change_configurationhopital'],
     'menu_param_logistique':   ['menu_fournisseurs', 'add_fournisseur', 'change_fournisseur', 'menu_magasins', 'add_magasin', 'change_magasin', 'menu_motifs_annulation', 'add_motifannulation', 'change_motifannulation', 'menu_beneficiaires', 'add_beneficiaire', 'change_beneficiaire', 'change_configurationhopital'],
-    'menu_modeles_pdf':        ['menu_parametres_doc', 'add_configdocument', 'change_configdocument', 'can_configurer_modeles_pdf', 'add_modeledocumentmagasin', 'change_modeledocumentmagasin'],
+    'menu_pat_parametres':     ['add_categoriepatrimoine', 'change_categoriepatrimoine', 'add_marque', 'change_marque', 'add_modele', 'change_modele', 'add_batiment', 'change_batiment', 'add_etage', 'change_etage', 'add_bureau', 'change_bureau', 'add_typeequipement', 'change_typeequipement', 'add_parametrespatrimoine', 'change_parametrespatrimoine'],
+    'menu_modeles_pdf':        ['menu_parametres_doc', 'can_configurer_modeles_pdf', 'add_modeledocumentmagasin', 'change_modeledocumentmagasin'],
     'menu_notifications_config': ['change_configurationnotification'],
 
     # ── SÉCURITÉ & ACCÈS ──
@@ -2314,6 +2336,24 @@ SOUS_PERM_LABELS = {
 
 
     'change_famillearticle':  {'label': 'Modifier familles', 'icon': 'fa-edit', 'color': '#ffc107'},
+
+
+    'add_projet':             {'label': 'Creer projet', 'icon': 'fa-plus', 'color': '#28a745'},
+
+
+    'change_projet':          {'label': 'Modifier projet', 'icon': 'fa-edit', 'color': '#ffc107'},
+
+
+    'delete_projet':          {'label': 'Supprimer projet', 'icon': 'fa-trash', 'color': '#dc3545'},
+
+
+    'add_projetproforma':     {'label': 'Creer proforma', 'icon': 'fa-plus', 'color': '#28a745'},
+
+
+    'change_projetproforma':  {'label': 'Modifier proforma', 'icon': 'fa-edit', 'color': '#ffc107'},
+
+
+    'delete_projetproforma':  {'label': 'Supprimer proforma', 'icon': 'fa-trash', 'color': '#dc3545'},
 
 
     'add_fournisseur':        {'label': 'Ajouter', 'icon': 'fa-plus', 'color': '#28a745'},
@@ -2523,16 +2563,6 @@ SOUS_PERM_LABELS = {
 
     'change_modeledocumentmagasin': {'label': 'Modifier modele PDF', 'icon': 'fa-edit', 'color': '#ffc107'},
 
-
-    'add_configdocument': {'label': 'Ajouter document', 'icon': 'fa-plus', 'color': '#28a745'},
-
-
-    'change_configdocument': {'label': 'Modifier document', 'icon': 'fa-edit', 'color': '#ffc107'},
-
-
-    'delete_configdocument': {'label': 'Supprimer document', 'icon': 'fa-trash', 'color': '#dc3545'},
-
-
     'add_user': {'label': 'Creer utilisateur', 'icon': 'fa-plus', 'color': '#28a745'},
 
 
@@ -2698,6 +2728,7 @@ MENU_ITEMS_META = {
 
     'menu_journal_audit': {'label': 'Journal Audit', 'icon': 'fa-history', 'color': '#6c757d'},
 
+    'menu_projets': {'label': 'Suivi de Projets', 'icon': 'fa-project-diagram', 'color': '#6f42c1'},
 
     'menu_pat_tickets': {'label': 'Tickets SAV', 'icon': 'fa-ticket-alt', 'color': '#20c997'},
 

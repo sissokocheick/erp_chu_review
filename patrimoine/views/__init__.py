@@ -54,7 +54,8 @@ from .vehicules import (
     liste_vehicules, detail_vehicule, creer_vehicule, modifier_vehicule, supprimer_vehicule,
     liste_interventions_vehicule, creer_intervention_vehicule,
     liste_missions_vehicule, creer_mission_vehicule,
-    ajax_modeles_vehicule,
+    ajax_modeles_vehicule, ajax_creer_marque, ajax_creer_modele,
+    ajax_creer_type_vehicule, ajax_creer_compagnie_assurance, ajax_creer_type_intervention_vehicule,
 )
 
 from .salles import (

@@ -180,6 +180,11 @@ def valider_demande_vehicule(request, pk):
             demande.commentaire_valider = request.POST.get('commentaire', '')
             demande.km_depart = int(request.POST['km_depart']) if request.POST.get('km_depart') else None
             demande.save()
+
+            if demande.vehicule:
+                demande.vehicule.statut = 'EN_SERVICE'
+                demande.vehicule.save(update_fields=['statut'])
+
             audit(request, "Validation d'une demande de véhicule", 'UPDATE', instance=demande)
 
             messages.success(request, f'✅ Demande validée — Véhicule {demande.vehicule.immatriculation} affecté.')
@@ -202,6 +207,15 @@ def valider_demande_vehicule(request, pk):
             demande.observation_retour = request.POST.get('observation_retour', '')
             demande.modifie_par = request.user
             demande.save()
+
+            if demande.vehicule:
+                demande.vehicule.statut = 'DISPONIBLE'
+                fields_to_update = ['statut']
+                if demande.km_retour and demande.km_retour > demande.vehicule.kilometrage:
+                    demande.vehicule.kilometrage = demande.km_retour
+                    fields_to_update.append('kilometrage')
+                demande.vehicule.save(update_fields=fields_to_update)
+
             audit(request, 'Clôture de mission — retour du véhicule', 'UPDATE', instance=demande)
 
             messages.success(request, '✅ Véhicule rendu — Mission terminée.')

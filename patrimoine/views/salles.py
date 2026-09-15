@@ -20,13 +20,14 @@ from functools import wraps
 
 from ..audit import audit
 
-def verifier_permission_salle(perm):
-    """Decorator: vérifie une permission salle spécifique."""
+def verifier_permission_salle(*perms):
+    """Decorator: vérifie qu'au moins une permission salle requise est présente."""
     def decorator(view_func):
         @wraps(view_func)
         @login_required
         def wrapper(request, *args, **kwargs):
-            if not (request.user.is_superuser or request.user.has_perm(perm)):
+            has_any = any(request.user.has_perm(p) for p in perms)
+            if not (request.user.is_superuser or has_any):
                 messages.error(request, "Accès non autorisé.")
                 return redirect('/')
             return view_func(request, *args, **kwargs)
@@ -245,7 +246,7 @@ def modifier_salle(request, pk):
     })
 
 
-@verifier_permission_salle("accounts.menu_pat_salles")
+@verifier_permission_salle("accounts.menu_pat_salles", "accounts.menu_pat_salles_calendrier")
 def calendrier_salles(request):
     """Calendrier hebdomadaire des réservations."""
     today = timezone.now().date()
@@ -433,6 +434,21 @@ def valider_reservation(request, pk):
     if request.method == 'POST':
         action = request.POST.get('action', '')
         if action == 'valider':
+            conflits_confirmes = ReservationSalle.objects.filter(
+                salle=reservation.salle,
+                statut='CONFIRMEE',
+                date_debut__lt=reservation.date_fin,
+                date_fin__gt=reservation.date_debut,
+            ).exclude(pk=reservation.pk)
+            if conflits_confirmes.exists():
+                premier_conflit = conflits_confirmes.first()
+                messages.error(
+                    request,
+                    f"⛔ Impossible de valider : la salle {reservation.salle.nom} est déjà réservée "
+                    f"par '{premier_conflit.objet}' de {premier_conflit.date_debut.strftime('%d/%m %H:%M')} à {premier_conflit.date_fin.strftime('%H:%M')}."
+                )
+                return redirect('patrimoine_reservation_detail', pk=pk)
+
             reservation.statut = 'CONFIRMEE'
             reservation.valide_par = request.user
             reservation.date_validation = timezone.now()

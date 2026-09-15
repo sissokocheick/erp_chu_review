@@ -20,6 +20,8 @@ Lancement :
 Playwright sync tourne sa propre boucle d'événements, ce que Django
 interprète comme un contexte async sans cette variable.)
 """
+import os
+os.environ["DJANGO_ALLOW_ASYNC_UNSAFE"] = "true"
 import unittest
 
 from django.contrib.auth import get_user_model

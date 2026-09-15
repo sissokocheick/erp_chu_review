@@ -61,11 +61,40 @@
                     <i class="fas fa-info-circle"></i> Informations
                 </h4>
                 <p style="color: var(--text-secondary); font-size: 13px; line-height: 1.6; margin: 0;">
-                    Le <strong>responsable</strong> sélectionné ci-dessous sera affiché sur les bons de stock
+                    Le <strong>responsable</strong> sélectionné ci-contre sera affiché sur les bons de stock
                     avec son nom, sa fonction et sa signature numérique.<br><br>
                     Si un bon est <strong>validé</strong> par un autre utilisateur, c'est le nom et la fonction
                     du validateur qui apparaîtront à la place.
                 </p>
+            </div>
+
+            <div style="grid-column: 1 / -1; background: var(--card-bg); padding: 20px; border-radius: 8px; box-shadow: 0 4px 10px var(--shadow); border-top: 4px solid #6f42c1;">
+                <h4 style="color: var(--text-primary); margin-top: 0; margin-bottom: 15px; font-size: 16px;">
+                    <i class="fas fa-project-diagram" style="color: #6f42c1;"></i> Modules & Projets
+                </h4>
+                <div style="padding: 16px; background: var(--bg-hover, #f8f9fa); border-radius: 8px; border: 1.5px solid var(--border-color);">
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0;">
+                        {{ form.gere_projets }}
+                        <span>Ce magasin gère les projets</span>
+                    </label>
+                    <small style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 8px; margin-left: 32px; line-height: 1.5;">
+                        <i class="fas fa-info-circle" style="color: #6f42c1; margin-right: 4px;"></i>
+                        Si cette option est <strong>activée</strong>, ce magasin aura la possibilité de sélectionner et lier un projet lors des réceptions (entrées), sorties de stock et retours. 
+                        Si cette option est <strong>désactivée</strong>, les champs et options de projets seront totalement invisibles et inaccessibles pour ce magasin.
+                    </small>
+                </div>
+
+                <div id="div-filtrer-articles-projet" style="padding: 16px; background: var(--bg-hover, #f8f9fa); border-radius: 8px; border: 1.5px solid var(--border-color); margin-top: 14px;">
+                    <label style="display: flex; align-items: center; gap: 12px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-primary); margin: 0;">
+                        {{ form.filtrer_articles_par_projet }}
+                        <span>Restreindre les articles aux matériels du projet</span>
+                    </label>
+                    <small style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 8px; margin-left: 32px; line-height: 1.5;">
+                        <i class="fas fa-filter" style="color: #17a2b8; margin-right: 4px;"></i>
+                        Si cette option est <strong>activée</strong> : dès qu'un magasinier sélectionne un projet (dans les sorties, réceptions ou retours), seuls les articles entrés ou prévus pour ce projet s'affichent lors de la recherche. Dès qu'aucun projet n'est sélectionné, l'ensemble du catalogue est affiché.<br>
+                        Si cette option est <strong>désactivée</strong> : tous les articles du stock restent recherchables et sélectionnables, même lorsqu'un projet est choisi.
+                    </small>
+                </div>
             </div>
 
         </div>

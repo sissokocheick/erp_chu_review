@@ -85,10 +85,10 @@
       <i class="fas fa-boxes"></i>
     </div>
     <div class="kpi-body">
-      <h3>{{ nb_immos_total }}</h3>
+      <h3>{{ nb_immos_total|format_milliers }}</h3>
       <p>Immobilisations</p>
       <div class="stat-bar"><div class="stat-bar-fill" style="width:{% widthratio nb_immos_actives nb_immos_total 100 %}%;background:#22c55e;"></div></div>
-      <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">{{ nb_immos_actives }} actives</span>
+      <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">{{ nb_immos_actives|format_milliers }} actives</span>
     </div>
   </div>
   </a>
@@ -100,10 +100,10 @@
       <i class="fas fa-car"></i>
     </div>
     <div class="kpi-body">
-      <h3>{{ nb_vehicules_total }}</h3>
+      <h3>{{ nb_vehicules_total|format_milliers }}</h3>
       <p>Véhicules</p>
       <div class="stat-bar"><div class="stat-bar-fill" style="width:{% widthratio nb_vehicules_disponibles nb_vehicules_total 100 %}%;background:#22c55e;"></div></div>
-      <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">{{ nb_vehicules_disponibles }} dispo</span>
+      <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">{{ nb_vehicules_disponibles|format_milliers }} dispo</span>
     </div>
   </div>
   </a>
@@ -115,10 +115,10 @@
       <i class="fas fa-door-open"></i>
     </div>
     <div class="kpi-body">
-      <h3>{{ nb_salles_total }}</h3>
+      <h3>{{ nb_salles_total|format_milliers }}</h3>
       <p>Salles</p>
       <div class="stat-bar"><div class="stat-bar-fill" style="width:{% widthratio nb_salles_disponibles nb_salles_total 100 %}%;background:#22c55e;"></div></div>
-      <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">{{ nb_salles_disponibles }} dispo</span>
+      <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">{{ nb_salles_disponibles|format_milliers }} dispo</span>
     </div>
   </div>
   </a>
@@ -130,14 +130,14 @@
       <i class="fas fa-clipboard-list"></i>
     </div>
     <div class="kpi-body">
-      <h3>{{ nb_demandes_totales }}</h3>
+      <h3>{{ nb_demandes_totales|format_milliers }}</h3>
       <p>Demandes en attente</p>
       <div style="display:flex;gap:6px;margin-top:4px;flex-wrap:wrap;">
         {% if nb_demandes_vehicule > 0 %}
-          <span class="kpi-badge" style="background:#fce7f3;color:#db2777;">{{ nb_demandes_vehicule }} véhicules</span>
+          <span class="kpi-badge" style="background:#fce7f3;color:#db2777;">{{ nb_demandes_vehicule|format_milliers }} véhicules</span>
         {% endif %}
         {% if nb_demandes_salle > 0 %}
-          <span class="kpi-badge" style="background:#dbeafe;color:#2563eb;">{{ nb_demandes_salle }} salles</span>
+          <span class="kpi-badge" style="background:#dbeafe;color:#2563eb;">{{ nb_demandes_salle|format_milliers }} salles</span>
         {% endif %}
       </div>
     </div>
@@ -154,10 +154,10 @@
       <i class="fas fa-tools"></i>
     </div>
     <div class="kpi-body">
-      <h3>{{ nb_interventions_en_cours }}</h3>
+      <h3>{{ nb_interventions_en_cours|format_milliers }}</h3>
       <p>Interventions en cours</p>
       {% if nb_interventions_nouvelles > 0 %}
-        <span class="kpi-badge" style="background:#fef3c7;color:#d97706;">{{ nb_interventions_nouvelles }} nouvelles</span>
+        <span class="kpi-badge" style="background:#fef3c7;color:#d97706;">{{ nb_interventions_nouvelles|format_milliers }} nouvelles</span>
       {% endif %}
     </div>
   </div>
@@ -170,10 +170,10 @@
       <i class="fas fa-calendar-check"></i>
     </div>
     <div class="kpi-body">
-      <h3>{{ nb_resa_semaine }}</h3>
+      <h3>{{ nb_resa_semaine|format_milliers }}</h3>
       <p>Réservations / semaine</p>
       {% if nb_resa_aujourd > 0 %}
-        <span class="kpi-badge" style="background:#cffafe;color:#0891b2;">{{ nb_resa_aujourd }} aujourd'hui</span>
+        <span class="kpi-badge" style="background:#cffafe;color:#0891b2;">{{ nb_resa_aujourd|format_milliers }} aujourd'hui</span>
       {% endif %}
     </div>
   </div>
@@ -186,7 +186,7 @@
       <i class="fas fa-wrench"></i>
     </div>
     <div class="kpi-body">
-      <h3>{{ nb_vehicules_maintenance }}</h3>
+      <h3>{{ nb_vehicules_maintenance|format_milliers }}</h3>
       <p>Véhicules en maintenance</p>
     </div>
   </div>
@@ -199,7 +199,7 @@
       <i class="fas fa-file-contract"></i>
     </div>
     <div class="kpi-body">
-      <h3>{{ contrats_expires }}</h3>
+      <h3>{{ contrats_expires|format_milliers }}</h3>
       <p>Contrats expirés</p>
       {% if contrats_expires == 0 %}
         <span class="kpi-badge" style="background:#dcfce7;color:#16a34a;">✓ À jour</span>
@@ -218,7 +218,7 @@
       <i class="fas fa-coins"></i>
     </div>
     <div class="kpi-body">
-      <h3 style="font-size:22px;">{{ valeur_totale|floatformat:0 }} <span style="font-size:12px;font-weight:500;">FCFA</span></h3>
+      <h3 style="font-size:22px;">{{ valeur_totale|format_milliers }} <span style="font-size:12px;font-weight:500;">FCFA</span></h3>
       <p>Valeur totale du patrimoine actif</p>
     </div>
   </div>
@@ -228,7 +228,7 @@
       <i class="fas fa-history"></i>
     </div>
     <div class="kpi-body">
-      <h3>{{ nb_interventions_terminees_30j }}</h3>
+      <h3>{{ nb_interventions_terminees_30j|format_milliers }}</h3>
       <p>Interventions terminées (30j)</p>
     </div>
   </div>

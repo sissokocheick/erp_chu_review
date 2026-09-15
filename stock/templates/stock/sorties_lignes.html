@@ -55,8 +55,24 @@
     
 
     <td style="padding: 12px; color: var(--text-dark);">
-        <i class="fas fa-hospital" style="color: var(--text-light); margin-right: 5px;"></i>
-        {{ bon.service_demandeur.nom|default:"—" }}
+        {% if bon.projet %}
+            <div style="font-weight:600; color:#0d6efd; max-width: 220px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="Projet : {{ bon.projet.nom }}">
+                <i class="fas fa-project-diagram" style="margin-right: 5px;"></i> {{ bon.projet.nom }}
+            </div>
+            {% if bon.fournisseur or bon.projet.fournisseur %}
+            <div style="font-size:11px; color:var(--text-medium); margin-top:2px;">
+                <i class="fas fa-building" style="color:var(--text-light); margin-right:3px;"></i> {{ bon.fournisseur.raison_sociale|default:bon.projet.fournisseur.raison_sociale }}
+            </div>
+            {% endif %}
+            {% if bon.service_demandeur %}
+            <div style="font-size:10px; color:var(--text-light); margin-top:1px;">
+                <i class="fas fa-hospital" style="margin-right:3px;"></i> {{ bon.service_demandeur.nom }}
+            </div>
+            {% endif %}
+        {% else %}
+            <i class="fas fa-hospital" style="color: var(--text-light); margin-right: 5px;"></i>
+            {{ bon.service_demandeur.nom|default:"—" }}
+        {% endif %}
     </td>
 
     <td style="padding: 12px; text-align: center;">
@@ -159,9 +175,20 @@
 <tr id="lignes-{{ bon.id }}" style="display: none; background: var(--bg-stripe);">
     <td colspan="8" style="padding: 15px 30px 25px 50px;">
         <div class="detail-card-sortie" style="background: var(--bg-card); padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px var(--shadow); border: 1px solid var(--border-light);">
-            <h4 style="margin-top: 0; margin-bottom: 15px; color: var(--primary-blue); font-size: 13px; text-transform: uppercase;">
-                <i class="fas fa-box-open"></i> Détail des articles
-            </h4>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">
+                <h4 style="margin: 0; color: var(--primary-blue); font-size: 13px; text-transform: uppercase;">
+                    <i class="fas fa-box-open"></i> Détail des articles
+                </h4>
+                {% if bon.projet %}
+                <div style="font-size: 12px; background: rgba(13, 110, 253, 0.08); border: 1px solid rgba(13, 110, 253, 0.25); border-radius: 6px; padding: 4px 10px; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="fas fa-project-diagram" style="color: #0d6efd;"></i>
+                    <span>Projet : <strong>{{ bon.projet.nom }}</strong></span>
+                    <a href="{% url 'projets:detail' bon.projet.id %}" style="color: #0d6efd; text-decoration: underline; margin-left: 6px; font-weight: 600; font-size: 11px;">
+                        <i class="fas fa-external-link-alt"></i> Voir le projet
+                    </a>
+                </div>
+                {% endif %}
+            </div>
 
             <table class="detail-table-sortie" style="width: 100%; border-collapse: collapse; font-size: 13px;">
                 <thead style="background: var(--bg-stripe);">

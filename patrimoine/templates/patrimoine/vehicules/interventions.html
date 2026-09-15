@@ -4,86 +4,213 @@
 {% block title %}Interventions — {{ vehicule.immatriculation }}{% endblock %}
 
 {% block contenu %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour au véhicule</a>
-            <h4 class="mb-0 mt-1"><i class="fas fa-wrench me-2"></i>Interventions — {{ vehicule.immatriculation }}</h4>
-        </div>
-        <a href="{% url 'patrimoine_vehicule_intervention_creer' vehicule.pk %}" class="btn btn-primary">
-            <i class="fas fa-plus me-1"></i>Nouvelle intervention
-        </a>
-    </div>
+<style>
+  :root {
+    --int-rad: 12px;
+    --int-rad-sm: 8px;
+  }
 
-    <!-- Filtres -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form method="GET" class="row g-3">
-                <div class="col-md-3">
-                    <select name="statut" class="form-select">
-                        <option value="">-- Tous les statuts --</option>
-                        <option value="PLANIFIEE" {% if statut_filter == 'PLANIFIEE' %}selected{% endif %}>Planifiée</option>
-                        <option value="EN_COURS" {% if statut_filter == 'EN_COURS' %}selected{% endif %}>En cours</option>
-                        <option value="TERMINEE" {% if statut_filter == 'TERMINEE' %}selected{% endif %}>Terminée</option>
-                        <option value="ANNULEE" {% if statut_filter == 'ANNULEE' %}selected{% endif %}>Annulée</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="submit" class="btn btn-outline-primary"><i class="fas fa-filter me-1"></i>Filtrer</button>
-                </div>
-            </form>
-        </div>
-    </div>
+  .int-container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding-bottom: 50px;
+  }
 
-    <!-- Liste -->
-    <div class="card">
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-hover">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Date prévue</th>
-                            <th>Type</th>
-                            <th>Statut</th>
-                            <th>Garage / Prestataire</th>
-                            <th>Coût</th>
-                            <th>Kilométrage</th>
-                            <th>Réalisée le</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for i in interventions %}
-                        <tr>
-                            <td>{{ i.date_prevue|date:"d/m/Y"|default:"—" }}</td>
-                            <td><span class="badge bg-secondary">{{ i.get_type_intervention_display }}</span></td>
-                            <td>
-                                {% if i.statut == 'PLANIFIEE' %}
-                                    <span class="badge bg-warning text-dark">Planifiée</span>
-                                {% elif i.statut == 'EN_COURS' %}
-                                    <span class="badge bg-primary">En cours</span>
-                                {% elif i.statut == 'TERMINEE' %}
-                                    <span class="badge bg-success">Terminée</span>
-                                {% else %}
-                                    <span class="badge bg-danger">Annulée</span>
-                                {% endif %}
-                            </td>
-                            <td>{{ i.garage_prestataire|default:"—" }}</td>
-                            <td>{{ i.cout|floatformat:0 }} FCFA</td>
-                            <td>{{ i.kilometrage|default:"—" }} km</td>
-                            <td>{{ i.date_realisation|date:"d/m/Y"|default:"—" }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="7" class="text-center text-muted py-4">
-                                <i class="fas fa-wrench fa-2x mb-2 d-block"></i>
-                                Aucune intervention enregistrée.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+  /* ── BANNIÈRE EN-TÊTE ── */
+  .int-hero {
+    background: linear-gradient(135deg, #78350f 0%, #b45309 50%, #d97706 100%);
+    color: white;
+    border-radius: var(--int-rad);
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 6px 20px rgba(180, 83, 9, 0.25);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .int-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .int-hero-icon {
+    width: 58px;
+    height: 58px;
+    background: rgba(255, 255, 255, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+  .int-hero h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .int-hero p {
+    margin: 4px 0 0 0;
+    opacity: 0.9;
+    font-size: 13px;
+  }
+  .btn-retour-int {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    padding: 10px 18px;
+    border-radius: var(--int-rad-sm);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .btn-retour-int:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: translateY(-1px);
+  }
+
+  .btn-new-int {
+    background: white;
+    color: #b45309;
+    padding: 10px 20px;
+    border-radius: var(--int-rad-sm);
+    text-decoration: none;
+    font-size: 13.5px;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.2s ease;
+  }
+  .btn-new-int:hover {
+    background: #fffbeb;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  }
+
+  /* ── BARRE DE FILTRES ── */
+  .int-filter-card {
+    background: var(--bg-card);
+    border-radius: var(--int-rad);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 8px var(--shadow);
+  }
+</style>
+
+<div class="int-container">
+  <!-- EN-TÊTE HERO -->
+  <div class="int-hero">
+    <div class="int-hero-left">
+      <div class="int-hero-icon">
+        <i class="fas fa-wrench"></i>
+      </div>
+      <div>
+        <h3>Historique des interventions — {{ vehicule.immatriculation }}</h3>
+        <p>{{ vehicule.marque|default:"" }} {{ vehicule.modele|default:"" }} • Entretiens, vidanges, réparations et contrôles</p>
+      </div>
     </div>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <a href="{% url 'patrimoine_vehicule_detail' vehicule.pk %}" class="btn-retour-int">
+        <i class="fas fa-arrow-left"></i> Fiche véhicule
+      </a>
+      <a href="{% url 'patrimoine_vehicule_intervention_creer' vehicule.pk %}" class="btn-new-int">
+        <i class="fas fa-plus-circle"></i> Nouvelle intervention
+      </a>
+    </div>
+  </div>
+
+  <!-- FILTRES -->
+  <div class="int-filter-card">
+    <form method="GET" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+      <div style="width: 240px;">
+        <select name="statut" class="nx-select">
+          <option value="">-- Tous les statuts --</option>
+          <option value="PLANIFIEE" {% if statut_filter == 'PLANIFIEE' %}selected{% endif %}>🟡 Planifiée</option>
+          <option value="EN_COURS" {% if statut_filter == 'EN_COURS' %}selected{% endif %}>🔵 En cours</option>
+          <option value="TERMINEE" {% if statut_filter == 'TERMINEE' %}selected{% endif %}>🟢 Terminée</option>
+          <option value="ANNULEE" {% if statut_filter == 'ANNULEE' %}selected{% endif %}>⚪ Annulée</option>
+        </select>
+      </div>
+      <button type="submit" class="nx-btn nx-btn-primary">
+        <i class="fas fa-filter"></i> Filtrer
+      </button>
+      {% if statut_filter %}
+      <a href="{% url 'patrimoine_vehicule_interventions' vehicule.pk %}" class="nx-btn nx-btn-light">
+        <i class="fas fa-times"></i> Réinitialiser
+      </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- TABLEAU DES INTERVENTIONS -->
+  <div class="nx-card">
+    <div class="nx-card-header">
+      <h4><i class="fas fa-list-alt" style="color: #b45309; margin-right: 8px;"></i> Liste des opérations</h4>
+      <span class="nx-badge nx-badge-orange">{{ interventions|length }} intervention(s)</span>
+    </div>
+    <div class="nx-card-body" style="padding: 0; overflow-x: auto;">
+      <table class="nx-table">
+        <thead>
+          <tr>
+            <th>Date prévue</th>
+            <th>Type</th>
+            <th>Statut</th>
+            <th>Garage / Prestataire</th>
+            <th>Coût</th>
+            <th>Kilométrage</th>
+            <th>Réalisée le</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for i in interventions %}
+          <tr>
+            <td style="white-space: nowrap; font-weight: 600;">
+              <i class="far fa-calendar-alt" style="margin-right: 6px; color: var(--text-light);"></i>
+              {{ i.date_prevue|date:"d/m/Y"|default:"—" }}
+            </td>
+            <td>
+              <span class="nx-badge nx-badge-blue">{{ i.get_type_intervention_display }}</span>
+            </td>
+            <td>
+              {% if i.statut == 'PLANIFIEE' %}
+                <span class="nx-badge nx-badge-yellow">Planifiée</span>
+              {% elif i.statut == 'EN_COURS' %}
+                <span class="nx-badge nx-badge-blue">En cours</span>
+              {% elif i.statut == 'TERMINEE' %}
+                <span class="nx-badge nx-badge-green">Terminée</span>
+              {% else %}
+                <span class="nx-badge nx-badge-red">Annulée</span>
+              {% endif %}
+            </td>
+            <td style="font-weight: 600;">{{ i.garage_prestataire|default:"—" }}</td>
+            <td style="font-weight: 700; color: #b45309;">{{ i.cout|floatformat:0 }} FCFA</td>
+            <td>{{ i.kilometrage|default:"—" }} km</td>
+            <td style="color: var(--text-light);">{{ i.date_realisation|date:"d/m/Y"|default:"—" }}</td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="nx-empty">
+              <i class="fas fa-wrench"></i>
+              Aucune intervention enregistrée pour ce véhicule.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 {% endblock %}

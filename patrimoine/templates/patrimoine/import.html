@@ -103,7 +103,7 @@
       <div style="font-weight:700;font-size:13px;">
         {% if log.type_equipement %}{{ log.type_equipement.nom }}{% else %}Import générique{% endif %}
       </div>
-      <div style="font-size:11px;color:#555;">{{ log.date_creation|date:"d/m/Y H:i" }} — {{ log.nb_crees }} créés, {{ log.nb_mis_a_jour }} mis à jour{% if log.nb_erreurs %}, {{ log.nb_erreurs }} erreurs{% endif %}</div>
+      <div style="font-size:11px;color:var(--text-medium);">{{ log.date_creation|date:"d/m/Y H:i" }} — {{ log.nb_crees }} créés, {{ log.nb_mis_a_jour }} mis à jour{% if log.nb_erreurs %}, {{ log.nb_erreurs }} erreurs{% endif %}</div>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
       <span style="font-size:11px;font-weight:700;">{{ log.get_statut_display }}</span>

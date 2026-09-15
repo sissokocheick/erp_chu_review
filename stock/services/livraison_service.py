@@ -350,10 +350,15 @@ class LivraisonService:
             commentaire=f"Destruction automatique du lot {entree.numero_lot or 'N/A'}"
         )
 
+        pu = getattr(entree, 'valeur_cmup', None) or getattr(entree.article, 'prix_reference', None)
         LigneBon.objects.create(
             bon=bon,
             article=entree.article,
             quantite=quantite,
+            quantite_servie=quantite,
+            quantite_demandee=quantite,
+            reste=0,
+            prix_unitaire=pu,
             numero_lot=entree.numero_lot,
             date_peremption=entree.date_peremption
         )

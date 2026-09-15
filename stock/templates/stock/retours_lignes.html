@@ -5,10 +5,20 @@
         <span class="num-bon {% if bon.est_annule %}annule{% endif %}">{{ bon.numero_bon }}</span>
         {% if bon.est_annule %}<span class="badge-annule">Annulé</span>{% endif %}
     </td>
-    <td>{{ bon.date_bon|date:"d/m/Y H:i" }}</td>
-    <td><span class="svc-tag">{{ bon.service_demandeur.nom|default:"—" }}</span></td>
-    
-    <td class="c"><span class="count-tag">{{ bon.lignes_bon.count }}</span></td>
+    <td>
+        {% if bon.projet %}
+            <span class="badge" style="background-color: #0d6efd; color: white; margin-bottom: 2px; display:inline-block; font-size:11px; padding: 4px 8px; border-radius: 4px;">
+                <i class="fas fa-project-diagram"></i> {{ bon.projet.nom }}
+            </span>
+            {% if bon.fournisseur or bon.projet.fournisseur %}
+            <div style="font-size:11px; color:var(--text-medium); margin-top:2px;">
+                <i class="fas fa-building"></i> {{ bon.fournisseur.raison_sociale|default:bon.projet.fournisseur.raison_sociale }}
+            </div>
+            {% endif %}
+        {% else %}
+            <span class="svc-tag">{{ bon.service_demandeur.nom|default:"—" }}</span>
+        {% endif %}
+    </td>
     <td>{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}</td>
     <td class="c">
         {% if not bon.est_annule %}

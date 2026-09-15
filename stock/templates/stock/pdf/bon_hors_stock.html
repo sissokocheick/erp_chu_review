@@ -180,6 +180,14 @@ img { max-width: 100%; height: auto; }
               {% if service_code %}<em>CODE :</em> {{ service_code }}{% endif %}
             </div>
           </td>
+          {% elif destinataire %}
+          <td style="width:32%; {% if pdf_config.service_demandeur.encadrer|default_if_none:True %}border:2px solid #000;{% else %}border:none;{% endif %} vertical-align:middle; text-align:{{ pdf_config.service_demandeur.position|default:'center' }}; padding:1.5mm;">
+            <div style="font-size:7pt; font-weight:bold; text-transform:uppercase; letter-spacing:1px; color:#555; margin-bottom:0.5mm;">DESTINATAIRE</div>
+            <div style="font-size:9pt; font-weight:bold; text-transform:uppercase;">{{ destinataire.nom_complet|default:destinataire }}</div>
+            <div style="font-size:7.5pt; margin-top:1mm;">
+              {% if destinataire.poste %}<em>POSTE :</em> {{ destinataire.poste }}{% endif %}
+            </div>
+          </td>
           {% else %}
           <td style="width:32%;"></td>
           {% endif %}
@@ -313,6 +321,14 @@ img { max-width: 100%; height: auto; }
               {% if service_poste %}<em>POSTE :</em> {{ service_poste }}{% endif %}
               {% if service_code and service_poste %}&nbsp;&nbsp;|&nbsp;&nbsp;{% endif %}
               {% if service_code %}<em>CODE :</em> {{ service_code }}{% endif %}
+            </div>
+          </td>
+          {% elif destinataire %}
+          <td style="width:32%; {% if pdf_config.service_demandeur.encadrer|default_if_none:True %}border:2px solid #000;{% else %}border:none;{% endif %} vertical-align:middle; text-align:{{ pdf_config.service_demandeur.position|default:'center' }}; padding:1.5mm;">
+            <div style="font-size:7pt; font-weight:bold; text-transform:uppercase; letter-spacing:1px; color:#555; margin-bottom:0.5mm;">DESTINATAIRE</div>
+            <div style="font-size:9pt; font-weight:bold; text-transform:uppercase;">{{ destinataire.nom_complet|default:destinataire }}</div>
+            <div style="font-size:7.5pt; margin-top:1mm;">
+              {% if destinataire.poste %}<em>POSTE :</em> {{ destinataire.poste }}{% endif %}
             </div>
           </td>
           {% else %}

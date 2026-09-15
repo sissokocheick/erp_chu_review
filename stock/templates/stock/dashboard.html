@@ -81,6 +81,17 @@
   .mtbl tbody td { padding: 9px 10px; vertical-align: middle; color: var(--text-dark); }
   .mtbl tbody tr:last-child { border-bottom: none; }
 
+  .alert-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 12px; }
+  .alert-table thead th {
+    background: var(--bg-hover); padding: 10px 14px; font-size: 11px; text-transform: uppercase;
+    font-weight: 700; color: var(--text-light); border-bottom: 2px solid var(--border-light);
+    letter-spacing: 0.5px; white-space: nowrap;
+  }
+  .alert-table tbody tr { border-bottom: 1px solid var(--border-light); transition: background .15s; }
+  .alert-table tbody tr:hover { background: var(--bg-hover); }
+  .alert-table tbody td { padding: 10px 14px; vertical-align: middle; color: var(--text-dark); }
+  .alert-table tbody tr:last-child { border-bottom: none; }
+
   .stock-bar { width: 100%; height: 6px; background: var(--border-light); border-radius: 3px; overflow: hidden; }
   .stock-bar-fill { height: 100%; border-radius: 3px; transition: width .3s; }
   .fill-red    { background: #e74c3c; }
@@ -159,19 +170,19 @@
 <div class="kpi-grid">
   <div class="kpi-card kpi-blue">
     <div class="kpi-icon"><i class="fas fa-boxes"></i></div>
-    <div><div class="kpi-val">{{ total_articles }}</div><div class="kpi-lbl">Articles catalogués</div></div>
+    <div><div class="kpi-val">{{ total_articles|format_milliers }}</div><div class="kpi-lbl">Articles catalogués</div></div>
   </div>
   <div class="kpi-card kpi-green">
     <div class="kpi-icon"><i class="fas fa-arrow-circle-down"></i></div>
-    <div><div class="kpi-val">{{ entrees_jour }}</div><div class="kpi-lbl">Entrees aujourd'hui</div></div>
+    <div><div class="kpi-val">{{ entrees_jour|format_milliers }}</div><div class="kpi-lbl">Entrees aujourd'hui</div></div>
   </div>
   <div class="kpi-card kpi-orange">
     <div class="kpi-icon"><i class="fas fa-arrow-circle-up"></i></div>
-    <div><div class="kpi-val">{{ sorties_jour }}</div><div class="kpi-lbl">Sorties aujourd'hui</div></div>
+    <div><div class="kpi-val">{{ sorties_jour|format_milliers }}</div><div class="kpi-lbl">Sorties aujourd'hui</div></div>
   </div>
   <div class="kpi-card {% if nb_critiques > 0 %}kpi-red{% else %}kpi-green{% endif %}">
     <div class="kpi-icon"><i class="fas {% if nb_critiques > 0 %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i></div>
-    <div><div class="kpi-val">{{ nb_critiques }}</div><div class="kpi-lbl">Stocks critiques</div></div>
+    <div><div class="kpi-val">{{ nb_critiques|format_milliers }}</div><div class="kpi-lbl">Stocks critiques</div></div>
   </div>
   <div class="kpi-card kpi-purple">
     <div class="kpi-icon"><i class="fas fa-coins"></i></div>
@@ -193,40 +204,69 @@
   <div class="card-head">
     <h6><i class="fas fa-bell" style="color:#e74c3c;"></i> Alertes de Stock</h6>
     <div style="font-size:11px;color:var(--text-light);">
-      {{ nb_critiques }} critique(s) &nbsp; {{ nb_alertes }} alerte(s) &nbsp; {{ nb_surstocks }} surstock(s)
+      {{ nb_critiques|format_milliers }} critique(s) &nbsp; {{ nb_alertes|format_milliers }} alerte(s) &nbsp; {{ nb_surstocks|format_milliers }} surstock(s)
     </div>
   </div>
   <div class="card-body">
     <div class="alert-tabs">
       <button class="atab critique {% if nb_critiques > 0 %}active{% endif %}" onclick="showAlert('critique', this)" aria-pressed="{% if nb_critiques > 0 %}true{% else %}false{% endif %}">
-        <i class="fas fa-exclamation-circle"></i> CRITIQUE <span class="badge-n">{{ nb_critiques }}</span>
+        <i class="fas fa-exclamation-circle"></i> CRITIQUE <span class="badge-n">{{ nb_critiques|format_milliers }}</span>
       </button>
       <button class="atab alerte {% if nb_critiques == 0 and nb_alertes > 0 %}active{% endif %}" onclick="showAlert('alerte', this)" aria-pressed="{% if nb_critiques == 0 and nb_alertes > 0 %}true{% else %}false{% endif %}">
-        <i class="fas fa-exclamation-triangle"></i> ALERTE <span class="badge-n">{{ nb_alertes }}</span>
+        <i class="fas fa-exclamation-triangle"></i> ALERTE <span class="badge-n">{{ nb_alertes|format_milliers }}</span>
       </button>
       <button class="atab surstock {% if nb_critiques == 0 and nb_alertes == 0 %}active{% endif %}" onclick="showAlert('surstock', this)" aria-pressed="{% if nb_critiques == 0 and nb_alertes == 0 %}true{% else %}false{% endif %}">
-        <i class="fas fa-warehouse"></i> SURSTOCK <span class="badge-n">{{ nb_surstocks }}</span>
+        <i class="fas fa-warehouse"></i> SURSTOCK <span class="badge-n">{{ nb_surstocks|format_milliers }}</span>
       </button>
     </div>
 
     <div class="alert-panel {% if nb_critiques > 0 %}active{% endif %}" id="panel-critique" role="tabpanel" aria-labelledby="tab-critique">
       {% if stocks_critiques %}
-      <table class="mtbl">
-        <thead><tr><th>Article</th><th>Famille</th><th>Magasin</th><th>Stock actuel</th><th>Seuil critique</th><th>Niveau</th></tr></thead>
+      <table class="alert-table">
+        <colgroup>
+          <col style="width: 35%;">
+          <col style="width: 21%;">
+          <col style="width: 14%;">
+          <col style="width: 14%;">
+          <col style="width: 16%;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th style="text-align: left;">Article</th>
+            <th style="text-align: left;">Famille</th>
+            <th style="text-align: right;">Stock actuel</th>
+            <th style="text-align: right;">Seuil critique</th>
+            <th style="text-align: center;">Niveau</th>
+          </tr>
+        </thead>
         <tbody>
         {% for s in stocks_critiques|slice:":15" %}
         <tr>
-          <td><strong>{{ s.article.designation }}</strong>{% if s.article.reference %}<br><small style="color:var(--text-light);">{{ s.article.reference }}</small>{% endif %}</td>
-          <td>{{ s.article.famille.intitule|truncatechars:25 }}</td>
-          <td>{{ s.magasin.nom }}</td>
-          <td><strong style="color:#e74c3c;font-size:15px;">{{ s.quantite_physique }}</strong> {{ s.article.unite_distribution }}</td>
-          <td>{{ s.article.seuil_critique }} {{ s.article.unite_distribution }}</td>
-          <td>
-            {% if s.article.seuil_minimum and s.article.seuil_minimum > 0 %}
+          <td style="text-align: left;">
+            <div style="font-weight: 700; color: var(--text-dark);">{{ s.article.designation }}</div>
+            {% if s.article.reference %}<small style="color: var(--text-light); font-size: 11px;">{{ s.article.reference }}</small>{% endif %}
+          </td>
+          <td style="text-align: left;">
+            <span style="color: var(--text-medium);">{{ s.article.famille.intitule|default:"—"|truncatechars:28 }}</span>
+          </td>
+          <td style="text-align: right; font-variant-numeric: tabular-nums;">
+            <strong style="color: #e74c3c; font-size: 15px;">{{ s.quantite_physique|floatformat:1 }}</strong>
+            {% if s.article.unite_distribution %}<small style="color: var(--text-light); font-size: 11px; margin-left: 2px;">{{ s.article.unite_distribution }}</small>{% endif %}
+          </td>
+          <td style="text-align: right; font-variant-numeric: tabular-nums;">
+            <span style="font-weight: 600; color: var(--text-dark);">{{ s.article.seuil_critique|default:"—" }}</span>
+            {% if s.article.unite_distribution and s.article.seuil_critique %}<small style="color: var(--text-light); font-size: 11px; margin-left: 2px;">{{ s.article.unite_distribution }}</small>{% endif %}
+          </td>
+          <td style="text-align: center;">
+            {% if s.quantite_physique == 0 %}
+              <span class="bc" style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size: 11px;"><i class="fas fa-times-circle"></i> Rupture (0%)</span>
+            {% elif s.article.seuil_minimum and s.article.seuil_minimum > 0 %}
               {% widthratio s.quantite_physique s.article.seuil_minimum 100 as pct %}
-              <div class="stock-bar"><div class="stock-bar-fill fill-red" style="width:{{ pct|default:0 }}%"></div></div>
-              <small style="color:var(--text-light);">{{ pct|default:0 }}% du seuil min.</small>
-            {% else %}<small style="color:var(--text-light);">—</small>{% endif %}
+              <div class="stock-bar" style="max-width: 110px; margin: 0 auto 3px auto; height: 7px;"><div class="stock-bar-fill fill-red" style="width: {{ pct|default:0 }}%"></div></div>
+              <small style="color: var(--text-light); font-size: 11px;">{{ pct|default:0 }}% du seuil min.</small>
+            {% else %}
+              <small style="color: var(--text-light);">—</small>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -237,22 +277,49 @@
 
     <div class="alert-panel {% if nb_critiques == 0 and nb_alertes > 0 %}active{% endif %}" id="panel-alerte" role="tabpanel" aria-labelledby="tab-alerte">
       {% if stocks_alerte %}
-      <table class="mtbl">
-        <thead><tr><th>Article</th><th>Famille</th><th>Magasin</th><th>Stock actuel</th><th>Seuil min.</th><th>Niveau</th></tr></thead>
+      <table class="alert-table">
+        <colgroup>
+          <col style="width: 35%;">
+          <col style="width: 21%;">
+          <col style="width: 14%;">
+          <col style="width: 14%;">
+          <col style="width: 16%;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th style="text-align: left;">Article</th>
+            <th style="text-align: left;">Famille</th>
+            <th style="text-align: right;">Stock actuel</th>
+            <th style="text-align: right;">Seuil min.</th>
+            <th style="text-align: center;">Niveau</th>
+          </tr>
+        </thead>
         <tbody>
         {% for s in stocks_alerte|slice:":15" %}
         <tr>
-          <td><strong>{{ s.article.designation }}</strong></td>
-          <td>{{ s.article.famille.intitule|truncatechars:25 }}</td>
-          <td>{{ s.magasin.nom }}</td>
-          <td><strong style="color:#fd7e14;font-size:15px;">{{ s.quantite_physique }}</strong> {{ s.article.unite_distribution }}</td>
-          <td>{{ s.article.seuil_minimum }} {{ s.article.unite_distribution }}</td>
-          <td>
+          <td style="text-align: left;">
+            <div style="font-weight: 700; color: var(--text-dark);">{{ s.article.designation }}</div>
+            {% if s.article.reference %}<small style="color: var(--text-light); font-size: 11px;">{{ s.article.reference }}</small>{% endif %}
+          </td>
+          <td style="text-align: left;">
+            <span style="color: var(--text-medium);">{{ s.article.famille.intitule|default:"—"|truncatechars:28 }}</span>
+          </td>
+          <td style="text-align: right; font-variant-numeric: tabular-nums;">
+            <strong style="color: #fd7e14; font-size: 15px;">{{ s.quantite_physique|floatformat:1 }}</strong>
+            {% if s.article.unite_distribution %}<small style="color: var(--text-light); font-size: 11px; margin-left: 2px;">{{ s.article.unite_distribution }}</small>{% endif %}
+          </td>
+          <td style="text-align: right; font-variant-numeric: tabular-nums;">
+            <span style="font-weight: 600; color: var(--text-dark);">{{ s.article.seuil_minimum|default:"—" }}</span>
+            {% if s.article.unite_distribution and s.article.seuil_minimum %}<small style="color: var(--text-light); font-size: 11px; margin-left: 2px;">{{ s.article.unite_distribution }}</small>{% endif %}
+          </td>
+          <td style="text-align: center;">
             {% if s.article.seuil_minimum and s.article.seuil_minimum > 0 %}
               {% widthratio s.quantite_physique s.article.seuil_minimum 100 as pct2 %}
-              <div class="stock-bar"><div class="stock-bar-fill fill-orange" style="width:{{ pct2|default:0 }}%"></div></div>
-              <small style="color:var(--text-light);">{{ pct2|default:0 }}%</small>
-            {% else %}<small style="color:var(--text-light);">—</small>{% endif %}
+              <div class="stock-bar" style="max-width: 110px; margin: 0 auto 3px auto; height: 7px;"><div class="stock-bar-fill fill-orange" style="width: {{ pct2|default:0 }}%"></div></div>
+              <small style="color: var(--text-light); font-size: 11px;">{{ pct2|default:0 }}%</small>
+            {% else %}
+              <small style="color: var(--text-light);">—</small>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
@@ -263,24 +330,53 @@
 
     <div class="alert-panel {% if nb_critiques == 0 and nb_alertes == 0 %}active{% endif %}" id="panel-surstock" role="tabpanel" aria-labelledby="tab-surstock">
       {% if stocks_surstock %}
-      <table class="mtbl">
-        <thead><tr><th>Article</th><th>Magasin</th><th>Stock actuel</th><th>Seuil maximum</th><th>Excedent</th></tr></thead>
+      <table class="alert-table">
+        <colgroup>
+          <col style="width: 35%;">
+          <col style="width: 21%;">
+          <col style="width: 14%;">
+          <col style="width: 14%;">
+          <col style="width: 16%;">
+        </colgroup>
+        <thead>
+          <tr>
+            <th style="text-align: left;">Article</th>
+            <th style="text-align: left;">Famille</th>
+            <th style="text-align: right;">Stock actuel</th>
+            <th style="text-align: right;">Seuil maximum</th>
+            <th style="text-align: center;">Excédent</th>
+          </tr>
+        </thead>
         <tbody>
         {% for s in stocks_surstock|slice:":15" %}
         <tr>
-          <td><strong>{{ s.article.designation }}</strong></td>
-          <td>{{ s.magasin.nom }}</td>
-          <td><strong style="color:#5dade2;font-size:15px;">{{ s.quantite_physique }}</strong> {{ s.article.unite_distribution }}</td>
-          <td>{{ s.article.seuil_maximum }} {{ s.article.unite_distribution }}</td>
-          <td>
-            {% if s.excedent is not None %}<span class="bb">+{{ s.excedent }} en exces</span>
-            {% else %}<span style="color:var(--text-light);">—</span>{% endif %}
+          <td style="text-align: left;">
+            <div style="font-weight: 700; color: var(--text-dark);">{{ s.article.designation }}</div>
+            {% if s.article.reference %}<small style="color: var(--text-light); font-size: 11px;">{{ s.article.reference }}</small>{% endif %}
+          </td>
+          <td style="text-align: left;">
+            <span style="color: var(--text-medium);">{{ s.article.famille.intitule|default:"—"|truncatechars:28 }}</span>
+          </td>
+          <td style="text-align: right; font-variant-numeric: tabular-nums;">
+            <strong style="color: #5dade2; font-size: 15px;">{{ s.quantite_physique|floatformat:1 }}</strong>
+            {% if s.article.unite_distribution %}<small style="color: var(--text-light); font-size: 11px; margin-left: 2px;">{{ s.article.unite_distribution }}</small>{% endif %}
+          </td>
+          <td style="text-align: right; font-variant-numeric: tabular-nums;">
+            <span style="font-weight: 600; color: var(--text-dark);">{{ s.article.seuil_maximum|default:"—" }}</span>
+            {% if s.article.unite_distribution and s.article.seuil_maximum %}<small style="color: var(--text-light); font-size: 11px; margin-left: 2px;">{{ s.article.unite_distribution }}</small>{% endif %}
+          </td>
+          <td style="text-align: center;">
+            {% if s.excedent is not None %}
+              <span class="bb" style="display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; font-size: 11px;"><i class="fas fa-arrow-up"></i> +{{ s.excedent }} en excès</span>
+            {% else %}
+              <span style="color: var(--text-light);">—</span>
+            {% endif %}
           </td>
         </tr>
         {% endfor %}
         </tbody>
       </table>
-      {% else %}<div class="empty-sm"><i class="fas fa-check-circle" style="color:#27ae60;"></i> Aucun surstock detecte</div>{% endif %}
+      {% else %}<div class="empty-sm"><i class="fas fa-check-circle" style="color:#27ae60;"></i> Aucun surstock détecté</div>{% endif %}
     </div>
   </div>
 </div>
@@ -294,19 +390,27 @@
     </div>
   </div>
   <div class="card">
-    <div class="card-head"><h6><i class="fas fa-chart-pie" style="color:#2ecc71;"></i> Top 5 Services demandeurs (30j)</h6></div>
+    <div class="card-head"><h6><i class="fas fa-chart-bar" style="color:#27ae60;"></i> Top 5 Entrées (30j)</h6></div>
     <div class="card-body">
-      {% if chart_services_labels %}<canvas id="chartServices"></canvas>
-      {% else %}<div class="empty-sm"><i class="fas fa-chart-pie"></i> Pas encore de donnees</div>{% endif %}
+      {% if chart_entrees_labels %}<canvas id="chartEntrees"></canvas>
+      {% else %}<div class="empty-sm"><i class="fas fa-chart-bar"></i> Pas encore de donnees d'entree</div>{% endif %}
     </div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <div class="card-head"><h6><i class="fas fa-chart-line" style="color:#1c5b96;"></i> Flux entrées / sorties (14 jours)</h6></div>
+  <div class="card-body">
+    <canvas id="chartFlux" height="70"></canvas>
   </div>
 </div>
 
 <div class="row2">
   <div class="card">
-    <div class="card-head"><h6><i class="fas fa-chart-line" style="color:#1c5b96;"></i> Flux entrées / sorties (14 jours)</h6></div>
+    <div class="card-head"><h6><i class="fas fa-chart-pie" style="color:#2ecc71;"></i> Top 5 Services demandeurs (30j)</h6></div>
     <div class="card-body">
-      <canvas id="chartFlux" height="90"></canvas>
+      {% if chart_services_labels %}<canvas id="chartServices"></canvas>
+      {% else %}<div class="empty-sm"><i class="fas fa-chart-pie"></i> Pas encore de donnees</div>{% endif %}
     </div>
   </div>
   <div class="card">
@@ -314,34 +418,6 @@
     <div class="card-body">
       {% if chart_familles_labels %}<canvas id="chartFamilles"></canvas>
       {% else %}<div class="empty-sm"><i class="fas fa-chart-pie"></i> Aucune valorisation disponible</div>{% endif %}
-    </div>
-  </div>
-</div>
-
-<div class="row2">
-  <div class="card">
-    <div class="card-head"><h6><i class="fas fa-chart-bar" style="color:#27ae60;"></i> Top 5 Entrées (30j)</h6></div>
-    <div class="card-body">
-      {% if chart_entrees_labels %}<canvas id="chartEntrees"></canvas>
-      {% else %}<div class="empty-sm"><i class="fas fa-chart-bar"></i> Pas encore de donnees d'entree</div>{% endif %}
-    </div>
-  </div>
-  <div class="card">
-    <div class="card-head"><h6><i class="fas fa-coins" style="color:#fd7e14;"></i> Valeur du stock par magasin</h6></div>
-    <div class="card-body" style="max-height:280px;overflow-y:auto;">
-      {% if valeur_par_magasin %}
-      <table class="mtbl">
-        <thead><tr><th>Magasin</th><th style="text-align:right;">Valeur</th></tr></thead>
-        <tbody>
-        {% for vm in valeur_par_magasin %}
-        <tr>
-          <td><strong>{{ vm.magasin__nom }}</strong></td>
-          <td style="text-align:right;white-space:nowrap;">{{ vm.total|floatformat:0 }} F</td>
-        </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-      {% else %}<div class="empty-sm"><i class="fas fa-coins"></i> Aucun stock valorisable</div>{% endif %}
     </div>
   </div>
 </div>
@@ -357,8 +433,8 @@
         {% for r in rotation_par_famille %}
         <tr>
           <td><strong>{{ r.famille }}</strong></td>
-          <td style="text-align:right;">{{ r.stock }}</td>
-          <td style="text-align:right;">{{ r.sorties }}</td>
+          <td style="text-align:right;">{{ r.stock|format_milliers }}</td>
+          <td style="text-align:right;">{{ r.sorties|format_milliers }}</td>
           <td style="text-align:right;">{% if r.taux is not None %}<span class="bb">{{ r.taux|floatformat:-2 }}×</span>{% else %}<span style="color:var(--text-light);">—</span>{% endif %}</td>
         </tr>
         {% endfor %}
@@ -408,7 +484,7 @@
             <strong>{{ lot.article.designation }}</strong><br>
             <span style="color:#e74c3c;font-size:11px;"><i class="fas fa-exclamation-circle me-1"></i>Perime le {{ lot.date_peremption|date:"d/m/Y" }}</span>
           </div>
-          <span class="perem-mag">{{ lot.magasin.nom }}</span>
+          {% if not magasin_actif %}<span class="perem-mag">{{ lot.magasin.nom }}</span>{% endif %}
         </div>
       </div>
       {% endfor %}
@@ -419,7 +495,7 @@
             <strong>{{ lot.article.designation }}</strong><br>
             <span style="color:#fd7e14;font-size:11px;"><i class="fas fa-exclamation-triangle me-1"></i>Expire le {{ lot.date_peremption|date:"d/m/Y" }}</span>
           </div>
-          <span class="perem-mag">{{ lot.magasin.nom }}</span>
+          {% if not magasin_actif %}<span class="perem-mag">{{ lot.magasin.nom }}</span>{% endif %}
         </div>
       </div>
       {% empty %}{% if not lots_perimes %}<div class="empty-sm"><i class="fas fa-calendar-check"></i> Aucune peremption imminente</div>{% endif %}{% endfor %}
@@ -435,7 +511,7 @@
           <td>{% if mv.type_mouvement == 'ENTREE' %}<span class="mv-e"><i class="fas fa-arrow-down me-1"></i>ENTREE</span>
               {% else %}<span class="mv-s"><i class="fas fa-arrow-up me-1"></i>SORTIE</span>{% endif %}</td>
           <td><strong>{{ mv.article.designation|truncatechars:22 }}</strong></td>
-          <td style="text-align:right;white-space:nowrap;"><strong>{{ mv.quantite }}</strong><br><small style="color:var(--text-light);">{{ mv.date_mouvement|date:"d/m H:i" }}</small></td>
+          <td style="text-align:right;white-space:nowrap;"><strong>{{ mv.quantite|format_milliers }}</strong><br><small style="color:var(--text-light);">{{ mv.date_mouvement|date:"d/m H:i" }}</small></td>
         </tr>
         {% empty %}<tr><td colspan="3"><div class="empty-sm"><i class="fas fa-inbox"></i> Aucun mouvement</div></td></tr>
         {% endfor %}

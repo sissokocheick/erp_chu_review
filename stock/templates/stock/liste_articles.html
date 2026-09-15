@@ -229,7 +229,7 @@
 </div>
 
 <div id="maModalePerso" class="modal-overlay">
-    <div class="modal-box">
+    <div class="modal-box" style="max-width: 740px;">
         <div class="modal-header">
             <h5 style="margin: 0; font-size: 17px;"><i class="fas fa-box-open me-2" style="color: #17a2b8;"></i> Creation / Edition Article</h5>
             <button type="button" data-action="fermer-modale" class="btn-modal-close">&times;</button>
@@ -247,7 +247,15 @@
                 <div class="form-group"><label>Reference (Optionnel)</label>{{ form.reference }}</div>
                 <div class="form-group"><label>Designation / Nom *</label>{{ form.designation }}</div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div class="form-group"><label>Unite Distribution *</label>{{ form.unite_distribution }}</div>
+                    <div class="form-group">
+                        <label>Unite Distribution *</label>
+                        {{ form.unite_distribution }}
+                        <datalist id="liste-unites-mesure">
+                            {% for u in unites_mesure %}
+                            <option value="{{ u.nom }}">{{ u.nom }}{% if u.symbole %} ({{ u.symbole }}){% endif %}</option>
+                            {% endfor %}
+                        </datalist>
+                    </div>
                     <div class="form-group"><label>Prix de Reference</label>{{ form.prix_reference }}</div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
@@ -271,12 +279,155 @@
                         <span style="font-size:12px;color:var(--text-light);">Cochez si cet article specifique est une immobilisation.</span>
                     </div>
                 </label>
+
+                <!-- Tarifs par Fournisseur -->
+                <div style="margin-top: 20px; border-top: 1.5px dashed var(--border-color); padding-top: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <div>
+                            <span style="font-size: 11px; font-weight: 700; color: #1c5b96; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="fas fa-tags me-1"></i> Tarifs d'Achat par Fournisseur
+                            </span>
+                            <div style="font-size: 11.5px; color: var(--text-light); margin-top: 2px;">
+                                Renseignez les prix d'achat négociés auprès de chaque fournisseur pour cet article.
+                            </div>
+                        </div>
+                        <button type="button" onclick="ajouterLigneTarifForm()" style="background: #e7f5ea; color: #1e7e34; border: 1.5px solid #c3e6cb; padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                            <i class="fas fa-plus"></i> Ajouter un tarif
+                        </button>
+                    </div>
+
+                    <div style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: var(--bg-card);">
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12.5px;">
+                            <thead style="background: var(--bg-stripe); font-size: 11px; text-transform: uppercase; color: var(--text-medium); border-bottom: 1px solid var(--border-color);">
+                                <tr>
+                                    <th style="padding: 8px 10px; text-align: left;">Fournisseur *</th>
+                                    <th style="padding: 8px 10px; text-align: right; width: 140px;">Prix Achat (FCFA) *</th>
+                                    <th style="padding: 8px 10px; text-align: left; width: 130px;">Réf. Fournisseur</th>
+                                    <th style="padding: 8px 10px; text-align: center; width: 75px;">Délai (j)</th>
+                                    <th style="padding: 8px 10px; text-align: center; width: 40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody-tarifs-form">
+                                {% for t in article_tarifs %}
+                                <tr class="ligne-tarif-form" style="border-bottom: 1px solid var(--border-light);">
+                                    <td style="padding: 6px 8px;">
+                                        <select name="tarif_fournisseur_id[]" required style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: var(--bg-input);">
+                                            <option value="">-- Sélectionner fournisseur --</option>
+                                            {% for f in fournisseurs %}
+                                            <option value="{{ f.id }}" {% if t.fournisseur_id == f.id %}selected{% endif %}>{{ f.code }} - {{ f.raison_sociale }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </td>
+                                    <td style="padding: 6px 8px;">
+                                        <input type="number" step="0.01" min="0" name="tarif_prix_achat[]" value="{{ t.prix_achat }}" required placeholder="0.00" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: right; background: var(--bg-input);">
+                                    </td>
+                                    <td style="padding: 6px 8px;">
+                                        <input type="text" name="tarif_ref_fournisseur[]" value="{{ t.reference_fournisseur|default:'' }}" placeholder="Ex: REF-ABC" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: var(--bg-input);">
+                                    </td>
+                                    <td style="padding: 6px 8px;">
+                                        <input type="number" min="0" name="tarif_delai[]" value="{{ t.delai_livraison_jours|default:'' }}" placeholder="Ex: 5" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: center; background: var(--bg-input);">
+                                    </td>
+                                    <td style="padding: 6px 8px; text-align: center;">
+                                        <button type="button" onclick="this.closest('tr').remove(); verifierLignesTarifForm();" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 14px;" title="Supprimer">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                        <div id="vide-tarifs-form" style="display: {% if article_tarifs %}none{% else %}block{% endif %}; text-align: center; padding: 12px; color: var(--text-light); font-size: 12px;">
+                            <i class="fas fa-info-circle me-1"></i> Aucun tarif négocié défini pour le moment.
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" data-action="fermer-modale" class="btn-cancel">Annuler</button>
                 <button type="button" data-action="enregistrer-article" class="btn-save"><i class="fas fa-save me-1"></i> Enregistrer</button>
             </div>
         </form>
+    </div>
+</div>
+
+<!-- Template ligne tarif pour formulaire création/édition -->
+<template id="tpl-ligne-tarif-form">
+    <tr class="ligne-tarif-form" style="border-bottom: 1px solid var(--border-light);">
+        <td style="padding: 6px 8px;">
+            <select name="tarif_fournisseur_id[]" required style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: var(--bg-input);">
+                <option value="">-- Sélectionner fournisseur --</option>
+                {% for f in fournisseurs %}
+                <option value="{{ f.id }}">{{ f.code }} - {{ f.raison_sociale }}</option>
+                {% endfor %}
+            </select>
+        </td>
+        <td style="padding: 6px 8px;">
+            <input type="number" step="0.01" min="0" name="tarif_prix_achat[]" value="" required placeholder="0.00" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: right; background: var(--bg-input);">
+        </td>
+        <td style="padding: 6px 8px;">
+            <input type="text" name="tarif_ref_fournisseur[]" value="" placeholder="Ex: REF-ABC" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: var(--bg-input);">
+        </td>
+        <td style="padding: 6px 8px;">
+            <input type="number" min="0" name="tarif_delai[]" value="" placeholder="Ex: 5" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: center; background: var(--bg-input);">
+        </td>
+        <td style="padding: 6px 8px; text-align: center;">
+            <button type="button" onclick="this.closest('tr').remove(); verifierLignesTarifForm();" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 14px;" title="Supprimer">
+                <i class="fas fa-trash"></i>
+            </button>
+        </td>
+    </tr>
+</template>
+
+<!-- Modale Rapide : Tarifs par Fournisseur -->
+<div id="modal-rapide-tarifs" class="modal-overlay" style="display: none; z-index: 99999999;">
+    <div class="modal-box" style="max-width: 740px; width: 95%;">
+        <div class="modal-header" style="background: linear-gradient(135deg, #1c5b96, #2b7bb9);">
+            <h5 style="margin: 0; font-size: 16px;">
+                <i class="fas fa-tags me-2"></i> Tarifs Fournisseurs — <span id="quick-article-nom" style="font-weight: 400; opacity: 0.95;"></span>
+            </h5>
+            <button type="button" onclick="fermerModalTarifsFournisseurs()" class="btn-modal-close">&times;</button>
+        </div>
+        <div class="modal-body" style="padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: rgba(28,91,150,0.06); padding: 10px 14px; border-radius: 8px; border: 1px solid rgba(28,91,150,0.15);">
+                <div>
+                    <span style="font-size: 12px; color: var(--text-medium); font-weight: 600;">Prix de référence standard :</span>
+                    <strong id="quick-article-prix-ref" style="font-size: 14px; color: #1c5b96; margin-left: 6px;"></strong>
+                </div>
+                <button type="button" onclick="ajouterLigneTarifQuick()" style="background: #28a745; color: white; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 5px;">
+                    <i class="fas fa-plus"></i> Nouveau tarif fournisseur
+                </button>
+            </div>
+
+            <div id="quick-tarifs-loading" style="text-align: center; padding: 30px; display: none;">
+                <i class="fas fa-spinner fa-spin" style="font-size: 26px; color: #1c5b96;"></i>
+                <div style="margin-top: 10px; color: var(--text-medium); font-size: 13px;">Chargement des tarifs en cours...</div>
+            </div>
+
+            <div id="quick-tarifs-content" style="border: 1px solid var(--border-color); border-radius: 8px; overflow: hidden; background: var(--bg-card);">
+                <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                    <thead style="background: var(--bg-stripe); font-size: 11px; text-transform: uppercase; color: var(--text-medium); border-bottom: 1px solid var(--border-color);">
+                        <tr>
+                            <th style="padding: 10px; text-align: left;">Fournisseur *</th>
+                            <th style="padding: 10px; text-align: right; width: 140px;">Prix Achat (FCFA) *</th>
+                            <th style="padding: 10px; text-align: left; width: 130px;">Réf. Fournisseur</th>
+                            <th style="padding: 10px; text-align: center; width: 75px;">Délai (j)</th>
+                            <th style="padding: 10px; text-align: center; width: 40px;"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="quick-tbody-tarifs">
+                    </tbody>
+                </table>
+                <div id="quick-vide-tarifs" style="display: none; text-align: center; padding: 25px; color: var(--text-light); font-size: 13px;">
+                    <i class="fas fa-info-circle me-1"></i> Aucun tarif négocié pour le moment. Cliquez sur "Nouveau tarif fournisseur" pour en ajouter.
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" onclick="fermerModalTarifsFournisseurs()" class="btn-cancel">Fermer</button>
+            <button type="button" id="btn-save-quick-tarifs" onclick="enregistrerTarifsFournisseursQuick()" class="btn-save" style="background: #28a745;">
+                <i class="fas fa-check me-1"></i> Enregistrer les tarifs
+            </button>
+        </div>
     </div>
 </div>
 
@@ -435,6 +586,34 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
         });
     }
 
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function verifierLignesTarifForm() {
+        const tbody = document.getElementById('tbody-tarifs-form');
+        const msgVide = document.getElementById('vide-tarifs-form');
+        if (tbody && msgVide) {
+            msgVide.style.display = tbody.children.length === 0 ? 'block' : 'none';
+        }
+    }
+
+    function ajouterLigneTarifForm() {
+        const tpl = document.getElementById('tpl-ligne-tarif-form');
+        const tbody = document.getElementById('tbody-tarifs-form');
+        if (tpl && tbody) {
+            const clone = tpl.content.cloneNode(true);
+            tbody.appendChild(clone);
+            verifierLignesTarifForm();
+        }
+    }
+
     function confirmerEnregistrement() {
         const form = document.getElementById('formArticle');
         const urlParams = new URLSearchParams(window.location.search);
@@ -481,6 +660,52 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
             return;
         }
 
+        // Validation des tarifs fournisseurs du formulaire
+        const tarifFournisseurs = form.querySelectorAll('select[name="tarif_fournisseur_id[]"]');
+        const tarifPrix = form.querySelectorAll('input[name="tarif_prix_achat[]"]');
+        const seenF = new Set();
+        let nbTarifsSaisis = 0;
+
+        for (let i = 0; i < tarifFournisseurs.length; i++) {
+            const fVal = tarifFournisseurs[i].value;
+            const pVal = tarifPrix[i] ? tarifPrix[i].value.trim() : '';
+
+            if (fVal || pVal) {
+                if (!fVal) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Fournisseur manquant',
+                        text: 'Veuillez sélectionner un fournisseur pour chaque ligne de tarif.',
+                        confirmButtonColor: '#1c5b96'
+                    });
+                    tarifFournisseurs[i].focus();
+                    return;
+                }
+                if (!pVal || isNaN(parseFloat(pVal)) || parseFloat(pVal) < 0) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Prix d\'achat requis',
+                        text: 'Veuillez saisir un prix d\'achat valide pour chaque fournisseur.',
+                        confirmButtonColor: '#1c5b96'
+                    });
+                    if (tarifPrix[i]) tarifPrix[i].focus();
+                    return;
+                }
+                if (seenF.has(fVal)) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Fournisseur en double',
+                        text: 'Un même fournisseur ne peut pas être ajouté plusieurs fois pour un article.',
+                        confirmButtonColor: '#1c5b96'
+                    });
+                    tarifFournisseurs[i].focus();
+                    return;
+                }
+                seenF.add(fVal);
+                nbTarifsSaisis++;
+            }
+        }
+
         const actionLabel = isNew ? 'Creation' : 'Modification';
         const actionVerb = isNew ? 'creer' : 'modifier';
         const iconType = isNew ? 'question' : 'info';
@@ -488,6 +713,9 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
 
         const peremptionStr = peremption ? '<span style="color:#28a745;">Oui <i class="fas fa-check-circle"></i></span>' : 'Non';
         const patrimoineStr = patrimoine ? '<span style="color:#856404;">Oui <i class="fas fa-check-circle"></i></span>' : 'Non';
+        const tarifsStr = nbTarifsSaisis > 0
+            ? `<span style="color:#1e7e34; font-weight:700;">${nbTarifsSaisis} tarif(s) négocié(s)</span>`
+            : '<span style="color:var(--text-light);">Prix de référence standard</span>';
 
         const recapHTML = '<div style="text-align:left; font-size:14px; line-height:1.7;">' +
             '<p style="margin-bottom:12px; color:var(--text-medium);">Vous etes sur le point <b>' + actionVerb + "</b> l&#39;article suivant :</p>" +
@@ -500,6 +728,7 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
             '<tr style="background:rgba(0,0,0,0.03);"><td style="padding:4px 8px; color:var(--text-light);"><i class="fas fa-layer-group"></i> Seuils</td><td style="padding:4px 8px; font-weight:600;">Min: ' + seuilMin + ' | Crit: ' + seuilCrit + ' | Max: ' + seuilMax + '</td></tr>' +
             '<tr><td style="padding:4px 8px; color:var(--text-light);"><i class="fas fa-clock"></i> Peremption</td><td style="padding:4px 8px; font-weight:600;">' + peremptionStr + '</td></tr>' +
             '<tr style="background:rgba(0,0,0,0.03);"><td style="padding:4px 8px; color:var(--text-light);"><i class="fas fa-building"></i> Patrimoine</td><td style="padding:4px 8px; font-weight:600;">' + patrimoineStr + '</td></tr>' +
+            '<tr><td style="padding:4px 8px; color:var(--text-light);"><i class="fas fa-tags"></i> Tarifs fourn.</td><td style="padding:4px 8px;">' + tarifsStr + '</td></tr>' +
             '</table></div>';
 
         Swal.fire({
@@ -516,6 +745,224 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
             if (result.isConfirmed) {
                 form.submit();
             }
+        });
+    }
+
+    /* ══════════ MODALE RAPIDE TARIFS FOURNISSEURS ══════════ */
+    let currentQuickArticleId = null;
+    let quickFournisseursList = [];
+
+    function ouvrirModalTarifsFournisseurs(articleId, articleNom) {
+        currentQuickArticleId = articleId;
+        const modal = document.getElementById('modal-rapide-tarifs');
+        const nomSpan = document.getElementById('quick-article-nom');
+        const prixRefSpan = document.getElementById('quick-article-prix-ref');
+        const tbody = document.getElementById('quick-tbody-tarifs');
+        const videDiv = document.getElementById('quick-vide-tarifs');
+        const loadingDiv = document.getElementById('quick-tarifs-loading');
+        const contentDiv = document.getElementById('quick-tarifs-content');
+
+        if (nomSpan) nomSpan.textContent = articleNom || '';
+        if (prixRefSpan) prixRefSpan.textContent = '...';
+        if (tbody) tbody.innerHTML = '';
+        if (videDiv) videDiv.style.display = 'none';
+        if (loadingDiv) loadingDiv.style.display = 'block';
+        if (contentDiv) contentDiv.style.display = 'none';
+        if (modal) modal.style.display = 'flex';
+
+        fetch(`/stock/articles/${articleId}/tarifs/`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (loadingDiv) loadingDiv.style.display = 'none';
+                if (contentDiv) contentDiv.style.display = 'block';
+
+                if (data.article) {
+                    if (nomSpan) nomSpan.textContent = data.article.designation;
+                    const pRef = data.article.prix_reference;
+                    if (prixRefSpan) prixRefSpan.textContent = pRef ? `${Math.round(pRef).toLocaleString('fr-FR')} FCFA` : 'Non défini';
+                }
+
+                quickFournisseursList = data.fournisseurs || [];
+                const tarifs = data.tarifs || [];
+
+                if (tarifs.length === 0) {
+                    if (videDiv) videDiv.style.display = 'block';
+                } else {
+                    if (videDiv) videDiv.style.display = 'none';
+                    tarifs.forEach(t => {
+                        ajouterLigneTarifQuick(t);
+                    });
+                }
+            })
+            .catch(err => {
+                console.error('Erreur chargement tarifs:', err);
+                if (loadingDiv) loadingDiv.style.display = 'none';
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: 'Impossible de charger les tarifs fournisseurs.',
+                    confirmButtonColor: '#dc3545'
+                });
+            });
+    }
+
+    function fermerModalTarifsFournisseurs() {
+        const modal = document.getElementById('modal-rapide-tarifs');
+        if (modal) modal.style.display = 'none';
+        currentQuickArticleId = null;
+    }
+
+    function verifierLignesTarifQuick() {
+        const tbody = document.getElementById('quick-tbody-tarifs');
+        const videDiv = document.getElementById('quick-vide-tarifs');
+        if (tbody && videDiv) {
+            videDiv.style.display = tbody.children.length === 0 ? 'block' : 'none';
+        }
+    }
+
+    function ajouterLigneTarifQuick(data = {}) {
+        const tbody = document.getElementById('quick-tbody-tarifs');
+        const videDiv = document.getElementById('quick-vide-tarifs');
+        if (!tbody) return;
+
+        if (videDiv) videDiv.style.display = 'none';
+
+        const tr = document.createElement('tr');
+        tr.className = 'quick-ligne-tarif';
+        tr.style.borderBottom = '1px solid var(--border-light)';
+
+        let selectHtml = '<select class="quick-f-select" required style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: var(--bg-input);">';
+        selectHtml += '<option value="">-- Sélectionner fournisseur --</option>';
+        quickFournisseursList.forEach(f => {
+            const sel = (data.fournisseur_id && String(f.id) === String(data.fournisseur_id)) ? 'selected' : '';
+            selectHtml += `<option value="${f.id}" ${sel}>${escapeHtml(f.code)} - ${escapeHtml(f.nom)}</option>`;
+        });
+        selectHtml += '</select>';
+
+        const prixVal = (data.prix_achat !== undefined && data.prix_achat !== null) ? data.prix_achat : '';
+        const refVal = data.reference_fournisseur || '';
+        const delaiVal = data.delai_livraison_jours || '';
+
+        tr.innerHTML = `
+            <td style="padding: 6px 8px;">${selectHtml}</td>
+            <td style="padding: 6px 8px;">
+                <input type="number" step="0.01" min="0" class="quick-prix-input" value="${prixVal}" required placeholder="0.00" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: right; background: var(--bg-input);">
+            </td>
+            <td style="padding: 6px 8px;">
+                <input type="text" class="quick-ref-input" value="${escapeHtml(refVal)}" placeholder="Ex: REF-ABC" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: var(--bg-input);">
+            </td>
+            <td style="padding: 6px 8px;">
+                <input type="number" min="0" class="quick-delai-input" value="${delaiVal}" placeholder="Ex: 5" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: center; background: var(--bg-input);">
+            </td>
+            <td style="padding: 6px 8px; text-align: center;">
+                <button type="button" onclick="this.closest('tr').remove(); verifierLignesTarifQuick();" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 14px;" title="Supprimer">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    function enregistrerTarifsFournisseursQuick() {
+        if (!currentQuickArticleId) return;
+
+        const rows = document.querySelectorAll('#quick-tbody-tarifs tr.quick-ligne-tarif');
+        const tarifs = [];
+        const seenFournisseurs = new Set();
+        let hasError = false;
+
+        rows.forEach(r => {
+            const fSelect = r.querySelector('.quick-f-select');
+            const prixInput = r.querySelector('.quick-prix-input');
+            const refInput = r.querySelector('.quick-ref-input');
+            const delaiInput = r.querySelector('.quick-delai-input');
+
+            const fId = fSelect ? fSelect.value : '';
+            const prix = prixInput ? prixInput.value.trim() : '';
+
+            if (!fId) {
+                Swal.fire({ icon: 'warning', title: 'Attention', text: 'Veuillez sélectionner un fournisseur pour chaque ligne.' });
+                hasError = true;
+                return;
+            }
+            if (!prix || isNaN(parseFloat(prix)) || parseFloat(prix) < 0) {
+                Swal.fire({ icon: 'warning', title: 'Attention', text: 'Veuillez renseigner un prix d\'achat valide pour chaque fournisseur.' });
+                hasError = true;
+                return;
+            }
+            if (seenFournisseurs.has(fId)) {
+                Swal.fire({ icon: 'warning', title: 'Attention', text: 'Le même fournisseur a été sélectionné plusieurs fois.' });
+                hasError = true;
+                return;
+            }
+            seenFournisseurs.add(fId);
+
+            tarifs.push({
+                fournisseur_id: parseInt(fId),
+                prix_achat: parseFloat(prix),
+                reference_fournisseur: refInput ? refInput.value.trim() : '',
+                delai_livraison_jours: delaiInput && delaiInput.value ? parseInt(delaiInput.value) : null,
+                est_principal: false
+            });
+        });
+
+        if (hasError) return;
+
+        const saveBtn = document.getElementById('btn-save-quick-tarifs');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Enregistrement...';
+        }
+
+        const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
+
+        fetch(`/stock/articles/${currentQuickArticleId}/tarifs/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken,
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ tarifs: tarifs })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-check me-1"></i> Enregistrer les tarifs';
+            }
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Succès !',
+                    text: 'Les tarifs fournisseurs ont été enregistrés avec succès.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+                fermerModalTarifsFournisseurs();
+                // Recharger la liste des articles via la recherche actuelle
+                rechercherArticles(document.getElementById('search-q').value);
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: data.error || 'Une erreur est survenue lors de l\'enregistrement.'
+                });
+            }
+        })
+        .catch(err => {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = '<i class="fas fa-check me-1"></i> Enregistrer les tarifs';
+            }
+            console.error('Erreur enregistrement tarifs:', err);
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: 'Une erreur réseau est survenue.'
+            });
         });
     }
 

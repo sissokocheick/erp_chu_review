@@ -277,8 +277,19 @@ def api_articles_json(request):
     """Retourne la liste des articles en JSON avec recherche et limite.
     ?q=terme → filtre par designation ou reference (insensible à la casse)
     ?limit=50 → limite le nombre de résultats (défaut 50)
+    ?projet_id=12 → filtre les articles du projet si le magasin restreint par projet
     """
     qs = Article.objects.filter(is_deleted=False).order_by('designation')
+
+    projet_id = request.GET.get('projet_id', '').strip()
+    if projet_id and projet_id.isdigit():
+        from stock.views.common_views import get_magasin_actif
+        from stock.services.projet_article_service import get_articles_ids_pour_projet
+        magasin_actif = get_magasin_actif(request)
+        if not magasin_actif or getattr(magasin_actif, 'filtrer_articles_par_projet', True):
+            allowed_ids = get_articles_ids_pour_projet(int(projet_id))
+            qs = qs.filter(id__in=allowed_ids)
+
     q = request.GET.get('q', '').strip()
     if q:
         from stock.views.common_views import normaliser_texte
@@ -290,3 +301,17 @@ def api_articles_json(request):
     limit = min(int(request.GET.get('limit', 50)), 200)
     articles = qs.values('id', 'reference', 'designation', 'unite_distribution').order_by('designation')[:limit]
     return JsonResponse({'articles': list(articles)})
+
+
+@login_required(login_url='/auth/login/')
+def api_articles_projet(request, projet_id):
+    """Retourne la liste des IDs et articles autorisés pour un projet."""
+    from stock.services.projet_article_service import get_articles_ids_pour_projet
+    article_ids = sorted(list(get_articles_ids_pour_projet(projet_id)))
+    articles = list(Article.objects.filter(id__in=article_ids, is_deleted=False).values('id', 'reference', 'designation', 'unite_distribution'))
+    return JsonResponse({
+        'success': True,
+        'projet_id': projet_id,
+        'article_ids': article_ids,
+        'articles': articles
+    })

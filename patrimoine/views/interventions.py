@@ -70,11 +70,8 @@ def _valider_image(fichier, taille_max=2 * 1024 * 1024):
 
 
 @login_required(login_url='/auth/login/')
-
 @patrimoine_required
-
-@verifier_permission('accounts.menu_pat_tech')
-
+@verifier_permission('accounts.menu_pat_historique', 'accounts.menu_pat_interventions', 'accounts.menu_pat_tech')
 def liste_interventions(request):
 
     params = ParametresPatrimoine.get_parametres()
@@ -141,15 +138,13 @@ def detail_intervention(request, intervention_id):
             'immobilisation__type_equipement__categorie',
             'immobilisation__service_affectation',
             'immobilisation__contrat_maintenance__prestataire',
-            'immobilisation__bureau__batiment',
+            'immobilisation__bureau__etage__batiment',
             'intervenant',
             'technicien_appele',
             'contrat',
             'cree_par',
         ).prefetch_related(
-            'pieces',
-            'demandes_materiaux__lignes_demande__article',
-            'historique_statuts',
+            'demandes_pieces__lignes_demande__article',
         ),
         id=intervention_id
     )

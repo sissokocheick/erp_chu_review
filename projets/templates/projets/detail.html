@@ -1,0 +1,1829 @@
+{% extends 'base_ui.html' %}
+{% load static %}
+{% load projets_tags %}
+
+{% block title %}Bilan Projet : {{ projet.nom }} — NexusERP{% endblock %}
+
+{% block contenu %}
+<style>
+  /* ══════════ STYLES DASHBOARD PROJET ══════════ */
+  .dash-header {
+    background: linear-gradient(135deg, #1c5b96 0%, #0d3b6e 100%);
+    color: white;
+    border-radius: 14px;
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    box-shadow: 0 4px 20px rgba(28, 91, 150, 0.25);
+    flex-wrap: wrap;
+  }
+  .dash-header-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .dash-header-left i.ico {
+    font-size: 32px;
+    background: rgba(255, 255, 255, 0.15);
+    padding: 14px;
+    border-radius: 12px;
+  }
+  .dash-header h2 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .dash-header p {
+    margin: 4px 0 0;
+    opacity: 0.85;
+    font-size: 13px;
+  }
+  .dash-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .dash-btn {
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+  }
+  .dash-btn-light {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+  }
+  .dash-btn-light:hover {
+    background: rgba(255, 255, 255, 0.25);
+    color: white;
+  }
+  .dash-btn-primary {
+    background: #28a745;
+    color: white;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.4);
+  }
+  .dash-btn-primary:hover {
+    background: #218838;
+    transform: translateY(-1px);
+    color: white;
+  }
+
+  /* ══════════ KPI METRICS ══════════ */
+  .dash-kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+  }
+  .dash-kpi {
+    background: var(--bg-card);
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 10px var(--shadow);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .dash-kpi:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px var(--shadow);
+  }
+  .dash-kpi-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+  .dash-kpi.blue .dash-kpi-icon { background: rgba(28, 91, 150, 0.12); color: #1c5b96; }
+  .dash-kpi.green .dash-kpi-icon { background: rgba(40, 167, 69, 0.12); color: #28a745; }
+  .dash-kpi.red .dash-kpi-icon { background: rgba(220, 53, 69, 0.12); color: #dc3545; }
+  .dash-kpi.purple .dash-kpi-icon { background: rgba(111, 66, 193, 0.12); color: #6f42c1; }
+
+  .dash-kpi-content h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--text-dark);
+  }
+  .dash-kpi-content span {
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 700;
+    color: var(--text-light);
+    letter-spacing: 0.4px;
+  }
+
+  /* ══════════ SECTION CARDS ══════════ */
+  .dash-card {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 2px 12px var(--shadow);
+    padding: 24px;
+    margin-bottom: 24px;
+  }
+  .dash-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1.5px solid var(--border-light);
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .dash-card-header h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* ══════════ COMPARATIVE TABLE ══════════ */
+  .dash-table-wrap {
+    overflow-x: auto;
+  }
+  .dash-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .dash-table thead tr {
+    background: var(--bg-hover);
+    border-bottom: 2px solid var(--border-color);
+  }
+  .dash-table thead th {
+    padding: 13px 14px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 700;
+    color: var(--text-light);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .dash-table thead th.c { text-align: center; }
+  .dash-table thead th.r { text-align: right; }
+  .dash-table tbody tr {
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.15s;
+  }
+  .dash-table tbody tr:hover {
+    background: var(--bg-hover);
+  }
+  .dash-table tbody td {
+    padding: 13px 14px;
+    vertical-align: middle;
+    color: var(--text-dark);
+  }
+  .dash-table tbody td.c { text-align: center; }
+  .dash-table tbody td.r { text-align: right; }
+
+  /* ══════════ PROGRESS BAR ══════════ */
+  .prog-track {
+    background: var(--bg-hover);
+    border-radius: 20px;
+    height: 10px;
+    width: 100%;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+  }
+  .prog-fill {
+    height: 100%;
+    border-radius: 20px;
+    transition: width 0.3s ease;
+  }
+  .prog-fill.green { background: #28a745; }
+  .prog-fill.blue { background: #1c5b96; }
+  .prog-fill.orange { background: #fd7e14; }
+
+  /* ══════════ TABS ══════════ */
+  .dash-tabs {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 18px;
+    border-bottom: 2px solid var(--border-light);
+  }
+  .dash-tab-btn {
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 10px 18px;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-light);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: -2px;
+  }
+  .dash-tab-btn:hover {
+    color: #1c5b96;
+  }
+  .dash-tab-btn.active {
+    color: #1c5b96;
+    border-bottom-color: #1c5b96;
+  }
+
+  .bon-item-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: var(--bg-hover);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    border: 1px solid var(--border-light);
+    transition: transform 0.15s;
+    text-decoration: none;
+    color: inherit;
+  }
+  .bon-item-card:hover {
+    transform: translateX(4px);
+    border-color: var(--border-color);
+  }
+
+  @media print {
+    .dash-header, .dash-actions, .filter-pills, .dash-tabs { display: none !important; }
+    .dash-card { box-shadow: none; border: 1px solid #ccc; }
+  }
+
+  /* ══════════ ACCORDION & PROFORMAS ══════════ */
+  .chev {
+    display: inline-block;
+    transition: transform 0.2s ease;
+    font-size: 11px;
+    color: var(--text-light);
+  }
+  .chev.rotated {
+    transform: rotate(90deg);
+    color: #1c5b96;
+  }
+  .proforma-row {
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .proforma-row:hover {
+    background: rgba(28, 91, 150, 0.04) !important;
+  }
+  .detail-proforma-row {
+    background: #f8fafc;
+  }
+  .detail-proforma-inner {
+    padding: 16px 20px;
+    border-left: 4px solid #1c5b96;
+    background: #ffffff;
+    margin: 4px 10px 10px 10px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  }
+  .detail-proforma-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    margin-top: 8px;
+  }
+  .detail-proforma-table th {
+    background: #f1f5f9;
+    padding: 8px 10px;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: #475569;
+    font-weight: 700;
+  }
+  .detail-proforma-table td {
+    padding: 8px 10px;
+    border-top: 1px solid #e2e8f0;
+    color: #1e293b;
+  }
+
+  /* ══════════ MODALE PROFORMA ══════════ */
+  .modal-overlay-custom {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.65);
+    z-index: 999999;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(3px);
+  }
+  .modal-box-proforma {
+    background: var(--bg-card, #ffffff);
+    width: 95%;
+    max-width: 980px;
+    max-height: 92vh;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.35);
+    border: 1px solid var(--border-light, #e0e0e0);
+    animation: zoomInModal 0.2s ease-out;
+  }
+  @keyframes zoomInModal {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .modal-header-proforma {
+    background: linear-gradient(135deg, #1c5b96 0%, #0d3b6e 100%);
+    color: white;
+    padding: 16px 22px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-body-proforma {
+    padding: 22px;
+    overflow-y: auto;
+    flex: 1;
+  }
+  .modal-footer-proforma {
+    padding: 14px 22px;
+    border-top: 1px solid var(--border-light, #eee);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    background: var(--bg-hover, #f8f9fa);
+  }
+  .btn-icon-action {
+    background: none;
+    border: none;
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 13px;
+    transition: all 0.15s;
+    color: var(--text-dark);
+  }
+  .btn-icon-action:hover {
+    background: var(--bg-hover);
+    transform: scale(1.1);
+  }
+  .btn-icon-action.print { color: #1c5b96; }
+  .btn-icon-action.edit { color: #fd7e14; }
+  .btn-icon-action.cancel { color: #dc3545; }
+</style>
+
+<!-- ══════════ HEADER BANNER ══════════ -->
+<div class="dash-header">
+  <div class="dash-header-left">
+    <i class="fas fa-hard-hat ico"></i>
+    <div>
+      <h2>
+        {{ projet.nom }}
+        <span class="badge" style="font-size: 11px; padding: 4px 10px; border-radius: 12px; background: rgba(255,255,255,0.25); color: white; font-weight: 700;">
+          {{ projet.get_statut_display }}
+        </span>
+      </h2>
+      <p>
+        <i class="fas fa-truck"></i> Entreprise / Fournisseur : <strong>{{ projet.fournisseur.raison_sociale|default:"Non assigné" }}</strong>
+        {% if projet.fournisseur and projet.meme_fournisseur_livreur %}
+          <span class="badge bg-success" style="font-size: 10px; padding: 2px 7px; margin-left: 4px; vertical-align: middle; border-radius: 6px;" title="Ce fournisseur livre directement le matériel (sélectionné par défaut lors des réceptions)">
+            <i class="fas fa-shipping-fast"></i> Livraisons directes
+          </span>
+        {% elif projet.fournisseur %}
+          <span class="badge bg-secondary" style="font-size: 10px; padding: 2px 7px; margin-left: 4px; vertical-align: middle; border-radius: 6px;" title="Fournisseurs de livraison multiples autorisés">
+            <i class="fas fa-boxes"></i> Livraisons libres
+          </span>
+        {% endif %}
+        &nbsp;|&nbsp;
+        <i class="fas fa-user-circle"></i> Chef : <strong>{% if projet.chef_de_projet %}{{ projet.chef_de_projet.get_full_name|default:projet.chef_de_projet.username }}{% else %}Non assigné{% endif %}</strong>
+        &nbsp;|&nbsp;
+        <i class="fas fa-building"></i> Direction : <strong>{{ projet.direction_responsable.nom|default:"Direction Technique" }}</strong>
+        {% if projet.responsable_direction %}
+          (<strong>{{ projet.responsable_direction.get_full_name|default:projet.responsable_direction.username }}</strong>)
+        {% endif %}
+        &nbsp;|&nbsp; 
+        <i class="fas fa-calendar-alt"></i> Période : <strong>{{ projet.date_debut|date:"d/m/Y"|default:"Début non fixé" }}</strong> au <strong>{{ projet.date_fin_prevue|date:"d/m/Y"|default:"Fin non fixée" }}</strong>
+      </p>
+    </div>
+  </div>
+  <div class="dash-actions">
+    <a href="{% url 'projets:modifier' projet.id %}" class="dash-btn dash-btn-light">
+      <i class="fas fa-edit"></i> Modifier le projet
+    </a>
+    <button type="button" onclick="ouvrirModalStatut()" class="dash-btn dash-btn-light">
+      <i class="fas fa-exchange-alt"></i> Statut
+    </button>
+    <button type="button" onclick="window.print()" class="dash-btn dash-btn-light">
+      <i class="fas fa-print"></i> Imprimer
+    </button>
+    <a href="{% url 'projets:liste' %}" class="dash-btn dash-btn-light">
+      <i class="fas fa-arrow-left"></i> Liste
+    </a>
+  </div>
+</div>
+
+{% if projet.statut == 'TERMINE' %}
+<div style="background: rgba(40, 167, 69, 0.1); border: 1.5px solid rgba(40, 167, 69, 0.35); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <i class="fas fa-check-circle" style="color: #28a745; font-size: 24px;"></i>
+    <div>
+      <strong style="color: #1e7e34; font-size: 14px;">Projet Terminé et Clôturé</strong>
+      <div style="font-size: 12.5px; color: var(--text-dark); margin-top: 2px;">
+        Le chantier est achevé (fin réelle : {{ projet.date_fin_reelle|date:"d/m/Y"|default:"enregistrée" }}). Les nouvelles réceptions et sorties de stock sont clôturées. Vous pouvez consulter l'historique et imprimer le bilan final.
+      </div>
+    </div>
+  </div>
+  <button type="button" onclick="ouvrirModalStatut()" class="dash-btn" style="background: white; border: 1px solid #28a745; color: #28a745; font-size: 12px; white-space: nowrap;">
+    <i class="fas fa-undo me-1"></i> Rouvrir le projet
+  </button>
+</div>
+{% elif projet.statut == 'SUSPENDU' %}
+<div style="background: rgba(255, 193, 7, 0.12); border: 1.5px solid rgba(255, 193, 7, 0.45); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <i class="fas fa-pause-circle" style="color: #d39e00; font-size: 24px;"></i>
+    <div>
+      <strong style="color: #856404; font-size: 14px;">Projet Temporairement Suspendu</strong>
+      <div style="font-size: 12.5px; color: var(--text-dark); margin-top: 2px;">
+        Le chantier est en pause. Les sorties de matériel du magasin vers ce chantier sont bloquées pour protéger le stock.
+      </div>
+    </div>
+  </div>
+  <button type="button" onclick="ouvrirModalStatut()" class="dash-btn" style="background: white; border: 1px solid #d39e00; color: #856404; font-size: 12px; white-space: nowrap;">
+    <i class="fas fa-play me-1"></i> Réactiver en cours
+  </button>
+</div>
+{% elif projet.statut == 'ANNULE' %}
+<div style="background: rgba(220, 53, 69, 0.1); border: 1.5px solid rgba(220, 53, 69, 0.35); border-radius: 12px; padding: 14px 20px; margin-bottom: 20px; display: flex; align-items: center; gap: 12px;">
+  <i class="fas fa-times-circle" style="color: #dc3545; font-size: 24px;"></i>
+  <div>
+    <strong style="color: #bd2130; font-size: 14px;">Projet Annulé</strong>
+    <div style="font-size: 12.5px; color: var(--text-dark); margin-top: 2px;">
+      Ce projet a été annulé. Tous les mouvements de stock et les devis proformas sont verrouillés.
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- ══════════ KPI CARDS ══════════ -->
+<div class="dash-kpis">
+  <div class="dash-kpi blue">
+    <div class="dash-kpi-icon"><i class="fas fa-coins"></i></div>
+    <div class="dash-kpi-content">
+      <h3>{% if projet.budget_alloue %}{{ projet.budget_alloue|format_milliers }} <small style="font-size:12px;">FCFA</small>{% else %}—{% endif %}</h3>
+      <span>Budget Initial Alloué</span>
+    </div>
+  </div>
+  <div class="dash-kpi green">
+    <div class="dash-kpi-icon"><i class="fas fa-boxes"></i></div>
+    <div class="dash-kpi-content">
+      <h3>{{ total_valeur_recue|format_milliers }} <small style="font-size:12px;">FCFA</small></h3>
+      <span>Valeur Réceptions Fournisseurs</span>
+    </div>
+  </div>
+  <div class="dash-kpi red">
+    <div class="dash-kpi-icon"><i class="fas fa-arrow-up"></i></div>
+    <div class="dash-kpi-content">
+      <h3>{{ total_valeur_nette|format_milliers }} <small style="font-size:12px;">FCFA</small></h3>
+      <span>Coût Net Décaissé (Chantier)</span>
+    </div>
+  </div>
+  <div class="dash-kpi purple">
+    <div class="dash-kpi-icon"><i class="fas fa-balance-scale"></i></div>
+    <div class="dash-kpi-content">
+      <h3>{{ bilan|length }}</h3>
+      <span>Articles Référencés</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SECTION : PROFORMAS & DEVIS FOURNISSEURS ══════════ -->
+<div class="dash-card">
+  <div class="dash-card-header">
+    <div>
+      <h3>
+        <i class="fas fa-file-invoice-dollar" style="color:#28a745;"></i> 
+        Besoins Prévisionnels : Proformas & Devis Fournisseurs
+      </h3>
+      <span style="font-size: 12px; color: var(--text-light); margin-top: 3px; display: block;">
+        Enregistrez les devis proforma reçus du fournisseur. Les articles et quantités sont automatiquement agrégés pour piloter les réceptions et les consommations du chantier.
+      </span>
+    </div>
+    {% if projet.statut != 'TERMINE' and projet.statut != 'ANNULE' %}
+      <button type="button" class="dash-btn dash-btn-primary" onclick="ouvrirModalProforma('creer')">
+        <i class="fas fa-plus-circle"></i> Enregistrer une Proforma
+      </button>
+    {% else %}
+      <span class="badge" style="background: rgba(108, 117, 125, 0.15); color: #6c757d; padding: 8px 14px; font-weight: 700; border-radius: 8px; font-size: 12.5px;">
+        <i class="fas fa-lock me-1"></i> Projet {{ projet.get_statut_display|lower }} (Proformas verrouillées)
+      </span>
+    {% endif %}
+  </div>
+
+  <div class="dash-table-wrap">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th style="width: 36px; text-align: center;"></th>
+          <th>N° Proforma / Devis</th>
+          <th>Date d'enreg.</th>
+          <th>Fournisseur / Entreprise</th>
+          <th class="c">Matériels</th>
+          <th class="r">Montant Estimé</th>
+          <th class="c">Statut</th>
+          <th class="c" style="width: 140px;">Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for pf in proformas %}
+        <tr class="proforma-row {% if pf.statut == 'ANNULE' %}annule{% endif %}" onclick="toggleDetailProforma({{ pf.id }})">
+          <td class="c">
+            <i class="fas fa-chevron-right chev" id="chev-pf-{{ pf.id }}"></i>
+          </td>
+          <td>
+            <span style="font-weight: 700; color: #1c5b96; font-size: 13.5px;">
+              <i class="fas fa-file-invoice" style="margin-right: 4px; color: #6c757d;"></i>
+              {{ pf.numero_proforma }}
+            </span>
+            {% if pf.objet %}
+              <div style="font-size: 11px; color: var(--text-light); margin-top: 2px;">{{ pf.objet|truncatechars:45 }}</div>
+            {% endif %}
+          </td>
+          <td>
+            <strong>{{ pf.date_proforma|date:"d/m/Y" }}</strong>
+            <div style="font-size: 11px; color: var(--text-light);">Saisi par {{ pf.cree_par.username|default:"Système" }}</div>
+          </td>
+          <td>
+            {% if pf.fournisseur %}
+              <i class="fas fa-building" style="color: var(--text-light); margin-right: 4px;"></i>
+              <strong>{{ pf.fournisseur.raison_sociale }}</strong>
+              {% if pf.fournisseur.code %}
+                <small style="color: var(--text-light);">({{ pf.fournisseur.code }})</small>
+              {% endif %}
+            {% else %}
+              <span style="color: var(--text-light);">— Non spécifié —</span>
+            {% endif %}
+          </td>
+          <td class="c">
+            <span class="badge" style="background: rgba(28, 91, 150, 0.1); color: #1c5b96; font-weight: 700; padding: 4px 10px; border-radius: 10px; font-size: 11px;">
+              <i class="fas fa-boxes"></i> {{ pf.lignes.count }} réf. ({{ pf.total_articles }} u)
+            </span>
+          </td>
+          <td class="r" style="font-weight: 700; color: var(--text-dark);">
+            {% if pf.total_montant_estime %}
+              {{ pf.total_montant_estime|format_milliers }} <small style="font-size: 11px;">FCFA</small>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+          <td class="c">
+            {% if pf.statut == 'ACTIF' %}
+              <span class="badge" style="background: rgba(40, 167, 69, 0.15); color: #28a745; padding: 4px 9px; border-radius: 10px; font-size: 11px; font-weight: 700;">
+                <i class="fas fa-check-circle"></i> Actif
+              </span>
+            {% else %}
+              <span class="badge" style="background: rgba(220, 53, 69, 0.15); color: #dc3545; padding: 4px 9px; border-radius: 10px; font-size: 11px; font-weight: 700;">
+                <i class="fas fa-ban"></i> Annulé
+              </span>
+            {% endif %}
+          </td>
+          <td class="c" onclick="event.stopPropagation();">
+            <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+              {% if pf.fichier_joint %}
+                <a href="{{ pf.fichier_joint.url }}" target="_blank" class="btn-icon-action" style="color:#17a2b8;" title="Télécharger / Voir le devis joint">
+                  <i class="fas fa-paperclip"></i>
+                </a>
+              {% endif %}
+              <button type="button" class="btn-icon-action print" title="Imprimer le bordereau officiel (PDF)" onclick="imprimerModal('{% url 'projets:imprimer_proforma' projet.id pf.id %}', 'Proforma — {{ pf.numero_proforma }}')">
+                <i class="fas fa-print"></i>
+              </button>
+              <button type="button" class="btn-icon-action edit" title="Modifier la proforma" onclick="ouvrirModalProforma('modifier', {{ pf.id }})">
+                <i class="fas fa-edit"></i>
+              </button>
+              <form method="post" action="{% url 'projets:annuler_proforma' projet.id pf.id %}" style="display: inline; margin:0;" id="form-annuler-pf-{{ pf.id }}">
+                {% csrf_token %}
+                {% if pf.statut == 'ACTIF' %}
+                  <button type="button" class="btn-icon-action cancel" title="Annuler la proforma" onclick="confirmerAnnulationProforma({{ pf.id }}, '{{ pf.numero_proforma }}', true)">
+                    <i class="fas fa-times-circle"></i>
+                  </button>
+                {% else %}
+                  <button type="button" class="btn-icon-action" style="color:#28a745;" title="Réactiver la proforma" onclick="confirmerAnnulationProforma({{ pf.id }}, '{{ pf.numero_proforma }}', false)">
+                    <i class="fas fa-undo"></i>
+                  </button>
+                {% endif %}
+              </form>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Ligne dépliable détail matériel -->
+        <tr id="detail-pf-{{ pf.id }}" class="detail-proforma-row" style="display: none;">
+          <td colspan="8" style="padding: 0;">
+            <div class="detail-proforma-inner">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h5 style="margin: 0; font-size: 13px; font-weight: 700; color: #1c5b96;">
+                  <i class="fas fa-list-ul me-1"></i> Détail des matériels figurant sur la proforma {{ pf.numero_proforma }}
+                </h5>
+                {% if pf.fichier_joint %}
+                  <a href="{{ pf.fichier_joint.url }}" target="_blank" style="font-size: 12px; color: #17a2b8; text-decoration: none;">
+                    <i class="fas fa-file-pdf"></i> Voir le scan joint
+                  </a>
+                {% endif %}
+              </div>
+              <table class="detail-proforma-table">
+                <thead>
+                  <tr>
+                    <th style="width: 50px; text-align: center;">N°</th>
+                    <th style="width: 150px;">Référence</th>
+                    <th>Désignation du Matériel</th>
+                    <th style="width: 120px; text-align: center;">Quantité Prévue</th>
+                    <th style="width: 130px; text-align: right;">P.U Estimé</th>
+                    <th style="width: 140px; text-align: right;">Montant Estimé</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for l in pf.lignes.all %}
+                  <tr>
+                    <td style="text-align: center; color: var(--text-light);">{{ forloop.counter }}</td>
+                    <td style="font-family: monospace; font-weight: 600;">{{ l.article.reference|default:"—" }}</td>
+                    <td><strong>{{ l.article.designation }}</strong></td>
+                    <td style="text-align: center; font-weight: 800; color: #1c5b96; font-size: 13px;">{{ l.quantite_prevue }}</td>
+                    <td style="text-align: right;">{% if l.prix_unitaire_estime %}{{ l.prix_unitaire_estime|format_milliers }} F{% else %}—{% endif %}</td>
+                    <td style="text-align: right; font-weight: 700;">
+                      {% if l.prix_unitaire_estime %}
+                        {% widthratio l.prix_unitaire_estime 1 l.quantite_prevue as total_ligne %}
+                        {{ total_ligne|format_milliers }} F
+                      {% else %}
+                        —
+                      {% endif %}
+                    </td>
+                  </tr>
+                  {% empty %}
+                  <tr>
+                    <td colspan="6" style="text-align: center; padding: 15px; color: var(--text-light);">
+                      Aucun article renseigné pour cette proforma.
+                    </td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 36px 20px; color: var(--text-light);">
+            <i class="fas fa-file-invoice" style="font-size: 32px; opacity: 0.3; margin-bottom: 8px; display: block;"></i>
+            Aucune proforma ou devis fournisseur enregistré pour ce chantier.
+            <div style="margin-top: 10px;">
+              <button type="button" onclick="ouvrirModalProforma('creer')" class="dash-btn dash-btn-primary" style="font-size: 12px; padding: 7px 16px;">
+                <i class="fas fa-plus"></i> Enregistrer une première proforma
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════ TABLEAU DE BORD : COMPARATIF PROFORMA VS RÉEL ══════════ -->
+<div class="dash-card">
+  <div class="dash-card-header">
+    <h3><i class="fas fa-chart-line" style="color:#1c5b96;"></i> Suivi Matière : Prévisions Proforma vs Réceptions & Consommations</h3>
+    <span style="font-size: 12px; color: var(--text-light);">
+      <i class="fas fa-info-circle"></i> Données synchronisées avec les mouvements de stock réels
+    </span>
+  </div>
+
+  <div class="dash-table-wrap">
+    <table class="dash-table">
+      <thead>
+        <tr>
+          <th>Désignation Article</th>
+          <th class="c" style="background: rgba(28, 91, 150, 0.08); color: #1c5b96;">Prévu (Proforma)</th>
+          <th class="c" style="background: rgba(40, 167, 69, 0.08); color: #28a745;">Reçu Fournisseur</th>
+          <th style="min-width: 140px;">Taux Réception</th>
+          <th class="c" style="background: rgba(220, 53, 69, 0.08); color: #dc3545;">Sorti Chantier</th>
+          <th class="c" style="background: rgba(23, 162, 184, 0.08); color: #17a2b8;">Retourné Magasin</th>
+          <th class="c" style="font-weight: 800;">Conso. Nette</th>
+          <th class="r">Valeur Nette</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if bilan %}
+        <!-- ═════ Ligne Synthèse Accordéon (1 seule ligne dépliable) ═════ -->
+        <tr class="proforma-row" onclick="toggleDetailBilan()" style="background: rgba(28, 91, 150, 0.04); font-weight: 700; cursor: pointer;">
+          <td>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <i id="chev-bilan" class="fas fa-chevron-right chev" style="font-size: 13px;"></i>
+              <div>
+                <span style="font-weight: 800; color: #1c5b96; font-size: 13.5px;">
+                  <i class="fas fa-cubes me-1"></i> Ensemble des Fournitures du Chantier
+                </span>
+                <span class="badge" style="background: rgba(28, 91, 150, 0.12); color: #1c5b96; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 10px; margin-left: 6px;">
+                  {{ bilan_global.total_articles }} référence(s)
+                </span>
+                {% if bilan_global.total_surconsommations > 0 %}
+                  <span class="badge" style="background: rgba(220, 53, 69, 0.15); color: #dc3545; font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 10px; margin-left: 4px;">
+                    <i class="fas fa-exclamation-triangle"></i> {{ bilan_global.total_surconsommations }} surconso.
+                  </span>
+                {% endif %}
+                <div style="font-size: 11px; color: var(--text-light); font-weight: normal; margin-top: 2px;">
+                  <i class="fas fa-mouse-pointer" style="font-size: 10px; opacity: 0.7;"></i> <span id="txt-bilan-action">Cliquer pour déplier et voir la liste des {{ bilan_global.total_articles }} article(s)</span>
+                </div>
+              </div>
+            </div>
+          </td>
+          <td class="c" style="font-weight: 800; font-size: 13.5px; background: rgba(28, 91, 150, 0.05); color: #1c5b96;">
+            {{ bilan_global.total_prevu }}
+          </td>
+          <td class="c" style="font-weight: 800; font-size: 13.5px; color: #28a745; background: rgba(40, 167, 69, 0.05);">
+            {{ bilan_global.total_recu }}
+          </td>
+          <td>
+            <div class="prog-track" style="height: 10px;">
+              <div class="prog-fill {% if bilan_global.progression_globale >= 100 %}green{% else %}blue{% endif %}" 
+                   style="width: {{ bilan_global.progression_globale }}%;"></div>
+            </div>
+            <div style="font-size: 10px; font-weight: 800; color: var(--text-light); text-align: right; margin-top: 3px;">
+              {{ bilan_global.progression_globale }}%
+            </div>
+          </td>
+          <td class="c" style="color: #dc3545; font-weight: 800; background: rgba(220, 53, 69, 0.05);">
+            {{ bilan_global.total_sorti }}
+          </td>
+          <td class="c" style="color: #17a2b8; font-weight: 800; background: rgba(23, 162, 184, 0.05);">
+            {{ bilan_global.total_retourne }}
+          </td>
+          <td class="c" style="font-weight: 800; font-size: 14px; {% if bilan_global.total_surconsommations > 0 %}color: #dc3545;{% endif %}">
+            {{ bilan_global.total_net }}
+          </td>
+          <td class="r" style="font-weight: 800; font-size: 13.5px;">
+            {{ bilan_global.total_valeur_nette|format_milliers }} <small>FCFA</small>
+          </td>
+        </tr>
+
+        <!-- ═════ Ligne dépliable contenant le détail complet des articles ═════ -->
+        <tr id="row-detail-bilan" class="detail-proforma-row" style="display: none;">
+          <td colspan="8" style="padding: 0;">
+            <div class="detail-proforma-inner" style="border-left-color: #1c5b96; margin: 6px 10px 14px 10px; background: #ffffff;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <h5 style="margin: 0; font-size: 13.5px; font-weight: 700; color: #1c5b96;">
+                    <i class="fas fa-list-ul me-1"></i> Liste détaillée des matériels du projet ({{ bilan_global.total_articles }} références)
+                  </h5>
+                  <span id="bilan-count-filtre" class="badge" style="background: #f1f5f9; color: var(--text-dark); font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 8px;">
+                    {{ bilan_global.total_articles }} affiché(s)
+                  </span>
+                </div>
+                <!-- Filtre rapide d'articles -->
+                <div style="position: relative; width: 280px; max-width: 100%;">
+                  <input type="text" id="input-filtre-bilan" class="input-custom" 
+                         placeholder="🔍 Filtrer un article..." 
+                         oninput="filtrerLignesBilan(this.value)"
+                         style="padding: 6px 10px 6px 30px; font-size: 12px; border-radius: 6px; width: 100%; box-sizing: border-box;">
+                  <i class="fas fa-search" style="position: absolute; left: 10px; top: 9px; color: var(--text-light); font-size: 11px;"></i>
+                </div>
+              </div>
+
+              <div style="max-height: 480px; overflow-y: auto; border: 1px solid var(--border-color); border-radius: 8px;">
+                <table class="detail-proforma-table" style="width: 100%; border-collapse: collapse; margin: 0;">
+                  <thead style="position: sticky; top: 0; z-index: 2; background: #f8fafc;">
+                    <tr>
+                      <th style="padding: 9px 12px; text-align: left;">Désignation de l'Article</th>
+                      <th style="padding: 9px 12px; text-align: center; width: 125px; background: rgba(28, 91, 150, 0.08); color: #1c5b96;">Prévu (Proforma)</th>
+                      <th style="padding: 9px 12px; text-align: center; width: 125px; background: rgba(40, 167, 69, 0.08); color: #28a745;">Reçu Fournisseur</th>
+                      <th style="padding: 9px 12px; text-align: left; min-width: 130px;">Taux Réception</th>
+                      <th style="padding: 9px 12px; text-align: center; width: 110px; background: rgba(220, 53, 69, 0.08); color: #dc3545;">Sorti Chantier</th>
+                      <th style="padding: 9px 12px; text-align: center; width: 110px; background: rgba(23, 162, 184, 0.08); color: #17a2b8;">Retourné Magasin</th>
+                      <th style="padding: 9px 12px; text-align: center; width: 110px; font-weight: 800;">Conso. Nette</th>
+                      <th style="padding: 9px 12px; text-align: right; width: 130px;">Valeur Nette</th>
+                    </tr>
+                  </thead>
+                  <tbody id="tbody-detail-bilan">
+                    {% for item in bilan %}
+                    <tr class="row-item-bilan" data-nom="{{ item.designation|lower }}">
+                      <td style="font-weight: 700; padding: 9px 12px;">
+                        {{ item.designation }}
+                        {% if item.alerte_surconsommation %}
+                          <span style="background: rgba(220, 53, 69, 0.15); color: #dc3545; padding: 2px 7px; border-radius: 10px; font-size: 10px; margin-left: 6px;" title="Attention : la consommation nette dépasse la quantité initiale prévue au proforma !">
+                            <i class="fas fa-exclamation-triangle"></i> Surconso.
+                          </span>
+                        {% endif %}
+                      </td>
+                      <td class="c" style="font-weight: 700; background: rgba(28, 91, 150, 0.03); text-align: center; padding: 9px 12px;">
+                        {{ item.prevu }}
+                      </td>
+                      <td class="c" style="font-weight: 700; color: #28a745; background: rgba(40, 167, 69, 0.03); text-align: center; padding: 9px 12px;">
+                        {{ item.recu }}
+                      </td>
+                      <td style="padding: 9px 12px;">
+                        <div class="prog-track">
+                          <div class="prog-fill {% if item.progression_recu >= 100 %}green{% else %}blue{% endif %}" 
+                               style="width: {{ item.progression_recu }}%;"></div>
+                        </div>
+                        <div style="font-size: 10px; font-weight: 700; color: var(--text-light); text-align: right; margin-top: 3px;">
+                          {{ item.progression_recu }}%
+                        </div>
+                      </td>
+                      <td class="c" style="color: #dc3545; background: rgba(220, 53, 69, 0.03); text-align: center; padding: 9px 12px;">
+                        {{ item.sorti }}
+                      </td>
+                      <td class="c" style="color: #17a2b8; background: rgba(23, 162, 184, 0.03); text-align: center; padding: 9px 12px;">
+                        {{ item.retourne }}
+                      </td>
+                      <td class="c" style="font-weight: 800; font-size: 13.5px; text-align: center; padding: 9px 12px; {% if item.alerte_surconsommation %}color: #dc3545;{% endif %}">
+                        {{ item.net }}
+                      </td>
+                      <td class="r" style="font-weight: 700; text-align: right; padding: 9px 12px;">
+                        {{ item.valeur_nette|format_milliers }} <small>FCFA</small>
+                      </td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" style="text-align: center; padding: 40px 20px; color: var(--text-light);">
+            <i class="fas fa-clipboard-list" style="font-size: 32px; opacity: 0.3; margin-bottom: 8px; display: block;"></i>
+            Aucun besoin prévisionnel ni mouvement de stock enregistré pour ce projet.
+            <div style="margin-top: 10px;">
+              <button type="button" onclick="ouvrirModalProforma('creer')" class="dash-btn dash-btn-primary" style="font-size: 12px; padding: 6px 14px;">
+                <i class="fas fa-plus"></i> Enregistrer une proforma
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ══════════ HISTORIQUE DES DOCUMENTS DE STOCK ══════════ -->
+<div class="dash-card">
+  <div class="dash-tabs">
+    <button type="button" class="dash-tab-btn active" onclick="basculerOnglet('tab-entrees', this)">
+      <i class="fas fa-boxes"></i> Réceptions Fournisseurs ({{ bons_entree.count }})
+    </button>
+    <button type="button" class="dash-tab-btn" onclick="basculerOnglet('tab-sorties', this)">
+      <i class="fas fa-arrow-up"></i> Sorties Décaissées ({{ bons_sortie.count }})
+    </button>
+    <button type="button" class="dash-tab-btn" onclick="basculerOnglet('tab-retours', this)">
+      <i class="fas fa-arrow-down"></i> Retours au Magasin ({{ bons_retour.count }})
+    </button>
+  </div>
+
+  <!-- Contenu Onglet 1 : Entrées -->
+  <div id="tab-entrees" class="tab-pane">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px;">
+      {% for bon in bons_entree %}
+        <a href="{% url 'imprimer_bon_multi_lignes' bon.id %}" target="_blank" class="bon-item-card" title="Ouvrir le bon de réception (PDF)">
+          <div>
+            <strong style="color: #28a745; font-size: 13.5px;"><i class="fas fa-file-pdf" style="margin-right: 4px;"></i> {{ bon.numero_bon }}</strong>
+            <div style="font-size: 11.5px; color: var(--text-light); margin-top: 2px;">
+              {{ bon.date_bon|date:"d/m/Y H:i" }} | Par {{ bon.cree_par.username }}
+            </div>
+            {% if bon.reference_externe %}
+              <div style="font-size: 11px; color: var(--text-medium); margin-top: 2px;">
+                Réf BL/Facture : <strong>{{ bon.reference_externe }}</strong>
+              </div>
+            {% endif %}
+          </div>
+          <span class="badge" style="background: rgba(40, 167, 69, 0.12); color: #28a745; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 11px;">
+            {{ bon.lignes_bon.count }} article(s)
+          </span>
+        </a>
+      {% empty %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-light);">
+          Aucune réception fournisseur n'est rattachée à ce projet.
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Contenu Onglet 2 : Sorties -->
+  <div id="tab-sorties" class="tab-pane" style="display: none;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px;">
+      {% for bon in bons_sortie %}
+        <a href="{% url 'imprimer_bon_multi_lignes' bon.id %}" target="_blank" class="bon-item-card" title="Ouvrir le bon de sortie chantier (PDF)">
+          <div>
+            <strong style="color: #dc3545; font-size: 13.5px;"><i class="fas fa-file-pdf" style="margin-right: 4px;"></i> {{ bon.numero_bon }}</strong>
+            <div style="font-size: 11.5px; color: var(--text-light); margin-top: 2px;">
+              {{ bon.date_bon|date:"d/m/Y H:i" }} | Par {{ bon.cree_par.username }}
+            </div>
+          </div>
+          <span class="badge" style="background: rgba(220, 53, 69, 0.12); color: #dc3545; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 11px;">
+            {{ bon.lignes_bon.count }} article(s)
+          </span>
+        </a>
+      {% empty %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-light);">
+          Aucune sortie de matériel décaissée vers ce chantier.
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Contenu Onglet 3 : Retours -->
+  <div id="tab-retours" class="tab-pane" style="display: none;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px;">
+      {% for bon in bons_retour %}
+        <a href="{% url 'imprimer_bon_multi_lignes' bon.id %}" target="_blank" class="bon-item-card" title="Ouvrir le bon de retour magasin (PDF)">
+          <div>
+            <strong style="color: #17a2b8; font-size: 13.5px;"><i class="fas fa-file-pdf" style="margin-right: 4px;"></i> {{ bon.numero_bon }}</strong>
+            <div style="font-size: 11.5px; color: var(--text-light); margin-top: 2px;">
+              {{ bon.date_bon|date:"d/m/Y H:i" }} | Par {{ bon.cree_par.username }}
+            </div>
+          </div>
+          <span class="badge" style="background: rgba(23, 162, 184, 0.12); color: #17a2b8; padding: 4px 10px; border-radius: 12px; font-weight: 700; font-size: 11px;">
+            {{ bon.lignes_bon.count }} article(s)
+          </span>
+        </a>
+      {% empty %}
+        <div style="grid-column: 1 / -1; text-align: center; padding: 30px; color: var(--text-light);">
+          Aucun retour de matériel non utilisé ou reliquat enregistré pour ce projet.
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODALE CHANGEMENT STATUT RAPIDE ══════════ -->
+<div id="modal-statut" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 999999; align-items: center; justify-content: center; backdrop-filter: blur(3px);">
+  <div style="background: var(--bg-card, #fff); width: 92%; max-width: 490px; border-radius: 14px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.35); border: 1px solid var(--border-light, #e2e8f0); animation: zoomInModal 0.2s ease-out;">
+    <div style="background: linear-gradient(135deg, #1c5b96 0%, #0d3b6e 100%); color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between;">
+      <h3 style="margin: 0; font-size: 16px; font-weight: 700; color: white; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-exchange-alt"></i> Modifier le statut du projet
+      </h3>
+      <button type="button" onclick="fermerModalStatut()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;">
+        &times;
+      </button>
+    </div>
+
+    <form id="form-changer-statut" method="post" action="{% url 'projets:changer_statut' projet.id %}" onsubmit="return confirmerChangementStatut(event)">
+      {% csrf_token %}
+      <div style="padding: 20px;">
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-medium); margin-bottom: 5px; text-transform: uppercase;">
+            Statut actuel
+          </label>
+          <div style="padding: 9px 12px; background: var(--bg-hover, #f8fafc); border-radius: 8px; border: 1px solid var(--border-light, #e2e8f0); display: flex; align-items: center; gap: 8px;">
+            <span class="status-pill status-{{ projet.statut|lower }}" style="font-size: 12px; padding: 4px 10px;">
+              {{ projet.get_statut_display }}
+            </span>
+          </div>
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-medium); margin-bottom: 5px; text-transform: uppercase;">
+            Nouveau statut souhaité <span style="color:#dc3545;">*</span>
+          </label>
+          <select name="statut" id="select-nouveau-statut" onchange="actualiserInfoStatut(this.value)" style="width: 100%; padding: 10px 12px; border-radius: 8px; border: 1.5px solid var(--border-color); background: var(--bg-input); color: var(--text-dark); font-size: 14px; outline: none; font-weight: 600;">
+            <option value="PREPARATION" {% if projet.statut == 'PREPARATION' %}selected{% endif %}>En préparation (cadrage)</option>
+            <option value="EN_COURS" {% if projet.statut == 'EN_COURS' %}selected{% endif %}>En cours (travaux actifs)</option>
+            <option value="SUSPENDU" {% if projet.statut == 'SUSPENDU' %}selected{% endif %}>Suspendu (pause temporaire)</option>
+            <option value="TERMINE" {% if projet.statut == 'TERMINE' %}selected{% endif %}>Terminé (clôturé définitivement)</option>
+            <option value="ANNULE" {% if projet.statut == 'ANNULE' %}selected{% endif %}>Annulé (abandonné)</option>
+          </select>
+        </div>
+
+        <div id="statut-impact-box" style="padding: 11px 13px; border-radius: 8px; font-size: 12.5px; line-height: 1.45; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af;">
+          <i class="fas fa-info-circle me-1"></i> <span id="statut-impact-text">Sélectionnez le nouveau statut pour consulter son impact sur le projet.</span>
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border-light, #eee); background: var(--bg-hover, #f8fafc);">
+        <button type="button" onclick="fermerModalStatut()" class="dash-btn" style="background: white; color: var(--text-medium); border: 1px solid var(--border-color);">
+          Annuler
+        </button>
+        <button type="submit" class="dash-btn dash-btn-primary" style="background: #1c5b96;">
+          <i class="fas fa-check"></i> Confirmer le statut
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+
+<!-- ══════════ MODALE ENREGISTREMENT / MODIFICATION PROFORMA ══════════ -->
+<div id="modal-proforma" class="modal-overlay-custom">
+  <div class="modal-box-proforma">
+    <div class="modal-header-proforma">
+      <h3 id="modal-proforma-titre" style="margin: 0; font-size: 16.5px; font-weight: 700; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-file-invoice-dollar"></i> Enregistrer une Proforma Fournisseur
+      </h3>
+      <button type="button" onclick="fermerModalProforma()" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;">
+        &times;
+      </button>
+    </div>
+
+    <form id="form-proforma" method="post" enctype="multipart/form-data" action="{% url 'projets:creer_proforma' projet.id %}" onsubmit="return confirmerEnregistrementProforma(event)">
+      {% csrf_token %}
+      <div class="modal-body-proforma">
+        <!-- Informations Générales Proforma -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-bottom: 18px;">
+          <div>
+            <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-medium); margin-bottom: 5px; text-transform: uppercase;">
+              N° Proforma / Réf Devis <span style="color:#dc3545;">*</span>
+            </label>
+            <input type="text" name="numero_proforma" id="pf-numero" class="input-custom" placeholder="Ex: PF-2026-001 ou DEV-BTP-89" required style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--border-color); border-radius: 8px;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-medium); margin-bottom: 5px; text-transform: uppercase;">
+              Date de la Proforma <span style="color:#dc3545;">*</span>
+            </label>
+            <input type="date" name="date_proforma" id="pf-date" class="input-custom" value="{% now 'Y-m-d' %}" required style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--border-color); border-radius: 8px;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-medium); margin-bottom: 5px; text-transform: uppercase;">
+              Fournisseur / Entreprise
+            </label>
+            <select name="fournisseur" id="pf-fournisseur" onchange="if(document.getElementById('pf-search-input') && document.getElementById('pf-search-input').value.trim()) filtrerArticlesProforma();" style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--border-color); border-radius: 8px; background: var(--bg-input);">
+              <option value="">-- Utiliser le fournisseur du projet ({{ projet.fournisseur.raison_sociale|default:"Aucun" }}) --</option>
+              {% for f in fournisseurs %}
+                <option value="{{ f.id }}" {% if projet.fournisseur_id == f.id %}selected{% endif %}>{{ f.code }} - {{ f.raison_sociale }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 18px;">
+          <div>
+            <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-medium); margin-bottom: 5px; text-transform: uppercase;">
+              Objet / Description
+            </label>
+            <input type="text" name="objet" id="pf-objet" class="input-custom" placeholder="Ex: Devis matériel gros oeuvre, plomberie bloc opératoire..." style="width: 100%; padding: 8px 12px; border: 1.5px solid var(--border-color); border-radius: 8px;">
+          </div>
+          <div>
+            <label style="display: block; font-size: 11.5px; font-weight: 700; color: var(--text-medium); margin-bottom: 5px; text-transform: uppercase;">
+              Document scanné / Devis PDF
+            </label>
+            <input type="file" name="fichier_joint" id="pf-fichier" accept=".pdf,.jpg,.jpeg,.png" style="width: 100%; font-size: 12px;">
+            <div id="pf-fichier-actuel" style="display: none; font-size: 11px; margin-top: 4px; color: #1c5b96;"></div>
+          </div>
+        </div>
+
+        <!-- Barre de recherche et ajout d'articles (comme les modales Entrées / Sorties) -->
+        <div class="vd-section" style="position: relative; z-index: 50; background: rgba(28, 91, 150, 0.05); border-left: 5px solid #1c5b96; padding: 14px 16px; border-radius: 10px; margin-bottom: 18px;">
+          <label style="display: block; font-size: 12px; font-weight: 700; color: #1c5b96; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px;">
+            <i class="fas fa-search me-1"></i> Rechercher et ajouter des articles au devis / proforma
+          </label>
+          <div style="position: relative;">
+            <input type="text" id="pf-search-input" class="input-custom" 
+                   placeholder="Tapez le nom ou la référence de l'article (ex: Ciment, Fer, Tuyau, Peinture...)" 
+                   autocomplete="off" 
+                   oninput="filtrerArticlesProforma()"
+                   style="border: 2px solid #1c5b96; height: 46px; font-size: 14px; background: var(--bg-card); padding-left: 40px; padding-right: 36px; border-radius: 8px; width: 100%; box-sizing: border-box;">
+            <i class="fas fa-search" style="position: absolute; left: 14px; top: 15px; color: #1c5b96; pointer-events: none; font-size: 15px;"></i>
+            <span id="pf-search-spinner" style="display: none; position: absolute; right: 14px; top: 14px; color: #1c5b96; font-size: 15px;">
+              <i class="fas fa-spinner fa-spin"></i>
+            </span>
+          </div>
+
+          <!-- Dropdown flottant de résultats de recherche -->
+          <div id="pf-dropdown" style="display: none; position: absolute; top: calc(100% + 4px); left: 0; width: 100%; background: var(--bg-card, #ffffff); border: 1.5px solid #1c5b96; border-radius: 10px; box-shadow: 0 12px 30px rgba(0,0,0,0.25); max-height: 280px; overflow-y: auto; z-index: 99999;">
+            <table style="width: 100%; border-collapse: collapse; margin: 0; font-size: 13px;">
+              <thead style="background: var(--bg-hover, #f1f5f9); position: sticky; top: 0; border-bottom: 1.5px solid var(--border-color); z-index: 2;">
+                <tr>
+                  <th style="padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-light); width: 140px;">Réf.</th>
+                  <th style="padding: 10px 14px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Désignation de l'article</th>
+                  <th style="padding: 10px 14px; text-align: right; font-size: 11px; text-transform: uppercase; color: var(--text-light); width: 140px;">P.U Réf. Indicatif</th>
+                  <th style="padding: 10px 14px; text-align: center; width: 90px;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="pf-dropdown-body">
+                <!-- Rempli dynamiquement en AJAX -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Table des matériels ajoutés à la proforma -->
+        <div style="margin-top: 10px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <label style="font-size: 12px; font-weight: 700; color: var(--text-dark); text-transform: uppercase;">
+              <i class="fas fa-boxes" style="color: #1c5b96;"></i> Fournitures figurant sur cette proforma
+            </label>
+            <span id="pf-badge-lignes-count" class="badge" style="background: rgba(28, 91, 150, 0.1); color: #1c5b96; font-weight: 700; padding: 4px 10px; border-radius: 10px; font-size: 11.5px;">
+              0 article(s)
+            </span>
+          </div>
+
+          <div style="border: 1.5px solid var(--border-color); border-radius: 10px; overflow: hidden; background: var(--bg-card);">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+              <thead>
+                <tr style="background: var(--bg-hover); border-bottom: 1.5px solid var(--border-color);">
+                  <th style="width: 45px; padding: 10px 12px; text-align: center; font-size: 11px; text-transform: uppercase; color: var(--text-light);">#</th>
+                  <th style="width: 120px; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Réf.</th>
+                  <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Désignation de l'Article</th>
+                  <th style="width: 120px; padding: 10px 12px; text-align: center; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Quantité Prévue <span style="color:#dc3545;">*</span></th>
+                  <th style="width: 150px; padding: 10px 12px; text-align: right; font-size: 11px; text-transform: uppercase; color: var(--text-light);">P.U Estimé (FCFA)</th>
+                  <th style="width: 150px; padding: 10px 12px; text-align: right; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Total Ligne</th>
+                  <th style="width: 50px; text-align: center;"></th>
+                </tr>
+              </thead>
+              <tbody id="tbody-proforma-lignes">
+                <tr id="pf-ligne-vide">
+                  <td colspan="7" style="text-align: center; padding: 40px 20px; color: var(--text-light);">
+                    <i class="fas fa-box-open" style="font-size: 34px; margin-bottom: 10px; display: block; opacity: 0.35;"></i>
+                    Aucun article dans la proforma pour le moment.<br>
+                    <small style="color: var(--text-medium);">Recherchez un article dans la barre ci-dessus pour l'ajouter à la liste.</small>
+                  </td>
+                </tr>
+              </tbody>
+              <tfoot id="tfoot-proforma" style="display: none; background: var(--bg-hover); border-top: 2px solid var(--border-color); font-weight: 700;">
+                <tr>
+                  <td colspan="3" style="padding: 10px 14px; text-align: right; text-transform: uppercase; font-size: 11.5px; color: var(--text-light);">Totaux Prévisionnels :</td>
+                  <td id="pf-total-qte" style="padding: 10px 12px; text-align: center; color: #1c5b96; font-size: 13.5px; font-weight: 800;">0</td>
+                  <td style="padding: 10px 12px;"></td>
+                  <td id="pf-total-montant" style="padding: 10px 14px; text-align: right; color: #28a745; font-size: 14px; font-weight: 800;">0 FCFA</td>
+                  <td></td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer-proforma">
+        <button type="button" onclick="fermerModalProforma()" class="dash-btn" style="background: var(--bg-hover); color: var(--text-medium); border: 1px solid var(--border-color);">
+          Annuler
+        </button>
+        <button type="submit" class="dash-btn dash-btn-primary" id="btn-submit-proforma">
+          <i class="fas fa-check-circle"></i> Enregistrer la Proforma
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function basculerOnglet(tabId, btn) {
+    document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+    document.querySelectorAll('.dash-tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(tabId).style.display = '';
+    btn.classList.add('active');
+  }
+
+  const STATUS_CONFIG = {
+    'PREPARATION': {
+      nom: 'En préparation',
+      icon: 'question',
+      color: '#6c757d',
+      desc: 'Le projet sera en phase de cadrage et devis. Les sorties de stock restent possibles pour préparer le chantier.',
+      btn: '<i class="fas fa-pencil-ruler"></i> Oui, passer en préparation'
+    },
+    'EN_COURS': {
+      nom: 'En cours',
+      icon: 'question',
+      color: '#0d6efd',
+      desc: 'Le projet sera actif. Toutes les sorties de matériel, consommations et proformas sont pleinement autorisées.',
+      btn: '<i class="fas fa-play"></i> Oui, passer En cours'
+    },
+    'SUSPENDU': {
+      nom: 'Suspendu',
+      icon: 'warning',
+      color: '#e0a800',
+      desc: 'Le chantier sera mis en pause temporaire. Les sorties de stock et livraisons pour ce projet seront bloquées.',
+      btn: '<i class="fas fa-pause"></i> Oui, suspendre le projet'
+    },
+    'TERMINE': {
+      nom: 'Terminé',
+      icon: 'warning',
+      color: '#28a745',
+      desc: 'Le chantier sera clôturé définitivement. La date de fin sera enregistrée, et les sorties de stock ainsi que les commandes proforma seront verrouillées.',
+      btn: '<i class="fas fa-check-double"></i> Oui, clôturer le projet'
+    },
+    'ANNULE': {
+      nom: 'Annulé',
+      icon: 'warning',
+      color: '#dc3545',
+      desc: 'Attention : le projet sera marqué comme abandonné. Toutes les opérations de stock et commandes seront immédiatement verrouillées.',
+      btn: '<i class="fas fa-ban"></i> Oui, annuler le projet'
+    }
+  };
+
+  function ouvrirModalStatut() {
+    const modal = document.getElementById('modal-statut');
+    if (modal) {
+      modal.style.display = 'flex';
+      const select = document.getElementById('select-nouveau-statut');
+      if (select) actualiserInfoStatut(select.value);
+    }
+  }
+
+  function fermerModalStatut() {
+    const modal = document.getElementById('modal-statut');
+    if (modal) modal.style.display = 'none';
+  }
+
+  function actualiserInfoStatut(statut) {
+    const box = document.getElementById('statut-impact-box');
+    const text = document.getElementById('statut-impact-text');
+    if (!box || !text) return;
+    const cfg = STATUS_CONFIG[statut];
+    if (!cfg) return;
+
+    text.textContent = cfg.desc;
+    if (statut === 'TERMINE') {
+      box.style.background = '#f0fdf4';
+      box.style.borderColor = '#bbf7d0';
+      box.style.color = '#166534';
+    } else if (statut === 'ANNULE') {
+      box.style.background = '#fef2f2';
+      box.style.borderColor = '#fecaca';
+      box.style.color = '#991b1b';
+    } else if (statut === 'SUSPENDU') {
+      box.style.background = '#fffbeb';
+      box.style.borderColor = '#fde68a';
+      box.style.color = '#92400e';
+    } else {
+      box.style.background = '#eff6ff';
+      box.style.borderColor = '#bfdbfe';
+      box.style.color = '#1e40af';
+    }
+  }
+
+  function confirmerChangementStatut(e) {
+    e.preventDefault();
+    const select = document.getElementById('select-nouveau-statut');
+    const statutChoisi = select ? select.value : '';
+    const statutActuel = '{{ projet.statut }}';
+
+    if (statutChoisi === statutActuel) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'info',
+          title: 'Statut inchangé',
+          text: `Le projet est déjà au statut « ${STATUS_CONFIG[statutActuel]?.nom || statutActuel} ».`,
+          confirmButtonColor: '#1c5b96'
+        });
+      } else {
+        alert("Le statut sélectionné est identique au statut actuel.");
+      }
+      return false;
+    }
+
+    const cfg = STATUS_CONFIG[statutChoisi] || { nom: statutChoisi, desc: '', color: '#1c5b96', icon: 'question', btn: 'Oui, confirmer' };
+
+    const questionHtml = `
+      <div style="text-align: left; font-size: 13.5px; line-height: 1.5;">
+        <p style="margin: 0 0 10px; font-weight: 600; color: var(--text-dark, #1e293b);">
+          <strong>Question :</strong> Voulez-vous vraiment passer le projet <strong>« {{ projet.nom|escapejs }} »</strong> au statut <strong>« ${cfg.nom} »</strong> ?
+        </p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #475569;">
+          ${cfg.desc}
+        </div>
+      </div>
+    `;
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: 'Changer le statut du projet ?',
+        html: questionHtml,
+        icon: cfg.icon,
+        showCancelButton: true,
+        confirmButtonColor: cfg.color,
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: cfg.btn,
+        cancelButtonText: '<i class="fas fa-times"></i> Non, annuler',
+        reverseButtons: true,
+        focusConfirm: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const form = document.getElementById('form-changer-statut');
+          form.removeAttribute('onsubmit');
+          form.submit();
+        }
+      });
+    } else if (confirm(`Question : Voulez-vous passer le statut à « ${cfg.nom} » ?\n\n${cfg.desc}`)) {
+      const form = document.getElementById('form-changer-statut');
+      form.removeAttribute('onsubmit');
+      form.submit();
+    }
+    return false;
+  }
+
+  function confirmerEnregistrementProforma(e) {
+    const numInput = document.getElementById('pf-numero');
+    const numero = numInput ? numInput.value.trim() : '';
+    if (!numero) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({ icon: 'warning', title: 'Champ requis', text: 'Veuillez saisir un numéro de proforma ou référence devis.', confirmButtonColor: '#1c5b96' });
+      } else {
+        alert("Veuillez saisir un numéro de proforma.");
+      }
+      return false;
+    }
+
+    const lignes = document.querySelectorAll('#tbody-proforma-lignes .pf-item-row');
+    if (lignes.length === 0) {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({ icon: 'warning', title: 'Aucun article', text: 'Veuillez ajouter au moins un article chiffré à la proforma.', confirmButtonColor: '#1c5b96' });
+      } else {
+        alert("Veuillez ajouter au moins un article chiffré à la proforma.");
+      }
+      return false;
+    }
+
+    e.preventDefault();
+
+    let total = 0;
+    lignes.forEach(r => {
+      const qte = parseInt(r.querySelector('.pf-input-qte')?.value) || 0;
+      const pu = parseFloat(r.querySelector('.pf-input-pu')?.value) || 0;
+      total += (qte * pu);
+    });
+    const totalFmt = Math.round(total).toLocaleString('fr-FR') + ' FCFA';
+    const form = document.getElementById('form-proforma');
+    const isEdit = form.action.includes('/modifier/');
+
+    const questionHtml = `
+      <div style="text-align: left; font-size: 13.5px; line-height: 1.5;">
+        <p style="margin: 0 0 10px; font-weight: 600; color: var(--text-dark, #1e293b);">
+          <strong>Question :</strong> Confirmez-vous ${isEdit ? 'la mise à jour' : "l'enregistrement"} de cette commande proforma ?
+        </p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12.5px;">
+          <div style="margin-bottom: 4px;"><strong>Réf. Proforma :</strong> <span style="color:#1c5b96; font-weight:bold;">${numero}</span></div>
+          <div style="margin-bottom: 4px;"><strong>Articles inclus :</strong> ${lignes.length} article(s)</div>
+          <div><strong>Montant estimé total :</strong> <span style="color:#1e7e34; font-weight:bold;">${totalFmt}</span></div>
+        </div>
+      </div>
+    `;
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: isEdit ? 'Mettre à jour la proforma ?' : 'Enregistrer la proforma ?',
+        html: questionHtml,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#1c5b96',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: `<i class="fas fa-check"></i> Oui, ${isEdit ? 'mettre à jour' : 'enregistrer'}`,
+        cancelButtonText: 'Vérifier la saisie',
+        reverseButtons: true,
+        focusConfirm: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          form.removeAttribute('onsubmit');
+          form.submit();
+        }
+      });
+    } else if (confirm(`Confirmez-vous l'enregistrement de la proforma « ${numero} » (${totalFmt}) ?`)) {
+      form.removeAttribute('onsubmit');
+      form.submit();
+    }
+    return false;
+  }
+
+  function confirmerAnnulationProforma(id, num, isAnnulation) {
+    const titre = isAnnulation ? 'Annuler la proforma ?' : 'Réactiver la proforma ?';
+    const confirmBtn = isAnnulation ? '<i class="fas fa-times-circle"></i> Oui, annuler cette proforma' : '<i class="fas fa-undo"></i> Oui, réactiver';
+    const btnColor = isAnnulation ? '#dc3545' : '#28a745';
+    
+    const questionHtml = `
+      <div style="text-align: left; font-size: 13.5px; line-height: 1.5;">
+        <p style="margin: 0 0 10px; font-weight: 600; color: var(--text-dark, #1e293b);">
+          <strong>Question :</strong> Voulez-vous vraiment ${isAnnulation ? 'annuler' : 'réactiver'} la proforma <strong>« ${num} »</strong> ?
+        </p>
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: ${isAnnulation ? '#dc3545' : '#28a745'};">
+          <i class="fas ${isAnnulation ? 'fa-exclamation-triangle' : 'fa-check-circle'} me-1"></i>
+          ${isAnnulation 
+            ? 'Cette proforma sera marquée comme annulée et ses montants/quantités seront déduits des estimations du projet.' 
+            : 'Cette proforma sera réintégrée dans les estimations et prévisions du projet.'}
+        </div>
+      </div>
+    `;
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: titre,
+        html: questionHtml,
+        icon: isAnnulation ? 'warning' : 'question',
+        showCancelButton: true,
+        confirmButtonColor: btnColor,
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: confirmBtn,
+        cancelButtonText: isAnnulation ? 'Non, conserver' : 'Non, laisser annulée',
+        reverseButtons: true,
+        focusConfirm: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          document.getElementById('form-annuler-pf-' + id).submit();
+        }
+      });
+    } else if (confirm(`Question : Voulez-vous vraiment ${isAnnulation ? 'annuler' : 'réactiver'} la proforma « ${num} » ?`)) {
+      document.getElementById('form-annuler-pf-' + id).submit();
+    }
+  }
+
+  /* ══════════ RECHERCHE ET AJOUT D'ARTICLES PROFORMA ══════════ */
+  let proformaTimer = null;
+
+  function filtrerArticlesProforma() {
+    const input = document.getElementById('pf-search-input');
+    const dropdown = document.getElementById('pf-dropdown');
+    const tbody = document.getElementById('pf-dropdown-body');
+    const spinner = document.getElementById('pf-search-spinner');
+    const term = (input.value || '').trim();
+
+    clearTimeout(proformaTimer);
+
+    if (term.length < 1) {
+      dropdown.style.display = 'none';
+      if (spinner) spinner.style.display = 'none';
+      return;
+    }
+
+    if (spinner) spinner.style.display = 'block';
+
+    proformaTimer = setTimeout(() => {
+      const selectFournisseur = document.getElementById('pf-fournisseur');
+      const fId = selectFournisseur ? selectFournisseur.value : '';
+      const fParam = fId ? `&fournisseur_id=${encodeURIComponent(fId)}` : '';
+
+      fetch(`{% url 'projets:api_articles' %}?q=${encodeURIComponent(term)}${fParam}`)
+        .then(res => res.json())
+        .then(data => {
+          if (spinner) spinner.style.display = 'none';
+          tbody.innerHTML = '';
+          
+          const articles = data.results || [];
+          if (articles.length === 0) {
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="4" style="text-align: center; padding: 22px 14px; color: var(--text-light);">
+                  <i class="fas fa-search" style="opacity: 0.5; margin-right: 6px;"></i>
+                  Aucun article trouvé pour "<strong>${term.replace(/</g, '&lt;')}</strong>".
+                </td>
+              </tr>
+            `;
+          } else {
+            articles.forEach(a => {
+              const tr = document.createElement('tr');
+              tr.style.cssText = 'cursor: pointer; border-bottom: 1px solid var(--border-light); transition: background 0.15s;';
+              tr.onmouseenter = () => tr.style.background = 'rgba(28, 91, 150, 0.08)';
+              tr.onmouseleave = () => tr.style.background = '';
+              
+              const prixNum = a.prix_reference || 0;
+              const prixFormate = prixNum ? `${Math.round(prixNum).toLocaleString('fr-FR')} FCFA` : '—';
+              const badgeTarif = a.prix_fournisseur_specifique ? `<span style="background: #e7f5ea; color: #1e7e34; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 6px; font-weight: 700; white-space: nowrap;"><i class="fas fa-tag me-1"></i>Tarif fournisseur</span>` : '';
+              
+              tr.innerHTML = `
+                <td style="padding: 10px 14px; font-weight: 700; color: #1c5b96; font-family: monospace; font-size: 12px;">${a.reference || '—'}</td>
+                <td style="padding: 10px 14px; font-weight: 600; color: var(--text-dark);">${a.designation}${badgeTarif}</td>
+                <td style="padding: 10px 14px; text-align: right; color: var(--text-medium); font-weight: 600;">${prixFormate}</td>
+                <td style="padding: 10px 14px; text-align: center;">
+                  <button type="button" class="dash-btn dash-btn-primary" style="padding: 4px 10px; font-size: 11px; border-radius: 6px;">
+                    <i class="fas fa-plus"></i> Ajouter
+                  </button>
+                </td>
+              `;
+              tr.onclick = function() {
+                ajouterArticleDirectProforma({
+                  id: a.id,
+                  reference: a.reference || '',
+                  designation: a.designation,
+                  prix_reference: prixNum
+                });
+              };
+              tbody.appendChild(tr);
+            });
+          }
+          dropdown.style.display = 'block';
+        })
+        .catch(err => {
+          if (spinner) spinner.style.display = 'none';
+          console.error(err);
+        });
+    }, 180);
+  }
+
+  function ajouterArticleDirectProforma(art, qte = 1, pu = null) {
+    const tbody = document.getElementById('tbody-proforma-lignes');
+    const ligneVide = document.getElementById('pf-ligne-vide');
+    if (ligneVide) ligneVide.remove();
+
+    const id = art.id || art.article_id;
+    const existingRow = document.getElementById(`pf-row-article-${id}`);
+
+    const prixInit = (pu !== null && pu !== undefined && pu !== '') ? pu : (art.prix_reference || 0);
+
+    if (existingRow) {
+      const qteInput = existingRow.querySelector('.pf-input-qte');
+      const currentQte = parseInt(qteInput.value) || 0;
+      qteInput.value = currentQte + (parseInt(qte) || 1);
+      
+      existingRow.style.backgroundColor = "rgba(40, 167, 69, 0.25)";
+      setTimeout(() => { existingRow.style.backgroundColor = ""; }, 450);
+      qteInput.focus();
+    } else {
+      const tr = document.createElement('tr');
+      tr.id = `pf-row-article-${id}`;
+      tr.className = 'pf-item-row';
+      tr.style.cssText = 'border-bottom: 1px solid var(--border-light); transition: background 0.3s;';
+
+      tr.innerHTML = `
+        <td style="padding: 9px 12px; text-align: center; font-weight: 700; color: var(--text-light);" class="pf-col-num"></td>
+        <td style="padding: 9px 12px; font-family: monospace; font-weight: 600; font-size: 12px; color: var(--text-medium);">
+          ${art.reference || '—'}
+          <input type="hidden" name="articles[]" value="${id}">
+        </td>
+        <td style="padding: 9px 12px; font-weight: 700; color: var(--text-dark);">
+          ${art.designation}
+        </td>
+        <td style="padding: 9px 12px; text-align: center;">
+          <input type="number" name="quantites[]" min="1" value="${qte}" required 
+                 class="input-custom pf-input-qte" 
+                 oninput="recalculerTotauxProforma()"
+                 style="width: 85px; padding: 6px 8px; text-align: center; font-weight: 800; font-size: 13.5px; border-radius: 6px;">
+        </td>
+        <td style="padding: 9px 12px; text-align: right;">
+          <input type="number" name="prix_unitaires[]" min="0" step="1" value="${prixInit ? Math.round(prixInit) : ''}" 
+                 placeholder="0"
+                 class="input-custom pf-input-pu" 
+                 oninput="recalculerTotauxProforma()"
+                 style="width: 110px; padding: 6px 8px; text-align: right; font-size: 13px; border-radius: 6px;">
+        </td>
+        <td style="padding: 9px 12px; text-align: right; font-weight: 800; color: #1c5b96; font-size: 13px;" class="pf-total-ligne">
+          0 FCFA
+        </td>
+        <td style="padding: 9px 12px; text-align: center;">
+          <button type="button" class="btn-icon-action" style="color: #dc3545;" title="Retirer cet article" onclick="supprimerLigneProforma(this)">
+            <i class="fas fa-trash-alt"></i>
+          </button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    }
+
+    const inputSearch = document.getElementById('pf-search-input');
+    if (inputSearch) {
+      inputSearch.value = '';
+      inputSearch.focus();
+    }
+    const dropdown = document.getElementById('pf-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+
+    recalculerTotauxProforma();
+  }
+
+  function supprimerLigneProforma(btn) {
+    const tr = btn.closest('tr');
+    if (!tr) return;
+    const designation = tr.querySelector('td:nth-child(3)')?.textContent?.trim() || 'cet article';
+
+    function _executerSuppression() {
+      tr.remove();
+      const tbody = document.getElementById('tbody-proforma-lignes');
+      if (!tbody.querySelector('.pf-item-row')) {
+        tbody.innerHTML = `
+          <tr id="pf-ligne-vide">
+            <td colspan="7" style="text-align: center; padding: 40px 20px; color: var(--text-light);">
+              <i class="fas fa-box-open" style="font-size: 34px; margin-bottom: 10px; display: block; opacity: 0.35;"></i>
+              Aucun article dans la proforma pour le moment.<br>
+              <small style="color: var(--text-medium);">Recherchez un article dans la barre ci-dessus pour l'ajouter à la liste.</small>
+            </td>
+          </tr>
+        `;
+      }
+      recalculerTotauxProforma();
+    }
+
+    if (typeof Swal !== 'undefined') {
+      Swal.fire({
+        title: 'Retirer cet article ?',
+        html: `
+          <div style="text-align: left; font-size: 13.5px;">
+            <p style="margin: 0 0 8px;"><strong>Question :</strong> Voulez-vous retirer cet article de la commande proforma ?</p>
+            <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 12px; font-weight: 700; color: #1c5b96;">
+              ${designation}
+            </div>
+          </div>
+        `,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: '<i class="fas fa-trash-alt"></i> Oui, retirer',
+        cancelButtonText: 'Conserver',
+        reverseButtons: true,
+        focusConfirm: true
+      }).then((result) => {
+        if (result.isConfirmed) {
+          _executerSuppression();
+        }
+      });
+    } else if (confirm(`Question : Voulez-vous retirer « ${designation} » de la proforma ?`)) {
+      _executerSuppression();
+    }
+  }
+
+  function recalculerTotauxProforma() {
+    const rows = document.querySelectorAll('#tbody-proforma-lignes .pf-item-row');
+    const tfoot = document.getElementById('tfoot-proforma');
+    const badgeCount = document.getElementById('pf-badge-lignes-count');
+    
+    if (rows.length === 0) {
+      if (tfoot) tfoot.style.display = 'none';
+      if (badgeCount) badgeCount.textContent = '0 article(s)';
+      return;
+    }
+
+    if (tfoot) tfoot.style.display = 'table-footer-group';
+    if (badgeCount) badgeCount.textContent = `${rows.length} article(s)`;
+
+    let totalQte = 0;
+    let totalMontant = 0;
+
+    rows.forEach((row, index) => {
+      const numCell = row.querySelector('.pf-col-num');
+      if (numCell) numCell.textContent = index + 1;
+
+      const qteInput = row.querySelector('.pf-input-qte');
+      const puInput = row.querySelector('.pf-input-pu');
+      const totalCell = row.querySelector('.pf-total-ligne');
+
+      const q = parseInt(qteInput ? qteInput.value : 0) || 0;
+      const pu = parseFloat(puInput ? puInput.value : 0) || 0;
+      const lineTotal = q * pu;
+
+      totalQte += q;
+      totalMontant += lineTotal;
+
+      if (totalCell) {
+        totalCell.textContent = lineTotal > 0 ? `${Math.round(lineTotal).toLocaleString('fr-FR')} FCFA` : '—';
+      }
+    });
+
+    const totalQteEl = document.getElementById('pf-total-qte');
+    const totalMontantEl = document.getElementById('pf-total-montant');
+
+    if (totalQteEl) totalQteEl.textContent = `${totalQte.toLocaleString('fr-FR')} u`;
+    if (totalMontantEl) totalMontantEl.textContent = `${Math.round(totalMontant).toLocaleString('fr-FR')} FCFA`;
+  }
+
+  function ouvrirModalProforma(mode, id) {
+    const modal = document.getElementById('modal-proforma');
+    const form = document.getElementById('form-proforma');
+    const titre = document.getElementById('modal-proforma-titre');
+    const tbody = document.getElementById('tbody-proforma-lignes');
+    const btnSubmit = document.getElementById('btn-submit-proforma');
+    const fichierActuel = document.getElementById('pf-fichier-actuel');
+    const searchInput = document.getElementById('pf-search-input');
+    const dropdown = document.getElementById('pf-dropdown');
+    
+    if (searchInput) searchInput.value = '';
+    if (dropdown) dropdown.style.display = 'none';
+    fichierActuel.style.display = 'none';
+    fichierActuel.innerHTML = '';
+    tbody.innerHTML = '';
+    
+    if (mode === 'creer') {
+      titre.innerHTML = '<i class="fas fa-file-invoice-dollar"></i> Enregistrer une Proforma Fournisseur';
+      btnSubmit.innerHTML = '<i class="fas fa-check-circle"></i> Enregistrer la Proforma';
+      form.action = "{% url 'projets:creer_proforma' projet.id %}";
+      document.getElementById('pf-numero').value = '';
+      document.getElementById('pf-date').value = new Date().toISOString().split('T')[0];
+      document.getElementById('pf-objet').value = '';
+      document.getElementById('pf-fournisseur').value = "{{ projet.fournisseur_id|default:'' }}";
+      document.getElementById('pf-fichier').value = '';
+      
+      tbody.innerHTML = `
+        <tr id="pf-ligne-vide">
+          <td colspan="7" style="text-align: center; padding: 40px 20px; color: var(--text-light);">
+            <i class="fas fa-box-open" style="font-size: 34px; margin-bottom: 10px; display: block; opacity: 0.35;"></i>
+            Aucun article dans la proforma pour le moment.<br>
+            <small style="color: var(--text-medium);">Recherchez un article dans la barre ci-dessus pour l'ajouter à la liste.</small>
+          </td>
+        </tr>
+      `;
+      recalculerTotauxProforma();
+      modal.style.display = 'flex';
+      setTimeout(() => { if (searchInput) searchInput.focus(); }, 100);
+    } else if (mode === 'modifier') {
+      titre.innerHTML = '<i class="fas fa-edit"></i> Modifier la Proforma';
+      btnSubmit.innerHTML = '<i class="fas fa-save"></i> Enregistrer les Modifications';
+      form.action = `/projets/{{ projet.id }}/proformas/${id}/modifier/`;
+      
+      fetch(`/projets/api/proformas/${id}/`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById('pf-numero').value = data.numero_proforma || '';
+          document.getElementById('pf-date').value = data.date_proforma || '';
+          document.getElementById('pf-fournisseur').value = data.fournisseur_id || '';
+          document.getElementById('pf-objet').value = data.objet || '';
+          document.getElementById('pf-fichier').value = '';
+          
+          if (data.fichier_url) {
+            fichierActuel.style.display = 'block';
+            fichierActuel.innerHTML = `<i class="fas fa-paperclip"></i> Fichier actuel : <a href="${data.fichier_url}" target="_blank" style="color:#1c5b96; font-weight:bold;">Voir / Télécharger</a>`;
+          }
+          
+          if (data.lignes && data.lignes.length > 0) {
+            data.lignes.forEach(l => {
+              ajouterArticleDirectProforma({
+                id: l.article_id,
+                reference: l.reference || '',
+                designation: l.designation,
+                prix_reference: l.prix_unitaire_estime
+              }, l.quantite_prevue, l.prix_unitaire_estime);
+            });
+          } else {
+            tbody.innerHTML = `
+              <tr id="pf-ligne-vide">
+                <td colspan="7" style="text-align: center; padding: 40px 20px; color: var(--text-light);">
+                  <i class="fas fa-box-open" style="font-size: 34px; margin-bottom: 10px; display: block; opacity: 0.35;"></i>
+                  Aucun article dans la proforma pour le moment.<br>
+                  <small style="color: var(--text-medium);">Recherchez un article dans la barre ci-dessus pour l'ajouter à la liste.</small>
+                </td>
+              </tr>
+            `;
+            recalculerTotauxProforma();
+          }
+          modal.style.display = 'flex';
+        })
+        .catch(err => {
+          alert('Erreur lors du chargement des informations de la proforma.');
+        });
+    }
+  }
+
+  function fermerModalProforma() {
+    document.getElementById('modal-proforma').style.display = 'none';
+    const dropdown = document.getElementById('pf-dropdown');
+    if (dropdown) dropdown.style.display = 'none';
+  }
+
+  // Fermer le dropdown lors d'un clic en dehors
+  document.addEventListener('click', function(e) {
+    const dropdown = document.getElementById('pf-dropdown');
+    const searchInput = document.getElementById('pf-search-input');
+    if (dropdown && searchInput && !dropdown.contains(e.target) && !searchInput.contains(e.target)) {
+      dropdown.style.display = 'none';
+    }
+  });
+
+  // Contrôle de soumission : vérifier qu'au moins un article est saisi
+  document.getElementById('form-proforma').addEventListener('submit', function(e) {
+    const rows = document.querySelectorAll('#tbody-proforma-lignes .pf-item-row');
+    if (rows.length === 0) {
+      e.preventDefault();
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'warning',
+          title: 'Proforma vide',
+          text: 'Veuillez rechercher et ajouter au moins un article dans la liste de la proforma.',
+          confirmButtonColor: '#1c5b96'
+        });
+      } else {
+        alert('Veuillez ajouter au moins un article dans la proforma.');
+      }
+      return false;
+    }
+  });
+
+  // Fermeture des modales avec ESC ou clic en dehors
+  window.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+      fermerModalProforma();
+      fermerModalStatut();
+    }
+  });
+
+  document.getElementById('modal-proforma').addEventListener('click', function(e) {
+    if (e.target === this) {
+      fermerModalProforma();
+    }
+  });
+</script>
+{% endblock %}

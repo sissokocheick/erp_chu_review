@@ -388,7 +388,29 @@
 
       <div class="mbody">
 
-        <div class="fg">
+        {% if magasin_gere_projets %}
+        <div class="fg" style="margin-bottom: 15px;">
+            <label>Type de Retour *</label>
+            <select name="type_retour" id="sel-type-retour" required style="width:100%;" class="select2-retour" onchange="toggleProjetRetour()">
+                <option value="RETOUR_SERVICE">Retour depuis un Service</option>
+                <option value="RETOUR_PROJET">Retour depuis un Projet (Reliquat)</option>
+            </select>
+        </div>
+
+        <div class="fg" id="div-retour-projet" style="display:none; margin-bottom: 15px;">
+            <label>Projet (Origine du retour) *</label>
+            <select name="projet" id="sel-projet" style="width:100%;" class="select2-retour">
+                <option value="">-- Choisir le projet --</option>
+                {% for p in projets_list %}
+                <option value="{{ p.id }}">{{ p.nom }}{% if p.fournisseur %} — Entr: {{ p.fournisseur.raison_sociale }}{% endif %}</option>
+                {% endfor %}
+            </select>
+        </div>
+        {% else %}
+        <input type="hidden" name="type_retour" id="sel-type-retour" value="RETOUR_SERVICE">
+        {% endif %}
+
+        <div class="fg" id="div-retour-service" style="margin-bottom: 15px;">
           <label>Service demandeur *</label>
           <select name="service_demandeur" id="sel-service" required style="width:100%;" class="select2-retour">
             <option value="">-- Choisir un service --</option>
@@ -402,6 +424,58 @@
           <label>Référence externe (optionnel)</label>
           <input type="text" name="reference_externe" placeholder="N° de bon physique, référence dossier…">
         </div>
+
+        <script>
+        function toggleProjetRetour() {
+            const selTypeRetour = document.getElementById('sel-type-retour');
+            if (!selTypeRetour) return;
+            const typeVal = selTypeRetour.value;
+            const divProjet = document.getElementById('div-retour-projet');
+            const divService = document.getElementById('div-retour-service');
+            const selProjet = document.getElementById('sel-projet');
+            const selService = document.getElementById('sel-service');
+
+            if (typeVal === 'RETOUR_PROJET' && divProjet && selProjet) {
+                divProjet.style.display = 'block';
+                selProjet.required = true;
+                if (divService) divService.style.display = 'none';
+                if (selService) {
+                    selService.required = false;
+                    $(selService).val(null).trigger('change');
+                }
+            } else {
+                if (divProjet) divProjet.style.display = 'none';
+                if (selProjet) {
+                    selProjet.required = false;
+                    $(selProjet).val(null).trigger('change');
+                }
+                if (divService) divService.style.display = 'block';
+                if (selService) selService.required = true;
+            }
+            mettreAJourPlaceholderSearchRetour();
+            const searchInput = document.getElementById('input-search-article');
+            if (searchInput && searchInput.value.trim().length >= 1) {
+                searchInput.dispatchEvent(new Event('input'));
+            }
+        }
+
+        function mettreAJourPlaceholderSearchRetour() {
+            const searchInput = document.getElementById('input-search-article');
+            if (!searchInput) return;
+            const selTypeRetour = document.getElementById('sel-type-retour');
+            const selProjet = document.getElementById('sel-projet');
+            const typeVal = selTypeRetour ? selTypeRetour.value : '';
+            const projetId = (typeVal === 'RETOUR_PROJET' && selProjet) ? selProjet.value : '';
+
+            if (typeof MAGASIN_FILTRE_PROJET !== 'undefined' && MAGASIN_FILTRE_PROJET && projetId) {
+                const opt = selProjet.options[selProjet.selectedIndex];
+                const projetText = opt ? opt.text.split('—')[0].trim() : 'ce projet';
+                searchInput.placeholder = `Rechercher parmi les matériels du projet (${projetText})...`;
+            } else {
+                searchInput.placeholder = "Tapez le nom ou la référence…";
+            }
+        }
+        </script>
 
         <!-- ════ BARRE DE RECHERCHE ARTICLE ════ -->
         <div class="fg" style="margin-bottom: 8px;">
@@ -437,7 +511,25 @@
 {% endif %}
 
 <script>
-/* ═════ DONNÉES ARTICLES ═════ */
+/* ═════ RESTRICTION PROJETS & DONNÉES ARTICLES ═════ */
+const PROJETS_ARTICLES_MAP = {{ projets_articles_json|default:'{}'|safe }};
+const MAGASIN_FILTRE_PROJET = {{ magasin_filtre_projet|yesno:'true,false' }};
+const CACHE_ARTICLES_PROJETS = {...PROJETS_ARTICLES_MAP};
+
+async function assurerArticlesProjetCharges(projetId) {
+    if (!projetId || CACHE_ARTICLES_PROJETS[projetId]) return;
+    try {
+        const resp = await fetch(`/api/projets/${projetId}/articles/`);
+        if (resp.ok) {
+            const data = await resp.json();
+            CACHE_ARTICLES_PROJETS[projetId] = data.article_ids || [];
+            PROJETS_ARTICLES_MAP[projetId] = CACHE_ARTICLES_PROJETS[projetId];
+        }
+    } catch (e) {
+        console.error("Erreur chargement articles projet :", e);
+    }
+}
+
 const ALL_ARTICLES = [
     {% for a in articles %}
     {id: {{ a.id }}, designation: "{{ a.designation|escapejs }}", reference: "{{ a.reference|default:""|escapejs }}"}{% if not forloop.last %},{% endif %}
@@ -546,6 +638,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (typeof $ !== 'undefined') {
         $('.select2-retour').select2({ width: '100%', dropdownParent: $('#modal-retour') });
+        $('#sel-projet').on('change', function() {
+            const projetId = $(this).val();
+            mettreAJourPlaceholderSearchRetour();
+            if (projetId && typeof assurerArticlesProjetCharges === 'function') {
+                assurerArticlesProjetCharges(projetId).then(() => {
+                    const searchInput = document.getElementById('input-search-article');
+                    if (searchInput && searchInput.value.trim().length >= 1) {
+                        searchInput.dispatchEvent(new Event('input'));
+                    }
+                });
+            } else {
+                const searchInput = document.getElementById('input-search-article');
+                if (searchInput && searchInput.value.trim().length >= 1) {
+                    searchInput.dispatchEvent(new Event('input'));
+                }
+            }
+        });
     }
 });
 
@@ -555,6 +664,8 @@ function ouvrirModal() {
 }
 function fermerModal() {
     document.getElementById('modal-retour').classList.remove('open');
+    if ($('#sel-type-retour').length) { $('#sel-type-retour').val('RETOUR_SERVICE').trigger('change'); }
+    if ($('#sel-projet').length) { $('#sel-projet').val(null).trigger('change'); }
 }
 document.addEventListener('keydown', function(e){
     if (e.key === 'Escape') fermerModal();
@@ -657,13 +768,35 @@ document.addEventListener('keydown', function(e){
             var q = this.value.trim().toLowerCase();
             if (!q) { resultsBox.classList.remove('open'); return; }
 
+            const selTypeRetour = document.getElementById('sel-type-retour');
+            const selProjet = document.getElementById('sel-projet');
+            const typeVal = selTypeRetour ? selTypeRetour.value : '';
+            const projetId = (typeVal === 'RETOUR_PROJET' && selProjet) ? selProjet.value : '';
+            const restrictionProjetActive = Boolean(MAGASIN_FILTRE_PROJET && projetId);
+            const articlesAutorises = restrictionProjetActive ? (CACHE_ARTICLES_PROJETS[projetId] || PROJETS_ARTICLES_MAP[projetId] || []) : null;
+
             var filtres = ALL_ARTICLES.filter(function(a){
+                if (restrictionProjetActive && (!articlesAutorises || !articlesAutorises.includes(a.id))) {
+                    return false;
+                }
                 return a.designation.toLowerCase().indexOf(q) !== -1 ||
                        (a.reference && a.reference.toLowerCase().indexOf(q) !== -1);
             });
 
             if (filtres.length === 0) {
-                resultsBox.innerHTML = '<div class="res-empty"><i class="fas fa-inbox" style="margin-right:6px;"></i>Aucun article trouvé</div>';
+                if (restrictionProjetActive) {
+                    var nbSansRestriction = ALL_ARTICLES.filter(function(a){
+                        return a.designation.toLowerCase().indexOf(q) !== -1 ||
+                               (a.reference && a.reference.toLowerCase().indexOf(q) !== -1);
+                    }).length;
+                    if (nbSansRestriction > 0) {
+                        resultsBox.innerHTML = '<div class="res-empty" style="color:var(--text-light);"><i class="fas fa-filter" style="margin-right:6px; color:#17a2b8;"></i>Aucun article correspondant affecté à ce projet</div>';
+                    } else {
+                        resultsBox.innerHTML = '<div class="res-empty"><i class="fas fa-inbox" style="margin-right:6px;"></i>Aucun article trouvé</div>';
+                    }
+                } else {
+                    resultsBox.innerHTML = '<div class="res-empty"><i class="fas fa-inbox" style="margin-right:6px;"></i>Aucun article trouvé</div>';
+                }
             } else {
                 resultsBox.innerHTML = filtres.slice(0, 8).map(function(a){
                     return '<div class="res-item" data-id="' + a.id + '">' +

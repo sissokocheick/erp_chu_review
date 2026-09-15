@@ -95,8 +95,18 @@ class ConfigurationHopital(TraceabiliteMixin):
     pays = models.CharField(max_length=100, blank=True, default="Côte d'Ivoire")
 
     # ── Paramètres fonctionnels ──
+    devise_monetaire = models.CharField(
+        max_length=15,
+        default="FCFA",
+        verbose_name="Devise monétaire (ex: FCFA, EUR, $)",
+        help_text="Symbole ou code de la devise monétaire affichée dans toute l'application."
+    )
 
-
+    seuil_alerte_peremption_jours = models.PositiveIntegerField(
+        default=30,
+        verbose_name="Délai d'alerte péremption (jours)",
+        help_text="Nombre de jours avant péremption pour déclencher l'alerte stock."
+    )
 
     delai_remplacement_bon_jours = models.PositiveIntegerField(
         default=2,

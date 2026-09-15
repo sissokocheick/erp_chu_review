@@ -66,28 +66,19 @@ class ConfigurationFormTest(TestCase):
             'couleur_principale': '#123456',
             'telephone': '27 22 45 00 00',
             'email_contact': 'contact@chu-angre.ci',
-            'cc': 'CC-2026',
-            'ifu': 'IFU-2026',
-            'rccm': 'RCCM-2026',
             'ville': 'Abidjan',
             'pays': "Côte d'Ivoire",
-            'direction_label': 'DIRECTION',
-            'sous_direction_label': 'SOUS-DIRECTION',
-            'service_label': 'SERVICE',
             'pied_page_pdf': 'Pied de page test',
-            'prefixe_bon_sortie': 'BSX',
-            'prefixe_bon_entree': 'BEX',
-            'prefixe_bon_retour': 'BRX',
-            'prefixe_bon_hors_stock': 'HSX',
-            'prefixe_commande': 'BCX',
         }, HTTP_X_REQUESTED_WITH='XMLHttpRequest')
         self.assertEqual(response.status_code, 200)
         data = response.json()
         self.assertTrue(data['success'])
         self.config.refresh_from_db()
         self.assertEqual(self.config.nom, "CHU d'Angré")
-        self.assertEqual(self.config.ifu, 'IFU-2026')
-        self.assertEqual(self.config.prefixe_bon_sortie, 'BSX')
+        self.assertEqual(self.config.telephone, '27 22 45 00 00')
+        self.assertEqual(self.config.ville, 'Abidjan')
+        # Les champs ifu/cc/rccm et prefixe_* ont été retirés du formulaire
+        # (épuration admin) : ils ne sont plus modifiables ici.
         # Les champs label_signataire_1..6 ont été supprimés (migration vers
         # ModeleDocumentMagasin) : labels_signatures renvoie les défauts.
         self.assertEqual(self.config.labels_signatures[5], 'Le Réceptionnaire')

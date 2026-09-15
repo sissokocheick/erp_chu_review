@@ -27,7 +27,8 @@ from accounts.models import Specialite, Fonction
     'accounts.menu_param_admin',
     'accounts.menu_services',
     'accounts.menu_specialites',
-    'accounts.menu_fonctions')
+    'accounts.menu_fonctions',
+    'accounts.menu_parametres')
 @catch_errors(redirect_url='/')
 def parametres_administratifs(request):
     if request.method == 'POST':

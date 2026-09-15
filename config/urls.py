@@ -16,6 +16,8 @@ urlpatterns = [
     path('core/', include('core.urls')),
 
     path('', include('stock.urls')), 
+    
+    path('projets/', include('projets.urls')),
 
     path('patrimoine/', include('patrimoine.urls')),
 ]

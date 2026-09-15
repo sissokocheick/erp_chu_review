@@ -341,7 +341,31 @@
         <form id="form-saisie-sortie" method="POST">
             {% csrf_token %}
             <div class="modal-body">
-                <div class="vd-section vd-header-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+                <div class="vd-section vd-header-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+                    <!-- Type de sortie -->
+                    {% if magasin_gere_projets %}
+                    <div>
+                        <label class="vd-label">Type de Sortie *</label>
+                        <select name="type_sortie" id="vd-type-sortie" class="vd-input select2" onchange="toggleProjetSelect()">
+                            <option value="SORTIE">Sortie Standard (Service)</option>
+                            <option value="SORTIE_PROJET">Sortie pour Projet</option>
+                        </select>
+                    </div>
+
+                    <!-- Projet (caché par défaut) -->
+                    <div id="div-projet" style="display: none;">
+                        <label class="vd-label">Projet (Destination) *</label>
+                        <select name="projet" id="vd-projet" class="vd-input select2">
+                            <option value="">-- Choisir le projet --</option>
+                            {% for p in projets_list %}
+                                <option value="{{ p.id }}">{{ p.nom }}{% if p.fournisseur %} — Entr: {{ p.fournisseur.raison_sociale }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% else %}
+                    <input type="hidden" name="type_sortie" id="vd-type-sortie" value="SORTIE">
+                    {% endif %}
+
                     <div>
                         <label class="vd-label">Magasin Source *</label>
                         {% if magasins|length == 1 %}
@@ -353,32 +377,89 @@
                             {% endfor %}
                         {% else %}
                             {% if magasin_actif %}
-<input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="vd-magasin">
-<input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
-{% else %}
-<select name="magasin" id="vd-magasin" required class="vd-input select2" style="width: 100%;">
+                            <input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="vd-magasin">
+                            <input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fixé au magasin actif">
+                            {% else %}
+                            <select name="magasin" id="vd-magasin" required class="vd-input select2" style="width: 100%;">
                                 <option value="">-- Choisir le magasin --</option>
-                                {% for m in magasins %}<option value="{{ m.id }}">{{ m.nom }}</option>{% endfor %}
+                                {% for m in magasins %}<option value="{{ m.id }}" data-gere-projets="{{ m.gere_projets|yesno:'1,0' }}">{{ m.nom }}</option>{% endfor %}
                             </select>
-{% endif %}
+                            {% endif %}
                         {% endif %}
                     </div>
-                    <div>
-                        <label class="vd-label">Service Demandeur *</label>
-                        <select name="service_demandeur" required class="vd-input select2">
+                    
+                    <div id="div-service">
+                        <label class="vd-label">Service Demandeur <span class="text-danger">*</span></label>
+                        <select name="service_demandeur" id="vd-service-demandeur" required class="vd-input select2">
                             <option value="">-- Chercher un service --</option>
                             {% for s in services %}<option value="{{ s.id }}">{{ s.nom }}</option>{% endfor %}
                         </select>
                     </div>
+
                     <div>
                         <label class="vd-label">Réf / N° de Demande *</label>
                         <input type="text" name="reference_externe" required placeholder="Ex: COMMANDE-44" class="vd-input">
                     </div>
+
                     <div>
                         <label class="vd-label">Date</label>
                         <input type="text" value="{% now 'd/m/Y' %}" readonly class="vd-input" style="background: var(--bg-stripe); color: var(--text-medium); font-weight: bold;">
                     </div>
                 </div>
+
+                <script>
+                function toggleProjetSelect() {
+                    const typeSortieEl = document.getElementById('vd-type-sortie');
+                    if (!typeSortieEl) return;
+                    const typeSortie = typeSortieEl.value;
+                    const divProjet = document.getElementById('div-projet');
+                    const divService = document.getElementById('div-service');
+                    const selectProjet = document.getElementById('vd-projet');
+                    const selectService = document.getElementById('vd-service-demandeur');
+                    
+                    if (typeSortie === 'SORTIE_PROJET') {
+                        if (divProjet) divProjet.style.display = 'block';
+                        if (selectProjet) selectProjet.required = true;
+                        
+                        if (divService) divService.style.display = 'none';
+                        if (selectService) {
+                            selectService.required = false;
+                            $(selectService).val(null).trigger('change');
+                        }
+                    } else {
+                        if (divProjet) divProjet.style.display = 'none';
+                        if (selectProjet) {
+                            selectProjet.required = false;
+                            $(selectProjet).val(null).trigger('change');
+                        }
+                        
+                        if (divService) divService.style.display = 'block';
+                        if (selectService) selectService.required = true;
+                    }
+                    if (typeof mettreAJourPlaceholderSearchSortie === 'function') {
+                        mettreAJourPlaceholderSearchSortie();
+                    }
+                    if (typeof filtrerProduits === 'function' && document.getElementById('vd-search-input') && document.getElementById('vd-search-input').value.trim().length >= 1) {
+                        filtrerProduits();
+                    }
+                }
+
+                function mettreAJourPlaceholderSearchSortie() {
+                    const searchInput = document.getElementById('vd-search-input');
+                    if (!searchInput || searchInput.disabled) return;
+                    const typeSortie = document.getElementById('vd-type-sortie')?.value;
+                    const selectProjet = document.getElementById('vd-projet');
+                    const projetId = (typeSortie === 'SORTIE_PROJET' && selectProjet) ? selectProjet.value : '';
+
+                    if (typeof MAGASIN_FILTRE_PROJET !== 'undefined' && MAGASIN_FILTRE_PROJET && projetId) {
+                        const opt = selectProjet.options[selectProjet.selectedIndex];
+                        const projetText = opt ? opt.text.split('—')[0].trim() : 'ce projet';
+                        searchInput.placeholder = `Rechercher parmi les matériels du projet (${projetText})...`;
+                    } else {
+                        searchInput.placeholder = "Taper le nom ou la référence de l'article...";
+                    }
+                }
+                </script>
 
                 <div class="vd-section" style="position: relative; z-index: 50; background: var(--bg-stripe); border-left: 5px solid #007bff;">
                     <label class="vd-label" style="color: #007bff;"><i class="fas fa-search"></i> Ajouter des produits au panier</label>
@@ -406,6 +487,12 @@
                                     <td style="padding: 12px; width: 20%; text-align: right;"><span class="badge-stock stock-ok">Calcul...</span></td>
                                 </tr>
                                 {% endfor %}
+                                <tr id="vd-dropdown-aucun-projet" style="display: none;">
+                                    <td colspan="3" style="text-align: center; padding: 20px; color: var(--text-light); font-size: 13px;">
+                                        <i class="fas fa-filter" style="color: #17a2b8; margin-right: 6px;"></i>
+                                        Aucun article correspondant affecté à ce projet.
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -446,6 +533,23 @@
 <script>
     /* ═════ CSRF TOKEN pour JS ═════ */
     const CSRF_TOKEN = '{{ csrf_token }}';
+    const PROJETS_ARTICLES_MAP = {{ projets_articles_json|default:'{}'|safe }};
+    const MAGASIN_FILTRE_PROJET = {{ magasin_filtre_projet|yesno:'true,false' }};
+    const CACHE_ARTICLES_PROJETS = {...PROJETS_ARTICLES_MAP};
+
+    async function assurerArticlesProjetCharges(projetId) {
+        if (!projetId || CACHE_ARTICLES_PROJETS[projetId]) return;
+        try {
+            const resp = await fetch(`/api/projets/${projetId}/articles/`);
+            if (resp.ok) {
+                const data = await resp.json();
+                CACHE_ARTICLES_PROJETS[projetId] = data.article_ids || [];
+                PROJETS_ARTICLES_MAP[projetId] = CACHE_ARTICLES_PROJETS[projetId];
+            }
+        } catch (e) {
+            console.error("Erreur chargement articles projet :", e);
+        }
+    }
 
     /* ═════ MODAL PDF ═════ */
     window.imprimerModal = function(url, titre) {
@@ -525,6 +629,20 @@
             if (tbody && tbody.children.length > 0 && tbody.children[0].id !== 'vd-ligne-vide') {
                 Swal.fire({ icon: 'info', title: 'Panier réinitialisé', text: 'Le magasin source a changé.', confirmButtonColor: '#007bff' });
                 viderTableau();
+            }
+        });
+
+        $('#vd-projet').on('change', function() {
+            const projetId = $(this).val();
+            mettreAJourPlaceholderSearchSortie();
+            if (projetId && typeof assurerArticlesProjetCharges === 'function') {
+                assurerArticlesProjetCharges(projetId).then(() => {
+                    if (document.getElementById('vd-search-input') && document.getElementById('vd-search-input').value.trim().length >= 1) {
+                        filtrerProduits();
+                    }
+                });
+            } else if (document.getElementById('vd-search-input') && document.getElementById('vd-search-input').value.trim().length >= 1) {
+                filtrerProduits();
             }
         });
 
@@ -618,14 +736,38 @@
     function filtrerProduits() {
         let input = document.getElementById('vd-search-input').value.toLowerCase();
         let dropdown = document.getElementById('vd-dropdown');
+        let aucunProjetRow = document.getElementById('vd-dropdown-aucun-projet');
         let magasinId = document.getElementById('vd-magasin').value;
         let rows = document.querySelectorAll('.dropdown-item');
         let hasVisible = false;
-        if (input.length < 1) { dropdown.style.display = 'none'; return; }
+
+        let projetId = '';
+        const typeSortie = document.getElementById('vd-type-sortie')?.value;
+        if (typeSortie === 'SORTIE_PROJET') {
+            projetId = document.getElementById('vd-projet')?.value || '';
+        }
+        const restrictionProjetActive = Boolean(MAGASIN_FILTRE_PROJET && projetId);
+        const articlesAutorises = restrictionProjetActive ? (CACHE_ARTICLES_PROJETS[projetId] || PROJETS_ARTICLES_MAP[projetId] || []) : null;
+
+        if (input.length < 1) {
+            dropdown.style.display = 'none';
+            if (aucunProjetRow) aucunProjetRow.style.display = 'none';
+            return;
+        }
+
+        let nbMatchesSansFiltreProjet = 0;
+
         rows.forEach(row => {
-            let ref = row.getAttribute('data-ref').toLowerCase();
-            let nom = row.getAttribute('data-nom').toLowerCase();
+            let ref = (row.getAttribute('data-ref') || '').toLowerCase();
+            let nom = (row.getAttribute('data-nom') || '').toLowerCase();
+            let articleId = parseInt(row.getAttribute('data-id'), 10);
+
             if (ref.includes(input) || nom.includes(input)) {
+                nbMatchesSansFiltreProjet++;
+                if (restrictionProjetActive && (!articlesAutorises || !articlesAutorises.includes(articleId))) {
+                    row.style.display = 'none';
+                    return;
+                }
                 let stocksData = {};
                 try {
                     stocksData = JSON.parse(row.getAttribute('data-stocks') || '{}');
@@ -642,7 +784,18 @@
                 row.style.display = ''; hasVisible = true;
             } else { row.style.display = 'none'; }
         });
-        dropdown.style.display = hasVisible ? 'block' : 'none';
+
+        if (aucunProjetRow) {
+            if (!hasVisible && nbMatchesSansFiltreProjet > 0 && restrictionProjetActive) {
+                aucunProjetRow.style.display = '';
+                dropdown.style.display = 'block';
+            } else {
+                aucunProjetRow.style.display = 'none';
+                dropdown.style.display = hasVisible ? 'block' : 'none';
+            }
+        } else {
+            dropdown.style.display = hasVisible ? 'block' : 'none';
+        }
     }
 
     function confirmerValidationBon(bonId, numeroBon, serviceNom, nbArticles, urlValidation) {
@@ -655,11 +808,11 @@
                     <div style="font-weight:bold; color:#1c5b96; font-size:17px; margin-bottom:4px;">
                         <i class="fas fa-file-invoice"></i> ${numeroBon}
                     </div>
-                    <div style="color:#555; font-size:13px; margin-bottom:3px;">
-                        <i class="fas fa-hospital" style="width:18px; color:#888;"></i> ${serviceNom}
+                    <div style="color:var(--text-medium); font-size:13px; margin-bottom:3px;">
+                        <i class="fas fa-hospital" style="width:18px; color:var(--text-light);"></i> ${serviceNom}
                     </div>
-                    <div style="color:#555; font-size:13px;">
-                        <i class="fas fa-box" style="width:18px; color:#888;"></i> ${nbArticles} article(s)
+                    <div style="color:var(--text-medium); font-size:13px;">
+                        <i class="fas fa-box" style="width:18px; color:var(--text-light);"></i> ${nbArticles} article(s)
                     </div>
                 </div>
                 <div style="color:#856404; background:#fff3cd; border:1px solid #ffeaa7; padding:10px 14px; border-radius:6px; font-size:13px;">

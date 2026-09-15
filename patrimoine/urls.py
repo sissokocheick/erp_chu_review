@@ -100,6 +100,11 @@ path('pertes/', views.registre_pertes, name='patrimoine_pertes'),
     path('vehicules/<int:vehicule_pk>/missions/',         views.liste_missions_vehicule,       name='patrimoine_vehicule_missions'),
     path('vehicules/<int:vehicule_pk>/missions/creer/',   views.creer_mission_vehicule,        name='patrimoine_vehicule_mission_creer'),
     path('ajax/vehicules/modeles/',               views.ajax_modeles_vehicule,     name='patrimoine_vehicule_ajax_modeles'),
+    path('ajax/vehicules/creer-marque/',          views.ajax_creer_marque,         name='patrimoine_vehicule_ajax_creer_marque'),
+    path('ajax/vehicules/creer-modele/',          views.ajax_creer_modele,         name='patrimoine_vehicule_ajax_creer_modele'),
+    path('ajax/vehicules/creer-type/',            views.ajax_creer_type_vehicule,  name='patrimoine_vehicule_ajax_creer_type'),
+    path('ajax/vehicules/creer-assurance/',       views.ajax_creer_compagnie_assurance, name='patrimoine_vehicule_ajax_creer_assurance'),
+    path('ajax/vehicules/creer-type-intervention/', views.ajax_creer_type_intervention_vehicule, name='patrimoine_vehicule_ajax_creer_type_intervention'),
 
     # ═══════════════════════════════════════════════════════════
     # GESTION DES SALLES DE CONFÉRENCE

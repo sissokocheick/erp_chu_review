@@ -1,242 +1,1049 @@
 {% extends "base_ui.html" %}
 {% load static %}
 
-{% block title %}{% if vehicule %}Modifier{% else %}Ajouter{% endif %} un véhicule — Patrimoine{% endblock %}
+{% block title %}{% if vehicule %}Modifier {{ vehicule.immatriculation }}{% else %}Ajouter un véhicule{% endif %} — Patrimoine{% endblock %}
 
 {% block contenu %}
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <a href="{% url 'patrimoine_vehicules' %}" class="text-decoration-none text-muted"><i class="fas fa-arrow-left me-1"></i>Retour</a>
-            <h4 class="mb-0 mt-1">
-                <i class="fas fa-car me-2"></i>
-                {% if vehicule %}Modifier {{ vehicule.immatriculation }}{% else %}Ajouter un véhicule{% endif %}
-            </h4>
+<style>
+  :root {
+    --veh-rad: 12px;
+    --veh-rad-sm: 8px;
+    --veh-blue: #1e3a8a;
+    --veh-accent: #2563eb;
+    --veh-accent-light: #eff6ff;
+  }
+
+  .veh-container {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding-bottom: 50px;
+  }
+
+  /* ── BANNIÈRE EN-TÊTE ── */
+  .veh-hero {
+    background: linear-gradient(135deg, #0f274a 0%, #1e4b85 50%, #2563eb 100%);
+    color: white;
+    border-radius: var(--veh-rad);
+    padding: 22px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 6px 20px rgba(30, 75, 133, 0.25);
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .veh-hero-left {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+  }
+  .veh-hero-icon {
+    width: 58px;
+    height: 58px;
+    background: rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #ffffff;
+    flex-shrink: 0;
+  }
+  .veh-hero h3 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+  }
+  .veh-hero p {
+    margin: 4px 0 0 0;
+    opacity: 0.9;
+    font-size: 13px;
+  }
+  .btn-retour-veh {
+    background: rgba(255, 255, 255, 0.18);
+    color: white;
+    padding: 10px 18px;
+    border-radius: var(--veh-rad-sm);
+    text-decoration: none;
+    font-size: 13px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  .btn-retour-veh:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: white;
+    transform: translateY(-1px);
+  }
+
+  /* ── GRILLE PRINCIPALE ── */
+  .veh-form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 960px) {
+    .veh-form-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  /* ── CARTES DE SECTIONS ── */
+  .veh-card {
+    background: var(--bg-card);
+    border-radius: var(--veh-rad);
+    box-shadow: 0 2px 12px var(--shadow);
+    border: 1px solid var(--border-light);
+    overflow: hidden;
+    margin-bottom: 24px;
+    transition: box-shadow 0.2s ease;
+  }
+  .veh-card:hover {
+    box-shadow: 0 4px 18px var(--shadow-lg);
+  }
+  .veh-card-head {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-light);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg-hover);
+  }
+  .veh-card-icon {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    flex-shrink: 0;
+  }
+  .veh-card-title {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+  .veh-card-body {
+    padding: 22px 20px;
+  }
+
+  /* ── GROUPES DE CHAMPS & INPUTS ── */
+  .veh-fg {
+    margin-bottom: 16px;
+  }
+  .veh-fg:last-child {
+    margin-bottom: 0;
+  }
+  .veh-label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-medium);
+    margin-bottom: 6px;
+  }
+  .veh-label .req {
+    color: #dc2626;
+    font-weight: 800;
+    margin-left: 3px;
+  }
+  .veh-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  @media (max-width: 540px) {
+    .veh-grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .veh-input,
+  .veh-select,
+  .veh-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--veh-rad-sm);
+    font-size: 13.5px;
+    background: var(--bg-hover);
+    color: var(--text-dark);
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+  .veh-input:focus,
+  .veh-select:focus,
+  .veh-textarea:focus {
+    border-color: #2563eb;
+    background: var(--bg-card);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  }
+  .veh-select {
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 4 5'%3E%3Cpath fill='%2364748b' d='M2 0L0 2h4zm0 5L0 3h4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 34px;
+  }
+  .veh-textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  /* Input avec suffixe d'unité (km, FCFA, CV) */
+  .veh-input-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .veh-input-wrap .veh-input {
+    padding-right: 58px;
+  }
+  .veh-input-unit {
+    position: absolute;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-light);
+    pointer-events: none;
+    text-transform: uppercase;
+  }
+
+  /* ── BARRE D'ACTIONS INFERIEURE ── */
+  .veh-actions-bar {
+    background: var(--bg-card);
+    border-radius: var(--veh-rad);
+    padding: 18px 24px;
+    border: 1px solid var(--border-light);
+    box-shadow: 0 4px 15px var(--shadow);
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .btn-veh-cancel {
+    background: var(--bg-hover);
+    color: var(--text-medium);
+    border: 1px solid var(--border-color);
+    padding: 11px 22px;
+    border-radius: var(--veh-rad-sm);
+    font-size: 13.5px;
+    font-weight: 700;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  .btn-veh-cancel:hover {
+    background: var(--bg-card);
+    color: var(--text-dark);
+    border-color: var(--text-medium);
+  }
+  .btn-veh-submit {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%);
+    color: white;
+    border: none;
+    padding: 11px 28px;
+    border-radius: var(--veh-rad-sm);
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+    transition: all 0.2s ease;
+  }
+  .btn-veh-submit:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+    background: linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%);
+  }
+
+  /* Badge immatriculation spécifique */
+  .immat-input {
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #1e3a8a;
+  }
+  body.dark-mode .immat-input {
+    color: #93c5fd;
+  }
+
+  /* Modales d'ajout rapide (Marque / Modèle) */
+  .mo-quick {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(3px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+  }
+  .mo-quick.open {
+    display: flex;
+  }
+  .mb-quick {
+    background: var(--bg-card, #ffffff);
+    border-radius: var(--veh-rad, 12px);
+    width: 90%;
+    max-width: 440px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+    border: 1px solid var(--border-color, #e2e8f0);
+    overflow: hidden;
+    animation: quickModalIn 0.2s ease-out;
+  }
+  @keyframes quickModalIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+  .mh-quick {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: var(--bg-hover, #f8fafc);
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+  }
+  .mh-quick h5 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-dark, #0f172a);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mc-quick {
+    background: none;
+    border: none;
+    font-size: 16px;
+    color: var(--text-medium, #64748b);
+    cursor: pointer;
+  }
+  .mbody-quick {
+    padding: 20px;
+  }
+  .mfoot-quick {
+    padding: 14px 20px;
+    background: var(--bg-hover, #f8fafc);
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+</style>
+
+<div class="veh-container">
+  <!-- EN-TÊTE HERO -->
+  <div class="veh-hero">
+    <div class="veh-hero-left">
+      <div class="veh-hero-icon">
+        <i class="fas fa-car"></i>
+      </div>
+      <div>
+        <h3>{% if vehicule %}Modifier le véhicule {{ vehicule.immatriculation }}{% else %}Ajouter un véhicule au parc{% endif %}</h3>
+        <p>{% if vehicule %}Mise à jour des caractéristiques, affectations et conformités du véhicule{% else %}Enregistrement d'un nouveau véhicule dans le parc automobile du CHU{% endif %}</p>
+      </div>
+    </div>
+    <a href="{% url 'patrimoine_vehicules' %}" class="btn-retour-veh">
+      <i class="fas fa-arrow-left"></i> Retour à la flotte
+    </a>
+  </div>
+
+  <form method="POST" novalidate id="formVehicule">
+    {% csrf_token %}
+
+    <div class="veh-form-grid">
+      <!-- ═══════════════════════════════════════════════
+           COLONNE GAUCHE : IDENTIFICATION & ACQUISITION
+           ═══════════════════════════════════════════════ -->
+      <div>
+        <!-- CARTE 1 : IDENTIFICATION -->
+        <div class="veh-card">
+          <div class="veh-card-head">
+            <div class="veh-card-icon" style="background: rgba(37, 99, 235, 0.12); color: #2563eb;">
+              <i class="fas fa-id-card"></i>
+            </div>
+            <h4 class="veh-card-title">Identification du véhicule</h4>
+          </div>
+          <div class="veh-card-body">
+            <!-- Immatriculation & Type -->
+            <div class="veh-grid-2 veh-fg">
+              <div>
+                <label class="veh-label">Immatriculation <span class="req">*</span></label>
+                <input type="text" name="immatriculation" class="veh-input immat-input" placeholder="Ex: 1234-GH-01" value="{{ vehicule.immatriculation|default:'' }}" required autofocus>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label class="veh-label" style="margin-bottom:0;">Type de véhicule</label>
+                  <button type="button" onclick="ouvrirModalAjoutTypeVehicule()" title="Créer un nouveau type de véhicule" style="background:rgba(37,99,235,0.1); color:#2563eb; border:1px solid rgba(37,99,235,0.25); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;">
+                    <i class="fas fa-plus"></i> Nouveau
+                  </button>
+                </div>
+                <select name="type_vehicule" class="veh-select" id="id_type_vehicule">
+                  <option value="">-- Sélectionner un type --</option>
+                  {% if types_vehicules %}
+                    {% for tv in types_vehicules %}
+                    <option value="{{ tv.code }}" {% if vehicule.type_vehicule == tv.code %}selected{% endif %}>{{ tv.nom }}</option>
+                    {% endfor %}
+                  {% else %}
+                    {% for val, label in type_vehicule_choices %}
+                    <option value="{{ val }}" {% if vehicule.type_vehicule == val %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                  {% endif %}
+                </select>
+              </div>
+            </div>
+
+            <!-- Marque & Modèle (dynamique avec ajout rapide) -->
+            <div class="veh-grid-2 veh-fg">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label class="veh-label" style="margin-bottom:0;">Marque</label>
+                  <button type="button" onclick="ouvrirModalAjoutMarque()" title="Créer une nouvelle marque" style="background:rgba(37,99,235,0.1); color:#2563eb; border:1px solid rgba(37,99,235,0.25); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;">
+                    <i class="fas fa-plus"></i> Nouvelle
+                  </button>
+                </div>
+                <select name="marque" class="veh-select" id="id_marque">
+                  <option value="">-- Choisir la marque --</option>
+                  {% for m in marques %}
+                  <option value="{{ m.pk }}" {% if vehicule.marque_id == m.pk %}selected{% endif %}>{{ m.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label class="veh-label" style="margin-bottom:0;">Modèle</label>
+                  <button type="button" id="btn-nouveau-modele" onclick="ouvrirModalAjoutModele()" title="Créer un nouveau modèle pour la marque sélectionnée" style="background:rgba(37,99,235,0.1); color:#2563eb; border:1px solid rgba(37,99,235,0.25); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;">
+                    <i class="fas fa-plus"></i> Nouveau
+                  </button>
+                </div>
+                <select name="modele" class="veh-select" id="id_modele">
+                  <option value="">-- Choisir d'abord une marque --</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Couleur & N° de châssis -->
+            <div class="veh-grid-2 veh-fg">
+              <div>
+                <label class="veh-label">Couleur</label>
+                <input type="text" name="couleur" class="veh-input" placeholder="Ex: Blanc, Gris métallisé..." value="{{ vehicule.couleur|default:'' }}">
+              </div>
+              <div>
+                <label class="veh-label">N° de châssis (VIN)</label>
+                <input type="text" name="numero_chassis" class="veh-input" placeholder="Code VIN à 17 caractères" value="{{ vehicule.numero_chassis|default:'' }}">
+              </div>
+            </div>
+
+            <!-- Carburant & Puissance -->
+            <div class="veh-grid-2 veh-fg">
+              <div>
+                <label class="veh-label">Carburant</label>
+                <select name="carburant" class="veh-select">
+                  <option value="DIESEL" {% if vehicule.carburant == 'DIESEL' or not vehicule %}selected{% endif %}>⛽ Diesel</option>
+                  <option value="ESSENCE" {% if vehicule.carburant == 'ESSENCE' %}selected{% endif %}>⛽ Essence</option>
+                  <option value="HYBRIDE" {% if vehicule.carburant == 'HYBRIDE' %}selected{% endif %}>🔋 Hybride</option>
+                  <option value="ELECTRIQUE" {% if vehicule.carburant == 'ELECTRIQUE' %}selected{% endif %}>⚡ Électrique</option>
+                </select>
+              </div>
+              <div>
+                <label class="veh-label">Puissance fiscale</label>
+                <div class="veh-input-wrap">
+                  <input type="number" name="puissance_cv" class="veh-input" placeholder="Ex: 7" value="{{ vehicule.puissance_cv|default:'' }}">
+                  <span class="veh-input-unit">CV</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Kilométrage -->
+            <div class="veh-fg">
+              <label class="veh-label">Kilométrage actuel au compteur</label>
+              <div class="veh-input-wrap">
+                <input type="number" name="kilometrage" class="veh-input" placeholder="0" value="{{ vehicule.kilometrage|default:'0' }}">
+                <span class="veh-input-unit">km</span>
+              </div>
+            </div>
+          </div>
         </div>
+
+        <!-- CARTE 2 : ACQUISITION -->
+        <div class="veh-card">
+          <div class="veh-card-head">
+            <div class="veh-card-icon" style="background: rgba(16, 185, 129, 0.12); color: #10b981;">
+              <i class="fas fa-shopping-cart"></i>
+            </div>
+            <h4 class="veh-card-title">Acquisition & Valeur patrimoniale</h4>
+          </div>
+          <div class="veh-card-body">
+            <div class="veh-grid-2 veh-fg">
+              <div>
+                <label class="veh-label">Date d'acquisition</label>
+                <input type="date" name="date_acquisition" class="veh-input" value="{{ vehicule.date_acquisition|date:'Y-m-d'|default:'' }}">
+              </div>
+              <div>
+                <label class="veh-label">1ère mise en circulation</label>
+                <input type="date" name="date_premiere_circulation" class="veh-input" value="{{ vehicule.date_premiere_circulation|date:'Y-m-d'|default:'' }}">
+              </div>
+            </div>
+
+            <div class="veh-fg">
+              <label class="veh-label">Valeur d'acquisition</label>
+              <div class="veh-input-wrap">
+                <input type="number" name="valeur_acquisition" class="veh-input" step="0.01" placeholder="0" value="{{ vehicule.valeur_acquisition|default:'0' }}">
+                <span class="veh-input-unit">FCFA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════
+           COLONNE DROITE : ASSURANCE, CT, AFFECTATION
+           ═══════════════════════════════════════════════ -->
+      <div>
+        <!-- CARTE 3 : ASSURANCE -->
+        <div class="veh-card">
+          <div class="veh-card-head">
+            <div class="veh-card-icon" style="background: rgba(245, 158, 11, 0.12); color: #f59e0b;">
+              <i class="fas fa-shield-alt"></i>
+            </div>
+            <h4 class="veh-card-title">Assurance automobile</h4>
+          </div>
+          <div class="veh-card-body">
+            <div class="veh-grid-2 veh-fg">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                  <label class="veh-label" style="margin-bottom:0;">Compagnie d'assurance</label>
+                  <button type="button" onclick="ouvrirModalAjoutAssurance()" title="Ajouter une nouvelle compagnie d'assurance" style="background:rgba(37,99,235,0.1); color:#2563eb; border:1px solid rgba(37,99,235,0.25); border-radius:6px; padding:2px 8px; font-size:11px; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; transition:all 0.2s ease;">
+                    <i class="fas fa-plus"></i> Nouvelle
+                  </button>
+                </div>
+                <select name="assurance_compagnie" class="veh-select" id="id_assurance_compagnie">
+                  <option value="">-- Choisir une compagnie --</option>
+                  {% for ca in compagnies_assurance %}
+                  <option value="{{ ca.nom }}" {% if vehicule.assurance_compagnie == ca.nom %}selected{% endif %}>{{ ca.nom }}</option>
+                  {% endfor %}
+                  {% if vehicule.assurance_compagnie %}
+                  <option value="{{ vehicule.assurance_compagnie }}" {% if not compagnies_assurance %}selected{% endif %}>{{ vehicule.assurance_compagnie }}</option>
+                  {% endif %}
+                </select>
+              </div>
+              <div>
+                <label class="veh-label">N° de police</label>
+                <input type="text" name="assurance_numero" class="veh-input" placeholder="Ex: POL-2026-987" value="{{ vehicule.assurance_numero|default:'' }}">
+              </div>
+            </div>
+
+            <div class="veh-grid-2 veh-fg">
+              <div>
+                <label class="veh-label">Début de couverture</label>
+                <input type="date" name="assurance_debut" class="veh-input" value="{{ vehicule.assurance_debut|date:'Y-m-d'|default:'' }}">
+              </div>
+              <div>
+                <label class="veh-label">Fin de couverture</label>
+                <input type="date" name="assurance_fin" class="veh-input" value="{{ vehicule.assurance_fin|date:'Y-m-d'|default:'' }}">
+              </div>
+            </div>
+
+            <div class="veh-fg">
+              <label class="veh-label">Prime annuelle d'assurance</label>
+              <div class="veh-input-wrap">
+                <input type="number" name="assurance_premium" class="veh-input" step="0.01" placeholder="0" value="{{ vehicule.assurance_premium|default:'0' }}">
+                <span class="veh-input-unit">FCFA</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARTE 4 : CONTRÔLE TECHNIQUE -->
+        <div class="veh-card">
+          <div class="veh-card-head">
+            <div class="veh-card-icon" style="background: rgba(14, 165, 233, 0.12); color: #0ea5e9;">
+              <i class="fas fa-clipboard-check"></i>
+            </div>
+            <h4 class="veh-card-title">Contrôle technique (CT)</h4>
+          </div>
+          <div class="veh-card-body">
+            <div class="veh-grid-2">
+              <div>
+                <label class="veh-label">Date du dernier CT</label>
+                <input type="date" name="ct_dernier_date" class="veh-input" value="{{ vehicule.ct_dernier_date|date:'Y-m-d'|default:'' }}">
+              </div>
+              <div>
+                <label class="veh-label">Date du prochain CT</label>
+                <input type="date" name="ct_prochaine_date" class="veh-input" value="{{ vehicule.ct_prochaine_date|date:'Y-m-d'|default:'' }}">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARTE 5 : AFFECTATION & STATUT -->
+        <div class="veh-card">
+          <div class="veh-card-head">
+            <div class="veh-card-icon" style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6;">
+              <i class="fas fa-user-check"></i>
+            </div>
+            <h4 class="veh-card-title">Affectation & Statut opérationnel</h4>
+          </div>
+          <div class="veh-card-body">
+            <!-- Service & Conducteur -->
+            <div class="veh-grid-2 veh-fg">
+              <div>
+                <label class="veh-label">Service d'affectation</label>
+                <select name="service_affectation" class="veh-select">
+                  <option value="">-- Aucun service affecté --</option>
+                  {% for s in services %}
+                  <option value="{{ s.pk }}" {% if vehicule.service_affectation_id == s.pk %}selected{% endif %}>{{ s.nom }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div>
+                <label class="veh-label">Conducteur titulaire</label>
+                <select name="conducteur_titulaire" class="veh-select">
+                  <option value="">-- Aucun conducteur attitré --</option>
+                  {% for u in conducteurs %}
+                  <option value="{{ u.pk }}" {% if vehicule.conducteur_titulaire_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+
+            <!-- Garage & Statut -->
+            <div class="veh-grid-2 veh-fg">
+              <div>
+                <label class="veh-label">Garage / Emplacement</label>
+                <input type="text" name="garage" class="veh-input" placeholder="Ex: Parking Direction, Garage Central..." value="{{ vehicule.garage|default:'' }}">
+              </div>
+              <div>
+                <label class="veh-label">Statut du véhicule</label>
+                <select name="statut" class="veh-select">
+                  <option value="DISPONIBLE" {% if vehicule.statut == 'DISPONIBLE' %}selected{% endif %}>🟢 Disponible</option>
+                  <option value="EN_SERVICE" {% if vehicule.statut == 'EN_SERVICE' %}selected{% endif %}>🔵 En service</option>
+                  <option value="EN_MAINTENANCE" {% if vehicule.statut == 'EN_MAINTENANCE' %}selected{% endif %}>🟡 En maintenance</option>
+                  <option value="HORS_SERVICE" {% if vehicule.statut == 'HORS_SERVICE' %}selected{% endif %}>🔴 Hors service</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Notes -->
+            <div class="veh-fg">
+              <label class="veh-label">Observations & Remarques</label>
+              <textarea name="notes" class="veh-textarea" rows="2" placeholder="Équipements spécifiques, historique particulier, état général...">{{ vehicule.notes|default:'' }}</textarea>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <form method="POST" novalidate>
-        {% csrf_token %}
-        <div class="row">
-            <!-- Colonne gauche : Identification -->
-            <div class="col-md-6">
-                <div class="card mb-4">
-                    <div class="card-header"><i class="fas fa-id-card me-2"></i>Identification</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Immatriculation *</label>
-                            <input type="text" name="immatriculation" class="form-control" value="{{ vehicule.immatriculation|default:'' }}" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label fw-bold">Type de véhicule</label>
-                            <select name="type_vehicule" class="form-select">
-                                {% for val, label in type_vehicule_choices %}
-                                <option value="{{ val }}" {% if vehicule.type_vehicule == val %}selected{% endif %}>{{ label }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Marque</label>
-                                <select name="marque" class="form-select" id="id_marque">
-                                    <option value="">-- Choisir --</option>
-                                    {% for m in marques %}
-                                    <option value="{{ m.pk }}" {% if vehicule.marque_id == m.pk %}selected{% endif %}>{{ m.nom }}</option>
-                                    {% endfor %}
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label fw-bold">Modèle</label>
-                                <select name="modele" class="form-select" id="id_modele">
-                                    <option value="">-- Choisir --</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Couleur</label>
-                                <input type="text" name="couleur" class="form-control" value="{{ vehicule.couleur|default:'' }}">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">N° de châssis</label>
-                                <input type="text" name="numero_chassis" class="form-control" value="{{ vehicule.numero_chassis|default:'' }}">
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Carburant</label>
-                                <select name="carburant" class="form-select">
-                                    <option value="ESSENCE" {% if vehicule.carburant == 'ESSENCE' %}selected{% endif %}>Essence</option>
-                                    <option value="DIESEL" {% if vehicule.carburant == 'DIESEL' or not vehicule %}selected{% endif %}>Diesel</option>
-                                    <option value="ELECTRIQUE" {% if vehicule.carburant == 'ELECTRIQUE' %}selected{% endif %}>Électrique</option>
-                                    <option value="HYBRIDE" {% if vehicule.carburant == 'HYBRIDE' %}selected{% endif %}>Hybride</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Puissance (CV)</label>
-                                <input type="number" name="puissance_cv" class="form-control" value="{{ vehicule.puissance_cv|default:'' }}">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Kilométrage actuel (km)</label>
-                            <input type="number" name="kilometrage" class="form-control" value="{{ vehicule.kilometrage|default:'0' }}">
-                        </div>
-                    </div>
-                </div>
+    <!-- BARRE D'ACTIONS -->
+    <div class="veh-actions-bar">
+      <a href="{% url 'patrimoine_vehicules' %}" class="btn-veh-cancel">
+        <i class="fas fa-times"></i> Annuler
+      </a>
+      <button type="submit" class="btn-veh-submit">
+        <i class="fas fa-check-circle"></i> {% if vehicule %}Enregistrer les modifications{% else %}Créer le véhicule{% endif %}
+      </button>
+    </div>
+  </form>
+</div>
 
-                <!-- Acquisition -->
-                <div class="card mb-4">
-                    <div class="card-header"><i class="fas fa-shopping-cart me-2"></i>Acquisition</div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Date d'acquisition</label>
-                                <input type="date" name="date_acquisition" class="form-control" value="{{ vehicule.date_acquisition|date:'Y-m-d'|default:'' }}">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">1ère mise en circulation</label>
-                                <input type="date" name="date_premiere_circulation" class="form-control" value="{{ vehicule.date_premiere_circulation|date:'Y-m-d'|default:'' }}">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Valeur d'acquisition (FCFA)</label>
-                            <input type="number" name="valeur_acquisition" class="form-control" step="0.01" value="{{ vehicule.valeur_acquisition|default:'0' }}">
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Colonne droite : Assurance, CT, Affectation -->
-            <div class="col-md-6">
-                <!-- Assurance -->
-                <div class="card mb-4">
-                    <div class="card-header"><i class="fas fa-shield-alt me-2"></i>Assurance</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Compagnie d'assurance</label>
-                            <input type="text" name="assurance_compagnie" class="form-control" value="{{ vehicule.assurance_compagnie|default:'' }}">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">N° de police</label>
-                            <input type="text" name="assurance_numero" class="form-control" value="{{ vehicule.assurance_numero|default:'' }}">
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Début assurance</label>
-                                <input type="date" name="assurance_debut" class="form-control" value="{{ vehicule.assurance_debut|date:'Y-m-d'|default:'' }}">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Fin assurance</label>
-                                <input type="date" name="assurance_fin" class="form-control" value="{{ vehicule.assurance_fin|date:'Y-m-d'|default:'' }}">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Prime annuelle (FCFA)</label>
-                            <input type="number" name="assurance_premium" class="form-control" step="0.01" value="{{ vehicule.assurance_premium|default:'0' }}">
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Contrôle technique -->
-                <div class="card mb-4">
-                    <div class="card-header"><i class="fas fa-certificate me-2"></i>Contrôle technique</div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Dernier CT</label>
-                                <input type="date" name="ct_dernier_date" class="form-control" value="{{ vehicule.ct_dernier_date|date:'Y-m-d'|default:'' }}">
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label class="form-label">Prochain CT</label>
-                                <input type="date" name="ct_prochaine_date" class="form-control" value="{{ vehicule.ct_prochaine_date|date:'Y-m-d'|default:'' }}">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Affectation -->
-                <div class="card mb-4">
-                    <div class="card-header"><i class="fas fa-user me-2"></i>Affectation</div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <label class="form-label">Service d'affectation</label>
-                            <select name="service_affectation" class="form-select">
-                                <option value="">-- Aucun service --</option>
-                                {% for s in services %}
-                                <option value="{{ s.pk }}" {% if vehicule.service_affectation_id == s.pk %}selected{% endif %}>{{ s.nom }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Conducteur titulaire</label>
-                            <select name="conducteur_titulaire" class="form-select">
-                                <option value="">-- Aucun conducteur --</option>
-                                {% for u in conducteurs %}
-                                <option value="{{ u.pk }}" {% if vehicule.conducteur_titulaire_id == u.pk %}selected{% endif %}>{{ u.get_full_name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Garage / Stationnement</label>
-                            <input type="text" name="garage" class="form-control" value="{{ vehicule.garage|default:'' }}">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Statut</label>
-                            <select name="statut" class="form-select">
-                                <option value="DISPONIBLE" {% if vehicule.statut == 'DISPONIBLE' %}selected{% endif %}>Disponible</option>
-                                <option value="EN_SERVICE" {% if vehicule.statut == 'EN_SERVICE' %}selected{% endif %}>En service</option>
-                                <option value="EN_MAINTENANCE" {% if vehicule.statut == 'EN_MAINTENANCE' %}selected{% endif %}>En maintenance</option>
-                                <option value="HORS_SERVICE" {% if vehicule.statut == 'HORS_SERVICE' %}selected{% endif %}>Hors service</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Notes</label>
-                            <textarea name="notes" class="form-control" rows="3">{{ vehicule.notes|default:'' }}</textarea>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Boutons -->
-        <div class="d-flex justify-content-end mb-4">
-            <a href="{% url 'patrimoine_vehicules' %}" class="btn btn-secondary me-2">Annuler</a>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>{% if vehicule %}Enregistrer{% else %}Créer{% endif %}</button>
-        </div>
+<!-- MODALE AJOUT RAPIDE MARQUE -->
+<div class="mo-quick" id="mo-quick-marque" onclick="if(event.target===this)fermerModalAjoutMarque()">
+  <div class="mb-quick" onclick="event.stopPropagation()">
+    <div class="mh-quick">
+      <h5><i class="fas fa-tag" style="color:#2563eb;"></i> Nouvelle Marque</h5>
+      <button type="button" class="mc-quick" onclick="fermerModalAjoutMarque()"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="form-quick-marque" onsubmit="soumettreAjoutMarque(event)">
+      <div class="mbody-quick">
+        <label class="veh-label">Nom de la marque *</label>
+        <input type="text" id="quick-marque-nom" class="veh-input" placeholder="Ex: TOYOTA, PEUGEOT, NISSAN..." required style="text-transform:uppercase;">
+      </div>
+      <div class="mfoot-quick">
+        <button type="button" class="btn-veh-cancel" style="padding:8px 16px; font-size:13px;" onclick="fermerModalAjoutMarque()">Annuler</button>
+        <button type="submit" class="btn-veh-submit" style="padding:8px 18px; font-size:13px;" id="btn-save-quick-marque">
+          <i class="fas fa-save"></i> Enregistrer
+        </button>
+      </div>
     </form>
+  </div>
+</div>
+
+<!-- MODALE AJOUT RAPIDE MODÈLE -->
+<div class="mo-quick" id="mo-quick-modele" onclick="if(event.target===this)fermerModalAjoutModele()">
+  <div class="mb-quick" onclick="event.stopPropagation()">
+    <div class="mh-quick">
+      <h5><i class="fas fa-car" style="color:#2563eb;"></i> Nouveau Modèle</h5>
+      <button type="button" class="mc-quick" onclick="fermerModalAjoutModele()"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="form-quick-modele" onsubmit="soumettreAjoutModele(event)">
+      <div class="mbody-quick">
+        <div style="background:var(--bg-hover, #f8fafc); padding:9px 13px; border-radius:6px; font-size:12.5px; color:var(--text-medium, #64748b); margin-bottom:14px; border:1px solid var(--border-color, #e2e8f0);">
+          Marque sélectionnée : <strong id="quick-modele-marque-nom" style="color:var(--text-dark, #0f172a);">-</strong>
+        </div>
+        <label class="veh-label">Nom du modèle *</label>
+        <input type="text" id="quick-modele-nom" class="veh-input" placeholder="Ex: HILUX, LAND CRUISER, 308, DUSTER..." required style="text-transform:uppercase;">
+      </div>
+      <div class="mfoot-quick">
+        <button type="button" class="btn-veh-cancel" style="padding:8px 16px; font-size:13px;" onclick="fermerModalAjoutModele()">Annuler</button>
+        <button type="submit" class="btn-veh-submit" style="padding:8px 18px; font-size:13px;" id="btn-save-quick-modele">
+          <i class="fas fa-save"></i> Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODALE AJOUT RAPIDE TYPE DE VÉHICULE -->
+<div class="mo-quick" id="mo-quick-type-vehicule" onclick="if(event.target===this)fermerModalAjoutTypeVehicule()">
+  <div class="mb-quick" onclick="event.stopPropagation()">
+    <div class="mh-quick">
+      <h5><i class="fas fa-car-side" style="color:#2563eb;"></i> Nouveau Type de Véhicule</h5>
+      <button type="button" class="mc-quick" onclick="fermerModalAjoutTypeVehicule()"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="form-quick-type-vehicule" onsubmit="soumettreAjoutTypeVehicule(event)">
+      <div class="mbody-quick">
+        <label class="veh-label">Désignation du type *</label>
+        <input type="text" id="quick-tv-nom" class="veh-input" placeholder="Ex: Berline, Pick-up, Ambulance..." required>
+      </div>
+      <div class="mfoot-quick">
+        <button type="button" class="btn-veh-cancel" style="padding:8px 16px; font-size:13px;" onclick="fermerModalAjoutTypeVehicule()">Annuler</button>
+        <button type="submit" class="btn-veh-submit" style="padding:8px 18px; font-size:13px;" id="btn-save-quick-tv">
+          <i class="fas fa-save"></i> Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODALE AJOUT RAPIDE COMPAGNIE ASSURANCE -->
+<div class="mo-quick" id="mo-quick-assurance" onclick="if(event.target===this)fermerModalAjoutAssurance()">
+  <div class="mb-quick" onclick="event.stopPropagation()">
+    <div class="mh-quick">
+      <h5><i class="fas fa-shield-alt" style="color:#059669;"></i> Nouvelle Compagnie d'Assurance</h5>
+      <button type="button" class="mc-quick" onclick="fermerModalAjoutAssurance()"><i class="fas fa-times"></i></button>
+    </div>
+    <form id="form-quick-assurance" onsubmit="soumettreAjoutAssurance(event)">
+      <div class="mbody-quick">
+        <label class="veh-label">Nom de la compagnie *</label>
+        <input type="text" id="quick-assurance-nom" class="veh-input" placeholder="Ex: SANLAM, AXA, SUNU..." required style="text-transform:uppercase;">
+      </div>
+      <div class="mfoot-quick">
+        <button type="button" class="btn-veh-cancel" style="padding:8px 16px; font-size:13px;" onclick="fermerModalAjoutAssurance()">Annuler</button>
+        <button type="submit" class="btn-veh-submit" style="padding:8px 18px; font-size:13px; background:linear-gradient(135deg, #059669 0%, #047857 100%);" id="btn-save-quick-assurance">
+          <i class="fas fa-save"></i> Enregistrer
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
-// Chargement dynamique des modèles selon la marque
-document.getElementById('id_marque').addEventListener('change', function() {
-    const marqueId = this.value;
+let currentSelectedModeleId = "{% if vehicule and vehicule.modele_id %}{{ vehicule.modele_id }}{% else %}{% endif %}";
+
+function chargerModeles(marqueId, callback, preselectModeleId) {
     const modeleSelect = document.getElementById('id_modele');
-    modeleSelect.innerHTML = '<option value="">Chargement...</option>';
-    
     if (!marqueId) {
         modeleSelect.innerHTML = '<option value="">-- Choisir d\'abord une marque --</option>';
         return;
     }
-    
+
+    modeleSelect.innerHTML = '<option value="">Chargement des modèles...</option>';
+
     fetch(`/patrimoine/ajax/vehicules/modeles/?marque_id=${marqueId}`)
-        .then(r => r.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Erreur réseau');
+            return response.json();
+        })
         .then(data => {
-            modeleSelect.innerHTML = '<option value="">-- Choisir --</option>';
-            data.modeles.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m.id;
-                opt.textContent = m.nom;
-                {% if vehicule and vehicule.modele_id %}
-                if (m.id == {{ vehicule.modele_id }}) opt.selected = true;
-                {% endif %}
-                modeleSelect.appendChild(opt);
-            });
+            modeleSelect.innerHTML = '<option value="">-- Choisir le modèle --</option>';
+            const targetId = preselectModeleId || currentSelectedModeleId;
+            if (data.modeles && data.modeles.length > 0) {
+                data.modeles.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.nom;
+                    if (targetId && m.id == targetId) {
+                        opt.selected = true;
+                    }
+                    modeleSelect.appendChild(opt);
+                });
+            } else {
+                modeleSelect.innerHTML = '<option value="">Aucun modèle disponible pour cette marque</option>';
+            }
+            if (callback) callback();
+        })
+        .catch(err => {
+            console.error("Erreur chargement modèles:", err);
+            modeleSelect.innerHTML = '<option value="">Erreur de chargement</option>';
         });
+}
+
+function ouvrirModalAjoutMarque() {
+    document.getElementById('quick-marque-nom').value = '';
+    document.getElementById('mo-quick-marque').classList.add('open');
+    setTimeout(() => document.getElementById('quick-marque-nom').focus(), 100);
+}
+
+function fermerModalAjoutMarque() {
+    document.getElementById('mo-quick-marque').classList.remove('open');
+}
+
+function soumettreAjoutMarque(e) {
+    e.preventDefault();
+    const nom = document.getElementById('quick-marque-nom').value.trim().toUpperCase();
+    if (!nom) return;
+
+    const btn = document.getElementById('btn-save-quick-marque');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData();
+    formData.append('nom', nom);
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    fetch('/patrimoine/ajax/vehicules/creer-marque/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        if (data.success) {
+            fermerModalAjoutMarque();
+            const marqueSelect = document.getElementById('id_marque');
+            let opt = Array.from(marqueSelect.options).find(o => o.value == data.id);
+            if (!opt) {
+                opt = document.createElement('option');
+                opt.value = data.id;
+                opt.textContent = data.nom;
+                marqueSelect.appendChild(opt);
+            }
+            marqueSelect.value = data.id;
+            currentSelectedModeleId = '';
+            chargerModeles(data.id);
+            if (typeof NxUX !== 'undefined' && NxUX.toast) {
+                NxUX.toast('success', `Marque "${data.nom}" créée et sélectionnée.`);
+            }
+        } else {
+            alert(data.error || "Erreur lors de la création de la marque.");
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        alert("Erreur réseau lors de la création de la marque.");
+    });
+}
+
+function ouvrirModalAjoutModele() {
+    const marqueSelect = document.getElementById('id_marque');
+    if (!marqueSelect.value) {
+        alert("Veuillez d'abord sélectionner une marque pour lui ajouter un modèle.");
+        marqueSelect.focus();
+        return;
+    }
+    const marqueNom = marqueSelect.options[marqueSelect.selectedIndex].text;
+    document.getElementById('quick-modele-marque-nom').textContent = marqueNom;
+    document.getElementById('quick-modele-nom').value = '';
+    document.getElementById('mo-quick-modele').classList.add('open');
+    setTimeout(() => document.getElementById('quick-modele-nom').focus(), 100);
+}
+
+function fermerModalAjoutModele() {
+    document.getElementById('mo-quick-modele').classList.remove('open');
+}
+
+function soumettreAjoutModele(e) {
+    e.preventDefault();
+    const marqueSelect = document.getElementById('id_marque');
+    const marqueId = marqueSelect.value;
+    const nom = document.getElementById('quick-modele-nom').value.trim().toUpperCase();
+    if (!marqueId || !nom) return;
+
+    const btn = document.getElementById('btn-save-quick-modele');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData();
+    formData.append('marque_id', marqueId);
+    formData.append('nom', nom);
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    fetch('/patrimoine/ajax/vehicules/creer-modele/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        if (data.success) {
+            fermerModalAjoutModele();
+            currentSelectedModeleId = data.id;
+            chargerModeles(marqueId, null, data.id);
+            if (typeof NxUX !== 'undefined' && NxUX.toast) {
+                NxUX.toast('success', `Modèle "${data.nom}" créé et sélectionné.`);
+            }
+        } else {
+            alert(data.error || "Erreur lors de la création du modèle.");
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        alert("Erreur réseau lors de la création du modèle.");
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    const marqueSelect = document.getElementById('id_marque');
+    if (marqueSelect) {
+        marqueSelect.addEventListener('change', function() {
+            currentSelectedModeleId = '';
+            chargerModeles(this.value);
+        });
+
+        // Initialisation si une marque est déjà sélectionnée
+        if (marqueSelect.value) {
+            chargerModeles(marqueSelect.value);
+        }
+    }
 });
 
-// Charger les modèles au chargement si une marque est sélectionnée
-{% if vehicule and vehicule.marque_id %}
-document.getElementById('id_marque').dispatchEvent(new Event('change'));
-{% endif %}
+function ouvrirModalAjoutTypeVehicule() {
+    document.getElementById('quick-tv-nom').value = '';
+    document.getElementById('mo-quick-type-vehicule').classList.add('open');
+    setTimeout(() => document.getElementById('quick-tv-nom').focus(), 100);
+}
+function fermerModalAjoutTypeVehicule() {
+    document.getElementById('mo-quick-type-vehicule').classList.remove('open');
+}
+function soumettreAjoutTypeVehicule(e) {
+    e.preventDefault();
+    const nom = document.getElementById('quick-tv-nom').value.trim();
+    if (!nom) return;
+
+    const btn = document.getElementById('btn-save-quick-tv');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData();
+    formData.append('nom', nom);
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    fetch('/patrimoine/ajax/vehicules/creer-type/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        if (data.success) {
+            fermerModalAjoutTypeVehicule();
+            const tvSelect = document.getElementById('id_type_vehicule');
+            let opt = Array.from(tvSelect.options).find(o => o.value === data.code);
+            if (!opt) {
+                opt = document.createElement('option');
+                opt.value = data.code;
+                opt.textContent = data.nom;
+                tvSelect.appendChild(opt);
+            }
+            tvSelect.value = data.code;
+            if (typeof NxUX !== 'undefined' && NxUX.toast) {
+                NxUX.toast('success', `Type de véhicule "${data.nom}" créé et sélectionné.`);
+            }
+        } else {
+            alert(data.error || "Erreur lors de la création du type de véhicule.");
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        alert("Erreur réseau lors de la création.");
+    });
+}
+
+function ouvrirModalAjoutAssurance() {
+    document.getElementById('quick-assurance-nom').value = '';
+    document.getElementById('mo-quick-assurance').classList.add('open');
+    setTimeout(() => document.getElementById('quick-assurance-nom').focus(), 100);
+}
+function fermerModalAjoutAssurance() {
+    document.getElementById('mo-quick-assurance').classList.remove('open');
+}
+function soumettreAjoutAssurance(e) {
+    e.preventDefault();
+    const nom = document.getElementById('quick-assurance-nom').value.trim().toUpperCase();
+    if (!nom) return;
+
+    const btn = document.getElementById('btn-save-quick-assurance');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
+
+    const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    const formData = new FormData();
+    formData.append('nom', nom);
+    formData.append('csrfmiddlewaretoken', csrfToken);
+
+    fetch('/patrimoine/ajax/vehicules/creer-assurance/', {
+        method: 'POST',
+        body: formData
+    })
+    .then(r => r.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        if (data.success) {
+            fermerModalAjoutAssurance();
+            const caSelect = document.getElementById('id_assurance_compagnie');
+            let opt = Array.from(caSelect.options).find(o => o.value === data.nom);
+            if (!opt) {
+                opt = document.createElement('option');
+                opt.value = data.nom;
+                opt.textContent = data.nom;
+                caSelect.appendChild(opt);
+            }
+            caSelect.value = data.nom;
+            if (typeof NxUX !== 'undefined' && NxUX.toast) {
+                NxUX.toast('success', `Compagnie d'assurance "${data.nom}" créée et sélectionnée.`);
+            }
+        } else {
+            alert(data.error || "Erreur lors de la création de la compagnie.");
+        }
+    })
+    .catch(err => {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+        alert("Erreur réseau lors de la création.");
+    });
+}
 </script>
 {% endblock %}

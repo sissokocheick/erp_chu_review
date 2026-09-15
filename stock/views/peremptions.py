@@ -45,11 +45,13 @@ def controle_peremptions(request):
     lots_inventaire = None
     lots_a_expirer = None
     nb_perimes = nb_critique = nb_attention = 0
-    # Seuil de l'onglet « À expirer » (en jours, borné 15..365)
+    # Seuil de l'onglet « À expirer » (en jours, borné 15..365, configuré dans Paramètres Administratifs)
+    from core.models import ConfigurationHopital
+    seuil_defaut = getattr(ConfigurationHopital.get_instance(), 'seuil_alerte_peremption_jours', 30) or 30
     try:
-        seuil_expiration = min(365, max(15, int(request.GET.get('seuil', 30))))
+        seuil_expiration = min(365, max(15, int(request.GET.get('seuil', seuil_defaut))))
     except (TypeError, ValueError):
-        seuil_expiration = 30
+        seuil_expiration = seuil_defaut
     # ── KPIs DESTRUCTION (toujours calculés pour affichage dans les KPIs) ──
     nb_destructions_total = Mouvement.objects.filter(
         type_mouvement='SORTIE',

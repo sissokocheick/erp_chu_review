@@ -2,7 +2,18 @@
 <tr class="article-row" onmouseover="this.style.background='var(--bg-hover)'" onmouseout="this.style.background=''">
     <td style="padding: 13px 15px;">
         <div style="color: #1c5b96; font-weight: bold; font-size: 15px;">{{ article.designation }}</div>
-        <div style="color: #666; font-size: 12px; margin-top: 2px; font-family: monospace;">Ref: {{ article.reference|default:"-" }}</div>
+        <div style="color: var(--text-medium); font-size: 12px; margin-top: 2px; font-family: monospace; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+            <span>Ref: {{ article.reference|default:"-" }}</span>
+            {% with nb_tarifs=article.tarifs_fournisseurs.all|length %}
+            {% if nb_tarifs > 0 %}
+            <span style="cursor: pointer; background: #e7f5ea; color: #1e7e34; border: 1px solid #c3e6cb; padding: 1px 7px; border-radius: 10px; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"
+                  onclick="ouvrirModalTarifsFournisseurs({{ article.id }}, '{{ article.designation|escapejs }}')"
+                  title="Cliquer pour voir/gérer les tarifs fournisseurs">
+                <i class="fas fa-tags"></i> {{ nb_tarifs }} tarif{{ nb_tarifs|pluralize }} fourn.
+            </span>
+            {% endif %}
+            {% endwith %}
+        </div>
     </td>
     <td style="padding: 13px 15px;">
         <span style="color: var(--text-medium);"><i class="fas fa-tag" style="color: var(--primary-blue);"></i> {{ article.famille.intitule|default:"General" }}</span>
@@ -18,21 +29,22 @@
         <a href="{% url 'etat_stock' %}?q={{ article.designation }}" style="background: var(--bg-card); border: 1px solid var(--primary-blue); color: var(--primary-blue); padding: 5px 12px; border-radius: 15px; font-size: 12px; text-decoration: none; display: inline-block;">Voir stocks <i class="fas fa-search"></i></a>
     </td>
     <td style="padding: 13px 15px; font-size: 12px; line-height: 1.4;">
-        <div style="color: #666; margin-bottom: 4px;">
+        <div style="color: var(--text-medium); margin-bottom: 4px;">
             <i class="fas fa-user-plus" style="color: #28a745; width: 15px;"></i>
             Cree par <b>{{ article.cree_par.username|default:"Systeme" }}</b><br>
-            <span style="color: #999; margin-left: 19px;">{{ article.date_creation|date:"d/m/Y a H:i" }}</span>
+            <span style="color: var(--text-light); margin-left: 19px;">{{ article.date_creation|date:"d/m/Y a H:i" }}</span>
         </div>
         {% if article.modifie_par %}
-        <div style="color: #666; border-top: 1px dashed #eee; padding-top: 4px;">
+        <div style="color: var(--text-medium); border-top: 1px dashed var(--border-light); padding-top: 4px;">
             <i class="fas fa-user-edit" style="color: #17a2b8; width: 15px;"></i>
             Modifie par <b>{{ article.modifie_par.username }}</b><br>
-            <span style="color: #999; margin-left: 19px;">{{ article.date_modification|date:"d/m/Y a H:i" }}</span>
+            <span style="color: var(--text-light); margin-left: 19px;">{{ article.date_modification|date:"d/m/Y a H:i" }}</span>
         </div>
         {% endif %}
     </td>
     <td style="padding: 13px 15px; text-align: center;">
         <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap;">
+            <button type="button" class="btn-action" style="background: rgba(40,167,69,0.08); color: #28a745; border-color: rgba(40,167,69,0.3);" title="Tarifs par fournisseur" onclick="ouvrirModalTarifsFournisseurs({{ article.id }}, '{{ article.designation|escapejs }}')"><i class="fas fa-tags"></i></button>
             <a href="{% url 'historique_article' article.id %}" class="btn-action history" title="Historique"><i class="fas fa-history"></i></a>
             <a href="?edit_article={{ article.id }}" class="btn-action edit" title="Modifier"><i class="fas fa-edit"></i></a>
             {% if article.id in articles_lies %}

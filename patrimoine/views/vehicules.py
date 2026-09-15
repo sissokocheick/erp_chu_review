@@ -11,7 +11,10 @@ from django.utils import timezone
 from django.db.models import Sum, Count, Q
 from django.core.paginator import Paginator
 
-from ..models import Vehicule, InterventionVehicule, MissionVehicule, Marque, Modele
+from ..models import (
+    Vehicule, InterventionVehicule, MissionVehicule, Marque, Modele,
+    TypeVehicule, TypeInterventionVehicule, CompagnieAssurance
+)
 from core.models import Service
 from ..views.common import patrimoine_required
 
@@ -89,9 +92,10 @@ def detail_vehicule(request, pk):
     """Détail d'un véhicule avec historique."""
     vehicule = get_object_or_404(
         Vehicule.objects.select_related(
-            'marque', 'modele', 'service_affectation', 'conducteur_titulaire'
+            'marque', 'modele', 'service_affectation', 'conducteur_titulaire',
+            'immobilisation__type_equipement'
         ).prefetch_related(
-            'interventions_vehicule__immobilisation__type_equipement',
+            'interventions_vehicule',
             'missions__service_demandeur',
         ),
         pk=pk
@@ -176,6 +180,8 @@ def creer_vehicule(request):
         'services': services,
         'conducteurs': conducteurs,
         'type_vehicule_choices': Vehicule.TYPE_VEHICULE_CHOICES,
+        'types_vehicules': TypeVehicule.objects.filter(actif=True).order_by('ordre', 'nom'),
+        'compagnies_assurance': CompagnieAssurance.objects.filter(actif=True).order_by('nom'),
     })
 
 
@@ -236,6 +242,8 @@ def modifier_vehicule(request, pk):
         'services': services,
         'conducteurs': conducteurs,
         'type_vehicule_choices': Vehicule.TYPE_VEHICULE_CHOICES,
+        'types_vehicules': TypeVehicule.objects.filter(actif=True).order_by('ordre', 'nom'),
+        'compagnies_assurance': CompagnieAssurance.objects.filter(actif=True).order_by('nom'),
     })
 
 
@@ -310,6 +318,7 @@ def creer_intervention_vehicule(request, vehicule_pk):
     
     return render(request, 'patrimoine/vehicules/formulaire_intervention.html', {
         'vehicule': vehicule,
+        'types_interventions': TypeInterventionVehicule.objects.filter(actif=True).order_by('nom'),
     })
 
 
@@ -389,3 +398,127 @@ def ajax_modeles_vehicule(request):
     
     modeles = Modele.objects.filter(marque_id=marque_id).order_by('nom').values('id', 'nom')
     return JsonResponse({'modeles': list(modeles)})
+
+
+@login_required
+@patrimoine_required
+def ajax_creer_marque(request):
+    """Création rapide d'une marque depuis le formulaire véhicule (AJAX POST)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+
+    nom = request.POST.get('nom', '').strip().upper()
+    if not nom:
+        return JsonResponse({'success': False, 'error': 'Le nom de la marque est requis.'}, status=400)
+
+    marque, cree = Marque.objects.get_or_create(nom=nom, defaults={'cree_par': request.user})
+    if cree:
+        audit(request, f"Marque créée (rapide) : {nom}", 'CREATE', instance=marque)
+
+    return JsonResponse({
+        'success': True,
+        'id': marque.id,
+        'nom': marque.nom,
+        'cree': cree
+    })
+
+
+@login_required
+@patrimoine_required
+def ajax_creer_modele(request):
+    """Création rapide d'un modèle depuis le formulaire véhicule (AJAX POST)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+
+    marque_id = request.POST.get('marque_id')
+    nom = request.POST.get('nom', '').strip().upper()
+    if not marque_id:
+        return JsonResponse({'success': False, 'error': 'Veuillez sélectionner une marque.'}, status=400)
+    if not nom:
+        return JsonResponse({'success': False, 'error': 'Le nom du modèle est requis.'}, status=400)
+
+    marque = get_object_or_404(Marque, pk=marque_id)
+    modele, cree = Modele.objects.get_or_create(marque=marque, nom=nom, defaults={'cree_par': request.user})
+    if cree:
+        audit(request, f"Modèle créé (rapide) : {nom} ({marque.nom})", 'CREATE', instance=modele)
+
+    return JsonResponse({
+        'success': True,
+        'id': modele.id,
+        'nom': modele.nom,
+        'marque_id': marque.id,
+        'cree': cree
+    })
+
+
+@login_required
+@patrimoine_required
+def ajax_creer_type_vehicule(request):
+    """Création rapide d'un type de véhicule (AJAX POST)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    nom = request.POST.get('nom', '').strip()
+    if not nom:
+        return JsonResponse({'success': False, 'error': 'Le nom du type est requis.'}, status=400)
+    code = nom.upper().replace(' ', '_')[:30]
+    tv, cree = TypeVehicule.objects.get_or_create(
+        code=code,
+        defaults={'nom': nom, 'cree_par': request.user}
+    )
+    if cree:
+        audit(request, f"Type de véhicule créé (rapide) : {nom}", 'CREATE', instance=tv)
+    return JsonResponse({
+        'success': True,
+        'id': tv.id,
+        'code': tv.code,
+        'nom': tv.nom,
+        'cree': cree
+    })
+
+
+@login_required
+@patrimoine_required
+def ajax_creer_compagnie_assurance(request):
+    """Création rapide d'une compagnie d'assurance (AJAX POST)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    nom = request.POST.get('nom', '').strip()
+    if not nom:
+        return JsonResponse({'success': False, 'error': 'Le nom de la compagnie est requis.'}, status=400)
+    ca, cree = CompagnieAssurance.objects.get_or_create(
+        nom=nom,
+        defaults={'cree_par': request.user}
+    )
+    if cree:
+        audit(request, f"Compagnie d'assurance créée (rapide) : {nom}", 'CREATE', instance=ca)
+    return JsonResponse({
+        'success': True,
+        'id': ca.id,
+        'nom': ca.nom,
+        'cree': cree
+    })
+
+
+@login_required
+@patrimoine_required
+def ajax_creer_type_intervention_vehicule(request):
+    """Création rapide d'un type d'intervention véhicule (AJAX POST)."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Méthode non autorisée'}, status=405)
+    nom = request.POST.get('nom', '').strip()
+    if not nom:
+        return JsonResponse({'success': False, 'error': 'Le nom du type d\'intervention est requis.'}, status=400)
+    code = nom.upper().replace(' ', '_')[:30]
+    tiv, cree = TypeInterventionVehicule.objects.get_or_create(
+        code=code,
+        defaults={'nom': nom, 'cree_par': request.user}
+    )
+    if cree:
+        audit(request, f"Type d'intervention véhicule créé (rapide) : {nom}", 'CREATE', instance=tiv)
+    return JsonResponse({
+        'success': True,
+        'id': tiv.id,
+        'code': tiv.code,
+        'nom': tiv.nom,
+        'cree': cree
+    })

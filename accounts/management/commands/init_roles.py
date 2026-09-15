@@ -33,21 +33,24 @@ ROLE_DEFS = {
             'menu_valider_demandes', 'menu_commandes',
             'menu_stock', 'menu_ajustements', 'menu_inventaires',
             'menu_historique', 'menu_peremptions',
-            'menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages',
+            'menu_rapports', 'menu_rapport_conso_service', 'menu_stats_demandes', 'menu_stats_sondages',
             'menu_stats_satisfaction',
-            'menu_lots',
+            'menu_lots', 'menu_param_logistique', 'menu_magasins',
         ],
-    },    'Directeur': {
-        'description': 'Direction, audit, rapports, validation véhicules/salles',
+    },
+    'Directeur': {
+        'description': 'Direction, audit, rapports, projets, validation véhicules/salles',
         'perms': [
             'menu_accueil', 'menu_dashboard', 'menu_stock', 'menu_historique',
-            'menu_rapports', 'menu_stats_demandes', 'menu_stats_sondages', 'menu_stats_satisfaction',
+            'menu_rapports', 'menu_rapport_conso_service', 'menu_stats_demandes', 'menu_stats_sondages', 'menu_stats_satisfaction',
+            'menu_projets',
             'menu_journal_audit', 'menu_pat_registre', 'menu_pat_historique', 'menu_pat_contrats',
             'menu_param_admin', 'menu_parametres',
             'menu_pat_vehicules', 'menu_pat_vehicules_valider',
             'menu_pat_salles', 'menu_pat_salles_valider', 'menu_pat_salles_calendrier',
         ],
-    },    'Technicien SAV': {
+    },
+    'Technicien SAV': {
         'description': 'Maintenance et interventions terrain',
         'perms': [
             'menu_accueil', 'menu_dashboard', 'menu_pat_tickets', 'menu_pat_mes_tickets',
@@ -58,11 +61,11 @@ ROLE_DEFS = {
         ],
     },
     'Gestionnaire Patrimoine': {
-        'description': 'Registre, contrats, inventaires, vehicules, salles, parametres',
-        'perms': ['menu_accueil', 'menu_dashboard', 'menu_pat_'],
+        'description': 'Registre, contrats, inventaires, vehicules, salles, parametres, projets',
+        'perms': ['menu_accueil', 'menu_dashboard', 'menu_projets', 'menu_pat_'],
     },
     'Comptable': {
-        'description': 'Registre immobilisations, amortissements, exports',
+        'description': 'Registre immobilisations, amortissements, rebuts, pertes, exports',
         'perms': [
             'menu_accueil', 'menu_dashboard',
             'menu_pat_registre', 'menu_pat_fiche_detail',
@@ -70,7 +73,7 @@ ROLE_DEFS = {
             'menu_pat_eclatement', 'menu_pat_immatriculation',
             'menu_pat_export_registre', 'menu_pat_import',
             'menu_pat_contrats', 'menu_pat_contrat_detail',
-            'menu_pat_historique',
+            'menu_pat_historique', 'menu_pat_rebuts', 'menu_pat_pertes',
         ],
     },
     'Auditeur': {
@@ -79,7 +82,7 @@ ROLE_DEFS = {
             'menu_accueil', 'menu_dashboard',
             'menu_pat_registre', 'menu_pat_historique',
             'menu_stock', 'menu_historique',
-            'menu_rapports', 'menu_stats_demandes', 'menu_journal_audit',
+            'menu_rapports', 'menu_rapport_conso_service', 'menu_stats_demandes', 'menu_journal_audit',
         ],
     },
 }

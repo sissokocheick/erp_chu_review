@@ -109,13 +109,30 @@ def _get_alertes(magasin_id, magasins_ids):
     ).order_by('-quantite_physique'))
 
     def _ser(s):
+        seuil_critique = s.article.seuil_critique
+        seuil_minimum = s.article.seuil_minimum
+        seuil_maximum = s.article.seuil_maximum
+        qte = float(s.quantite_physique)
+        excedent = round(qte - float(seuil_maximum), 2) if seuil_maximum is not None and qte > float(seuil_maximum) else None
         return {
-            'article__designation': s.article.designation,
-            'article__famille__intitule': getattr(s.article.famille, 'intitule', '') if s.article.famille else '',
-            'magasin__nom': s.magasin.nom if s.magasin else '',
-            'quantite_physique': float(s.quantite_physique),
-            'article_id': s.article_id,
-            'magasin_id': s.magasin_id,
+            'article': {
+                'id': s.article_id,
+                'designation': s.article.designation,
+                'reference': s.article.reference or '',
+                'famille': {
+                    'intitule': getattr(s.article.famille, 'intitule', '') if s.article.famille else '',
+                } if s.article.famille else None,
+                'unite_distribution': str(s.article.unite_distribution) if s.article.unite_distribution else '',
+                'seuil_critique': seuil_critique,
+                'seuil_minimum': seuil_minimum,
+                'seuil_maximum': seuil_maximum,
+            },
+            'magasin': {
+                'id': s.magasin_id,
+                'nom': s.magasin.nom if s.magasin else '',
+            },
+            'quantite_physique': qte,
+            'excedent': excedent,
         }
 
     data = {
@@ -268,7 +285,10 @@ def _get_peremptions(magasin_id, magasins_ids, aujourdhui):
             quantite_physique=Sum('quantite_physique')
         )
     }
-    date_alerte = aujourdhui + timedelta(days=90)
+    from core.models import ConfigurationHopital
+    config_h = ConfigurationHopital.get_instance()
+    delai_alerte = getattr(config_h, 'seuil_alerte_peremption_jours', 30) or 30
+    date_alerte = aujourdhui + timedelta(days=delai_alerte)
     lots_en_alerte_list = []
     for lot in Mouvement.objects.filter(
         type_mouvement='ENTREE', date_peremption__isnull=False,
@@ -279,11 +299,18 @@ def _get_peremptions(magasin_id, magasins_ids, aujourdhui):
         phys = stock_physique_map.get((lot.article_id, lot.magasin_id), 0)
         if restante > 0 and phys > 0:
             lots_en_alerte_list.append({
-                'article__designation': lot.article.designation,
-                'magasin__nom': lot.magasin.nom if lot.magasin else '',
+                'article': {
+                    'designation': lot.article.designation if lot.article else '',
+                    'reference': getattr(lot.article, 'reference', '') if lot.article else '',
+                },
+                'magasin': {
+                    'nom': lot.magasin.nom if lot.magasin else '',
+                },
                 'numero_lot': lot.numero_lot,
-                'date_peremption': lot.date_peremption.isoformat(),
-                'qte_sortie': qte, 'quantite_restante': restante, 'stock_physique': phys,
+                'date_peremption': lot.date_peremption,
+                'qte_sortie': qte,
+                'quantite_restante': restante,
+                'stock_physique': phys,
             })
     lots_perimes_list = []
     for lot in Mouvement.objects.filter(
@@ -295,11 +322,18 @@ def _get_peremptions(magasin_id, magasins_ids, aujourdhui):
         phys = stock_physique_map.get((lot.article_id, lot.magasin_id), 0)
         if restante > 0 and phys > 0:
             lots_perimes_list.append({
-                'article__designation': lot.article.designation,
-                'magasin__nom': lot.magasin.nom if lot.magasin else '',
+                'article': {
+                    'designation': lot.article.designation if lot.article else '',
+                    'reference': getattr(lot.article, 'reference', '') if lot.article else '',
+                },
+                'magasin': {
+                    'nom': lot.magasin.nom if lot.magasin else '',
+                },
                 'numero_lot': lot.numero_lot,
-                'date_peremption': lot.date_peremption.isoformat(),
-                'qte_sortie': qte, 'quantite_restante': restante, 'stock_physique': phys,
+                'date_peremption': lot.date_peremption,
+                'qte_sortie': qte,
+                'quantite_restante': restante,
+                'stock_physique': phys,
             })
     data = {'lots_en_alerte': lots_en_alerte_list, 'lots_perimes': lots_perimes_list}
     cache.set(key, data, _TTL_PEREMPTION)

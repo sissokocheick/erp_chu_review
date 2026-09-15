@@ -42,7 +42,49 @@ def intspace(value):
     if value is None:
         return ""
     try:
-        num = int(value)
+        num = round(float(value))
         return f"{num:,}".replace(",", " ")
     except (ValueError, TypeError):
         return value
+
+@register.filter(name='format_milliers')
+def format_milliers(valeur, devise=None):
+    """
+    Formate un montant ou nombre avec des espaces comme séparateurs de milliers :
+    Ex: 15000000 -> "15 000 000"
+    Ex: 15000000|format_milliers:"FCFA" -> "15 000 000 FCFA"
+    """
+    if valeur is None or valeur == '' or valeur == '—':
+        return '—' if devise else ''
+    
+    try:
+        if isinstance(valeur, str):
+            valeur = valeur.strip().replace(' ', '').replace(',', '.')
+            if not valeur:
+                return '—' if devise else ''
+        
+        val_float = float(valeur)
+        val_int = round(val_float)
+        
+        if abs(val_float - val_int) > 0.001:
+            formatted = f"{val_float:,.2f}".replace(",", " ").replace(".", ",")
+        else:
+            formatted = f"{val_int:,}".replace(",", " ")
+        
+        if devise is True or str(devise).lower() in ('auto', 'devise'):
+            try:
+                from core.models import ConfigurationHopital
+                devise = ConfigurationHopital.get_instance().devise_monetaire or 'FCFA'
+            except Exception:
+                devise = 'FCFA'
+
+        if devise:
+            return f"{formatted} {devise}"
+        return formatted
+    except (ValueError, TypeError):
+        return str(valeur)
+
+@register.filter(name='separateur_milliers')
+def separateur_milliers(valeur, devise=None):
+    """Alias pour format_milliers."""
+    return format_milliers(valeur, devise)

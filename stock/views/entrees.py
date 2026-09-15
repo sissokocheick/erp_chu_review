@@ -1,4 +1,5 @@
 import os
+import json
 import logging
 from datetime import datetime
 from decimal import Decimal
@@ -51,7 +52,7 @@ def _afficher_entrees(request):
     """Branche GET : filtres, pagination, contexte."""
     qs = BonMouvement.objects.filter(
         type_bon='ENTREE'
-    ).select_related('magasin', 'fournisseur', 'cree_par').prefetch_related(
+    ).select_related('magasin', 'fournisseur', 'cree_par', 'projet', 'projet__fournisseur').prefetch_related(
         'lignes_bon__article'
     ).order_by('-date_bon')
 
@@ -70,15 +71,56 @@ def _afficher_entrees(request):
             or circuit_entree.valideurs.filter(id=request.user.id).exists()
         )
 
+    magasin_actif = get_magasin_actif(request)
+    magasin_gere_projets = bool(magasin_actif and magasin_actif.gere_projets)
+    magasin_filtre_projet = bool(magasin_actif and magasin_actif.gere_projets and getattr(magasin_actif, 'filtrer_articles_par_projet', True))
+
+    from projets.models import Projet
+    from stock.services.projet_article_service import get_map_articles_projets
+    projets_list = Projet.objects.filter(is_deleted=False).exclude(statut__in=['TERMINE', 'ANNULE']).select_related('fournisseur').only('id', 'nom', 'fournisseur__id', 'fournisseur__raison_sociale', 'meme_fournisseur_livreur').order_by('nom')
+
+    nb_projets = projets_list.count()
+    if nb_projets <= 30:
+        projets_articles_map = get_map_articles_projets(projets_list)
+    else:
+        projets_articles_map = get_map_articles_projets(projets_list[:20])
+    projets_articles_json = json.dumps(projets_articles_map)
+
+    ids_articles_projets = set()
+    for ids in projets_articles_map.values():
+        ids_articles_projets.update(ids)
+
+    if ids_articles_projets:
+        articles_projets = Article.objects.filter(
+            id__in=ids_articles_projets, is_deleted=False
+        ).select_related('famille').prefetch_related('stocks__magasin')[:200]
+        articles_autres = Article.objects.filter(
+            is_deleted=False
+        ).exclude(id__in=ids_articles_projets).select_related('famille').prefetch_related(
+            'stocks__magasin'
+        )[:200]
+        articles = list(articles_projets) + list(articles_autres)
+    else:
+        articles = Article.objects.filter(is_deleted=False).order_by(
+            'designation'
+        ).select_related('famille').prefetch_related(
+            'stocks__magasin'
+        )[:200]
+
     extra = {
         'magasins': get_magasins_autorises(request).order_by('nom'),
         'fournisseurs': Fournisseur.objects.all().order_by('raison_sociale'),
-        'articles': Article.objects.filter(is_deleted=False).order_by('designation').select_related('famille').prefetch_related('stocks__magasin')[:200],
+        'projets_list': projets_list,
+        'articles': articles,
+        'projets_articles_json': projets_articles_json,
         'motifs_annulation': MotifAnnulation.objects.filter(actif=True).order_by('libelle'),
         'peut_creer': _has_perm_bon(request.user, 'add', 'ENTREE'),
         'peut_annuler': _has_perm_bon(request.user, 'cancel', 'ENTREE'),
         'circuit_entree': circuit_entree,
         'est_valideur_entree': est_valideur_entree,
+        'magasin_actif': magasin_actif,
+        'magasin_gere_projets': magasin_gere_projets,
+        'magasin_filtre_projet': magasin_filtre_projet,
     }
     return render_liste(
         request, qs,
@@ -89,6 +131,7 @@ def _afficher_entrees(request):
         texte_champs=[
             'numero_bon__icontains',
             'fournisseur__raison_sociale__icontains',
+            'projet__nom__icontains',
             'reference_externe__icontains',
             'magasin__nom__icontains',
             'lignes_bon__article__designation__icontains',
@@ -211,6 +254,17 @@ def _creer_entree(request):
             })
 
     try:
+        projet_id = request.POST.get('projet')
+        projet = None
+        if projet_id and magasin.gere_projets:
+            from projets.models import Projet
+            projet = get_object_or_404(Projet.objects.select_related('fournisseur'), id=projet_id)
+            if projet.statut in ['TERMINE', 'ANNULE']:
+                messages.error(request, f"❌ Impossible de réceptionner du matériel pour un projet {projet.get_statut_display().lower()}.")
+                return redirect('liste_entrees')
+            if not fournisseur and projet.fournisseur:
+                fournisseur = projet.fournisseur
+
         from stock.models import CircuitValidation
         circuit_entree = CircuitValidation.objects.filter(
             type_document='ENTREE', est_actif=True, is_deleted=False
@@ -221,7 +275,8 @@ def _creer_entree(request):
             magasin=magasin,
             fournisseur=fournisseur,
             reference_externe=ref_ext,
-            circuit_validation=circuit_entree
+            circuit_validation=circuit_entree,
+            projet=projet
         )
     except ValidationError as e:
         messages.error(request, str(e))

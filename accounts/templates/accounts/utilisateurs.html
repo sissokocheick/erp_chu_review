@@ -460,7 +460,7 @@
 
                     <div class="field-wrapper">
                         <label class="input-label-pro">Login : <span>*</span></label>
-                        <input type="text" name="username" id="inp_username" value="{{ form_data.username|default:'' }}" required minlength="3" maxlength="50" class="clean-input-pro" style="text-transform:lowercase;" data-nx-format="login" autocomplete="off" {% if form_data.user_id %}readonly{% endif %}>
+                        <input type="text" name="username" id="inp_username" value="{{ form_data.username|default:'' }}" required minlength="3" maxlength="50" class="clean-input-pro" style="text-transform:lowercase;" data-nx-format="login" autocomplete="off">
                     </div>
                     <div class="field-wrapper">
                         <label class="input-label-pro">Contact (SMS) :</label>
@@ -736,7 +736,7 @@ function editerUser(id, nom, prenom, username, email, contact, specialite, group
     document.getElementById('inp_nom').value = nom;
     document.getElementById('inp_prenom').value = prenom;
     document.getElementById('inp_username').value = username;
-    document.getElementById('inp_username').setAttribute('readonly', 'readonly');
+    document.getElementById('inp_username').removeAttribute('readonly');
     document.getElementById('inp_email').value = email;
 
     let contactInput = document.getElementById('inp_contact');

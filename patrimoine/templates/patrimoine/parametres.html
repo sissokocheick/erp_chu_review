@@ -158,7 +158,7 @@
     <i class="fas fa-building"></i> Bâtiments <span class="count">{{ batiments|length }}</span>
   </button>
   <button class="pm-tab" data-target="tab-marques" onclick="showTab('tab-marques')">
-    <i class="fas fa-trademark"></i> Marques <span class="count">{{ marques|length }}</span>
+    <i class="fas fa-trademark"></i> Marques & Modèles <span class="count">{{ marques|length }}</span>
   </button>
   <button class="pm-tab" data-target="tab-interventions" onclick="showTab('tab-interventions')">
     <i class="fas fa-tools"></i> Interventions
@@ -171,6 +171,9 @@
   </button>
   <button class="pm-tab" data-target="tab-contrats" onclick="showTab('tab-contrats')">
     <i class="fas fa-file-signature"></i> Sous-traitance
+  </button>
+  <button class="pm-tab" data-target="tab-flotte" onclick="showTab('tab-flotte')">
+    <i class="fas fa-car-side"></i> Flotte Automobile <span class="count">{{ types_vehicules|length|add:types_interventions_vehicules|length|add:compagnies_assurance|length }}</span>
   </button>
 </div>
 
@@ -388,28 +391,54 @@
 <div class="pm-panel" id="tab-marques">
   <div class="card-section">
     <div class="cs-head">
-      <h6><i class="fas fa-trademark" style="color:var(--accent);"></i> Marques</h6>
+      <h6><i class="fas fa-trademark" style="color:var(--accent);"></i> Marques & Modèles</h6>
       <div class="search-magic">
           <i class="fas fa-search"></i>
-          <input type="text" class="live-search" data-target="tbody-marques" placeholder="Chercher une marque...">
+          <input type="text" class="live-search" data-target="tbody-marques" placeholder="Chercher une marque ou un modèle...">
       </div>
-      <button class="btn-add green" onclick="ouvrirModalMarque()">
-        <i class="fas fa-plus"></i> Nouvelle marque
-      </button>
+      <div style="display:flex; gap:8px;">
+        <button class="btn-add green" onclick="ouvrirModalMarque()">
+          <i class="fas fa-plus"></i> Nouvelle marque
+        </button>
+        <button class="btn-add" style="background:#2563eb; color:#fff;" onclick="ouvrirModalModele()">
+          <i class="fas fa-plus"></i> Nouveau modèle
+        </button>
+      </div>
     </div>
     <div class="cs-body">
       <table class="cs-table">
-        <thead><tr><th>Nom</th><th>Modèles</th><th style="text-align:right;">Actions</th></tr></thead>
+        <thead><tr><th style="width:200px;">Marque</th><th>Modèles associés</th><th style="text-align:right; width:120px;">Actions Marque</th></tr></thead>
         <tbody id="tbody-marques">
           {% for m in marques %}
           <tr>
-            <td style="font-weight:700;">{{ m.nom }}</td>
-            <td><span style="background:#e8f5e9;color:#2e7d32;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:700;">{{ m.modeles.count }} modèle{% if m.modeles.count > 1 %}s{% endif %}</span></td>
-            <td style="text-align:right;">
-              <button class="btn-edit" onclick="editerMarque({{ m.id }},'{{ m.nom|escapejs }}')">
+            <td style="font-weight:700; vertical-align:middle;">
+              <i class="fas fa-tag me-1" style="color:var(--accent); font-size:12px;"></i> {{ m.nom }}
+            </td>
+            <td style="vertical-align:middle;">
+              <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                {% for mod in m.modeles.all %}
+                <span style="display:inline-flex; align-items:center; gap:6px; background:var(--head-bg, #f1f5f9); border:1px solid var(--border, #e2e8f0); color:var(--text, #1e293b); padding:4px 9px; border-radius:12px; font-size:12px; font-weight:600;">
+                  <span>{{ mod.nom }}</span>
+                  <button type="button" onclick="editerModele({{ mod.id }}, {{ m.id }}, '{{ mod.nom|escapejs }}')" title="Modifier {{ mod.nom }}" style="background:none; border:none; color:#3b82f6; cursor:pointer; padding:0 2px; font-size:11px;">
+                    <i class="fas fa-pen"></i>
+                  </button>
+                  <button type="button" onclick="confirmerSuppression('delete_modele', '{{ mod.id }}', '{{ mod.nom|escapejs }}')" title="Supprimer {{ mod.nom }}" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:0 2px; font-size:11px;">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </span>
+                {% empty %}
+                <span style="color:var(--text-secondary, #94a3b8); font-size:12px; font-style:italic;">Aucun modèle</span>
+                {% endfor %}
+                <button type="button" onclick="ouvrirModalModele({{ m.id }})" title="Ajouter un modèle à {{ m.nom }}" style="display:inline-flex; align-items:center; gap:4px; background:#eff6ff; border:1px dashed #3b82f6; color:#2563eb; padding:3px 9px; border-radius:12px; font-size:11px; font-weight:600; cursor:pointer;">
+                  <i class="fas fa-plus"></i> Modèle
+                </button>
+              </div>
+            </td>
+            <td style="text-align:right; vertical-align:middle;">
+              <button class="btn-edit" onclick="editerMarque({{ m.id }},'{{ m.nom|escapejs }}')" title="Modifier la marque">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn-del" onclick="confirmerSuppression('delete_marque','{{ m.id }}','{{ m.nom|escapejs }}')">
+              <button class="btn-del" onclick="confirmerSuppression('delete_marque','{{ m.id }}','{{ m.nom|escapejs }}')" title="Supprimer la marque">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
@@ -716,7 +745,147 @@
             </table>
             <div id="pag-tbody-techs"></div>
         </div>
+</div>
+
+<div class="pm-panel" id="tab-flotte">
+  <!-- 1. Types de Véhicules -->
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-car" style="color:var(--accent);"></i> Types de Véhicules</h6>
+      <div class="search-magic">
+        <i class="fas fa-search"></i>
+        <input type="text" class="live-search" data-target="tbody-types-vehicules" placeholder="Chercher un type...">
+      </div>
+      <button class="btn-add" style="background:#2563eb;" onclick="ouvrirModalTypeVehicule()">
+        <i class="fas fa-plus"></i> Nouveau type
+      </button>
     </div>
+    <div class="cs-body">
+      <table class="cs-table">
+        <thead>
+          <tr>
+            <th style="width:140px;">Code</th>
+            <th>Désignation</th>
+            <th>Icône</th>
+            <th>Ordre</th>
+            <th style="text-align:right; width:120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-types-vehicules">
+          {% for tv in types_vehicules %}
+          <tr>
+            <td><code style="background:var(--head-bg);padding:2px 7px;border-radius:4px;font-size:12px;">{{ tv.code }}</code></td>
+            <td style="font-weight:700;">{{ tv.nom }}</td>
+            <td><i class="{{ tv.icone|default:'fas fa-car' }}" style="color:var(--accent); font-size:15px; margin-right:5px;"></i> <span style="font-size:11px;color:var(--text-secondary);">{{ tv.icone }}</span></td>
+            <td><span style="background:var(--head-bg); padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;">{{ tv.ordre }}</span></td>
+            <td style="text-align:right; white-space:nowrap;">
+              <button class="btn-edit" onclick="editerTypeVehicule({{ tv.id }}, '{{ tv.code|escapejs }}', '{{ tv.nom|escapejs }}', '{{ tv.icone|escapejs }}', '{{ tv.ordre }}', '{{ tv.description|default:''|escapejs }}')" title="Modifier">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-del" onclick="confirmerSuppression('delete_type_vehicule', '{{ tv.id }}', '{{ tv.nom|escapejs }}')" title="Supprimer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="empty-pm">Aucun type de véhicule configuré.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 2. Types d'Interventions Véhicule -->
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-wrench" style="color:#d97706;"></i> Types d'Interventions Véhicule</h6>
+      <div class="search-magic">
+        <i class="fas fa-search"></i>
+        <input type="text" class="live-search" data-target="tbody-types-interventions-vehicules" placeholder="Chercher une intervention...">
+      </div>
+      <button class="btn-add" style="background:#d97706;" onclick="ouvrirModalTypeInterventionVehicule()">
+        <i class="fas fa-plus"></i> Nouveau type d'intervention
+      </button>
+    </div>
+    <div class="cs-body">
+      <table class="cs-table">
+        <thead>
+          <tr>
+            <th style="width:140px;">Code</th>
+            <th>Libellé de l'intervention</th>
+            <th>Description</th>
+            <th style="text-align:right; width:120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-types-interventions-vehicules">
+          {% for tiv in types_interventions_vehicules %}
+          <tr>
+            <td><code style="background:var(--head-bg);padding:2px 7px;border-radius:4px;font-size:12px;">{{ tiv.code }}</code></td>
+            <td style="font-weight:700;"><i class="fas fa-tools me-1" style="color:#d97706; font-size:12px;"></i> {{ tiv.nom }}</td>
+            <td style="color:var(--text-secondary); font-size:12px;">{{ tiv.description|default:"—" }}</td>
+            <td style="text-align:right; white-space:nowrap;">
+              <button class="btn-edit" onclick="editerTypeInterventionVehicule({{ tiv.id }}, '{{ tiv.code|escapejs }}', '{{ tiv.nom|escapejs }}', '{{ tiv.description|default:''|escapejs }}')" title="Modifier">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-del" onclick="confirmerSuppression('delete_type_intervention_vehicule', '{{ tiv.id }}', '{{ tiv.nom|escapejs }}')" title="Supprimer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="4" class="empty-pm">Aucun type d'intervention configuré.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 3. Compagnies d'Assurance -->
+  <div class="card-section">
+    <div class="cs-head">
+      <h6><i class="fas fa-shield-alt" style="color:#059669;"></i> Compagnies d'Assurance</h6>
+      <div class="search-magic">
+        <i class="fas fa-search"></i>
+        <input type="text" class="live-search" data-target="tbody-compagnies-assurance" placeholder="Chercher une compagnie...">
+      </div>
+      <button class="btn-add" style="background:#059669;" onclick="ouvrirModalCompagnieAssurance()">
+        <i class="fas fa-plus"></i> Nouvelle compagnie
+      </button>
+    </div>
+    <div class="cs-body">
+      <table class="cs-table">
+        <thead>
+          <tr>
+            <th style="width:140px;">Code</th>
+            <th>Nom de la compagnie</th>
+            <th>Téléphone</th>
+            <th>Email</th>
+            <th style="text-align:right; width:120px;">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-compagnies-assurance">
+          {% for ca in compagnies_assurance %}
+          <tr>
+            <td><code style="background:var(--head-bg);padding:2px 7px;border-radius:4px;font-size:12px;">{{ ca.code|default:"—" }}</code></td>
+            <td style="font-weight:700;"><i class="fas fa-shield-alt me-1" style="color:#059669; font-size:12px;"></i> {{ ca.nom }}</td>
+            <td style="font-size:12px;"><i class="fas fa-phone me-1" style="color:var(--text-secondary); font-size:11px;"></i> {{ ca.telephone|default:"—" }}</td>
+            <td style="font-size:12px;"><i class="fas fa-envelope me-1" style="color:var(--text-secondary); font-size:11px;"></i> {{ ca.email|default:"—" }}</td>
+            <td style="text-align:right; white-space:nowrap;">
+              <button class="btn-edit" onclick="editerCompagnieAssurance({{ ca.id }}, '{{ ca.code|default:''|escapejs }}', '{{ ca.nom|escapejs }}', '{{ ca.telephone|default:''|escapejs }}', '{{ ca.email|default:''|escapejs }}', '{{ ca.adresse|default:''|escapejs }}')" title="Modifier">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-del" onclick="confirmerSuppression('delete_compagnie_assurance', '{{ ca.id }}', '{{ ca.nom|escapejs }}')" title="Supprimer">
+                <i class="fas fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+          {% empty %}
+          <tr><td colspan="5" class="empty-pm">Aucune compagnie d'assurance configurée.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <div class="mo" id="mo-tech" onclick="if(event.target===this)fermer('mo-tech')">
@@ -980,10 +1149,37 @@
       <input type="hidden" name="item_id" id="marque-id">
       <div class="mbody">
         <div class="fg"><label>Nom de la marque *</label>
-          <input type="text" name="nom" id="marque-nom" placeholder="HP, CANON, DAIKIN…" required style="text-transform:uppercase;"></div>
+          <input type="text" name="nom" id="marque-nom" placeholder="HP, CANON, DAIKIN, TOYOTA…" required style="text-transform:uppercase;"></div>
       </div>
       <div class="mfoot">
         <button type="button" class="btn-nok" onclick="fermer('mo-marque')">Annuler</button>
+        <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-modele" onclick="if(event.target===this)fermer('mo-modele')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh"><h5 id="mo-modele-titre"><i class="fas fa-car me-2"></i> Modèle</h5>
+      <button class="mc" onclick="fermer('mo-modele')"><i class="fas fa-times"></i></button></div>
+    <form method="POST" id="form-modele">{% csrf_token %}
+      <input type="hidden" name="action" value="save_modele">
+      <input type="hidden" name="item_id" id="modele-id">
+      <div class="mbody">
+        <div class="fg"><label>Marque parente *</label>
+          <select name="marque_id" id="modele-marque-id" required style="width:100%; padding:9px 12px; border:1px solid var(--border); border-radius:6px; background:var(--card-bg); color:var(--text);">
+            <option value="">-- Choisir une marque --</option>
+            {% for m in marques %}
+            <option value="{{ m.id }}">{{ m.nom }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="fg" style="margin-top:14px;"><label>Nom du modèle *</label>
+          <input type="text" name="nom" id="modele-nom" placeholder="HILUX, COROLLA, LAND CRUISER, DUSTER…" required style="text-transform:uppercase;"></div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-modele')">Annuler</button>
         <button type="submit" class="btn-ok"><i class="fas fa-save me-1"></i>Enregistrer</button>
       </div>
     </form>
@@ -1075,6 +1271,86 @@
       <div class="mfoot">
         <button type="button" class="btn-nok" onclick="fermer('mo-tech-externe')">Annuler</button>
         <button type="submit" class="btn-ok" style="background:#f59e0b;"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-type-vehicule" onclick="if(event.target===this)fermer('mo-type-vehicule')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh" style="background: linear-gradient(135deg, #2563eb, #1d4ed8);">
+      <h5 id="mo-tv-titre"><i class="fas fa-car me-2"></i> Type de Véhicule</h5>
+      <button class="mc" onclick="fermer('mo-type-vehicule')"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="save_type_vehicule">
+      <input type="hidden" name="item_id" id="tv-id">
+      <div class="mbody">
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;">
+          <div class="fg"><label>Code (ex: BERLINE)</label><input type="text" name="code" id="tv-code" placeholder="Auto si vide" style="text-transform:uppercase;"></div>
+          <div class="fg"><label>Désignation *</label><input type="text" name="nom" id="tv-nom" placeholder="Ex: Berline, SUV, Ambulance..." required></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="fg"><label>Icône FontAwesome</label><input type="text" name="icone" id="tv-icone" placeholder="fas fa-car" value="fas fa-car"></div>
+          <div class="fg"><label>Ordre d'affichage</label><input type="number" name="ordre" id="tv-ordre" value="0"></div>
+        </div>
+        <div class="fg"><label>Description / Usage</label><input type="text" name="description" id="tv-desc" placeholder="Optionnel"></div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-type-vehicule')">Annuler</button>
+        <button type="submit" class="btn-ok" style="background:#2563eb;"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-type-intervention-vehicule" onclick="if(event.target===this)fermer('mo-type-intervention-vehicule')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh" style="background: linear-gradient(135deg, #d97706, #b45309);">
+      <h5 id="mo-tiv-titre"><i class="fas fa-wrench me-2"></i> Type d'Intervention Véhicule</h5>
+      <button class="mc" onclick="fermer('mo-type-intervention-vehicule')"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="save_type_intervention_vehicule">
+      <input type="hidden" name="item_id" id="tiv-id">
+      <div class="mbody">
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;">
+          <div class="fg"><label>Code (ex: VIDANGE)</label><input type="text" name="code" id="tiv-code" placeholder="Auto si vide" style="text-transform:uppercase;"></div>
+          <div class="fg"><label>Libellé de l'intervention *</label><input type="text" name="nom" id="tiv-nom" placeholder="Ex: Vidange, Pneumatique, Climatisation..." required></div>
+        </div>
+        <div class="fg"><label>Description</label><input type="text" name="description" id="tiv-desc" placeholder="Optionnel"></div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-type-intervention-vehicule')">Annuler</button>
+        <button type="submit" class="btn-ok" style="background:#d97706;"><i class="fas fa-save me-1"></i>Enregistrer</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="mo" id="mo-compagnie-assurance" onclick="if(event.target===this)fermer('mo-compagnie-assurance')">
+  <div class="mb" onclick="event.stopPropagation()">
+    <div class="mh" style="background: linear-gradient(135deg, #059669, #047857);">
+      <h5 id="mo-ca-titre"><i class="fas fa-shield-alt me-2"></i> Compagnie d'Assurance</h5>
+      <button class="mc" onclick="fermer('mo-compagnie-assurance')"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="POST">{% csrf_token %}
+      <input type="hidden" name="action" value="save_compagnie_assurance">
+      <input type="hidden" name="item_id" id="ca-id">
+      <div class="mbody">
+        <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;">
+          <div class="fg"><label>Code (ex: AXA)</label><input type="text" name="code" id="ca-code" placeholder="Optionnel" style="text-transform:uppercase;"></div>
+          <div class="fg"><label>Nom de la compagnie *</label><input type="text" name="nom" id="ca-nom" placeholder="Ex: SANLAM, AXA, SUNU..." required></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+          <div class="fg"><label>Téléphone</label><input type="text" name="telephone" id="ca-tel" placeholder="+225 ..."></div>
+          <div class="fg"><label>Email</label><input type="email" name="email" id="ca-email" placeholder="contact@assurance.com"></div>
+        </div>
+        <div class="fg"><label>Adresse géographique / Siège</label><input type="text" name="adresse" id="ca-adr" placeholder="Ex: Plateau, Abidjan"></div>
+      </div>
+      <div class="mfoot">
+        <button type="button" class="btn-nok" onclick="fermer('mo-compagnie-assurance')">Annuler</button>
+        <button type="submit" class="btn-ok" style="background:#059669;"><i class="fas fa-save me-1"></i>Enregistrer</button>
       </div>
     </form>
   </div>
@@ -1210,7 +1486,8 @@ document.addEventListener('DOMContentLoaded', function() {
     [
         'tbody-categories', 'tbody-types', 'liste-batiments', 'tbody-affectations', 
         'tbody-marques', 'tbody-equipe', 
-        'tbody-types-contrats', 'tbody-techs'
+        'tbody-types-contrats', 'tbody-techs',
+        'tbody-types-vehicules', 'tbody-types-interventions-vehicules', 'tbody-compagnies-assurance'
     ].forEach(id => majPagination(id));
 
     if (typeof $ !== 'undefined') {
@@ -1414,6 +1691,27 @@ function editerMarque(id, nom) {
   document.getElementById('mo-marque').classList.add('open');
 }
 
+function ouvrirModalModele(marqueId) {
+  document.getElementById('modele-id').value = '';
+  document.getElementById('modele-nom').value = '';
+  document.getElementById('mo-modele-titre').innerHTML = '<i class="fas fa-car me-2"></i> Nouveau Modèle';
+  let sel = document.getElementById('modele-marque-id');
+  if (marqueId) {
+    sel.value = marqueId;
+  } else {
+    sel.value = '';
+  }
+  document.getElementById('mo-modele').classList.add('open');
+}
+
+function editerModele(id, marqueId, nom) {
+  document.getElementById('modele-id').value = id;
+  document.getElementById('modele-nom').value = nom;
+  document.getElementById('modele-marque-id').value = marqueId;
+  document.getElementById('mo-modele-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier le Modèle';
+  document.getElementById('mo-modele').classList.add('open');
+}
+
 function ouvrirModalAffectation(userId, nomUser, bureauId) {
     document.getElementById('affectation-user-id').value = userId;
     document.getElementById('affectation-nom-user').textContent = nomUser;
@@ -1612,6 +1910,65 @@ function soumettreSchema(e) {
     .catch(function() {
       NxUX.toast('error', 'Erreur réseau');
     });
+}
+
+function ouvrirModalTypeVehicule() {
+    document.getElementById('tv-id').value = '';
+    document.getElementById('tv-code').value = '';
+    document.getElementById('tv-nom').value = '';
+    document.getElementById('tv-icone').value = 'fas fa-car';
+    document.getElementById('tv-ordre').value = '0';
+    document.getElementById('tv-desc').value = '';
+    document.getElementById('mo-tv-titre').innerHTML = '<i class="fas fa-car me-2"></i> Nouveau Type de Véhicule';
+    document.getElementById('mo-type-vehicule').classList.add('open');
+}
+function editerTypeVehicule(id, code, nom, icone, ordre, desc) {
+    document.getElementById('tv-id').value = id;
+    document.getElementById('tv-code').value = code;
+    document.getElementById('tv-nom').value = nom;
+    document.getElementById('tv-icone').value = icone || 'fas fa-car';
+    document.getElementById('tv-ordre').value = ordre || '0';
+    document.getElementById('tv-desc').value = desc || '';
+    document.getElementById('mo-tv-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier le Type de Véhicule';
+    document.getElementById('mo-type-vehicule').classList.add('open');
+}
+
+function ouvrirModalTypeInterventionVehicule() {
+    document.getElementById('tiv-id').value = '';
+    document.getElementById('tiv-code').value = '';
+    document.getElementById('tiv-nom').value = '';
+    document.getElementById('tiv-desc').value = '';
+    document.getElementById('mo-tiv-titre').innerHTML = '<i class="fas fa-wrench me-2"></i> Nouveau Type d\'Intervention';
+    document.getElementById('mo-type-intervention-vehicule').classList.add('open');
+}
+function editerTypeInterventionVehicule(id, code, nom, desc) {
+    document.getElementById('tiv-id').value = id;
+    document.getElementById('tiv-code').value = code;
+    document.getElementById('tiv-nom').value = nom;
+    document.getElementById('tiv-desc').value = desc || '';
+    document.getElementById('mo-tiv-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier le Type d\'Intervention';
+    document.getElementById('mo-type-intervention-vehicule').classList.add('open');
+}
+
+function ouvrirModalCompagnieAssurance() {
+    document.getElementById('ca-id').value = '';
+    document.getElementById('ca-code').value = '';
+    document.getElementById('ca-nom').value = '';
+    document.getElementById('ca-tel').value = '';
+    document.getElementById('ca-email').value = '';
+    document.getElementById('ca-adr').value = '';
+    document.getElementById('mo-ca-titre').innerHTML = '<i class="fas fa-shield-alt me-2"></i> Nouvelle Compagnie d\'Assurance';
+    document.getElementById('mo-compagnie-assurance').classList.add('open');
+}
+function editerCompagnieAssurance(id, code, nom, tel, email, adr) {
+    document.getElementById('ca-id').value = id;
+    document.getElementById('ca-code').value = code || '';
+    document.getElementById('ca-nom').value = nom;
+    document.getElementById('ca-tel').value = tel || '';
+    document.getElementById('ca-email').value = email || '';
+    document.getElementById('ca-adr').value = adr || '';
+    document.getElementById('mo-ca-titre').innerHTML = '<i class="fas fa-edit me-2"></i> Modifier la Compagnie d\'Assurance';
+    document.getElementById('mo-compagnie-assurance').classList.add('open');
 }
 </script>
 {% endblock %}
