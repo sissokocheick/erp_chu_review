@@ -230,7 +230,9 @@
                                 </td>
                                 <td>
                                     {% if evt.duree_en_cours %}
-                                        <span class="nx-duree-badge" style="background:#dbeafe;color:#1e40af;">en cours</span>
+                                        <span class="nx-duree-badge" style="background:#dbeafe;color:#1e40af;"><i class="fas fa-circle" style="font-size:7px;margin-right:4px;"></i>en cours</span>
+                                    {% elif evt.duree_expiree or evt.duree_display == 'Expirée' %}
+                                        <span class="nx-duree-badge" style="background:#fef3c7;color:#92400e;" title="Session expirée par inactivité (délai dépassé)"><i class="fas fa-history" style="font-size:8px;margin-right:3px;"></i>Expirée</span>
                                     {% elif evt.duree_display and evt.duree_display != '—' %}
                                         <span class="nx-duree-badge" style="background:#ecfdf5;color:#065f46;">{{ evt.duree_display }}</span>
                                     {% else %}

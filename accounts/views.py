@@ -14,6 +14,7 @@ from datetime import timedelta, datetime
 
 
 from django.shortcuts import render, redirect, get_object_or_404
+from django.conf import settings
 
 
 from django.contrib import messages
@@ -397,10 +398,32 @@ def custom_login(request):
 
 
         if user and password_ok:
-
+            # Clôturer proprement les anciennes sessions actives de cet utilisateur
+            # pour éviter l'accumulation de connexions simultanées orphelines "en cours"
+            try:
+                from django.contrib.sessions.models import Session
+                now_tz = timezone.now()
+                for s in Session.objects.filter(expire_date__gt=now_tz):
+                    try:
+                        s_data = s.get_decoded()
+                        if str(s_data.get('_auth_user_id')) == str(user.id):
+                            s_key = s.session_key
+                            s.delete()
+                            AuditConnexion.objects.create(
+                                utilisateur=user,
+                                type_action='DECONNEXION',
+                                description=f"Fermeture automatique session precedente de {user.username} (nouvelle connexion)",
+                                adresse_ip=get_client_ip(request),
+                                user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
+                                session_key=s_key,
+                            )
+                    except Exception:
+                        pass
+            except Exception as e:
+                logger.warning("[login] Nettoyage anciennes sessions: %s", e)
 
             login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-
+            nouvelle_session_key = request.session.session_key
 
             # Journaliser la connexion IMMEDIATEMENT apres login() :
             # le retour anticipe must_change_password court-circuitait
@@ -413,6 +436,7 @@ def custom_login(request):
                     description=f"Connexion reussie de {user.username}",
                     adresse_ip=get_client_ip(request),
                     user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
+                    session_key=nouvelle_session_key,
                 )
             except Exception:
                 logger.exception("AuditConnexion impossible pour %s", user.username)
@@ -499,35 +523,17 @@ def custom_logout(request):
 
 
     if request.user.is_authenticated:
-
-
         log_audit(request, f"Deconnexion de {request.user.username}", type_action='LOGOUT')
-
-
         try:
-
-
+            s_key = request.session.session_key
             AuditConnexion.objects.create(
-
-
                 utilisateur=request.user,
-
-
                 type_action='DECONNEXION',
-
-
                 description=f"Deconnexion de {request.user.username}",
-
-
                 adresse_ip=get_client_ip(request),
-
-
                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
-
-
+                session_key=s_key,
             )
-
-
         except Exception as e:
             logger.warning("[logout] Enregistrement deconnexion echoue: %s", e)
 
@@ -3528,126 +3534,94 @@ def journal_audit(request):
         return f'{s} s'
 
 
-    # CORRECTION [Perf] : limiter les deconnexions a la periode pertinente
+    # Source de verite unique : sessions Django actives
+    sessions_actives_qs = list(Session.objects.filter(expire_date__gt=now))
+    active_session_keys = set()
+    user_ids_actifs = set()
+    for s in sessions_actives_qs:
+        active_session_keys.add(s.session_key)
+        try:
+            data = s.get_decoded()
+            uid = data.get('_auth_user_id')
+            if uid:
+                user_ids_actifs.add(int(uid))
+        except Exception:
+            continue
 
-
-    deco_qs = AuditConnexion.objects.filter(type_action='DECONNEXION', utilisateur_id__isnull=False)
-
-
-    if periode_debut:
-
-
-        deco_qs = deco_qs.filter(date_creation__gte=periode_debut - timedelta(days=1))
-
-
-    deconnexions = list(deco_qs.order_by('date_creation').values('utilisateur_id', 'date_creation'))
-
-
-    deco_by_user = {}
-
-
-    for d in deconnexions:
-
-
-        deco_by_user.setdefault(d['utilisateur_id'], []).append(d['date_creation'])
-
+    session_cookie_age = getattr(settings, 'SESSION_COOKIE_AGE', 1200)
 
     evenements = list(page_obj.object_list)
+    user_ids_page = {evt.utilisateur_id for evt in evenements if evt.utilisateur_id}
 
+    # Chronologie ordonnée des connexions et déconnexions pour les utilisateurs de la page
+    timeline_qs = (
+        AuditConnexion.objects
+        .filter(utilisateur_id__in=user_ids_page, type_action__in=['CONNEXION', 'DECONNEXION'])
+        .order_by('date_creation', 'pk')
+        .values('id', 'utilisateur_id', 'type_action', 'date_creation', 'session_key')
+    )
+    user_timeline = {}
+    for item in timeline_qs:
+        user_timeline.setdefault(item['utilisateur_id'], []).append(item)
 
     for evt in evenements:
-
-
         evt.duree_display = '—'
-
-
         evt.duree_en_cours = False
-
+        evt.duree_expiree = False
 
         if evt.type_action != 'CONNEXION' or not evt.utilisateur_id:
-
-
             continue
 
+        timeline = user_timeline.get(evt.utilisateur_id, [])
 
-        dates = deco_by_user.get(evt.utilisateur_id, [])
+        next_conn = None
+        next_deco = None
 
+        for item in timeline:
+            if item['date_creation'] > evt.date_creation or (item['date_creation'] == evt.date_creation and item['id'] > evt.id):
+                if item['type_action'] == 'CONNEXION' and next_conn is None:
+                    next_conn = item
+                elif item['type_action'] == 'DECONNEXION' and next_deco is None:
+                    next_deco = item
+                if next_conn and next_deco:
+                    break
 
-        fin = None
-
-
-        for d in dates:
-
-
-            if d > evt.date_creation:
-
-
-                fin = d
-
-
-                break
-
-
-        if fin is None:
-
-
-            evt.duree_display = 'en cours'
-
-
-            evt.duree_en_cours = True
-
-
-        else:
-
-
-            delta = (fin - evt.date_creation).total_seconds()
-
-
+        # Cas 1 : Déconnexion explicite survenue avant une nouvelle connexion
+        if next_deco and (next_conn is None or next_deco['date_creation'] <= next_conn['date_creation']):
+            delta = (next_deco['date_creation'] - evt.date_creation).total_seconds()
             evt.duree_display = _fmt_duree(delta)
+            evt.duree_en_cours = False
 
+        # Cas 2 : Une nouvelle connexion est survenue avant déconnexion explicite
+        elif next_conn:
+            delta = (next_conn['date_creation'] - evt.date_creation).total_seconds()
+            if delta <= session_cookie_age:
+                evt.duree_display = _fmt_duree(delta)
+            else:
+                evt.duree_display = 'Expirée'
+                evt.duree_expiree = True
+            evt.duree_en_cours = False
+
+        # Cas 3 : Dernière connexion connue de cet utilisateur (pas de reconnexion ni déconnexion ultérieure)
+        else:
+            est_active = False
+            if getattr(evt, 'session_key', None):
+                est_active = evt.session_key in active_session_keys
+            else:
+                age_sec = (now - evt.date_creation).total_seconds()
+                est_active = (evt.utilisateur_id in user_ids_actifs) and (age_sec <= session_cookie_age)
+
+            if est_active:
+                evt.duree_en_cours = True
+                evt.duree_display = 'en cours'
+            else:
+                evt.duree_display = 'Expirée'
+                evt.duree_expiree = True
+                evt.duree_en_cours = False
 
     # ═══════════════════════════════════════════════════════════════════
-
-
     # PANNEAU LATÉRAL — donnees reelles (optimisees)
-
-
     # ═══════════════════════════════════════════════════════════════════
-
-
-    # Source de verite unique : sessions Django actives
-
-
-    sessions_actives_qs = Session.objects.filter(expire_date__gt=now)
-
-
-    user_ids_actifs = set()
-
-
-    for s in sessions_actives_qs:
-
-
-        try:
-
-
-            data = s.get_decoded()
-
-
-            uid = data.get('_auth_user_id')
-
-
-            if uid:
-
-
-                user_ids_actifs.add(int(uid))
-
-
-        except Exception:
-
-
-            continue
-
-
     utilisateurs_actifs = len(user_ids_actifs)
 
 

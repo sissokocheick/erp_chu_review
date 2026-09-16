@@ -479,6 +479,7 @@ class AuditConnexion(models.Model):
     description = models.TextField(blank=True)
     adresse_ip = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
+    session_key = models.CharField(max_length=40, null=True, blank=True, db_index=True, verbose_name="Clé de session Django")
     date_creation = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
