@@ -128,6 +128,8 @@ class ConfigurationHopitalFormTest(TestCase):
             'ville': 'Abidjan', 'pays': "Côte d'Ivoire",
             'adresse': 'Boulevard Mitterrand',
             'pied_page_pdf': 'pied institutionnel',
+            'devise_monetaire': 'FCFA',
+            'seuil_alerte_peremption_jours': 30,
         }, instance=config)
         self.assertTrue(form.is_valid(), form.errors)
         config = form.save()
@@ -138,12 +140,15 @@ class ConfigurationHopitalFormTest(TestCase):
         config = ConfigurationHopital.get_instance()
         form = ConfigurationHopitalForm({
             'nom': "Test", 'couleur_principale': 'bleu',
+            'devise_monetaire': 'FCFA', 'seuil_alerte_peremption_jours': 30,
         }, instance=config)
         self.assertFalse(form.is_valid())
 
     def test_form_nom_requis(self):
         config = ConfigurationHopital.get_instance()
-        form = ConfigurationHopitalForm({'nom': ''}, instance=config)
+        form = ConfigurationHopitalForm({
+            'nom': '', 'devise_monetaire': 'FCFA', 'seuil_alerte_peremption_jours': 30,
+        }, instance=config)
         self.assertFalse(form.is_valid())
         self.assertIn('nom', form.errors)
 
@@ -151,7 +156,7 @@ class ConfigurationHopitalFormTest(TestCase):
         form = ConfigurationHopitalForm()
         for champ in ('nom', 'couleur_principale', 'logo',
                       'telephone', 'email_contact', 'ville', 'adresse', 'pays',
-                      'pied_page_pdf'):
+                      'pied_page_pdf', 'devise_monetaire', 'seuil_alerte_peremption_jours'):
             self.assertIn(champ, form.fields)
 
 
