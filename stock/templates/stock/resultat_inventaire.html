@@ -115,7 +115,7 @@
     <table class="recap-bar">
         <tr>
             <td><span class="num">{{ total_ecarts }}</span><span class="txt">Écarts constatés (unités)</span></td>
-            <td><span class="num">{{ valeur_totale_ecart|floatformat:2 }} FCFA</span><span class="txt">Valeur totale des écarts</span></td>
+            <td><span class="num">{{ valeur_totale_ecart|floatformat:2 }} {{ devise_monetaire }}</span><span class="txt">Valeur totale des écarts</span></td>
             <td><span class="num">{{ lignes_data|length }}</span><span class="txt">Lignes traitées</span></td>
         </tr>
     </table>
@@ -148,7 +148,7 @@
                     {% elif item.ecart < 0 %}<span class="ecart-neg">{{ item.ecart }}</span>
                     {% else %}<span class="ecart-zero">0</span>{% endif %}
                 </td>
-                <td class="text-right">{{ item.valeur_ecart|floatformat:2 }} FCFA</td>
+                <td class="text-right">{{ item.valeur_ecart|floatformat:2 }} {{ devise_monetaire }}</td>
                 <td class="text-center">{{ item.observation }}</td>
             </tr>
             {% empty %}

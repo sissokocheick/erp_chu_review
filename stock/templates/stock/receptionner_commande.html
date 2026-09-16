@@ -146,7 +146,7 @@
             <th class="c" style="width:14%;">N° Lot reçu</th>
             <th class="c" style="width:12%;">Date péremption</th>
             <th class="c" style="width:11%;">Qté reçue</th>
-            <th class="c" style="width:11%;">P.U. (FCFA)</th>
+            <th class="c" style="width:11%;">P.U. ({{ devise_monetaire }})</th>
           </tr>
         </thead>
         <tbody>
@@ -201,7 +201,7 @@
                      class="input-prix" style="cursor: not-allowed;" readonly
                      title="Le prix est figé depuis la commande."
                      aria-label="Prix unitaire">
-              <div style="font-size:10px;color: var(--text-light);margin-top:2px;">FCFA / unité</div>
+              <div style="font-size:10px;color: var(--text-light);margin-top:2px;">{{ devise_monetaire }} / unité</div>
             </td>
           </tr>
           {% endif %}

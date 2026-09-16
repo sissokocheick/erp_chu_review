@@ -309,7 +309,7 @@
                 <tr>
                     <td rowspan="4" class="c-logo-box">
                         <img src="/static/img/logo.jpg" alt="Logo CHU" onerror="this.style.display='none'"><br>
-                        Centre Hospitalier et<br>Universitaire d'Angré
+                        Centre Hospitalier et<br>Universitaire
                     </td>
                     <td class="c-ps2">SERVICE TECHNIQUE / MAINTENANCE</td>
                     <td class="c-code">Code : ENR-SAV/TECH-001</td>
@@ -391,8 +391,8 @@
             </table>
 
             <div class="footer-pdf">
-                ANGRE BESSIKOI Adresse : 28 BP 1350 ABIDJAN Tel : 2722496400 CC N° : 1821717-Q<br>
-                Service Maintenance & Infrastructures | Plateforme ERP CHU Angré
+                {{ config_hopital.adresse|default:"" }}0 ABIDJAN Tel : 2722496400 CC N° : 1821717-Q<br>
+                Service Maintenance & Infrastructures | Plateforme ERP {{ etablissement_nom|upper }}
             </div>
 
         </div>

@@ -75,7 +75,7 @@
             <img src="data:image/png;base64,{{ qr_code }}" alt="QR Code">
         </div>
         <div class="info-container">
-            <h3>CHU ANGRÉ</h3>
+            <h3>{{ etablissement_nom|upper }}</h3>
             <p><strong>{{ immo.nom_affichage }}</strong></p>
             <p>Marque: {{ immo.marque.nom|default:"N/A" }}</p>
             <p>S/N: {{ immo.numero_serie|default:"N/A" }}</p>

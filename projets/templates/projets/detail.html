@@ -492,21 +492,21 @@
   <div class="dash-kpi blue">
     <div class="dash-kpi-icon"><i class="fas fa-coins"></i></div>
     <div class="dash-kpi-content">
-      <h3>{% if projet.budget_alloue %}{{ projet.budget_alloue|format_milliers }} <small style="font-size:12px;">FCFA</small>{% else %}—{% endif %}</h3>
+      <h3>{% if projet.budget_alloue %}{{ projet.budget_alloue|format_milliers }} <small style="font-size:12px;">{{ devise_monetaire }}</small>{% else %}—{% endif %}</h3>
       <span>Budget Initial Alloué</span>
     </div>
   </div>
   <div class="dash-kpi green">
     <div class="dash-kpi-icon"><i class="fas fa-boxes"></i></div>
     <div class="dash-kpi-content">
-      <h3>{{ total_valeur_recue|format_milliers }} <small style="font-size:12px;">FCFA</small></h3>
+      <h3>{{ total_valeur_recue|format_milliers }} <small style="font-size:12px;">{{ devise_monetaire }}</small></h3>
       <span>Valeur Réceptions Fournisseurs</span>
     </div>
   </div>
   <div class="dash-kpi red">
     <div class="dash-kpi-icon"><i class="fas fa-arrow-up"></i></div>
     <div class="dash-kpi-content">
-      <h3>{{ total_valeur_nette|format_milliers }} <small style="font-size:12px;">FCFA</small></h3>
+      <h3>{{ total_valeur_nette|format_milliers }} <small style="font-size:12px;">{{ devise_monetaire }}</small></h3>
       <span>Coût Net Décaissé (Chantier)</span>
     </div>
   </div>
@@ -593,7 +593,7 @@
           </td>
           <td class="r" style="font-weight: 700; color: var(--text-dark);">
             {% if pf.total_montant_estime %}
-              {{ pf.total_montant_estime|format_milliers }} <small style="font-size: 11px;">FCFA</small>
+              {{ pf.total_montant_estime|format_milliers }} <small style="font-size: 11px;">{{ devise_monetaire }}</small>
             {% else %}
               —
             {% endif %}
@@ -783,7 +783,7 @@
             {{ bilan_global.total_net }}
           </td>
           <td class="r" style="font-weight: 800; font-size: 13.5px;">
-            {{ bilan_global.total_valeur_nette|format_milliers }} <small>FCFA</small>
+            {{ bilan_global.total_valeur_nette|format_milliers }} <small>{{ devise_monetaire }}</small>
           </td>
         </tr>
 
@@ -860,7 +860,7 @@
                         {{ item.net }}
                       </td>
                       <td class="r" style="font-weight: 700; text-align: right; padding: 9px 12px;">
-                        {{ item.valeur_nette|format_milliers }} <small>FCFA</small>
+                        {{ item.valeur_nette|format_milliers }} <small>{{ devise_monetaire }}</small>
                       </td>
                     </tr>
                     {% endfor %}
@@ -1146,7 +1146,7 @@
                   <th style="width: 120px; padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Réf.</th>
                   <th style="padding: 10px 12px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Désignation de l'Article</th>
                   <th style="width: 120px; padding: 10px 12px; text-align: center; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Quantité Prévue <span style="color:#dc3545;">*</span></th>
-                  <th style="width: 150px; padding: 10px 12px; text-align: right; font-size: 11px; text-transform: uppercase; color: var(--text-light);">P.U Estimé (FCFA)</th>
+                  <th style="width: 150px; padding: 10px 12px; text-align: right; font-size: 11px; text-transform: uppercase; color: var(--text-light);">P.U Estimé ({{ devise_monetaire }})</th>
                   <th style="width: 150px; padding: 10px 12px; text-align: right; font-size: 11px; text-transform: uppercase; color: var(--text-light);">Total Ligne</th>
                   <th style="width: 50px; text-align: center;"></th>
                 </tr>
@@ -1165,7 +1165,7 @@
                   <td colspan="3" style="padding: 10px 14px; text-align: right; text-transform: uppercase; font-size: 11.5px; color: var(--text-light);">Totaux Prévisionnels :</td>
                   <td id="pf-total-qte" style="padding: 10px 12px; text-align: center; color: #1c5b96; font-size: 13.5px; font-weight: 800;">0</td>
                   <td style="padding: 10px 12px;"></td>
-                  <td id="pf-total-montant" style="padding: 10px 14px; text-align: right; color: #28a745; font-size: 14px; font-weight: 800;">0 FCFA</td>
+                  <td id="pf-total-montant" style="padding: 10px 14px; text-align: right; color: #28a745; font-size: 14px; font-weight: 800;">0 {{ devise_monetaire }}</td>
                   <td></td>
                 </tr>
               </tfoot>
@@ -1363,7 +1363,7 @@
       const pu = parseFloat(r.querySelector('.pf-input-pu')?.value) || 0;
       total += (qte * pu);
     });
-    const totalFmt = Math.round(total).toLocaleString('fr-FR') + ' FCFA';
+    const totalFmt = Math.round(total).toLocaleString('fr-FR') + ' {{ devise_monetaire }}';
     const form = document.getElementById('form-proforma');
     const isEdit = form.action.includes('/modifier/');
 
@@ -1495,7 +1495,7 @@
               tr.onmouseleave = () => tr.style.background = '';
               
               const prixNum = a.prix_reference || 0;
-              const prixFormate = prixNum ? `${Math.round(prixNum).toLocaleString('fr-FR')} FCFA` : '—';
+              const prixFormate = prixNum ? `${Math.round(prixNum).toLocaleString('fr-FR')} {{ devise_monetaire }}` : '—';
               const badgeTarif = a.prix_fournisseur_specifique ? `<span style="background: #e7f5ea; color: #1e7e34; padding: 2px 6px; border-radius: 4px; font-size: 10px; margin-left: 6px; font-weight: 700; white-space: nowrap;"><i class="fas fa-tag me-1"></i>Tarif fournisseur</span>` : '';
               
               tr.innerHTML = `
@@ -1575,7 +1575,7 @@
                  style="width: 110px; padding: 6px 8px; text-align: right; font-size: 13px; border-radius: 6px;">
         </td>
         <td style="padding: 9px 12px; text-align: right; font-weight: 800; color: #1c5b96; font-size: 13px;" class="pf-total-ligne">
-          0 FCFA
+          0 {{ devise_monetaire }}
         </td>
         <td style="padding: 9px 12px; text-align: center;">
           <button type="button" class="btn-icon-action" style="color: #dc3545;" title="Retirer cet article" onclick="supprimerLigneProforma(this)">
@@ -1681,7 +1681,7 @@
       totalMontant += lineTotal;
 
       if (totalCell) {
-        totalCell.textContent = lineTotal > 0 ? `${Math.round(lineTotal).toLocaleString('fr-FR')} FCFA` : '—';
+        totalCell.textContent = lineTotal > 0 ? `${Math.round(lineTotal).toLocaleString('fr-FR')} {{ devise_monetaire }}` : '—';
       }
     });
 
@@ -1689,7 +1689,7 @@
     const totalMontantEl = document.getElementById('pf-total-montant');
 
     if (totalQteEl) totalQteEl.textContent = `${totalQte.toLocaleString('fr-FR')} u`;
-    if (totalMontantEl) totalMontantEl.textContent = `${Math.round(totalMontant).toLocaleString('fr-FR')} FCFA`;
+    if (totalMontantEl) totalMontantEl.textContent = `${Math.round(totalMontant).toLocaleString('fr-FR')} {{ devise_monetaire }}`;
   }
 
   function ouvrirModalProforma(mode, id) {

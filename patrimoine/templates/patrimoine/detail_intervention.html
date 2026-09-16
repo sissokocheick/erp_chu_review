@@ -174,13 +174,13 @@
         
         {% if intervention.immobilisation.contrat_maintenance and intervention.immobilisation.contrat_maintenance.statut == 'ACTIF' %}
             <div style="font-size: 14px; font-weight: 800; color: #059669; margin-bottom: 10px;">
-                <i class="fas fa-check-circle"></i> Frais de base couverts par le forfait contrat (0 FCFA)
+                <i class="fas fa-check-circle"></i> Frais de base couverts par le forfait contrat (0 {{ devise_monetaire }})
             </div>
             
             {% if intervention.frais_hors_contrat > 0 %}
                 <div class="devis-box">
                     <div style="font-size: 12px; font-weight: 800; color: #b45309; text-transform: uppercase;">Avenant / Devis Hors Contrat</div>
-                    <div style="font-size: 22px; font-weight: 800; color: #d97706; margin: 8px 0;">{{ intervention.frais_hors_contrat|floatformat:0 }} FCFA</div>
+                    <div style="font-size: 22px; font-weight: 800; color: #d97706; margin: 8px 0;">{{ intervention.frais_hors_contrat|floatformat:0 }} {{ devise_monetaire }}</div>
                     <p style="font-size: 14px; color: #92400e; margin-bottom: 15px; background: var(--bg-card); padding: 10px; border-radius: 8px;"><b>Motif :</b> {{ intervention.motif_frais_hors_contrat }}</p>
                     
                     {% if intervention.devis_accepte == True %}
@@ -212,7 +212,7 @@
                     {% csrf_token %}
                     <input type="hidden" name="action" value="soumettre_devis">
                     <h6 style="margin:0 0 15px 0; color: var(--text-dark); font-size: 14px; font-weight: 800;">Soumettre des frais supplémentaires</h6>
-                    <input type="number" name="montant_devis" class="form-control" placeholder="Montant du devis (FCFA)" required>
+                    <input type="number" name="montant_devis" class="form-control" placeholder="Montant du devis ({{ devise_monetaire }})" required>
                     <textarea name="motif_devis" class="form-control" rows="2" placeholder="Justification détaillée (Ex: Remplacement carte mère hors garantie...)" required></textarea>
                     
                     <label style="font-size: 11px; font-weight: 800; color: var(--text-medium); display: block; margin-bottom: 5px;">Transmettre pour validation à :</label>
@@ -223,7 +223,7 @@
             {% endif %}
 
         {% else %}
-            <div style="font-size: 24px; font-weight: 800; color: var(--text-dark);">{{ intervention.cout_total|floatformat:0 }} FCFA</div>
+            <div style="font-size: 24px; font-weight: 800; color: var(--text-dark);">{{ intervention.cout_total|floatformat:0 }} {{ devise_monetaire }}</div>
             <small style="color: var(--text-medium); font-weight: 600;">(Main d'œuvre + Pièces + Déplacement)</small>
         {% endif %}
     </div>

@@ -180,7 +180,7 @@
                     <div class="s-value">{{ total_quantite }}</div>
                 </div>
                 <div class="summary-cell">
-                    <div class="s-label">Valeur (FCFA)</div>
+                    <div class="s-label">Valeur ({{ devise_monetaire }})</div>
                     <div class="s-value">{{ total_valeur|floatformat:0 }}</div>
                 </div>
                 <div class="summary-cell">
@@ -198,7 +198,7 @@
                         <th style="width:30%;">Service</th>
                         <th style="width:10%;">Code</th>
                         <th style="width:14%;" class="text-right">Unités</th>
-                        <th style="width:16%;" class="text-right">Valeur (FCFA)</th>
+                        <th style="width:16%;" class="text-right">Valeur ({{ devise_monetaire }})</th>
                         <th style="width:12%;" class="text-right">Nb mvt</th>
                         <th style="width:14%;" class="text-right">Part valeur</th>
                     </tr>
@@ -231,7 +231,7 @@
                         <th style="width:12%;">Référence</th>
                         <th style="width:8%;">Unité</th>
                         <th style="width:10%;" class="text-right">Quantité</th>
-                        <th style="width:14%;" class="text-right">Valeur (FCFA)</th>
+                        <th style="width:14%;" class="text-right">Valeur ({{ devise_monetaire }})</th>
                         <th style="width:12%;" class="text-right">Nb mvt</th>
                     </tr>
                 </thead>

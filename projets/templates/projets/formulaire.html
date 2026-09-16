@@ -393,14 +393,14 @@
       </div>
 
       <div class="form-group-item">
-        <label class="form-label-custom">Budget alloué (FCFA)</label>
+        <label class="form-label-custom">Budget alloué ({{ devise_monetaire }})</label>
         <input type="number" step="1" min="0" name="budget_alloue" id="id_budget_alloue" class="input-custom" 
                value="{{ projet.budget_alloue|default:'' }}" 
                placeholder="Ex: 15000000"
                oninput="actualiserApercuBudget(this.value)">
         <div id="budget-preview" style="font-size: 12px; color: #1c5b96; font-weight: 700; margin-top: 4px; min-height: 18px;">
           {% if projet.budget_alloue %}
-            <i class="fas fa-coins me-1"></i> {{ projet.budget_alloue|format_milliers }} FCFA
+            <i class="fas fa-coins me-1"></i> {{ projet.budget_alloue|format_milliers }} {{ devise_monetaire }}
           {% endif %}
         </div>
 
@@ -565,7 +565,7 @@
               <th style="padding: 9px 12px; width: 120px; text-align: left; font-size: 11px; color: var(--text-light);">Réf.</th>
               <th style="padding: 9px 12px; text-align: left; font-size: 11px; color: var(--text-light);">Désignation <span class="req">*</span></th>
               <th style="padding: 9px 12px; width: 110px; text-align: center; font-size: 11px; color: var(--text-light);">Quantité <span class="req">*</span></th>
-              <th style="padding: 9px 12px; width: 130px; text-align: right; font-size: 11px; color: var(--text-light);">P.U Estimé (FCFA)</th>
+              <th style="padding: 9px 12px; width: 130px; text-align: right; font-size: 11px; color: var(--text-light);">P.U Estimé ({{ devise_monetaire }})</th>
               <th style="padding: 9px 12px; width: 130px; text-align: right; font-size: 11px; color: var(--text-light);">Total Ligne</th>
               <th style="padding: 9px 12px; width: 50px; text-align: center;"></th>
             </tr>
@@ -578,7 +578,7 @@
               <td colspan="3" style="padding: 10px 14px; text-align: right; font-size: 12px; color: var(--text-medium);">TOTAUX DE LA PROFORMA :</td>
               <td id="modal-pf-total-qte" style="padding: 10px 14px; text-align: center; color: #28a745; font-size: 13px;">0 unités</td>
               <td></td>
-              <td id="modal-pf-total-montant" style="padding: 10px 14px; text-align: right; color: #1e7e34; font-size: 13px;">0 FCFA</td>
+              <td id="modal-pf-total-montant" style="padding: 10px 14px; text-align: right; color: #1e7e34; font-size: 13px;">0 {{ devise_monetaire }}</td>
               <td></td>
             </tr>
           </tfoot>
@@ -1090,7 +1090,7 @@
     const elQte = document.getElementById('modal-pf-total-qte');
     const elMontant = document.getElementById('modal-pf-total-montant');
     if (elQte) elQte.textContent = `${totalQte} unités (${rows.length} réf.)`;
-    if (elMontant) elMontant.textContent = `${Math.round(totalMontant).toLocaleString('fr-FR')} FCFA`;
+    if (elMontant) elMontant.textContent = `${Math.round(totalMontant).toLocaleString('fr-FR')} {{ devise_monetaire }}`;
   }
 
   function validerModalProforma() {
@@ -1173,7 +1173,7 @@
     const isEdit = (idx >= 0 && idx < proformasData.length);
     const titre = isEdit ? "Mettre à jour la proforma ?" : "Ajouter cette proforma ?";
     const totalMontant = lignes.reduce((acc, cur) => acc + (cur.montant_total || 0), 0);
-    const montantFmt = Math.round(totalMontant).toLocaleString('fr-FR') + ' FCFA';
+    const montantFmt = Math.round(totalMontant).toLocaleString('fr-FR') + ' {{ devise_monetaire }}';
 
     const questionHtml = `
       <div style="text-align: left; font-size: 13.5px; line-height: 1.5;">
@@ -1263,7 +1263,7 @@
     const nomProjet = nomInput ? nomInput.value.trim() : '';
     const isModification = {% if projet and projet.id %}true{% else %}false{% endif %};
     const budgetInput = document.querySelector('[name="budget_alloue"]');
-    const budgetVal = (budgetInput && budgetInput.value) ? Math.round(parseFloat(budgetInput.value)).toLocaleString('fr-FR') + ' FCFA' : 'Non défini';
+    const budgetVal = (budgetInput && budgetInput.value) ? Math.round(parseFloat(budgetInput.value)).toLocaleString('fr-FR') + ' {{ devise_monetaire }}' : 'Non défini';
     const chefSelect = document.querySelector('[name="chef_de_projet"]');
     const chefNom = (chefSelect && chefSelect.selectedOptions[0]) ? chefSelect.selectedOptions[0].text.trim() : 'Non assigné';
 
@@ -1445,7 +1445,7 @@
     if (!el) return;
     const num = parseFloat(val);
     if (!isNaN(num) && num > 0) {
-      el.innerHTML = `<i class="fas fa-coins me-1"></i> ${Math.round(num).toLocaleString('fr-FR')} FCFA`;
+      el.innerHTML = `<i class="fas fa-coins me-1"></i> ${Math.round(num).toLocaleString('fr-FR')} {{ devise_monetaire }}`;
     } else {
       el.innerHTML = '';
     }

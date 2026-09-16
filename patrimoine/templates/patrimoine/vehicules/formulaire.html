@@ -512,7 +512,7 @@
               <label class="veh-label">Valeur d'acquisition</label>
               <div class="veh-input-wrap">
                 <input type="number" name="valeur_acquisition" class="veh-input" step="0.01" placeholder="0" value="{{ vehicule.valeur_acquisition|default:'0' }}">
-                <span class="veh-input-unit">FCFA</span>
+                <span class="veh-input-unit">{{ devise_monetaire }}</span>
               </div>
             </div>
           </div>
@@ -571,7 +571,7 @@
               <label class="veh-label">Prime annuelle d'assurance</label>
               <div class="veh-input-wrap">
                 <input type="number" name="assurance_premium" class="veh-input" step="0.01" placeholder="0" value="{{ vehicule.assurance_premium|default:'0' }}">
-                <span class="veh-input-unit">FCFA</span>
+                <span class="veh-input-unit">{{ devise_monetaire }}</span>
               </div>
             </div>
           </div>

@@ -173,7 +173,7 @@
   <h5><i class="fas fa-calculator"></i> Acquisition & Amortissement</h5>
   <div class="grid3">
     <div class="fg">
-      <label>Valeur d'acquisition (FCFA) <span class="req">*</span></label>
+      <label>Valeur d'acquisition ({{ devise_monetaire }}) <span class="req">*</span></label>
       <input type="number" name="valeur_acquisition" value="{{ immo.valeur_acquisition|default:'0' }}" required>
     </div>
     <div class="fg">

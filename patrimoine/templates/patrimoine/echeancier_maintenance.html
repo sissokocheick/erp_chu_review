@@ -115,7 +115,7 @@
                     {% endif %}
                 </td>
                 <td data-label="Équipements" style="text-align:center;">{{ e.nb_equipements }}</td>
-                <td data-label="Coût annuel">{{ e.contrat.cout_annuel|floatformat:0 }} FCFA</td>
+                <td data-label="Coût annuel">{{ e.contrat.cout_annuel|floatformat:0 }} {{ devise_monetaire }}</td>
                 <td data-label="Statut" style="text-align:right;">
                     {% if e.statut == 'EN_RETARD' %}
                         <span class="badge badge-retard">En retard</span>

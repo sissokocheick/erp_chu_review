@@ -301,7 +301,7 @@
                             <thead style="background: var(--bg-stripe); font-size: 11px; text-transform: uppercase; color: var(--text-medium); border-bottom: 1px solid var(--border-color);">
                                 <tr>
                                     <th style="padding: 8px 10px; text-align: left;">Fournisseur *</th>
-                                    <th style="padding: 8px 10px; text-align: right; width: 140px;">Prix Achat (FCFA) *</th>
+                                    <th style="padding: 8px 10px; text-align: right; width: 140px;">Prix Achat ({{ devise_monetaire }}) *</th>
                                     <th style="padding: 8px 10px; text-align: left; width: 130px;">Réf. Fournisseur</th>
                                     <th style="padding: 8px 10px; text-align: center; width: 75px;">Délai (j)</th>
                                     <th style="padding: 8px 10px; text-align: center; width: 40px;"></th>
@@ -408,7 +408,7 @@
                     <thead style="background: var(--bg-stripe); font-size: 11px; text-transform: uppercase; color: var(--text-medium); border-bottom: 1px solid var(--border-color);">
                         <tr>
                             <th style="padding: 10px; text-align: left;">Fournisseur *</th>
-                            <th style="padding: 10px; text-align: right; width: 140px;">Prix Achat (FCFA) *</th>
+                            <th style="padding: 10px; text-align: right; width: 140px;">Prix Achat ({{ devise_monetaire }}) *</th>
                             <th style="padding: 10px; text-align: left; width: 130px;">Réf. Fournisseur</th>
                             <th style="padding: 10px; text-align: center; width: 75px;">Délai (j)</th>
                             <th style="padding: 10px; text-align: center; width: 40px;"></th>
@@ -781,7 +781,7 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
                 if (data.article) {
                     if (nomSpan) nomSpan.textContent = data.article.designation;
                     const pRef = data.article.prix_reference;
-                    if (prixRefSpan) prixRefSpan.textContent = pRef ? `${Math.round(pRef).toLocaleString('fr-FR')} FCFA` : 'Non défini';
+                    if (prixRefSpan) prixRefSpan.textContent = pRef ? `${Math.round(pRef).toLocaleString('fr-FR')} {{ devise_monetaire }}` : 'Non défini';
                 }
 
                 quickFournisseursList = data.fournisseurs || [];

@@ -196,7 +196,7 @@
               {% endif %}
             </td>
             <td style="font-weight: 600;">{{ i.garage_prestataire|default:"—" }}</td>
-            <td style="font-weight: 700; color: #b45309;">{{ i.cout|floatformat:0 }} FCFA</td>
+            <td style="font-weight: 700; color: #b45309;">{{ i.cout|floatformat:0 }} {{ devise_monetaire }}</td>
             <td>{{ i.kilometrage|default:"—" }} km</td>
             <td style="color: var(--text-light);">{{ i.date_realisation|date:"d/m/Y"|default:"—" }}</td>
           </tr>

@@ -215,7 +215,7 @@
         {% th_tri 'nb' 'Nb biens' tri ordre %}
         {% th_tri 'valeur' "Valeur d'acquisition" tri ordre %}
         {% th_tri 'amorti' 'Amortissement cumulé' tri ordre %}
-        {% th_tri 'vnc' 'VNC (FCFA)' tri ordre %}
+        {% th_tri 'vnc' 'VNC ({{ devise_monetaire }})' tri ordre %}
         <th>Part VNC</th>
       </tr>
     </thead>
@@ -262,7 +262,7 @@
         {% th_tri 'type' "Type d'équipement" tri_detail ordre_detail 'd' %}
         {% th_tri 'nb' 'Nb biens' tri_detail ordre_detail 'd' %}
         {% th_tri 'valeur' "Valeur d'acquisition" tri_detail ordre_detail 'd' %}
-        {% th_tri 'vnc' 'VNC (FCFA)' tri_detail ordre_detail 'd' %}
+        {% th_tri 'vnc' 'VNC ({{ devise_monetaire }})' tri_detail ordre_detail 'd' %}
       </tr>
     </thead>
     <tbody>
@@ -334,7 +334,7 @@
         labels: labels,
         datasets: [
           {
-            label: 'Valeur acquise (FCFA)', data: valeur,
+            label: 'Valeur acquise ({{ devise_monetaire }})', data: valeur,
             backgroundColor: 'rgba(30,58,138,0.7)', borderRadius: 4, yAxisID: 'y',
           },
           {

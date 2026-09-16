@@ -395,7 +395,7 @@
                     </div>
                     <span class="vnc-txt">{{ pct }}%</span>
                   </div>
-                  <div style="font-size:12px;color: var(--text-medium);font-weight:700;margin-top:4px;">{{ immo.vnc|floatformat:0 }} FCFA</div>
+                  <div style="font-size:12px;color: var(--text-medium);font-weight:700;margin-top:4px;">{{ immo.vnc|floatformat:0 }} {{ devise_monetaire }}</div>
                   {% endwith %}
                 </td>
 

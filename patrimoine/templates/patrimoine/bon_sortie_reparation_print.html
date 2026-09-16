@@ -28,7 +28,7 @@
     </div>
 
     <div class="header">
-        <div class="logo">CHU ANGRÉ</div>
+        <div class="logo">{{ etablissement_nom|upper }}</div>
         <div style="text-align: right;">
             <strong>Date :</strong> {{ today|default:intervention.date_appel_prestataire|date:"d/m/Y" }}<br>
             <strong>Réf Ticket :</strong> #{{ intervention.id|stringformat:"04d" }}

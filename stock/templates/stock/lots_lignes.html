@@ -24,7 +24,7 @@
     {% endif %}
   </td>
   <td style="text-align:right;">
-    {% if lot.valeur_cmup %}{{ lot.valeur_cmup|floatformat:2 }} FCFA{% else %}—{% endif %}
+    {% if lot.valeur_cmup %}{{ lot.valeur_cmup|floatformat:2 }} {{ devise_monetaire }}{% else %}—{% endif %}
   </td>
 </tr>
 {% empty %}

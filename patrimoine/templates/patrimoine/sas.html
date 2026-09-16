@@ -114,7 +114,7 @@
           </td>
           
           <td>
-            <div style="font-weight:800; color: var(--text-dark); font-size:14px;">{{ immo.valeur_acquisition|floatformat:0 }} FCFA</div>
+            <div style="font-weight:800; color: var(--text-dark); font-size:14px;">{{ immo.valeur_acquisition|floatformat:0 }} {{ devise_monetaire }}</div>
             {% if immo.prix_depuis_stock %}
             <div class="info-bon" style="color:#10b981;"><i class="fas fa-check-circle" style="margin-right:2px;"></i> Depuis le stock</div>
             {% endif %}

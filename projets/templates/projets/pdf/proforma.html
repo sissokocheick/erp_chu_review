@@ -229,7 +229,7 @@ body {
           <td style="text-align:center; color:#1c5b96; font-size:10.5pt;">{{ proforma.total_articles }}</td>
           <td></td>
           <td style="text-align:right; color:#1c5b96;">
-            {% if proforma.total_montant_estime %}{{ proforma.total_montant_estime|format_milliers }} FCFA{% else %}—{% endif %}
+            {% if proforma.total_montant_estime %}{{ proforma.total_montant_estime|format_milliers }} {{ devise_monetaire }}{% else %}—{% endif %}
           </td>
         </tr>
       </tfoot>

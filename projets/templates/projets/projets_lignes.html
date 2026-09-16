@@ -34,7 +34,7 @@
   </td>
   <td>
     {% if projet.budget_alloue %}
-      <strong style="color: #1c5b96; font-size: 13.5px; letter-spacing: 0.2px;">{{ projet.budget_alloue|format_milliers }} FCFA</strong>
+      <strong style="color: #1c5b96; font-size: 13.5px; letter-spacing: 0.2px;">{{ projet.budget_alloue|format_milliers }} {{ devise_monetaire }}</strong>
     {% else %}
       <span style="color: var(--text-light);">Non défini</span>
     {% endif %}

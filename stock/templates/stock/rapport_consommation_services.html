@@ -204,7 +204,7 @@
         {% th_tri 'service' 'Service' tri ordre %}
         <th>Code</th>
         {% th_tri 'quantite' 'Unités consommées' tri ordre %}
-        {% th_tri 'valeur' 'Valeur (FCFA)' tri ordre %}
+        {% th_tri 'valeur' 'Valeur ({{ devise_monetaire }})' tri ordre %}
         {% th_tri 'mouvements' 'Nb mouvements' tri ordre %}
         <th>Part (valeur)</th>
       </tr>
@@ -253,7 +253,7 @@
         {% th_tri 'reference' 'Référence' tri_detail ordre_detail 'd' %}
         {% th_tri 'unite' 'Unité' tri_detail ordre_detail 'd' %}
         {% th_tri 'quantite' 'Quantité' tri_detail ordre_detail 'd' %}
-        {% th_tri 'valeur' 'Valeur (FCFA)' tri_detail ordre_detail 'd' %}
+        {% th_tri 'valeur' 'Valeur ({{ devise_monetaire }})' tri_detail ordre_detail 'd' %}
         {% th_tri 'mouvements' 'Nb mvt' tri_detail ordre_detail 'd' %}
       </tr>
     </thead>
@@ -333,7 +333,7 @@
             fill: true, tension: 0.35, yAxisID: 'y',
           },
           {
-            label: 'Valeur (FCFA)', data: valeur,
+            label: 'Valeur ({{ devise_monetaire }})', data: valeur,
             borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.15)',
             fill: false, tension: 0.35, yAxisID: 'y1',
           }
