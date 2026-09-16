@@ -31,7 +31,7 @@ class PDFAuditCoherenceTests(TestCase):
             couleur_principale="#1c5b96",
             pied_page_pdf="Direction des Affaires Financières / Service Logistique"
         )
-        self.service = Service.objects.create(nom="Pédiatrie", code="PED", poste="Poste 201")
+        self.service = Service.objects.create(nom="Pédiatrie", code="PED")
         self.user_demandeur = User.objects.create_user(username="demandeur", password="pwd", first_name="Jean", last_name="Demandeur")
         self.user_magasinier = User.objects.create_user(username="magasinier", password="pwd", first_name="Marc", last_name="Magasinier")
         self.user_valideur = User.objects.create_user(username="valideur", password="pwd", first_name="Paul", last_name="Chef")

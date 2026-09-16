@@ -63,7 +63,7 @@ class BrowserAuditE2ETest(LiveServerTestCase):
             pied_page_pdf="Direction des Affaires Financières / Service Logistique"
         )
 
-        self.service = Service.objects.create(nom="Chirurgie", code="CHIR", poste="202")
+        self.service = Service.objects.create(nom="Chirurgie", code="CHIR", poste_telephone="202")
         self.magasin = Magasin.objects.create(
             nom="Magasin Pharmacie",
             responsable=self.user,
