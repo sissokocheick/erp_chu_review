@@ -210,7 +210,7 @@
               <button class="btn-edit" onclick="editerCategorie({{ cat.id }},'{{ cat.code|escapejs }}','{{ cat.nom|escapejs }}','{{ cat.icone|escapejs }}','{{ cat.couleur|escapejs }}')">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn-del" onclick="confirmerSuppression('delete_categorie','{{ cat.id }}','{{ cat.nom|escapejs }}')">
+              <button class="btn-del" onclick="confirmerSuppressionParam('delete_categorie','{{ cat.id }}','{{ cat.nom|escapejs }}')">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
@@ -267,7 +267,7 @@
               <button class="btn-edit" onclick="editerType({{ t.id }},'{{ t.code|escapejs }}','{{ t.nom|escapejs }}',{{ t.categorie_id }},'{{ t.duree_amortissement_defaut }}','{{ t.mode_amortissement }}')">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn-del" onclick="confirmerSuppression('delete_type','{{ t.id }}','{{ t.nom|escapejs }}')">
+              <button class="btn-del" onclick="confirmerSuppressionParam('delete_type','{{ t.id }}','{{ t.nom|escapejs }}')">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
@@ -306,7 +306,7 @@
                 <button class="btn-edit" onclick="editerBatiment({{ b.id }}, '{{ b.code|escapejs }}', '{{ b.nom|escapejs }}', [{% for s in b.services.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
                   <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn-del" onclick="confirmerSuppression('delete_batiment','{{ b.id }}','{{ b.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
+                <button class="btn-del" onclick="confirmerSuppressionParam('delete_batiment','{{ b.id }}','{{ b.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
             </div>
         </div>
         <div id="bat-detail-{{ b.id }}" style="display:none; padding: 0 20px 20px 40px; background: var(--card-bg);">
@@ -319,7 +319,7 @@
                         <button class="btn-edit" onclick="editerEtage({{ e.id }}, '{{ e.nom|escapejs }}', {{ b.id }}, '{{ b.nom|escapejs }}', [{% for s in e.services.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}])">
                           <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn-del" onclick="confirmerSuppression('delete_etage','{{ e.id }}','{{ e.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
+                        <button class="btn-del" onclick="confirmerSuppressionParam('delete_etage','{{ e.id }}','{{ e.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
                     </div>
                 </div>
                 <div style="display:flex; flex-wrap:wrap; gap:8px; padding-left:20px;">
@@ -327,7 +327,7 @@
                     <div style="background:var(--head-bg); border:1px solid var(--input-border); padding:4px 10px; border-radius:20px; font-size:12px; display:flex; align-items:center; gap:8px; color:var(--text-main);">
                         <i class="fas fa-door-open" style="color:var(--accent);"></i> <strong>{{ bur.nom }}</strong>
                         <i class="fas fa-pen" style="color:var(--text-secondary); cursor:pointer;" onclick="editerBureau({{ bur.id }}, '{{ bur.nom|escapejs }}', {{ e.id }}, [{% for s in bur.services.all %}{{ s.id }}{% if not forloop.last %},{% endif %}{% endfor %}])"></i>
-                        <i class="fas fa-times" style="color:#dc3545; cursor:pointer;" onclick="confirmerSuppression('delete_bureau','{{ bur.id }}','{{ bur.nom|escapejs }}')"></i>
+                        <i class="fas fa-times" style="color:#dc3545; cursor:pointer;" onclick="confirmerSuppressionParam('delete_bureau','{{ bur.id }}','{{ bur.nom|escapejs }}')"></i>
                     </div>
                     {% empty %}
                     <span style="font-size:11px; color:var(--text-secondary); font-style:italic;">Aucun bureau sur cet étage</span>
@@ -422,7 +422,7 @@
                   <button type="button" onclick="editerModele({{ mod.id }}, {{ m.id }}, '{{ mod.nom|escapejs }}')" title="Modifier {{ mod.nom }}" style="background:none; border:none; color:#3b82f6; cursor:pointer; padding:0 2px; font-size:11px;">
                     <i class="fas fa-pen"></i>
                   </button>
-                  <button type="button" onclick="confirmerSuppression('delete_modele', '{{ mod.id }}', '{{ mod.nom|escapejs }}')" title="Supprimer {{ mod.nom }}" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:0 2px; font-size:11px;">
+                  <button type="button" onclick="confirmerSuppressionParam('delete_modele', '{{ mod.id }}', '{{ mod.nom|escapejs }}')" title="Supprimer {{ mod.nom }}" style="background:none; border:none; color:#ef4444; cursor:pointer; padding:0 2px; font-size:11px;">
                     <i class="fas fa-times"></i>
                   </button>
                 </span>
@@ -438,7 +438,7 @@
               <button class="btn-edit" onclick="editerMarque({{ m.id }},'{{ m.nom|escapejs }}')" title="Modifier la marque">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn-del" onclick="confirmerSuppression('delete_marque','{{ m.id }}','{{ m.nom|escapejs }}')" title="Supprimer la marque">
+              <button class="btn-del" onclick="confirmerSuppressionParam('delete_marque','{{ m.id }}','{{ m.nom|escapejs }}')" title="Supprimer la marque">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
@@ -663,7 +663,7 @@
                         <td style="color:var(--text-secondary); font-size:12px;">{{ tc.description|default:"-" }}</td>
                         <td style="text-align:right; white-space:nowrap;">
                             <button class="btn-edit" onclick="editerTypeContrat({{ tc.id }}, '{{ tc.nom|escapejs }}', '{{ tc.description|escapejs }}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn-del" onclick="confirmerSuppression('delete_type_contrat', '{{ tc.id }}', '{{ tc.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
+                            <button class="btn-del" onclick="confirmerSuppressionParam('delete_type_contrat', '{{ tc.id }}', '{{ tc.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                     {% empty %}
@@ -697,7 +697,7 @@
                         <td style="color:var(--text-secondary);"><i class="fas fa-phone"></i> {{ f.telephone|default:"Non renseigné" }}</td>
                         <td style="text-align:right; white-space:nowrap;">
                             <button class="btn-edit" onclick="editerFournisseur({{ f.id }}, '{{ f.raison_sociale|escapejs }}', '{{ f.telephone|escapejs }}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn-del" onclick="confirmerSuppression('delete_fournisseur', '{{ f.id }}', '{{ f.raison_sociale|escapejs }}')"><i class="fas fa-trash"></i></button>
+                            <button class="btn-del" onclick="confirmerSuppressionParam('delete_fournisseur', '{{ f.id }}', '{{ f.raison_sociale|escapejs }}')"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                     {% empty %}
@@ -735,7 +735,7 @@
                         <td style="color:var(--text-secondary);"><i class="fas fa-phone"></i> {{ t.telephone }}</td>
                         <td style="text-align:right; white-space:nowrap;">
                             <button class="btn-edit" onclick="editerTechExterne({{ t.id }}, {{ t.fournisseur.id }}, '{{ t.nom|escapejs }}', '{{ t.telephone|escapejs }}', '{{ t.specialite|escapejs }}')"><i class="fas fa-edit"></i></button>
-                            <button class="btn-del" onclick="confirmerSuppression('delete_tech_externe', '{{ t.id }}', '{{ t.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
+                            <button class="btn-del" onclick="confirmerSuppressionParam('delete_tech_externe', '{{ t.id }}', '{{ t.nom|escapejs }}')"><i class="fas fa-trash"></i></button>
                         </td>
                     </tr>
                     {% empty %}
@@ -745,6 +745,7 @@
             </table>
             <div id="pag-tbody-techs"></div>
         </div>
+</div>
 </div>
 
 <div class="pm-panel" id="tab-flotte">
@@ -782,7 +783,7 @@
               <button class="btn-edit" onclick="editerTypeVehicule({{ tv.id }}, '{{ tv.code|escapejs }}', '{{ tv.nom|escapejs }}', '{{ tv.icone|escapejs }}', '{{ tv.ordre }}', '{{ tv.description|default:''|escapejs }}')" title="Modifier">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn-del" onclick="confirmerSuppression('delete_type_vehicule', '{{ tv.id }}', '{{ tv.nom|escapejs }}')" title="Supprimer">
+              <button class="btn-del" onclick="confirmerSuppressionParam('delete_type_vehicule', '{{ tv.id }}', '{{ tv.nom|escapejs }}')" title="Supprimer">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
@@ -827,7 +828,7 @@
               <button class="btn-edit" onclick="editerTypeInterventionVehicule({{ tiv.id }}, '{{ tiv.code|escapejs }}', '{{ tiv.nom|escapejs }}', '{{ tiv.description|default:''|escapejs }}')" title="Modifier">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn-del" onclick="confirmerSuppression('delete_type_intervention_vehicule', '{{ tiv.id }}', '{{ tiv.nom|escapejs }}')" title="Supprimer">
+              <button class="btn-del" onclick="confirmerSuppressionParam('delete_type_intervention_vehicule', '{{ tiv.id }}', '{{ tiv.nom|escapejs }}')" title="Supprimer">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
@@ -874,7 +875,7 @@
               <button class="btn-edit" onclick="editerCompagnieAssurance({{ ca.id }}, '{{ ca.code|default:''|escapejs }}', '{{ ca.nom|escapejs }}', '{{ ca.telephone|default:''|escapejs }}', '{{ ca.email|default:''|escapejs }}', '{{ ca.adresse|default:''|escapejs }}')" title="Modifier">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn-del" onclick="confirmerSuppression('delete_compagnie_assurance', '{{ ca.id }}', '{{ ca.nom|escapejs }}')" title="Supprimer">
+              <button class="btn-del" onclick="confirmerSuppressionParam('delete_compagnie_assurance', '{{ ca.id }}', '{{ ca.nom|escapejs }}')" title="Supprimer">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
@@ -1533,7 +1534,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-function confirmerSuppression(action, id, nom) {
+function confirmerSuppressionParam(action, id, nom) {
   NxUX.confirm({
     title: 'Supprimer "' + nom + '" ?',
     text: 'Cette action est irréversible.',
