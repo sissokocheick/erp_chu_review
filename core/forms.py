@@ -22,8 +22,12 @@ class ConfigurationHopitalForm(forms.ModelForm):
             'telephone', 'email_contact', 'ville', 'adresse', 'pays',
             # Paramètres fonctionnels
             'devise_monetaire', 'seuil_alerte_peremption_jours',
-            # Documents / Pied de page PDF
-            'pied_page_pdf',
+            # Documents / Légal / Affichage
+            'pied_page_pdf', 'cachet', 'cc', 'ifu', 'rccm',
+            'direction_label', 'sous_direction_label', 'service_label',
+            'afficher_logo', 'afficher_cachet', 'afficher_cc', 'afficher_ifu', 'afficher_rccm',
+            'afficher_telephone', 'afficher_republique', 'afficher_devise', 'afficher_direction', 'afficher_sous_direction', 'afficher_service',
+            'prefixe_bon_sortie', 'prefixe_bon_entree', 'prefixe_bon_retour', 'prefixe_bon_hors_stock', 'prefixe_commande'
         ]
         widgets = {
             'nom': forms.TextInput(attrs={'class': 'form-control', 'required': True}),
@@ -37,7 +41,21 @@ class ConfigurationHopitalForm(forms.ModelForm):
             'devise_monetaire': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Ex: FCFA'}),
             'seuil_alerte_peremption_jours': forms.NumberInput(attrs={'class': 'form-control', 'min': '1', 'max': '365'}),
             'pied_page_pdf': forms.Textarea(attrs={'class': 'form-control', 'rows': '2'}),
+            'cachet': forms.ClearableFileInput(attrs={'class': 'form-control'}),
+            'cc': forms.TextInput(attrs={'class': 'form-control'}),
+            'ifu': forms.TextInput(attrs={'class': 'form-control'}),
+            'rccm': forms.TextInput(attrs={'class': 'form-control'}),
+            'direction_label': forms.TextInput(attrs={'class': 'form-control'}),
+            'sous_direction_label': forms.TextInput(attrs={'class': 'form-control'}),
+            'service_label': forms.TextInput(attrs={'class': 'form-control'}),
+            'prefixe_bon_sortie': forms.TextInput(attrs={'class': 'form-control'}),
+            'prefixe_bon_entree': forms.TextInput(attrs={'class': 'form-control'}),
+            'prefixe_bon_retour': forms.TextInput(attrs={'class': 'form-control'}),
+            'prefixe_bon_hors_stock': forms.TextInput(attrs={'class': 'form-control'}),
+            'prefixe_commande': forms.TextInput(attrs={'class': 'form-control'}),
         }
+        for field_name in ['afficher_logo', 'afficher_cachet', 'afficher_cc', 'afficher_ifu', 'afficher_rccm', 'afficher_telephone', 'afficher_republique', 'afficher_devise', 'afficher_direction', 'afficher_sous_direction', 'afficher_service']:
+            widgets[field_name] = forms.CheckboxInput(attrs={'class': 'form-check-input'})
 
 
 class ConfigurationNotificationForm(forms.ModelForm):
