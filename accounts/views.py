@@ -417,8 +417,8 @@ def custom_login(request):
                                 user_agent=request.META.get('HTTP_USER_AGENT', '')[:255],
                                 session_key=s_key,
                             )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        logger.warning("Erreur suppression ancienne session %s: %s", getattr(s, 'session_key', ''), e)
             except Exception as e:
                 logger.warning("[login] Nettoyage anciennes sessions: %s", e)
 
