@@ -400,20 +400,11 @@ class Service(TraceabiliteMixin):
     code = models.CharField(max_length=20, help_text="Ex: SA17")
     nom = models.CharField(max_length=200, help_text="Ex: CARDIOLOGIE, URGENCES")
 
-    poste = models.CharField(
-        max_length=20,
-        blank=True,
-        default="",
-        verbose_name="Poste / Extension",
-        help_text="Ex: 231, 200, etc."
-    )
     poste_telephone = models.CharField(
         max_length=20, blank=True, null=True,
         verbose_name="Poste téléphonique",
         help_text="Ex: 200, 256"
     )
-
-    telephone = models.CharField(max_length=50, blank=True, null=True, verbose_name="Téléphone")
 
     telecopie = models.CharField(
         max_length=50, blank=True, null=True,

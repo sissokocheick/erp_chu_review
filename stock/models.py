@@ -471,34 +471,21 @@ class Magasin(TracabiliteModel, SoftDeleteModel):
     localisation = models.CharField(max_length=200, blank=True)
 
     titre_responsable = models.CharField(
-        max_length=100,
-        default="Sous-Directeur de la Logistique",
-        verbose_name="Titre du Responsable",
-        help_text="Ex: Pharmacien Chef, Sous-Directeur Logistique..."
+        max_length=150, blank=True, null=True,
+        verbose_name="Titre du Responsable (PDF)",
+        help_text="Ex: Pharmacien Chef, Magasinier Principal"
     )
     responsable = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True, blank=True,
-        related_name='magasins_diriges',
-        verbose_name="Utilisateur Chef de ce magasin"
+        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
+        related_name="magasins_diriges",
+        verbose_name="Responsable / Signataire par défaut",
+        help_text="La signature numérisée de cet utilisateur sera apposée sur les PDF (ex: 'Vu pour exécution')."
     )
-    pied_de_page = models.CharField(
-        max_length=255,
-        default="Direction des Affaires Financières / Sous-Direction de la Logistique",
-        verbose_name="Texte du pied de page",
-        help_text="Texte du pied de page du PDF"
-    )
-
-    code_bon_sortie     = models.CharField(max_length=50, default="ENR-BSM/DAF-001", verbose_name="Code ISO - Bon de Sortie")
-    code_bon_entree     = models.CharField(max_length=50, default="ENR-BEM/DAF-001", verbose_name="Code ISO - Bon d'Entrée")
-    code_bon_retour     = models.CharField(max_length=50, default="ENR-BRM/DAF-003", verbose_name="Code ISO - Bon de Retour")
-    code_bon_hors_stock = models.CharField(max_length=50, default="ENR-BSHS/DAF-002", verbose_name="Code ISO - Bon Hors Stock")
 
     gere_projets = models.BooleanField(
         default=False,
         verbose_name="Gère les projets",
-        help_text="Si coché, ce magasin peut affecter du stock aux projets (entrées, sorties et retours de projets)."
+        help_text="Si actif, ce magasin peut affecter des entrées, sorties et retours à des projets (financement, subvention, activité spécifique)."
     )
     filtrer_articles_par_projet = models.BooleanField(
         default=True,
