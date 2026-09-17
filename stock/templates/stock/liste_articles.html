@@ -215,7 +215,7 @@
                     data-action="filtrer-famille">
                 <option value="">-- Toutes les familles --</option>
                 {% for f in familles %}
-                <option value="{{ f.id }}" {% if famille_id == f.id|stringformat:"s" %}selected{% endif %}>{{ f.intitule }}</option>
+                <option value="{{ f.id|stringformat:"s" }}" {% if famille_id == f.id|stringformat:"s" %}selected{% endif %}>{{ f.intitule }}</option>
                 {% endfor %}
             </select>
         </div>
@@ -314,18 +314,18 @@
                                         <select name="tarif_fournisseur_id[]" required style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: var(--bg-input);">
                                             <option value="">-- Sélectionner fournisseur --</option>
                                             {% for f in fournisseurs %}
-                                            <option value="{{ f.id }}" {% if t.fournisseur_id == f.id %}selected{% endif %}>{{ f.code }} - {{ f.raison_sociale }}</option>
+                                            <option value="{{ f.id|stringformat:"s" }}" {% if t.fournisseur_id == f.id %}selected{% endif %}>{{ f.code }} - {{ f.raison_sociale }}</option>
                                             {% endfor %}
                                         </select>
                                     </td>
                                     <td style="padding: 6px 8px;">
-                                        <input type="number" step="0.01" min="0" name="tarif_prix_achat[]" value="{{ t.prix_achat }}" required placeholder="0.00" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: right; background: var(--bg-input);">
+                                        <input type="number" step="0.01" min="0" name="tarif_prix_achat[]" value="{{ t.prix_achat|stringformat:"s" }}" required placeholder="0.00" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: right; background: var(--bg-input);">
                                     </td>
                                     <td style="padding: 6px 8px;">
                                         <input type="text" name="tarif_ref_fournisseur[]" value="{{ t.reference_fournisseur|default:'' }}" placeholder="Ex: REF-ABC" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: var(--bg-input);">
                                     </td>
                                     <td style="padding: 6px 8px;">
-                                        <input type="number" min="0" name="tarif_delai[]" value="{{ t.delai_livraison_jours|default:'' }}" placeholder="Ex: 5" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: center; background: var(--bg-input);">
+                                        <input type="number" min="0" name="tarif_delai[]" value="{{ t.delai_livraison_jours|default:''|stringformat:"s" }}" placeholder="Ex: 5" style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; text-align: center; background: var(--bg-input);">
                                     </td>
                                     <td style="padding: 6px 8px; text-align: center;">
                                         <button type="button" onclick="this.closest('tr').remove(); verifierLignesTarifForm();" style="background: none; border: none; color: #dc3545; cursor: pointer; font-size: 14px;" title="Supprimer">
@@ -357,7 +357,7 @@
             <select name="tarif_fournisseur_id[]" required style="width: 100%; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 6px; font-size: 12px; background: var(--bg-input);">
                 <option value="">-- Sélectionner fournisseur --</option>
                 {% for f in fournisseurs %}
-                <option value="{{ f.id }}">{{ f.code }} - {{ f.raison_sociale }}</option>
+                <option value="{{ f.id|stringformat:"s" }}">{{ f.code }} - {{ f.raison_sociale }}</option>
                 {% endfor %}
             </select>
         </td>

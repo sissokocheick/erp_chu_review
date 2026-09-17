@@ -30,13 +30,13 @@ Reproduit les 3 zones ciblÃ©es par les recherches automatiques : #zone-service
           </div>
         </td>
         <td class="c">
-          <a href="?edit_service={{ s.id }}&open=services" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
-          <form method="POST" id="del-svc-{{ s.id }}" style="display:inline;">
+          <a href="?edit_service={{ s.id|stringformat:"s" }}&open=services" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
+          <form method="POST" id="del-svc-{{ s.id|stringformat:"s" }}" style="display:inline;">
             {% csrf_token %}
-            <input type="hidden" name="service_id" value="{{ s.id }}">
+            <input type="hidden" name="service_id" value="{{ s.id|stringformat:"s" }}">
             <input type="hidden" name="supprimer_service" value="1">
             {% if peut_annuler_services %}
-            <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-svc-{{ s.id }}','Supprimer le service Â« {{ s.nom|escapejs }} Â» ?')">
+            <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-svc-{{ s.id|stringformat:"s" }}','Supprimer le service Â« {{ s.nom|escapejs }} Â» ?')">
               <i class="fas fa-trash-alt"></i>
             </button>
             {% endif %}
@@ -86,13 +86,13 @@ Reproduit les 3 zones ciblÃ©es par les recherches automatiques : #zone-service
           </div>
         </td>
         <td class="c">
-          <a href="?edit_specialite={{ sp.id }}&open=specialites" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
-          <form method="POST" id="del-spc-{{ sp.id }}" style="display:inline;">
+          <a href="?edit_specialite={{ sp.id|stringformat:"s" }}&open=specialites" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
+          <form method="POST" id="del-spc-{{ sp.id|stringformat:"s" }}" style="display:inline;">
             {% csrf_token %}
-            <input type="hidden" name="specialite_id" value="{{ sp.id }}">
+            <input type="hidden" name="specialite_id" value="{{ sp.id|stringformat:"s" }}">
             <input type="hidden" name="supprimer_specialite" value="1">
             {% if peut_annuler_specialites %}
-            <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-spc-{{ sp.id }}','Supprimer la spÃ©cialitÃ© Â« {{ sp.nom|escapejs }} Â» ?')">
+            <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-spc-{{ sp.id|stringformat:"s" }}','Supprimer la spÃ©cialitÃ© Â« {{ sp.nom|escapejs }} Â» ?')">
               <i class="fas fa-trash-alt"></i>
             </button>
             {% endif %}
@@ -142,13 +142,13 @@ Reproduit les 3 zones ciblÃ©es par les recherches automatiques : #zone-service
           </div>
         </td>
         <td class="c">
-          <a href="?edit_fonction={{ fn.id }}&open=fonctions" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
-          <form method="POST" id="del-fnc-{{ fn.id }}" style="display:inline;">
+          <a href="?edit_fonction={{ fn.id|stringformat:"s" }}&open=fonctions" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
+          <form method="POST" id="del-fnc-{{ fn.id|stringformat:"s" }}" style="display:inline;">
             {% csrf_token %}
-            <input type="hidden" name="fonction_id" value="{{ fn.id }}">
+            <input type="hidden" name="fonction_id" value="{{ fn.id|stringformat:"s" }}">
             <input type="hidden" name="supprimer_fonction" value="1">
             {% if peut_annuler_fonctions %}
-            <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-fnc-{{ fn.id }}','Supprimer la fonction Â« {{ fn.nom|escapejs }} Â» ?')">
+            <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-fnc-{{ fn.id|stringformat:"s" }}','Supprimer la fonction Â« {{ fn.nom|escapejs }} Â» ?')">
               <i class="fas fa-trash-alt"></i>
             </button>
             {% endif %}

@@ -406,8 +406,8 @@
               <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
                 <span class="fw-semibold">{{ p.valeur }}</span>
                 <span class="ref-actions">
-                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
-                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id|stringformat:"s" }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id|stringformat:"s" }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
                 </span>
               </div>
               {% empty %}
@@ -442,8 +442,8 @@
               <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
                 <span class="fw-semibold">{{ p.valeur }}</span>
                 <span class="ref-actions">
-                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
-                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id|stringformat:"s" }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id|stringformat:"s" }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
                 </span>
               </div>
               {% empty %}
@@ -478,8 +478,8 @@
               <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
                 <span class="fw-semibold">{{ p.valeur }}</span>
                 <span class="ref-actions">
-                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
-                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id|stringformat:"s" }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id|stringformat:"s" }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
                 </span>
               </div>
               {% empty %}
@@ -514,8 +514,8 @@
               <div class="ref-row card-row" data-valeur="{{ p.valeur|lower }}">
                 <span class="fw-semibold">{{ p.valeur }}</span>
                 <span class="ref-actions">
-                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
-                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
+                  <button type="button" class="edit" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id|stringformat:"s" }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')"><i class="fas fa-edit"></i></button>
+                  <button type="button" class="delete" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id|stringformat:"s" }}','Supprimer « {{ p.valeur|escapejs }} » ?')"><i class="fas fa-trash-alt"></i></button>
                 </span>
               </div>
               {% empty %}
@@ -569,16 +569,16 @@
                   <span class="badge-actif"><i class="fas fa-check-circle"></i> Actif</span>
                 </td>
                 <td class="c" style="white-space: nowrap;">
-                  <button type="button" class="btn-ed-sm" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')">
+                  <button type="button" class="btn-ed-sm" title="Modifier" onclick="ouvrirModalParamFamille('{{ p.id|stringformat:"s" }}','{{ p.type_parametre }}','{{ p.valeur|escapejs }}')">
                     <i class="fas fa-edit"></i>
                   </button>
-                  <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id }}','Supprimer « {{ p.valeur|escapejs }} » ?')">
+                  <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-param-{{ p.id|stringformat:"s" }}','Supprimer « {{ p.valeur|escapejs }} » ?')">
                     <i class="fas fa-trash-alt"></i>
                   </button>
-                  <form method="POST" id="del-param-{{ p.id }}" style="display:none;">
+                  <form method="POST" id="del-param-{{ p.id|stringformat:"s" }}" style="display:none;">
                     {% csrf_token %}
                     <input type="hidden" name="supprimer_param_famille" value="1">
-                    <input type="hidden" name="parametre_id" value="{{ p.id }}">
+                    <input type="hidden" name="parametre_id" value="{{ p.id|stringformat:"s" }}">
                   </form>
                 </td>
               </tr>
@@ -1514,7 +1514,7 @@ function updateRadioSelection(radio) {
             <select name="service" id="input-benef-service">
               <option value="">-- Aucun --</option>
               {% for s in services %}
-              <option value="{{ s.id }}">{{ s.nom }}</option>
+              <option value="{{ s.id|stringformat:"s" }}">{{ s.nom }}</option>
               {% endfor %}
             </select>
           </div>

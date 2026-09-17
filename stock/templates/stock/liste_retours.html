@@ -383,7 +383,7 @@
     <form method="POST" id="form-retour" action="{% url 'liste_retours_services' %}">
       {% csrf_token %}
       {% if magasin_actif %}
-      <input type="hidden" name="magasin" value="{{ magasin_actif.id }}">
+      <input type="hidden" name="magasin" value="{{ magasin_actif.id|stringformat:"s" }}">
       {% endif %}
 
       <div class="mbody">
@@ -402,7 +402,7 @@
             <select name="projet" id="sel-projet" style="width:100%;" class="select2-retour">
                 <option value="">-- Choisir le projet --</option>
                 {% for p in projets_list %}
-                <option value="{{ p.id }}">{{ p.nom }}{% if p.fournisseur %} — Entr: {{ p.fournisseur.raison_sociale }}{% endif %}</option>
+                <option value="{{ p.id|stringformat:"s" }}">{{ p.nom }}{% if p.fournisseur %} — Entr: {{ p.fournisseur.raison_sociale }}{% endif %}</option>
                 {% endfor %}
             </select>
         </div>
@@ -415,7 +415,7 @@
           <select name="service_demandeur" id="sel-service" required style="width:100%;" class="select2-retour">
             <option value="">-- Choisir un service --</option>
             {% for s in services %}
-            <option value="{{ s.id }}">{{ s.nom }}</option>
+            <option value="{{ s.id|stringformat:"s" }}">{{ s.nom }}</option>
             {% endfor %}
           </select>
         </div>
@@ -532,7 +532,7 @@ async function assurerArticlesProjetCharges(projetId) {
 
 const ALL_ARTICLES = [
     {% for a in articles %}
-    {id: {{ a.id }}, designation: "{{ a.designation|escapejs }}", reference: "{{ a.reference|default:""|escapejs }}"}{% if not forloop.last %},{% endif %}
+    {id: {{ a.id|stringformat:"s" }}, designation: "{{ a.designation|escapejs }}", reference: "{{ a.reference|default:""|escapejs }}"}{% if not forloop.last %},{% endif %}
     {% endfor %}
 ];
 

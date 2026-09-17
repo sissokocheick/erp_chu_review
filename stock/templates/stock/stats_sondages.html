@@ -66,7 +66,7 @@
 
 <div class="page-header-bar">
   <h2><i class="fas fa-poll" style="color:#1c5b96;"></i> Statistiques des Sondages de Satisfaction</h2>
-  <a href="{% url 'export_sondages_csv' %}?{% if date_range %}date_range={{ date_range|urlencode }}&{% endif %}{% if service_id %}service={{ service_id }}{% endif %}" 
+  <a href="{% url 'export_sondages_csv' %}?{% if date_range %}date_range={{ date_range|urlencode }}&{% endif %}{% if service_id %}service={{ service_id|stringformat:"s" }}{% endif %}" 
    class="btn-modal-close" 
    style="text-decoration:none; display:inline-flex; align-items:center; gap:8px;" rel="noopener noreferrer">
   <i class="fas fa-file-csv"></i> Export CSV
@@ -92,7 +92,7 @@
     <select name="service" onchange="this.form.submit()">
       <option value="">Tous les services</option>
       {% for s in services %}
-      <option value="{{ s.id }}" {% if service_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nom }}</option>
+      <option value="{{ s.id|stringformat:"s" }}" {% if service_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nom }}</option>
       {% endfor %}
     </select>
   </div>

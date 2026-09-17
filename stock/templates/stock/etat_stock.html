@@ -279,7 +279,7 @@
           <select id="select-famille" name="famille" class="filter-sel" style="width:100%; padding-left:32px;">
             <option value="">Toutes les familles</option>
             {% for famille in familles %}
-              <option value="{{ famille.id }}" {% if famille_id == famille.id|stringformat:"s" %}selected{% endif %}>
+              <option value="{{ famille.id|stringformat:"s" }}" {% if famille_id == famille.id|stringformat:"s" %}selected{% endif %}>
                 {{ famille.intitule }}
               </option>
             {% endfor %}
@@ -299,7 +299,7 @@
     <form id="form-per-page" method="GET" style="margin:0;display:flex;align-items:center;gap:6px;">
       {% if q %}<input type="hidden" name="q" value="{{ q_stock }}">{% endif %}
       {% if magasin_id %}<input type="hidden" name="magasin" value="{{ magasin_filtre }}">{% endif %}
-      {% if famille_id %}<input type="hidden" name="famille" value="{{ famille_id }}">{% endif %}
+      {% if famille_id %}<input type="hidden" name="famille" value="{{ famille_id|stringformat:"s" }}">{% endif %}
       <label style="font-size:12px;color:var(--text-light);font-weight:600;">Afficher</label>
       <select name="per_page" class="filter-sel" onchange="document.getElementById('form-per-page').submit();">
         <option value="15"  {% if per_page == '15'  %}selected{% endif %}>15</option>
@@ -333,13 +333,13 @@
     </span>
     <div class="pag-ctrl">
       {% if stocks.has_previous %}
-        <a class="pag-link" href="?page=1{% if q %}&q={{ q_stock }}{% endif %}{% if magasin_id %}&magasin={{ magasin_filtre }}{% endif %}{% if famille_id %}&famille={{ famille_id }}{% endif %}&per_page={{ per_page }}">&laquo; Premier</a>
-        <a class="pag-link" href="?page={{ stocks.previous_page_number }}{% if q %}&q={{ q_stock }}{% endif %}{% if magasin_id %}&magasin={{ magasin_filtre }}{% endif %}{% if famille_id %}&famille={{ famille_id }}{% endif %}&per_page={{ per_page }}">Préc.</a>
+        <a class="pag-link" href="?page=1{% if q %}&q={{ q_stock }}{% endif %}{% if magasin_id %}&magasin={{ magasin_filtre }}{% endif %}{% if famille_id %}&famille={{ famille_id|stringformat:"s" }}{% endif %}&per_page={{ per_page }}">&laquo; Premier</a>
+        <a class="pag-link" href="?page={{ stocks.previous_page_number }}{% if q %}&q={{ q_stock }}{% endif %}{% if magasin_id %}&magasin={{ magasin_filtre }}{% endif %}{% if famille_id %}&famille={{ famille_id|stringformat:"s" }}{% endif %}&per_page={{ per_page }}">Préc.</a>
       {% endif %}
       <span class="pag-cur">{{ stocks.number }} / {{ stocks.paginator.num_pages }}</span>
       {% if stocks.has_next %}
-        <a class="pag-link" href="?page={{ stocks.next_page_number }}{% if q %}&q={{ q_stock }}{% endif %}{% if magasin_id %}&magasin={{ magasin_filtre }}{% endif %}{% if famille_id %}&famille={{ famille_id }}{% endif %}&per_page={{ per_page }}">Suiv.</a>
-        <a class="pag-link" href="?page={{ stocks.paginator.num_pages }}{% if q %}&q={{ q_stock }}{% endif %}{% if magasin_id %}&magasin={{ magasin_filtre }}{% endif %}{% if famille_id %}&famille={{ famille_id }}{% endif %}&per_page={{ per_page }}">Dernier &raquo;</a>
+        <a class="pag-link" href="?page={{ stocks.next_page_number }}{% if q %}&q={{ q_stock }}{% endif %}{% if magasin_id %}&magasin={{ magasin_filtre }}{% endif %}{% if famille_id %}&famille={{ famille_id|stringformat:"s" }}{% endif %}&per_page={{ per_page }}">Suiv.</a>
+        <a class="pag-link" href="?page={{ stocks.paginator.num_pages }}{% if q %}&q={{ q_stock }}{% endif %}{% if magasin_id %}&magasin={{ magasin_filtre }}{% endif %}{% if famille_id %}&famille={{ famille_id|stringformat:"s" }}{% endif %}&per_page={{ per_page }}">Dernier &raquo;</a>
       {% endif %}
     </div>
   </div>

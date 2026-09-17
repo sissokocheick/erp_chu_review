@@ -304,7 +304,7 @@
             <select name="fournisseur" id="select-fourn" required class="cmd-form-input s2">
               <option value="">— Sélectionner —</option>
               {% for f in fournisseurs %}
-                <option value="{{ f.id }}" {% if commande.fournisseur.id == f.id %}selected{% endif %}>{{ f.raison_sociale }}</option>
+                <option value="{{ f.id|stringformat:"s" }}" {% if commande.fournisseur.id == f.id %}selected{% endif %}>{{ f.raison_sociale }}</option>
               {% endfor %}
             </select>
           </div>
@@ -313,7 +313,7 @@
             <select name="famille" id="cmd-famille-select" class="cmd-form-input s2" required>
               <option value="">— Choisir une famille —</option>
               {% for f in familles %}
-                <option value="{{ f.id }}" {% if commande.famille.id == f.id %}selected{% endif %}>{{ f.intitule }}</option>
+                <option value="{{ f.id|stringformat:"s" }}" {% if commande.famille.id == f.id %}selected{% endif %}>{{ f.intitule }}</option>
               {% endfor %}
             </select>
           </div>
@@ -327,7 +327,7 @@
           </div>
           <div>
             <label class="cmd-form-label"><i class="fas fa-hourglass-half me-1"></i>Délai (jours)</label>
-            <input type="number" name="delai_livraison" id="delai_livraison" class="cmd-form-input" min="1" placeholder="Ex: 5" value="{{ commande.delai_livraison|default:'' }}">
+            <input type="number" name="delai_livraison" id="delai_livraison" class="cmd-form-input" min="1" placeholder="Ex: 5" value="{{ commande.delai_livraison|default:''|stringformat:"s" }}">
           </div>
           <div>
             <label class="cmd-form-label"><i class="fas fa-calendar-alt me-1"></i>Date de livraison</label>
@@ -361,7 +361,7 @@
               <tbody id="cmd-dd-body">
                 {% for a in articles %}
                 <tr class="cmd-dd-item"
-                    data-id="{{ a.id }}"
+                    data-id="{{ a.id|stringformat:"s" }}"
                     data-ref="{{ a.reference|default:'-' }}"
                     data-nom="{{ a.designation }}"
                     data-unite="{{ a.unite_distribution }}"
@@ -396,14 +396,14 @@
             </thead>
             <tbody id="cmd-tbody">
               {% for ligne in commande.lignes_commande.all %}
-              <tr id="cmd-art-{{ ligne.article.id }}">
+              <tr id="cmd-art-{{ ligne.article.id|stringformat:"s" }}">
                 <td style="text-align:center;font-weight:700;color:var(--cmd-text-secondary);" class="col-n">{{ forloop.counter }}</td>
                 <td style="font-family:monospace;font-size:12px;color:var(--cmd-text-secondary);">{{ ligne.article.reference|default:"—" }}</td>
                 <td style="font-weight:700;color:var(--cmd-accent);">{{ ligne.article.designation }}</td>
                 <td style="font-size:12px;color:var(--cmd-text-secondary);">{{ ligne.article.unite_distribution }}</td>
                 <td style="text-align:center;">
-                  <input type="number" name="quantites[]" value="{{ ligne.quantite_demandee }}" min="1" class="qte-input" required>
-                  <input type="hidden" name="articles[]" value="{{ ligne.article.id }}">
+                  <input type="number" name="quantites[]" value="{{ ligne.quantite_demandee|stringformat:"s" }}" min="1" class="qte-input" required>
+                  <input type="hidden" name="articles[]" value="{{ ligne.article.id|stringformat:"s" }}">
                 </td>
                 <td style="text-align:center;">
                   <input type="text" name="prix_unitaires[]" value="{{ ligne.prix_unitaire|default_if_none:'' }}" placeholder="0" class="pu-input">

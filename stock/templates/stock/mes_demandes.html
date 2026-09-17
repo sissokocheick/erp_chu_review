@@ -799,7 +799,7 @@
           <div>
             <label class="search-label">&#127978; Magasin cible</label>
             <input type="text" value="{{ magasin_actif.nom|upper }}" readonly style="width:100%;padding:12px;border:1.5px solid var(--border-light);border-radius:12px;font-size:14px;background:#e9ecef;color:var(--text-medium);">
-            <input type="hidden" name="magasin_cible" value="{{ magasin_actif.id }}">
+            <input type="hidden" name="magasin_cible" value="{{ magasin_actif.id|stringformat:"s" }}">
           </div>
           <div>
             <label class="search-label">&#128172; Commentaire (optionnel)</label>

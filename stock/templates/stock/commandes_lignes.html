@@ -90,10 +90,10 @@
 </style>
 
 {% for commande in commandes %}
-<tr id="cmd-row-{{ commande.id }}" class="cmd-row">
+<tr id="cmd-row-{{ commande.id|stringformat:"s" }}" class="cmd-row">
     <td style="padding: 12px; text-align: center;">
-        <button class="cmd-toggle" id="btn-toggle-{{ commande.id }}" data-action="toggle" data-cmd-id="{{ commande.id }}" title="Voir le detail" aria-label="Voir detail commande {{ commande.numero_commande|escapejs }}">
-            <i class="fas fa-chevron-right" id="icon-{{ commande.id }}"></i>
+        <button class="cmd-toggle" id="btn-toggle-{{ commande.id|stringformat:"s" }}" data-action="toggle" data-cmd-id="{{ commande.id|stringformat:"s" }}" title="Voir le detail" aria-label="Voir detail commande {{ commande.numero_commande|escapejs }}">
+            <i class="fas fa-chevron-right" id="icon-{{ commande.id|stringformat:"s" }}"></i>
         </button>
     </td>
 
@@ -190,7 +190,7 @@
     </td>
 </tr>
 
-<tr id="lignes-{{ commande.id }}" class="cmd-detail-row">
+<tr id="lignes-{{ commande.id|stringformat:"s" }}" class="cmd-detail-row">
     <td colspan="9" style="padding: 0;">
         <div class="cmd-detail-box">
             <h4 class="cmd-detail-title"><i class="fas fa-shopping-basket"></i> Detail de la commande</h4>

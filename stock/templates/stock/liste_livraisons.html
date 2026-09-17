@@ -138,7 +138,7 @@
       <select name="magasin" id="filterMagasin" class="filter-sel">
         <option value="">Tous les magasins</option>
         {% for mag in magasins %}
-        <option value="{{ mag.id }}" {% if magasin_filter == mag.id|stringformat:"s" %}selected{% endif %}>{{ mag.nom }}</option>
+        <option value="{{ mag.id|stringformat:"s" }}" {% if magasin_filter == mag.id|stringformat:"s" %}selected{% endif %}>{{ mag.nom }}</option>
         {% endfor %}
       </select>
     </form>
@@ -160,12 +160,12 @@
     </thead>
     <tbody>
       {% for lv in livraisons %}
-      <tr onclick="toggleDetail('detail-{{ lv.id }}')"
+      <tr onclick="toggleDetail('detail-{{ lv.id|stringformat:"s" }}')"
           data-search="{{ lv.numero_livraison }} {{ lv.demande.numero_demande }} {{ lv.demande.service_demandeur.nom }} {{ lv.livre_par.get_full_name }}"
           data-statut="{% if lv.est_receptionne %}signe{% else %}attente{% endif %}"
-          data-magasin="{{ lv.demande.magasin_cible_id }}">
+          data-magasin="{{ lv.demande.magasin_cible_id|stringformat:"s" }}">
         <td class="c">
-          <i class="fas fa-chevron-right" id="chev-{{ lv.id }}" style="color: var(--text-light);font-size:11px;transition:.2s;"></i>
+          <i class="fas fa-chevron-right" id="chev-{{ lv.id|stringformat:"s" }}" style="color: var(--text-light);font-size:11px;transition:.2s;"></i>
         </td>
         <td>
           <div class="num-lv"><i class="fas fa-truck" style="margin-right:5px;opacity:.6;"></i>LIV-{{ lv.numero_livraison|stringformat:"03d" }}</div>
@@ -215,7 +215,7 @@
         </td>
       </tr>
 
-      <tr class="detail-panel" id="detail-{{ lv.id }}">
+      <tr class="detail-panel" id="detail-{{ lv.id|stringformat:"s" }}">
         <td colspan="9">
           <div class="detail-inner">
             <div class="detail-section">

@@ -7,7 +7,7 @@
             {% with nb_tarifs=article.tarifs_fournisseurs.all|length %}
             {% if nb_tarifs > 0 %}
             <span style="cursor: pointer; background: #e7f5ea; color: #1e7e34; border: 1px solid #c3e6cb; padding: 1px 7px; border-radius: 10px; font-size: 10.5px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;"
-                  onclick="ouvrirModalTarifsFournisseurs({{ article.id }}, '{{ article.designation|escapejs }}')"
+                  onclick="ouvrirModalTarifsFournisseurs({{ article.id|stringformat:"s" }}, '{{ article.designation|escapejs }}')"
                   title="Cliquer pour voir/gérer les tarifs fournisseurs">
                 <i class="fas fa-tags"></i> {{ nb_tarifs }} tarif{{ nb_tarifs|pluralize }} fourn.
             </span>
@@ -44,9 +44,9 @@
     </td>
     <td style="padding: 13px 15px; text-align: center;">
         <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap;">
-            <button type="button" class="btn-action" style="background: rgba(40,167,69,0.08); color: #28a745; border-color: rgba(40,167,69,0.3);" title="Tarifs par fournisseur" onclick="ouvrirModalTarifsFournisseurs({{ article.id }}, '{{ article.designation|escapejs }}')"><i class="fas fa-tags"></i></button>
+            <button type="button" class="btn-action" style="background: rgba(40,167,69,0.08); color: #28a745; border-color: rgba(40,167,69,0.3);" title="Tarifs par fournisseur" onclick="ouvrirModalTarifsFournisseurs({{ article.id|stringformat:"s" }}, '{{ article.designation|escapejs }}')"><i class="fas fa-tags"></i></button>
             <a href="{% url 'historique_article' article.id %}" class="btn-action history" title="Historique"><i class="fas fa-history"></i></a>
-            <a href="?edit_article={{ article.id }}" class="btn-action edit" title="Modifier"><i class="fas fa-edit"></i></a>
+            <a href="?edit_article={{ article.id|stringformat:"s" }}" class="btn-action edit" title="Modifier"><i class="fas fa-edit"></i></a>
             {% if article.id in articles_lies %}
             <span class="btn-action delete" style="opacity:0.4;cursor:not-allowed;" title="Article utilise — suppression impossible"><i class="fas fa-trash"></i></span>
             {% else %}

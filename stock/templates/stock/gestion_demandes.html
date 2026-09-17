@@ -210,7 +210,7 @@
   <select name="service" id="select-service">
     <option value="">— Tous les services —</option>
     {% for s in services %}
-    <option value="{{ s.id }}" {% if request.GET.service == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nom }}</option>
+    <option value="{{ s.id|stringformat:"s" }}" {% if request.GET.service == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nom }}</option>
     {% endfor %}
   </select>
   {% endif %}
@@ -254,7 +254,7 @@
       {% for demande in demandes %}
       <tr>
         <td style="text-align:center;">
-            <button class="btn-toggle" data-action="toggle" data-target="lignes-{{ demande.id }}" title="Derouler pour voir les details">
+            <button class="btn-toggle" data-action="toggle" data-target="lignes-{{ demande.id|stringformat:"s" }}" title="Derouler pour voir les details">
                 <i class="fas fa-chevron-right"></i>
             </button>
         </td>
@@ -322,7 +322,7 @@
       </tr>
 
       {# ── ACCORDEON DETAIL ── #}
-      <tr class="tr-lignes" id="lignes-{{ demande.id }}" style="display: none; background: #fcfdfd;">
+      <tr class="tr-lignes" id="lignes-{{ demande.id|stringformat:"s" }}" style="display: none; background: #fcfdfd;">
           <td colspan="7" style="padding: 15px 30px 25px 50px; border-bottom: 2px solid #117a8b;">
 
               {% if request.GET.onglet == 'historique' %}
@@ -342,7 +342,7 @@
                           {% for ligne in demande.lignes_demande.all %}
                           <tr>
                               <td><strong>{{ ligne.article.designation }}</strong></td>
-                              <td style="text-align: center; font-weight: bold; color: #1c5b96; font-size: 14px;">{{ ligne.quantite_demandee }}</td>
+                              <td style="text-align: center; font-weight: bold; color: #1c5b96; font-size: 14px;">{{ ligne.quantite_demandee|stringformat:"s" }}</td>
                               <td style="text-align: center; font-weight: bold; color: #28a745; font-size: 14px;">{{ ligne.quantite_livree|default:"0" }}</td>
                               <td style="text-align: center; font-weight: bold; color: #dc3545; font-size: 14px;">
                                   {% if ligne.reste > 0 %}{{ ligne.reste }}{% else %}<span style="color:#28a745;">✓</span>{% endif %}
@@ -396,11 +396,11 @@
               </div>
 
               {% else %}
-              <form method="POST" action="{% url 'valider_traitement_demande' demande.id %}" id="form-livraison-{{ demande.id }}" 
+              <form method="POST" action="{% url 'valider_traitement_demande' demande.id %}" id="form-livraison-{{ demande.id|stringformat:"s" }}" 
                     style="background: var(--bg-card); padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); border-left: 5px solid #ffc107;">
                   {% csrf_token %}
-                  <input type="hidden" name="cloturer_demande" id="hidden_cloturer_{{ demande.id }}" value="0">
-                  <input type="hidden" name="motif_cloture" id="hidden_motif_{{ demande.id }}" value="">
+                  <input type="hidden" name="cloturer_demande" id="hidden_cloturer_{{ demande.id|stringformat:"s" }}" value="0">
+                  <input type="hidden" name="motif_cloture" id="hidden_motif_{{ demande.id|stringformat:"s" }}" value="">
 
                   <h4 style="margin: 0 0 10px; color: var(--text-dark); font-weight: 700; font-size: 15px;">
                       <i class="fas fa-truck" style="color:#ffc107; margin-right:5px;"></i> Formulaire de Livraison
@@ -431,22 +431,22 @@
                               </td>
                               <td style="text-align: center; background-color: #f8fff9;">
                                   {% if ligne.quantite_en_stock > 0 %}
-                                  <input type="number" name="qte_accordee_{{ ligne.id }}"
-                                         id="qte_accordee_{{ ligne.id }}"
+                                  <input type="number" name="qte_accordee_{{ ligne.id|stringformat:"s" }}"
+                                         id="qte_accordee_{{ ligne.id|stringformat:"s" }}"
                                          data-reste="{{ ligne.reste }}"
-                                         data-ligne-id="{{ ligne.id }}"
+                                         data-ligne-id="{{ ligne.id|stringformat:"s" }}"
                                          value="{% if ligne.quantite_en_stock >= ligne.reste %}{{ ligne.reste }}{% else %}{{ ligne.quantite_en_stock }}{% endif %}"
                                          min="0"
                                          max="{{ ligne.reste }}"
                                          style="width:90px; padding:8px; border:2px solid #28a745; border-radius:4px; text-align:center; font-weight:bold; color:#28a745; font-size:15px; outline:none;"
-                                         data-action="valider-qte" data-demande-id="{{ demande.id }}"
+                                         data-action="valider-qte" data-demande-id="{{ demande.id|stringformat:"s" }}"
                                          autocomplete="off">
-                                  <div class="msg-erreur-qte" id="erreur-qte-{{ ligne.id }}">
+                                  <div class="msg-erreur-qte" id="erreur-qte-{{ ligne.id|stringformat:"s" }}">
                                       <i class="fas fa-exclamation-triangle"></i> La quantite ne peut pas depasser {{ ligne.reste }}
                                   </div>
                                   {% else %}
                                   <span style="color:#dc3545; font-size:12px; font-weight:bold;"><i class="fas fa-exclamation-circle"></i> Rupture</span>
-                                  <input type="hidden" name="qte_accordee_{{ ligne.id }}" value="0">
+                                  <input type="hidden" name="qte_accordee_{{ ligne.id|stringformat:"s" }}" value="0">
                                   {% endif %}
                               </td>
                           </tr>
@@ -456,15 +456,15 @@
 
                   <div style="margin-top: 20px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-light); padding-top: 15px;">
                       <div style="font-size: 14px; color: var(--text-medium);">
-                          Total de cette livraison : <strong id="total-livraison-{{ demande.id }}" style="color:#117a8b; font-size:18px;">—</strong> unites
+                          Total de cette livraison : <strong id="total-livraison-{{ demande.id|stringformat:"s" }}" style="color:#117a8b; font-size:18px;">—</strong> unites
                       </div>
                       <div style="display: flex; gap: 10px;">
-                          <button type="button" data-action="livrer" data-demande-id="{{ demande.id }}" data-numero="{{ demande.numero_demande }}" 
+                          <button type="button" data-action="livrer" data-demande-id="{{ demande.id|stringformat:"s" }}" data-numero="{{ demande.numero_demande }}" 
                                   style="background:#28a745; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; transition:0.2s;" title="Creer la livraison et garder le reliquat actif">
                               <i class="fas fa-truck me-1"></i> Livrer
                           </button>
 
-                          <button type="button" data-action="livrer-cloturer" data-demande-id="{{ demande.id }}" data-numero="{{ demande.numero_demande }}" data-reste="{{ demande.reste }}" 
+                          <button type="button" data-action="livrer-cloturer" data-demande-id="{{ demande.id|stringformat:"s" }}" data-numero="{{ demande.numero_demande }}" data-reste="{{ demande.reste }}" 
                                   style="background:#fd7e14; color:white; border:none; padding:10px 20px; border-radius:4px; font-weight:700; cursor:pointer; font-size:13px; transition:0.2s;" title="Creer la livraison et annuler le reliquat">
                               <i class="fas fa-lock me-1"></i> Livrer & Cloturer
                           </button>

@@ -419,13 +419,13 @@
                 </div>
               </td>
               <td class="c">
-                <a href="?edit_service={{ s.id }}&open=services" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
-                <form method="POST" id="del-svc-{{ s.id }}" style="display:inline;">
+                <a href="?edit_service={{ s.id|stringformat:"s" }}&open=services" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
+                <form method="POST" id="del-svc-{{ s.id|stringformat:"s" }}" style="display:inline;">
                   {% csrf_token %}
-                  <input type="hidden" name="service_id" value="{{ s.id }}">
+                  <input type="hidden" name="service_id" value="{{ s.id|stringformat:"s" }}">
                   <input type="hidden" name="supprimer_service" value="1">
                   {% if peut_annuler_services %}
-                  <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-svc-{{ s.id }}','Supprimer le service « {{ s.nom|escapejs }} » ?')">
+                  <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-svc-{{ s.id|stringformat:"s" }}','Supprimer le service « {{ s.nom|escapejs }} » ?')">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                   {% endif %}
@@ -499,13 +499,13 @@
                 </div>
               </td>
               <td class="c">
-                <a href="?edit_specialite={{ sp.id }}&open=specialites" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
-                <form method="POST" id="del-sp-{{ sp.id }}" style="display:inline;">
+                <a href="?edit_specialite={{ sp.id|stringformat:"s" }}&open=specialites" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
+                <form method="POST" id="del-sp-{{ sp.id|stringformat:"s" }}" style="display:inline;">
                   {% csrf_token %}
-                  <input type="hidden" name="specialite_id" value="{{ sp.id }}">
+                  <input type="hidden" name="specialite_id" value="{{ sp.id|stringformat:"s" }}">
                   <input type="hidden" name="supprimer_specialite" value="1">
                   {% if peut_annuler_specialites %}
-                  <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-sp-{{ sp.id }}','Supprimer « {{ sp.nom|escapejs }} » ?')">
+                  <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-sp-{{ sp.id|stringformat:"s" }}','Supprimer « {{ sp.nom|escapejs }} » ?')">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                   {% endif %}
@@ -580,13 +580,13 @@
                 </span>
               </td>
               <td class="c">
-                <a href="?edit_fonction={{ f.id }}&open=fonctions" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
-                <form method="POST" id="del-fct-{{ f.id }}" style="display:inline;">
+                <a href="?edit_fonction={{ f.id|stringformat:"s" }}&open=fonctions" class="btn-ed-sm" title="Modifier"><i class="fas fa-edit"></i></a>
+                <form method="POST" id="del-fct-{{ f.id|stringformat:"s" }}" style="display:inline;">
                   {% csrf_token %}
-                  <input type="hidden" name="fonction_id" value="{{ f.id }}">
+                  <input type="hidden" name="fonction_id" value="{{ f.id|stringformat:"s" }}">
                   <input type="hidden" name="supprimer_fonction" value="1">
                   {% if peut_annuler_fonctions %}
-                  <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-fct-{{ f.id }}','Supprimer la fonction « {{ f.nom|escapejs }} » ?')">
+                  <button type="button" class="btn-dl-sm" title="Supprimer" onclick="confirmerSuppression('del-fct-{{ f.id|stringformat:"s" }}','Supprimer la fonction « {{ f.nom|escapejs }} » ?')">
                     <i class="fas fa-trash-alt"></i>
                   </button>
                   {% endif %}

@@ -263,19 +263,19 @@
                         <label class="vd-label">Magasin Destination *</label>
                         {% if magasins|length == 1 %}
                             {% for m in magasins %}
-                                <input type="hidden" name="magasin" id="vd-magasin" value="{{ m.id }}">
+                                <input type="hidden" name="magasin" id="vd-magasin" value="{{ m.id|stringformat:"s" }}">
                                 <div style="padding: 10px; background: var(--bg-input); border: 2px solid var(--border-color); border-radius: 8px; font-weight: bold; color: var(--primary-blue); height: 42px; display: flex; align-items: center;">
                                     <i class="fas fa-lock" style="color: var(--text-light); margin-right: 8px;"></i> {{ m.nom }}
                                 </div>
                             {% endfor %}
                         {% else %}
                             {% if magasin_actif %}
-<input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="vd-magasin">
+<input type="hidden" name="magasin" value="{{ magasin_actif.id|stringformat:"s" }}" id="vd-magasin">
 <input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fixé au magasin actif actuel">
 {% else %}
 <select name="magasin" id="vd-magasin" required class="vd-input select2" style="width: 100%; background: var(--bg-input); color: var(--text-dark);">
                                 <option value="">-- Choisir le magasin --</option>
-                                {% for m in magasins %}<option value="{{ m.id }}" data-gere-projets="{{ m.gere_projets|yesno:'1,0' }}">{{ m.nom }}</option>{% endfor %}
+                                {% for m in magasins %}<option value="{{ m.id|stringformat:"s" }}" data-gere-projets="{{ m.gere_projets|yesno:'1,0' }}">{{ m.nom }}</option>{% endfor %}
                             </select>
 {% endif %}
                         {% endif %}
@@ -284,7 +284,7 @@
                         <label class="vd-label">Fournisseur *</label>
                         <select name="fournisseur" id="vd-fournisseur" required class="vd-input select2">
                             <option value="">-- Chercher un fournisseur --</option>
-                            {% for f in fournisseurs %}<option value="{{ f.id }}">{{ f.raison_sociale }}</option>{% endfor %}
+                            {% for f in fournisseurs %}<option value="{{ f.id|stringformat:"s" }}">{{ f.raison_sociale }}</option>{% endfor %}
                         </select>
                     </div>
                     {% if magasin_gere_projets %}
@@ -293,7 +293,7 @@
                         <select name="projet" id="vd-projet-entree" class="vd-input select2" onchange="onProjetEntreeChange(this)">
                             <option value="">-- Aucun projet lié --</option>
                             {% for p in projets_list %}
-                                <option value="{{ p.id }}" data-fournisseur-id="{{ p.fournisseur_id|default:'' }}" data-meme-fournisseur="{{ p.meme_fournisseur_livreur|yesno:'1,0' }}">
+                                <option value="{{ p.id|stringformat:"s" }}" data-fournisseur-id="{{ p.fournisseur_id|default:'' }}" data-meme-fournisseur="{{ p.meme_fournisseur_livreur|yesno:'1,0' }}">
                                     {{ p.nom }}{% if p.fournisseur %} ({{ p.fournisseur.raison_sociale }}){% endif %}
                                 </option>
                             {% endfor %}
@@ -375,12 +375,12 @@
                             <tbody id="vd-dropdown-body">
                                 {% for a in articles %}
                                 <tr class="dropdown-item"
-                                    data-id="{{ a.id }}"
+                                    data-id="{{ a.id|stringformat:"s" }}"
                                     data-ref="{{ a.reference|default:'-'|escapejs }}"
                                     data-nom="{{ a.designation|escapejs }}"
                                     data-gere-lots="{{ a.famille.gere_lots_peremption|yesno:'true,false' }}"
                                     data-gere-lots-article="{{ a.gere_lots_peremption|yesno:'true,false' }}"
-                                    data-stocks='{ {% for s in a.stocks.all %}"{{ s.magasin.id }}": {{ s.quantite_physique }}{% if not forloop.last %}, {% endif %}{% endfor %} }'
+                                    data-stocks='{ {% for s in a.stocks.all %}"{{ s.magasin.id|stringformat:"s" }}": {{ s.quantite_physique }}{% if not forloop.last %}, {% endif %}{% endfor %} }'
                                     onclick="ajouterArticleDirect(this)"
                                     style="cursor: pointer; border-bottom: 1px solid var(--border-light);">
                                     <td style="padding: 12px; font-weight: bold; width: 20%; color: var(--text-medium);">{{ a.reference|default:'-' }}</td>
@@ -711,7 +711,7 @@ window.imprimerModal = function(url, titre) {
                     '<label style="font-weight:bold; font-size:14px;">Motif de l\'annulation (Obligatoire) :</label>' +
                     '<select id="swal-motif-select" class="form-control" style="width: 100%; margin-top:10px; background: var(--bg-card); color: var(--text-dark);">' +
                     '<option value="">-- Rechercher un motif --</option>' +
-                    '{% for m in motifs_annulation %}<option value="{{ m.id }}">{{ m.libelle|escapejs }}</option>{% endfor %}' +
+                    '{% for m in motifs_annulation %}<option value="{{ m.id|stringformat:"s" }}">{{ m.libelle|escapejs }}</option>{% endfor %}' +
                     '</select></div>',
             icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545',
             confirmButtonText: "Confirmer l'annulation", cancelButtonText: 'Retour',

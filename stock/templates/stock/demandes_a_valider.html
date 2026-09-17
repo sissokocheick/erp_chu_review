@@ -112,16 +112,16 @@
             </thead>
             <tbody>
                 {% for d in demandes %}
-                <tr onclick="toggleDetail('detail-{{ d.id }}', 'icon-{{ d.id }}')">
+                <tr onclick="toggleDetail('detail-{{ d.id|stringformat:"s" }}', 'icon-{{ d.id|stringformat:"s" }}')">
                     
                     <td style="text-align: center;" onclick="event.stopPropagation();">
                         {% if d.statut == 'EN_ATTENTE_VALIDATION' %}
-                        <input type="checkbox" name="demandes_cochees" value="{{ d.id }}" class="checkbox-custom check-demande">
+                        <input type="checkbox" name="demandes_cochees" value="{{ d.id|stringformat:"s" }}" class="checkbox-custom check-demande">
                         {% endif %}
                     </td>
 
                     <td style="text-align: center;">
-                        <i class="fas fa-chevron-right" id="icon-{{ d.id }}" style="color: #117a8b; transition: transform 0.2s ease;"></i>
+                        <i class="fas fa-chevron-right" id="icon-{{ d.id|stringformat:"s" }}" style="color: #117a8b; transition: transform 0.2s ease;"></i>
                     </td>
                     
                     <td><strong style="color:#117a8b; font-family:monospace; font-size: 14px;">{{ d.numero_demande }}</strong></td>
@@ -161,7 +161,7 @@
                 </tr>
 
                 {# ── ACCORDÉON : DÉTAIL ET ACTIONS ── #}
-                <tr id="detail-{{ d.id }}" style="display: none; background: #fdfdfd; cursor: default;" onclick="event.stopPropagation();">
+                <tr id="detail-{{ d.id|stringformat:"s" }}" style="display: none; background: #fdfdfd; cursor: default;" onclick="event.stopPropagation();">
                     <td colspan="8" style="padding: 15px 30px 25px 60px; border-bottom: 2px solid #117a8b;">
                         
                         <div style="background: var(--bg-card); padding: 20px; border-radius: 8px; border: 1px solid #dee2e6;">
@@ -186,7 +186,7 @@
                                     <tr>
                                         <td style="color:#888;">{{ ligne.article.reference|default:"-" }}</td>
                                         <td><strong>{{ ligne.article.designation }}</strong></td>
-                                        <td style="text-align: center; font-weight: bold; color: #117a8b; font-size: 14px;">{{ ligne.quantite_demandee }}</td>
+                                        <td style="text-align: center; font-weight: bold; color: #117a8b; font-size: 14px;">{{ ligne.quantite_demandee|stringformat:"s" }}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -194,10 +194,10 @@
 
                             {% if d.statut == 'EN_ATTENTE_VALIDATION' %}
                             <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #eee; padding-top: 15px;">
-                                <button type="button" onclick="confirmerRefusUnique('{{ d.id }}')" style="background: #dc3545; color: white; border: none; padding: 8px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                                <button type="button" onclick="confirmerRefusUnique('{{ d.id|stringformat:"s" }}')" style="background: #dc3545; color: white; border: none; padding: 8px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;">
                                     <i class="fas fa-times"></i> Refuser
                                 </button>
-                                <button type="button" onclick="confirmerValidationUnique('{{ d.id }}', '{{ d.numero_demande }}')" style="background: #28a745; color: white; border: none; padding: 8px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;">
+                                <button type="button" onclick="confirmerValidationUnique('{{ d.id|stringformat:"s" }}', '{{ d.numero_demande }}')" style="background: #28a745; color: white; border: none; padding: 8px 20px; border-radius: 4px; font-weight: bold; cursor: pointer; transition: 0.2s;">
                                     <i class="fas fa-check"></i> Approuver
                                 </button>
                             </div>

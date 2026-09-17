@@ -106,20 +106,20 @@
       <div>
         <label class="flabel">Magasin de destination *</label>
         {% if magasin_actif %}
-          <input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="sel-magasin">
+          <input type="hidden" name="magasin" value="{{ magasin_actif.id|stringformat:"s" }}" id="sel-magasin">
           <div class="magasin-locked">
             <i class="fas fa-store" style="color:#1c5b96;"></i>
             <strong>{{ magasin_actif.nom|upper }}</strong>
           </div>
         {% else %}
           {% if magasin_actif %}
-<input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="sel-magasin">
+<input type="hidden" name="magasin" value="{{ magasin_actif.id|stringformat:"s" }}" id="sel-magasin">
 <input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
 {% else %}
 <select name="magasin" id="sel-magasin" required class="finput">
             <option value="">— Choisir le magasin —</option>
             {% for m in magasins %}
-            <option value="{{ m.id }}">{{ m.nom }}</option>
+            <option value="{{ m.id|stringformat:"s" }}">{{ m.nom }}</option>
             {% endfor %}
           </select>
 {% endif %}
@@ -162,11 +162,11 @@
                   &nbsp;|&nbsp; Unité: <em>{{ ligne.article.unite_distribution }}</em>
                 </small>
               </div>
-              <input type="hidden" name="ligne_ids[]" value="{{ ligne.id }}">
+              <input type="hidden" name="ligne_ids[]" value="{{ ligne.id|stringformat:"s" }}">
             </td>
             <td style="text-align:center;">
               <div class="qte-info">
-                <span style="color: var(--text-light);">Demandé : <strong>{{ ligne.quantite_demandee }}</strong></span><br>
+                <span style="color: var(--text-light);">Demandé : <strong>{{ ligne.quantite_demandee|stringformat:"s" }}</strong></span><br>
                 <span style="color:#28a745;">Reçu : <strong>{{ ligne.quantite_recue }}</strong></span><br>
                 <span style="color:#1c5b96;font-weight:700;font-size:13px;">Attendu : {{ ligne.reliquat }}</span>
               </div>

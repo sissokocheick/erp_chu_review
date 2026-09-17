@@ -358,7 +358,7 @@
                         <select name="projet" id="vd-projet" class="vd-input select2">
                             <option value="">-- Choisir le projet --</option>
                             {% for p in projets_list %}
-                                <option value="{{ p.id }}">{{ p.nom }}{% if p.fournisseur %} — Entr: {{ p.fournisseur.raison_sociale }}{% endif %}</option>
+                                <option value="{{ p.id|stringformat:"s" }}">{{ p.nom }}{% if p.fournisseur %} — Entr: {{ p.fournisseur.raison_sociale }}{% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -370,19 +370,19 @@
                         <label class="vd-label">Magasin Source *</label>
                         {% if magasins|length == 1 %}
                             {% for m in magasins %}
-                                <input type="hidden" name="magasin" id="vd-magasin" value="{{ m.id }}">
+                                <input type="hidden" name="magasin" id="vd-magasin" value="{{ m.id|stringformat:"s" }}">
                                 <div style="padding: 10px; background: var(--bg-input); border: 2px solid var(--border-color); border-radius: 8px; font-weight: bold; color: var(--primary-blue); height: 42px; display: flex; align-items: center;">
                                     <i class="fas fa-lock" style="color: var(--text-medium); margin-right: 8px;"></i> {{ m.nom }}
                                 </div>
                             {% endfor %}
                         {% else %}
                             {% if magasin_actif %}
-                            <input type="hidden" name="magasin" value="{{ magasin_actif.id }}" id="vd-magasin">
+                            <input type="hidden" name="magasin" value="{{ magasin_actif.id|stringformat:"s" }}" id="vd-magasin">
                             <input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fixé au magasin actif">
                             {% else %}
                             <select name="magasin" id="vd-magasin" required class="vd-input select2" style="width: 100%;">
                                 <option value="">-- Choisir le magasin --</option>
-                                {% for m in magasins %}<option value="{{ m.id }}" data-gere-projets="{{ m.gere_projets|yesno:'1,0' }}">{{ m.nom }}</option>{% endfor %}
+                                {% for m in magasins %}<option value="{{ m.id|stringformat:"s" }}" data-gere-projets="{{ m.gere_projets|yesno:'1,0' }}">{{ m.nom }}</option>{% endfor %}
                             </select>
                             {% endif %}
                         {% endif %}
@@ -392,7 +392,7 @@
                         <label class="vd-label">Service Demandeur <span class="text-danger">*</span></label>
                         <select name="service_demandeur" id="vd-service-demandeur" required class="vd-input select2">
                             <option value="">-- Chercher un service --</option>
-                            {% for s in services %}<option value="{{ s.id }}">{{ s.nom }}</option>{% endfor %}
+                            {% for s in services %}<option value="{{ s.id|stringformat:"s" }}">{{ s.nom }}</option>{% endfor %}
                         </select>
                     </div>
 
@@ -476,10 +476,10 @@
                             <tbody id="vd-dropdown-body">
                                 {% for a in articles %}
                                 <tr class="dropdown-item"
-                                    data-id="{{ a.id }}"
+                                    data-id="{{ a.id|stringformat:"s" }}"
                                     data-ref="{{ a.reference|default:'-'|escapejs }}"
                                     data-nom="{{ a.designation|escapejs }}"
-                                    data-stocks='{ {% for s in a.stocks.all %}"{{ s.magasin.id }}": {{ s.quantite_physique }}{% if not forloop.last %}, {% endif %}{% endfor %} }'
+                                    data-stocks='{ {% for s in a.stocks.all %}"{{ s.magasin.id|stringformat:"s" }}": {{ s.quantite_physique }}{% if not forloop.last %}, {% endif %}{% endfor %} }'
                                     onclick="ajouterArticleDirect(this)"
                                     style="cursor: pointer; border-bottom: 1px solid var(--border-light);">
                                     <td style="padding: 12px; font-weight: bold; width: 20%; color: var(--text-medium);">{{ a.reference|default:'-' }}</td>
@@ -730,7 +730,7 @@
     };
 
     function confirmerAnnulationSortie(bonId, numeroBon) {
-        Swal.fire({ title: 'Annuler la sortie ' + numeroBon, html: `<div style="text-align:left; margin-top:10px;"><label style="font-weight:bold;">Motif :</label><select id="swal-motif-select-sortie" class="form-control" style="width:100%;margin-top:10px;"><option value="">-- Sélectionner --</option>{% for m in motifs_annulation %}<option value="{{ m.id }}">{{ m.libelle }}</option>{% endfor %}</select></div>`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: "Confirmer l'annulation", cancelButtonText: 'Retour', didOpen: () => { if (typeof $ !== 'undefined') { $('#swal-motif-select-sortie').select2({ dropdownParent: $('.swal2-container'), placeholder: "Tapez pour chercher..." }); } }, preConfirm: () => { const motifId = document.getElementById('swal-motif-select-sortie').value; if (!motifId) { Swal.showValidationMessage('Veuillez sélectionner un motif'); } return motifId; } }).then((result) => { if (result.isConfirmed) { let form = document.getElementById('form-annuler-sortie-' + bonId); let inputMotif = document.createElement('input'); inputMotif.type = 'hidden'; inputMotif.name = 'motif_id'; inputMotif.value = result.value; form.appendChild(inputMotif); Swal.fire({ title: 'Annulation en cours...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } }); form.submit(); } });
+        Swal.fire({ title: 'Annuler la sortie ' + numeroBon, html: `<div style="text-align:left; margin-top:10px;"><label style="font-weight:bold;">Motif :</label><select id="swal-motif-select-sortie" class="form-control" style="width:100%;margin-top:10px;"><option value="">-- Sélectionner --</option>{% for m in motifs_annulation %}<option value="{{ m.id|stringformat:"s" }}">{{ m.libelle }}</option>{% endfor %}</select></div>`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: "Confirmer l'annulation", cancelButtonText: 'Retour', didOpen: () => { if (typeof $ !== 'undefined') { $('#swal-motif-select-sortie').select2({ dropdownParent: $('.swal2-container'), placeholder: "Tapez pour chercher..." }); } }, preConfirm: () => { const motifId = document.getElementById('swal-motif-select-sortie').value; if (!motifId) { Swal.showValidationMessage('Veuillez sélectionner un motif'); } return motifId; } }).then((result) => { if (result.isConfirmed) { let form = document.getElementById('form-annuler-sortie-' + bonId); let inputMotif = document.createElement('input'); inputMotif.type = 'hidden'; inputMotif.name = 'motif_id'; inputMotif.value = result.value; form.appendChild(inputMotif); Swal.fire({ title: 'Annulation en cours...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } }); form.submit(); } });
     }
 
     function filtrerProduits() {

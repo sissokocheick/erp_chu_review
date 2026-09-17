@@ -34,7 +34,7 @@
                         <select name="service" class="form-control select2" style="width: 100%;">
                             <option value="">-- Tous les services (Global) --</option>
                             {% for s in services %}
-                                <option value="{{ s.id }}">{{ s.nom }}</option>
+                                <option value="{{ s.id|stringformat:"s" }}">{{ s.nom }}</option>
                             {% endfor %}
                         </select>
                     </div>

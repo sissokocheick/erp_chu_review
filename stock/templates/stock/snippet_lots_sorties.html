@@ -7,7 +7,7 @@
      - un <select name="articles[]"> pour l'article
      - un <input name="quantites[]"> pour la quantité
      - un <select name="lots[]"> pour le lot (ce snippet l'ajoute dynamiquement)
-  2. Un <input hidden id="magasin_actif_id" value="{{ magasin_actif_id }}">
+  2. Un <input hidden id="magasin_actif_id" value="{{ magasin_actif_id|stringformat:"s" }}">
      ou récupérer le magasin sélectionné dans le formulaire.
   3. Ajouter dans urls.py :
      path('api/lots/<int:article_id>/<int:magasin_id>/', views.api_lots_disponibles, name='api_lots_disponibles'),
@@ -35,7 +35,7 @@
       <select name="articles[]" class="form-select select-article" required>
         <option value="">-- Choisir un article --</option>
         {% for art in articles %}
-          <option value="{{ art.id }}"
+          <option value="{{ art.id|stringformat:"s" }}"
                   data-gere-lots="{{ art.famille.gere_lots_peremption|yesno:'true,false' }}">
             {{ art.designation }}
           </option>

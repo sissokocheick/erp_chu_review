@@ -645,14 +645,14 @@
   <select name="fournisseur" id="select-fournisseur">
     <option value="">— Tous fournisseurs —</option>
     {% for f in fournisseurs %}
-    <option value="{{ f.id }}" {% if request.GET.fournisseur == f.id|stringformat:"s" %}selected{% endif %}>{{ f.raison_sociale }}</option>
+    <option value="{{ f.id|stringformat:"s" }}" {% if request.GET.fournisseur == f.id|stringformat:"s" %}selected{% endif %}>{{ f.raison_sociale }}</option>
     {% endfor %}
   </select>
 
   <select name="famille_liste" id="select-famille-liste">
     <option value="">— Toutes familles —</option>
     {% for f in familles %}
-    <option value="{{ f.id }}" {% if request.GET.famille_liste == f.id|stringformat:"s" %}selected{% endif %}>{{ f.intitule }}</option>
+    <option value="{{ f.id|stringformat:"s" }}" {% if request.GET.famille_liste == f.id|stringformat:"s" %}selected{% endif %}>{{ f.intitule }}</option>
     {% endfor %}
   </select>
 
@@ -733,7 +733,7 @@
             <label class="cmd-form-label">Fournisseur *</label>
             <select name="fournisseur" id="select-fourn" required class="cmd-form-input s2">
               <option value="">— Sélectionner —</option>
-              {% for f in fournisseurs %}<option value="{{ f.id }}">{{ f.raison_sociale }}</option>{% endfor %}
+              {% for f in fournisseurs %}<option value="{{ f.id|stringformat:"s" }}">{{ f.raison_sociale }}</option>{% endfor %}
             </select>
           </div>
           <div>
@@ -741,7 +741,7 @@
             <select name="famille" id="cmd-famille-select" class="cmd-form-input s2" required>
               <option value="">— Choisir d'abord une famille —</option>
               {% for famille in familles %}
-              <option value="{{ famille.id }}">{{ famille.intitule }}</option>
+              <option value="{{ famille.id|stringformat:"s" }}">{{ famille.intitule }}</option>
               {% endfor %}
             </select>
           </div>
@@ -789,7 +789,7 @@
               <tbody id="cmd-dd-body">
                 {% for a in articles %}
                 <tr class="cmd-dd-item"
-                    data-id="{{ a.id }}"
+                    data-id="{{ a.id|stringformat:"s" }}"
                     data-ref="{{ a.reference|default:'-' }}"
                     data-nom="{{ a.designation }}"
                     data-unite="{{ a.unite_distribution }}"

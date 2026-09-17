@@ -34,14 +34,14 @@
         </td>
         <td class="c" style="padding: 11px 12px; text-align: center; white-space: nowrap;">
           <a href="{% url 'parametres_magasin' m.id %}" title="Configurer les codes ISO" style="color: #6f42c1; background: none; border: none; font-size: 15px; padding: 4px 6px; margin-right: 5px; text-decoration: none;"><i class="fas fa-cogs"></i></a>
-          <a href="?edit_magasin={{ m.id }}&open=magasins" title="Modifier" style="color: #28a745; background: none; border: none; font-size: 15px; padding: 4px 6px; margin-right: 5px; text-decoration: none;"><i class="fas fa-edit"></i></a>
+          <a href="?edit_magasin={{ m.id|stringformat:"s" }}&open=magasins" title="Modifier" style="color: #28a745; background: none; border: none; font-size: 15px; padding: 4px 6px; margin-right: 5px; text-decoration: none;"><i class="fas fa-edit"></i></a>
           {% if m.is_deletable %}
-          <form method="POST" id="del-mag-{{ m.id }}" style="display:inline;">
+          <form method="POST" id="del-mag-{{ m.id|stringformat:"s" }}" style="display:inline;">
             {% csrf_token %}
-            <input type="hidden" name="magasin_id" value="{{ m.id }}">
+            <input type="hidden" name="magasin_id" value="{{ m.id|stringformat:"s" }}">
             <input type="hidden" name="supprimer_magasin" value="1">
             <button type="button" title="Supprimer" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;"
-                    onclick="confirmerSuppression('del-mag-{{ m.id }}','Supprimer le magasin « {{ m.nom|escapejs }} » ?')">
+                    onclick="confirmerSuppression('del-mag-{{ m.id|stringformat:"s" }}','Supprimer le magasin « {{ m.nom|escapejs }} » ?')">
               <i class="fas fa-trash-alt"></i>
             </button>
           </form>
@@ -103,13 +103,13 @@
                   </div>
                 </td>
                 <td class="c" style="padding: 11px 12px; text-align: center; white-space: nowrap;">
-                    <a href="?edit_fournisseur={{ fr.id }}&open=fournisseurs" style="color: #28a745; background: none; border: none; font-size: 15px; padding: 4px 6px; margin-right: 5px; text-decoration: none;" title="Modifier"><i class="fas fa-edit"></i></a>
+                    <a href="?edit_fournisseur={{ fr.id|stringformat:"s" }}&open=fournisseurs" style="color: #28a745; background: none; border: none; font-size: 15px; padding: 4px 6px; margin-right: 5px; text-decoration: none;" title="Modifier"><i class="fas fa-edit"></i></a>
                     {% if fr.is_deletable %}
-                    <form method="POST" id="del-fourn-{{ fr.id }}" style="display: inline;">
+                    <form method="POST" id="del-fourn-{{ fr.id|stringformat:"s" }}" style="display: inline;">
                         {% csrf_token %}
-                        <input type="hidden" name="fournisseur_id" value="{{ fr.id }}">
+                        <input type="hidden" name="fournisseur_id" value="{{ fr.id|stringformat:"s" }}">
                         <input type="hidden" name="supprimer_fournisseur" value="1">
-                        <button type="button" onclick="confirmerSuppression('del-fourn-{{ fr.id }}', 'Supprimer ce fournisseur ?');" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+                        <button type="button" onclick="confirmerSuppression('del-fourn-{{ fr.id|stringformat:"s" }}', 'Supprimer ce fournisseur ?');" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
                     </form>
                     {% else %}
                     <span style="color: #dc3545; opacity: .35; cursor: not-allowed; font-size: 15px; padding: 4px 6px;" title="Impossible à supprimer : utilisé par {{ fr.deps|join:', '|escape }}">
@@ -159,13 +159,13 @@
                     {% if b.service %}<i class="fas fa-clinic-medical" style="color: var(--text-muted); margin-right:4px;"></i> {{ b.service.nom }}{% else %}-{% endif %}
                 </td>
                 <td class="c" style="padding: 11px 12px; text-align: center; white-space: nowrap;">
-                    <button type="button" onclick="ouvrirModalBeneficiaire('{{ b.id }}', '{{ b.nom_complet|escapejs }}', '{{ b.poste|escapejs }}', '{{ b.service_id|default:'' }}')" style="color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px; margin-right: 5px;" title="Modifier"><i class="fas fa-edit"></i></button>
+                    <button type="button" onclick="ouvrirModalBeneficiaire('{{ b.id|stringformat:"s" }}', '{{ b.nom_complet|escapejs }}', '{{ b.poste|escapejs }}', '{{ b.service_id|default:'' }}')" style="color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px; margin-right: 5px;" title="Modifier"><i class="fas fa-edit"></i></button>
                     {% if b.is_deletable %}
-                    <form method="POST" id="del-benef-{{ b.id }}" style="display: inline;">
+                    <form method="POST" id="del-benef-{{ b.id|stringformat:"s" }}" style="display: inline;">
                         {% csrf_token %}
-                        <input type="hidden" name="beneficiaire_id" value="{{ b.id }}">
+                        <input type="hidden" name="beneficiaire_id" value="{{ b.id|stringformat:"s" }}">
                         <input type="hidden" name="supprimer_beneficiaire" value="1">
-                        <button type="button" onclick="confirmerSuppression('del-benef-{{ b.id }}', 'Supprimer ce bénéficiaire ?');" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
+                        <button type="button" onclick="confirmerSuppression('del-benef-{{ b.id|stringformat:"s" }}', 'Supprimer ce bénéficiaire ?');" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer"><i class="fas fa-trash-alt"></i></button>
                     </form>
                     {% else %}
                     <span style="color: #dc3545; opacity: .35; cursor: not-allowed; font-size: 15px; padding: 4px 6px;" title="Impossible à supprimer : utilisé par {{ b.deps|join:', '|escape }}">
@@ -226,23 +226,23 @@
                 </td>
                 <td class="c" style="padding: 11px 12px; text-align: center; white-space: nowrap;">
                     <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
-                        <button onclick="ouvrirModalMotif({{ m.id }}, '{{ m.libelle|escapejs }}')" style="color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Modifier">
+                        <button onclick="ouvrirModalMotif({{ m.id|stringformat:"s" }}, '{{ m.libelle|escapejs }}')" style="color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Modifier">
                             <i class="fas fa-edit"></i>
                         </button>
                         <form method="POST" style="display: inline;">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle_motif"> 
-                            <input type="hidden" name="motif_id" value="{{ m.id }}">
+                            <input type="hidden" name="motif_id" value="{{ m.id|stringformat:"s" }}">
                             <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 2px 4px; color: {% if m.actif %}#28a745{% else %}#dc3545{% endif %};" title="{% if m.actif %}Désactiver{% else %}Activer{% endif %}">
                                 <i class="fas {% if m.actif %}fa-toggle-on{% else %}fa-toggle-off{% endif %}"></i>
                             </button>
                         </form>
                         {% if m.is_deletable %}
-                        <form method="POST" id="del-motif-{{ m.id }}" style="display: inline;">
+                        <form method="POST" id="del-motif-{{ m.id|stringformat:"s" }}" style="display: inline;">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="supprimer_motif">
-                            <input type="hidden" name="motif_id" value="{{ m.id }}">
-                            <button type="button" onclick="confirmerSuppression('del-motif-{{ m.id }}', 'Supprimer ce motif ?')" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer">
+                            <input type="hidden" name="motif_id" value="{{ m.id|stringformat:"s" }}">
+                            <button type="button" onclick="confirmerSuppression('del-motif-{{ m.id|stringformat:"s" }}', 'Supprimer ce motif ?')" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </form>
@@ -312,22 +312,22 @@
                 </td>
                 <td class="c" style="padding: 11px 12px; text-align: center; white-space: nowrap;">
                     <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
-                        <button type="button" onclick="ouvrirModalUnite({{ u.id }}, '{{ u.nom|escapejs }}', '{{ u.code|default:''|escapejs }}', '{{ u.description|default:''|escapejs }}')" style="color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Modifier">
+                        <button type="button" onclick="ouvrirModalUnite({{ u.id|stringformat:"s" }}, '{{ u.nom|escapejs }}', '{{ u.code|default:''|escapejs }}', '{{ u.description|default:''|escapejs }}')" style="color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Modifier">
                             <i class="fas fa-edit"></i>
                         </button>
                         <form method="POST" style="display: inline;">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle_unite_mesure"> 
-                            <input type="hidden" name="unite_id" value="{{ u.id }}">
+                            <input type="hidden" name="unite_id" value="{{ u.id|stringformat:"s" }}">
                             <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 2px 4px; color: {% if u.actif %}#28a745{% else %}#dc3545{% endif %};" title="{% if u.actif %}Désactiver{% else %}Activer{% endif %}">
                                 <i class="fas {% if u.actif %}fa-toggle-on{% else %}fa-toggle-off{% endif %}"></i>
                             </button>
                         </form>
-                        <form method="POST" id="del-unite-{{ u.id }}" style="display: inline;">
+                        <form method="POST" id="del-unite-{{ u.id|stringformat:"s" }}" style="display: inline;">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="supprimer_unite_mesure">
-                            <input type="hidden" name="unite_id" value="{{ u.id }}">
-                            <button type="button" onclick="confirmerSuppression('del-unite-{{ u.id }}', 'Supprimer l\'unité « {{ u.nom|escapejs }} » ?')" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer">
+                            <input type="hidden" name="unite_id" value="{{ u.id|stringformat:"s" }}">
+                            <button type="button" onclick="confirmerSuppression('del-unite-{{ u.id|stringformat:"s" }}', 'Supprimer l\'unité « {{ u.nom|escapejs }} » ?')" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </form>
@@ -385,22 +385,22 @@
                 </td>
                 <td class="c" style="padding: 11px 12px; text-align: center; white-space: nowrap;">
                     <div style="display: flex; gap: 5px; justify-content: center; align-items: center;">
-                        <button type="button" onclick="ouvrirModalMotifAjustement({{ m.id }}, '{{ m.libelle|escapejs }}', '{{ m.code|default:''|escapejs }}', '{{ m.description|default:''|escapejs }}')" style="color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Modifier">
+                        <button type="button" onclick="ouvrirModalMotifAjustement({{ m.id|stringformat:"s" }}, '{{ m.libelle|escapejs }}', '{{ m.code|default:''|escapejs }}', '{{ m.description|default:''|escapejs }}')" style="color: #28a745; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Modifier">
                             <i class="fas fa-edit"></i>
                         </button>
                         <form method="POST" style="display: inline;">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="toggle_motif_ajustement"> 
-                            <input type="hidden" name="motif_ajust_id" value="{{ m.id }}">
+                            <input type="hidden" name="motif_ajust_id" value="{{ m.id|stringformat:"s" }}">
                             <button type="submit" style="background: none; border: none; cursor: pointer; font-size: 18px; padding: 2px 4px; color: {% if m.actif %}#28a745{% else %}#dc3545{% endif %};" title="{% if m.actif %}Désactiver{% else %}Activer{% endif %}">
                                 <i class="fas {% if m.actif %}fa-toggle-on{% else %}fa-toggle-off{% endif %}"></i>
                             </button>
                         </form>
-                        <form method="POST" id="del-motif-ajust-{{ m.id }}" style="display: inline;">
+                        <form method="POST" id="del-motif-ajust-{{ m.id|stringformat:"s" }}" style="display: inline;">
                             {% csrf_token %}
                             <input type="hidden" name="action" value="supprimer_motif_ajustement">
-                            <input type="hidden" name="motif_ajust_id" value="{{ m.id }}">
-                            <button type="button" onclick="confirmerSuppression('del-motif-ajust-{{ m.id }}', 'Supprimer ce motif d\'ajustement ?')" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer">
+                            <input type="hidden" name="motif_ajust_id" value="{{ m.id|stringformat:"s" }}">
+                            <button type="button" onclick="confirmerSuppression('del-motif-ajust-{{ m.id|stringformat:"s" }}', 'Supprimer ce motif d\'ajustement ?')" style="color: #dc3545; background: none; border: none; cursor: pointer; font-size: 15px; padding: 4px 6px;" title="Supprimer">
                                 <i class="fas fa-trash-alt"></i>
                             </button>
                         </form>

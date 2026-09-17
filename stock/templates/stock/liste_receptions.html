@@ -632,7 +632,7 @@
   <select name="fournisseur" id="select-fournisseur">
     <option value="">— Tous fournisseurs —</option>
     {% for f in fournisseurs %}
-    <option value="{{ f.id }}" {% if request.GET.fournisseur == f.id|stringformat:"s" %}selected{% endif %}>{{ f.raison_sociale }}</option>
+    <option value="{{ f.id|stringformat:"s" }}" {% if request.GET.fournisseur == f.id|stringformat:"s" %}selected{% endif %}>{{ f.raison_sociale }}</option>
     {% endfor %}
   </select>
   <a href="?onglet={{ onglet|default:'en_cours' }}" class="rec-btn-reset" onclick="event.preventDefault(); resetFiltresReceptions();"><i class="fas fa-sync-alt"></i> Réinit.</a>
@@ -668,7 +668,7 @@
       <tr>
         <td style="text-align:center;" data-label="">
           {% if item.commande.bons_reception.all or item.commande.bons_livraison.all %}
-          <button type="button" class="rec-toggle" id="btn-toggle-{{ item.commande.id }}" onclick="toggleLignes({{ item.commande.id }})">
+          <button type="button" class="rec-toggle" id="btn-toggle-{{ item.commande.id|stringformat:"s" }}" onclick="toggleLignes({{ item.commande.id|stringformat:"s" }})">
             <i class="fas fa-chevron-right"></i>
           </button>
           {% endif %}
@@ -719,7 +719,7 @@
         </td>
         <td style="text-align:center;" data-label="BL">
           {% if item.has_doc %}
-            <span class="rec-badge rec-badge-livre" style="cursor:pointer;" onclick="ouvrirModalBLs({{ item.commande.id }})">
+            <span class="rec-badge rec-badge-livre" style="cursor:pointer;" onclick="ouvrirModalBLs({{ item.commande.id|stringformat:"s" }})">
               <i class="fas fa-file-alt"></i> {{ item.nb_bl }}
             </span>
           {% else %}
@@ -736,14 +736,14 @@
 
             {# BLs visible dès qu'il y a au moins 1 réception #}
             {% if item.commande.bons_reception.all %}
-              <button type="button" class="rec-btn-view" onclick="ouvrirModalBLs({{ item.commande.id }})">
+              <button type="button" class="rec-btn-view" onclick="ouvrirModalBLs({{ item.commande.id|stringformat:"s" }})">
                 <i class="fas fa-eye"></i> BLs
               </button>
             {% endif %}
 
             {# Retour fournisseur en 1 clic : pré-remplit la modale depuis les réceptions #}
             {% if item.commande.bons_reception.all %}
-              <a href="{% url 'liste_retours_fournisseurs' %}?from_commande={{ item.commande.id }}" class="rec-btn-view"
+              <a href="{% url 'liste_retours_fournisseurs' %}?from_commande={{ item.commande.id|stringformat:"s" }}" class="rec-btn-view"
                  style="background: rgba(231,76,60,0.08); color: #c0392b; border-color: rgba(231,76,60,0.35);"
                  title="Créer un retour fournisseur à partir des réceptions de cette commande">
                 <i class="fas fa-undo-alt"></i> Retour Fourn.
@@ -761,7 +761,7 @@
 
       {# ── Ligne dépliable : Bons d'entrée + BLs ── #}
       {% if item.commande.bons_reception.all or item.commande.bons_livraison.all %}
-      <tr class="rec-detail-row" id="lignes-{{ item.commande.id }}">
+      <tr class="rec-detail-row" id="lignes-{{ item.commande.id|stringformat:"s" }}">
         <td colspan="10">
           <div class="rec-detail-box">
             {# Bons d'entrée avec leur BL respectif #}
@@ -800,7 +800,7 @@
                           <i class="fas fa-file-alt"></i> Oui
                         </span>
                       {% else %}
-                        <button type="button" class="rec-btn-attach" style="padding:5px 10px;font-size:11px;" onclick="ouvrirModalUpload({{ item.commande.id }}, {{ be.bon.id }})">
+                        <button type="button" class="rec-btn-attach" style="padding:5px 10px;font-size:11px;" onclick="ouvrirModalUpload({{ item.commande.id|stringformat:"s" }}, {{ be.bon.id|stringformat:"s" }})">
                           <i class="fas fa-paperclip"></i> Joindre
                         </button>
                       {% endif %}
@@ -847,7 +847,7 @@
                           <i class="fas fa-eye"></i> Voir
                         </button>
                         {% if bl_data.peut_remplacer %}
-                        <button type="button" class="be-chip-sm" onclick="ouvrirModalRemplacer({{ bl_data.bl.id }}, '{{ item.commande.numero_commande|escapejs }}')">
+                        <button type="button" class="be-chip-sm" onclick="ouvrirModalRemplacer({{ bl_data.bl.id|stringformat:"s" }}, '{{ item.commande.numero_commande|escapejs }}')">
                           <i class="fas fa-sync-alt"></i> Rempl.
                         </button>
                         {% else %}
@@ -920,11 +920,11 @@
 <!-- MODALS LISTE BLs (une par commande avec réception) -->
 {% for item in commandes_data %}
 {% if item.commande.bons_reception.all %}
-<div class="up-modal" id="modal-bls-{{ item.commande.id }}">
+<div class="up-modal" id="modal-bls-{{ item.commande.id|stringformat:"s" }}">
   <div class="up-modal-box wide">
     <div class="up-modal-head">
       <h5><i class="fas fa-file-invoice me-2"></i>Bons de livraison — {{ item.commande.numero_commande }}</h5>
-      <button type="button" class="up-modal-close" onclick="fermerModalBLs({{ item.commande.id }})"><i class="fas fa-times"></i></button>
+      <button type="button" class="up-modal-close" onclick="fermerModalBLs({{ item.commande.id|stringformat:"s" }})"><i class="fas fa-times"></i></button>
     </div>
     <div class="up-modal-body">
       {% if item.bls_data %}
@@ -957,7 +957,7 @@
                   <i class="fas fa-eye"></i> Voir
                 </button>
                 {% if bl_data.peut_remplacer %}
-                <button type="button" class="be-chip-sm" onclick="ouvrirModalRemplacer({{ bl_data.bl.id }}, '{{ item.commande.numero_commande|escapejs }}');fermerModalBLs({{ item.commande.id }});">
+                <button type="button" class="be-chip-sm" onclick="ouvrirModalRemplacer({{ bl_data.bl.id|stringformat:"s" }}, '{{ item.commande.numero_commande|escapejs }}');fermerModalBLs({{ item.commande.id|stringformat:"s" }});">
                   <i class="fas fa-sync-alt"></i> Rempl.
                 </button>
                 {% else %}
@@ -980,9 +980,9 @@
       {% endif %}
     </div>
         <div class="up-modal-foot">
-      <button type="button" class="up-btn-nok" onclick="fermerModalBLs({{ item.commande.id }})">Fermer</button>
+      <button type="button" class="up-btn-nok" onclick="fermerModalBLs({{ item.commande.id|stringformat:"s" }})">Fermer</button>
       {% if item.nb_bl < item.nb_receptions and item.premier_bon_sans_bl_id %}
-      <button type="button" class="up-btn-ok" onclick="ouvrirModalUpload({{ item.commande.id }}, {{ item.premier_bon_sans_bl_id }});fermerModalBLs({{ item.commande.id }});">
+      <button type="button" class="up-btn-ok" onclick="ouvrirModalUpload({{ item.commande.id|stringformat:"s" }}, {{ item.premier_bon_sans_bl_id|stringformat:"s" }});fermerModalBLs({{ item.commande.id|stringformat:"s" }});">
         <i class="fas fa-plus me-1"></i>Ajouter un BL
       </button>
       {% else %}
@@ -1000,15 +1000,15 @@
 
 <!-- MODALS UPLOAD (une par commande) -->
 {% for item in commandes_data %}
-<div class="up-modal" id="modal-upload-{{ item.commande.id }}">
+<div class="up-modal" id="modal-upload-{{ item.commande.id|stringformat:"s" }}">
   <div class="up-modal-box">
     <div class="up-modal-head">
       <h5><i class="fas fa-paperclip me-2"></i>Joindre un BL — {{ item.commande.numero_commande }}</h5>
-      <button type="button" class="up-modal-close" onclick="fermerModalUpload({{ item.commande.id }})"><i class="fas fa-times"></i></button>
+      <button type="button" class="up-modal-close" onclick="fermerModalUpload({{ item.commande.id|stringformat:"s" }})"><i class="fas fa-times"></i></button>
     </div>
-    <form method="POST" action="{% url 'joindre_bon_livraison' item.commande.id %}" enctype="multipart/form-data" id="form-upload-{{ item.commande.id }}">
+    <form method="POST" action="{% url 'joindre_bon_livraison' item.commande.id %}" enctype="multipart/form-data" id="form-upload-{{ item.commande.id|stringformat:"s" }}">
       {% csrf_token %}
-      <input type="hidden" name="bon_entree_id" id="bon-entree-id-{{ item.commande.id }}" value="">
+      <input type="hidden" name="bon_entree_id" id="bon-entree-id-{{ item.commande.id|stringformat:"s" }}" value="">
       <div class="up-modal-body">
         <div style="text-align:center;margin-bottom:16px;">
           <div style="font-family:monospace;font-weight:700;color:#1c5b96;font-size:18px;">{{ item.commande.numero_commande }}</div>
@@ -1018,20 +1018,20 @@
           <label style="display:block;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--rec-text-secondary);margin-bottom:5px;">Référence BL (optionnel)</label>
           <input type="text" name="reference_bl" maxlength="100" placeholder="Ex: BL-2026-001" style="width:100%;padding:9px 12px;border:1px solid var(--rec-border);border-radius:7px;font-size:13px;background:var(--rec-bg-alt);color:var(--rec-text);">
         </div>
-        <div class="up-zone" id="up-zone-{{ item.commande.id }}">
-          <input type="file" name="document_livraison" id="file-up-{{ item.commande.id }}"
+        <div class="up-zone" id="up-zone-{{ item.commande.id|stringformat:"s" }}">
+          <input type="file" name="document_livraison" id="file-up-{{ item.commande.id|stringformat:"s" }}"
                  accept=".pdf,.jpg,.jpeg,.png" required
-                 onchange="handleFileUpload(this, {{ item.commande.id }})">
-          <i class="fas fa-cloud-upload-alt" id="up-icon-{{ item.commande.id }}"></i>
-          <div class="up-text" id="up-text-{{ item.commande.id }}">Cliquez ou glissez le bon ici</div>
-          <div class="up-hint" id="up-hint-{{ item.commande.id }}">PDF, JPG, PNG — Max 1 Mo</div>
-          <div id="up-display-{{ item.commande.id }}" style="display:none;">
-            <span class="up-file-name"><i class="fas fa-file"></i> <span id="up-filename-{{ item.commande.id }}"></span></span>
+                 onchange="handleFileUpload(this, {{ item.commande.id|stringformat:"s" }})">
+          <i class="fas fa-cloud-upload-alt" id="up-icon-{{ item.commande.id|stringformat:"s" }}"></i>
+          <div class="up-text" id="up-text-{{ item.commande.id|stringformat:"s" }}">Cliquez ou glissez le bon ici</div>
+          <div class="up-hint" id="up-hint-{{ item.commande.id|stringformat:"s" }}">PDF, JPG, PNG — Max 1 Mo</div>
+          <div id="up-display-{{ item.commande.id|stringformat:"s" }}" style="display:none;">
+            <span class="up-file-name"><i class="fas fa-file"></i> <span id="up-filename-{{ item.commande.id|stringformat:"s" }}"></span></span>
           </div>
         </div>
       </div>
       <div class="up-modal-foot">
-        <button type="button" class="up-btn-nok" onclick="fermerModalUpload({{ item.commande.id }})">Annuler</button>
+        <button type="button" class="up-btn-nok" onclick="fermerModalUpload({{ item.commande.id|stringformat:"s" }})">Annuler</button>
         <button type="submit" class="up-btn-ok"><i class="fas fa-paper-plane me-1"></i>Joindre</button>
       </div>
     </form>

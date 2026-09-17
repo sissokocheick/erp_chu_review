@@ -1,6 +1,6 @@
 {% for bon in entrees_bons %}
     
-    <tr id="bon-row-{{ bon.id }}" 
+    <tr id="bon-row-{{ bon.id|stringformat:"s" }}" 
         {% if bon.est_annule %} 
             style="background-color: #fdf3f4; border-bottom: 1px solid #f5c6cb;" 
         {% else %} 
@@ -8,8 +8,8 @@
         {% endif %}>
         
         <td style="padding: 12px; text-align: center;">
-            <button onclick="toggleLignes('{{ bon.id }}')" style="background: none; border: none; cursor: pointer; color: #6c757d;">
-                <i class="fas fa-chevron-right" id="icon-{{ bon.id }}"></i>
+            <button onclick="toggleLignes('{{ bon.id|stringformat:"s" }}')" style="background: none; border: none; cursor: pointer; color: #6c757d;">
+                <i class="fas fa-chevron-right" id="icon-{{ bon.id|stringformat:"s" }}"></i>
             </button>
         </td>
 
@@ -74,14 +74,14 @@
                                 <!-- ✅ SCAN : bouton orange si fichier, bouton gris cliquable sinon -->
                 {% if bon.document_scan %}
                     <button type="button" 
-                            onclick="event.stopPropagation(); afficherScan('{{ bon.document_scan.url }}', '{{ bon.document_scan.name|default:'Document'|escapejs }}', {{ bon.id }});"
+                            onclick="event.stopPropagation(); afficherScan('{{ bon.document_scan.url }}', '{{ bon.document_scan.name|default:'Document'|escapejs }}', {{ bon.id|stringformat:"s" }});"
                             style="background: #f59e0b; color: white; border: none; padding: 6px 10px; border-radius: 4px; font-size: 12px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                             title="Voir le fichier scanné">
                         <i class="fas fa-file-pdf"></i> PDF
                     </button>
                 {% else %}
                     <button type="button"
-                            onclick="event.stopPropagation(); afficherScanVide({{ bon.id }});"
+                            onclick="event.stopPropagation(); afficherScanVide({{ bon.id|stringformat:"s" }});"
                             style="background: #e9ecef; color: var(--text-medium); border: none; padding: 6px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;"
                             title="Joindre un fichier scanné">
                         <i class="fas fa-paperclip"></i> —
@@ -101,19 +101,19 @@
                             <i class="fas fa-lock"></i> Attente validation
                         </span>
                         {% if circuit_entree and est_valideur_entree %}
-                        <form method="POST" action="{% url 'valider_bon_entree' bon.id %}" style="display:inline; margin:0;" id="form-val-entree-{{ bon.id }}">
+                        <form method="POST" action="{% url 'valider_bon_entree' bon.id %}" style="display:inline; margin:0;" id="form-val-entree-{{ bon.id|stringformat:"s" }}">
                             {% csrf_token %}
-                            <button type="button" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le bon d'entrée" aria-label="Valider le bon d'entrée {{ bon.numero_bon }}" onclick="confirmerSweetAlert('Valider le bon d\'entrée ?', 'Le stock sera mis à jour.', 'question', 'Valider', '#007bff', function(){document.getElementById('form-val-entree-{{ bon.id }}').submit();})">
+                            <button type="button" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le bon d'entrée" aria-label="Valider le bon d'entrée {{ bon.numero_bon }}" onclick="confirmerSweetAlert('Valider le bon d\'entrée ?', 'Le stock sera mis à jour.', 'question', 'Valider', '#007bff', function(){document.getElementById('form-val-entree-{{ bon.id|stringformat:"s" }}').submit();})">
                                 <i class="fas fa-stamp"></i> Valider
                             </button>
                         </form>
                         {% endif %}
                     {% endif %}
                     {% if peut_annuler or perms.stock.delete_bonmouvement %}
-                        <button onclick="confirmerAnnulationEntree({{ bon.id }}, '{{ bon.numero_bon|escapejs }}')" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
+                        <button onclick="confirmerAnnulationEntree({{ bon.id|stringformat:"s" }}, '{{ bon.numero_bon|escapejs }}')" style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;">
                             <i class="fas fa-ban"></i>
                         </button>
-                        <form id="form-annuler-entree-{{ bon.id }}" action="{% url 'annuler_entree' bon.id %}" method="POST" style="display: none;">
+                        <form id="form-annuler-entree-{{ bon.id|stringformat:"s" }}" action="{% url 'annuler_entree' bon.id %}" method="POST" style="display: none;">
                             {% csrf_token %}
                         </form>
                     {% endif %}
@@ -126,7 +126,7 @@
         </td>
     </tr>
 
-    <tr id="lignes-{{ bon.id }}" style="display: none; background: #fdfdfd;">
+    <tr id="lignes-{{ bon.id|stringformat:"s" }}" style="display: none; background: #fdfdfd;">
     
     <td colspan="8" style="padding: 15px 30px 25px 50px;">
         <div style="background: var(--bg-card); padding: 15px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); border: 1px solid #ddd;">

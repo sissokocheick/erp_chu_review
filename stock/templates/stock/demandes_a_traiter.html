@@ -103,15 +103,15 @@
         <tbody>
             {% for d in demandes %}
             <tr class="demande-row"
-                onclick="toggleDetail('detail-{{ d.id }}', 'icon-{{ d.id }}')"
+                onclick="toggleDetail('detail-{{ d.id|stringformat:"s" }}', 'icon-{{ d.id|stringformat:"s" }}')"
                 role="button"
                 aria-expanded="false"
-                aria-controls="detail-{{ d.id }}"
+                aria-controls="detail-{{ d.id|stringformat:"s" }}"
                 tabindex="0"
-                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDetail('detail-{{ d.id }}','icon-{{ d.id }}')}">
+                onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleDetail('detail-{{ d.id|stringformat:"s" }}','icon-{{ d.id|stringformat:"s" }}')}">
 
                 <td style="padding: 12px; text-align: center;">
-                    <i class="fas fa-chevron-right chevron-icon" id="icon-{{ d.id }}"></i>
+                    <i class="fas fa-chevron-right chevron-icon" id="icon-{{ d.id|stringformat:"s" }}"></i>
                 </td>
 
                 <td style="padding: 12px;">
@@ -142,9 +142,9 @@
                 </td>
 
                 <td style="padding: 12px; text-align: center;" onclick="event.stopPropagation();">
-                    <form method="POST" id="form-validation-{{ d.id }}" style="display: flex; gap: 8px; justify-content: center; margin: 0;">
+                    <form method="POST" id="form-validation-{{ d.id|stringformat:"s" }}" style="display: flex; gap: 8px; justify-content: center; margin: 0;">
                         {% csrf_token %}
-                        <input type="hidden" name="demande_id" value="{{ d.id }}">
+                        <input type="hidden" name="demande_id" value="{{ d.id|stringformat:"s" }}">
 
                         <button type="submit" name="action" value="approuver" title="Approuver"
                                 class="btn-approbation"
@@ -152,7 +152,7 @@
                             <i class="fas fa-check"></i>
                         </button>
 
-                        <button type="button" onclick="demanderMotifRefus('{{ d.id }}')" title="Refuser"
+                        <button type="button" onclick="demanderMotifRefus('{{ d.id|stringformat:"s" }}')" title="Refuser"
                                 class="btn-refus">
                             <i class="fas fa-times"></i>
                         </button>
@@ -160,7 +160,7 @@
                 </td>
             </tr>
 
-            <tr id="detail-{{ d.id }}" class="detail-row" aria-expanded="false">
+            <tr id="detail-{{ d.id|stringformat:"s" }}" class="detail-row" aria-expanded="false">
                 <td colspan="5" class="detail-panel">
                     <div class="detail-inner">
                         <h5 style="margin-top: 0; color: #1c5b96; font-size: 14px;"><i class="fas fa-box-open"></i> Detail de la demande</h5>
@@ -185,7 +185,7 @@
                                     <td style="color: var(--text-medium);">{{ ligne.article.reference|default:"-" }}</td>
                                     <td style="font-weight: bold; color: var(--text-dark);">{{ ligne.article.designation }}</td>
                                     <td style="text-align: center; font-size: 14px;">
-                                        <span class="qte-badge">{{ ligne.quantite_demandee }}</span>
+                                        <span class="qte-badge">{{ ligne.quantite_demandee|stringformat:"s" }}</span>
                                     </td>
                                 </tr>
                                 {% endfor %}

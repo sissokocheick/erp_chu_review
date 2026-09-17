@@ -94,7 +94,7 @@
     <select name="service" onchange="this.form.submit()">
       <option value="">Tous les services</option>
       {% for s in services %}
-      <option value="{{ s.id }}" {% if service_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nom }}</option>
+      <option value="{{ s.id|stringformat:"s" }}" {% if service_id == s.id|stringformat:"s" %}selected{% endif %}>{{ s.nom }}</option>
       {% endfor %}
     </select>
   </div>

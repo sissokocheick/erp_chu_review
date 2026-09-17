@@ -630,9 +630,9 @@
           <td>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
               {% if plan.statut == 'ACTIF' %}
-              <form method="POST" action="{% url 'generer_campagne_tournante' plan.id %}" style="display:inline;margin:0;" id="form-gen-camp-{{ plan.id }}">
+              <form method="POST" action="{% url 'generer_campagne_tournante' plan.id %}" style="display:inline;margin:0;" id="form-gen-camp-{{ plan.id|stringformat:"s" }}">
                 {% csrf_token %}
-                <button type="button" class="pl-btn-gen" title="Générer la campagne d'inventaire maintenant" onclick="confirmerSweetAlert('Générer la campagne ?', '{{ plan.titre|escapejs }} sera lancée.', 'question', 'Générer', '#6f42c1', function(){document.getElementById('form-gen-camp-{{ plan.id }}').submit();})"><i class="fas fa-magic"></i> Générer</button>
+                <button type="button" class="pl-btn-gen" title="Générer la campagne d'inventaire maintenant" onclick="confirmerSweetAlert('Générer la campagne ?', '{{ plan.titre|escapejs }} sera lancée.', 'question', 'Générer', '#6f42c1', function(){document.getElementById('form-gen-camp-{{ plan.id|stringformat:"s" }}').submit();})"><i class="fas fa-magic"></i> Générer</button>
               </form>
               <form method="POST" action="{% url 'basculer_statut_plan' plan.id %}" style="display:inline;margin:0;">
                 {% csrf_token %}
@@ -849,7 +849,7 @@
           <!-- Magasin -->
           <div class="fg">
             <label>Magasin concerné</label>
-            <input type="hidden" name="magasin_id" value="{{ magasin_actif.id }}">
+            <input type="hidden" name="magasin_id" value="{{ magasin_actif.id|stringformat:"s" }}">
             <div class="readonly-box">
               <i class="fas fa-lock" style="margin-right:6px;"></i>{{ magasin_actif.nom|upper }}
             </div>
@@ -861,7 +861,7 @@
             <div class="famille-grid">
               {% for f in familles %}
               <div class="famille-item" onclick="toggleFamille(this)">
-                <input type="checkbox" name="familles_ids" value="{{ f.id }}" id="famille_{{ f.id }}" onchange="updateFamilleStyle(this)">
+                <input type="checkbox" name="familles_ids" value="{{ f.id|stringformat:"s" }}" id="famille_{{ f.id|stringformat:"s" }}" onchange="updateFamilleStyle(this)">
                 <div style="display:flex;flex-direction:column;gap:1px;">
                   <span class="famille-nom">{{ f.intitule }}</span>
                   <span class="famille-code">Code : {{ f.code }}</span>
@@ -917,12 +917,12 @@
         <div class="pl-fg">
           <label>Magasin *</label>
           {% if magasin_actif %}
-<input type="hidden" name="magasin_id" value="{{ magasin_actif.id }}">
+<input type="hidden" name="magasin_id" value="{{ magasin_actif.id|stringformat:"s" }}">
 <input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
 {% else %}
 <select name="magasin_id" required>
             {% for m in magasins %}
-            <option value="{{ m.id }}" {% if magasin_actif and m.id == magasin_actif.id %}selected{% endif %}>{{ m.nom }}</option>
+            <option value="{{ m.id|stringformat:"s" }}" {% if magasin_actif and m.id == magasin_actif.id %}selected{% endif %}>{{ m.nom }}</option>
             {% endfor %}
           </select>
 {% endif %}
@@ -943,7 +943,7 @@
           <div class="pl-familles">
             {% for f in familles %}
             <label>
-              <input type="checkbox" name="familles_ids" value="{{ f.id }}">
+              <input type="checkbox" name="familles_ids" value="{{ f.id|stringformat:"s" }}">
               <span>{{ f.intitule }}</span>
             </label>
             {% empty %}

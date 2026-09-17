@@ -1,6 +1,6 @@
 {% for bon in retours_bons %}
-<tr class="bon-row {% if bon.est_annule %}annule{% endif %}" onclick="toggleDetail({{ bon.id }})">
-    <td class="c"><i class="fas fa-chevron-right chev" id="chev-{{ bon.id }}"></i></td>
+<tr class="bon-row {% if bon.est_annule %}annule{% endif %}" onclick="toggleDetail({{ bon.id|stringformat:"s" }})">
+    <td class="c"><i class="fas fa-chevron-right chev" id="chev-{{ bon.id|stringformat:"s" }}"></i></td>
     <td>
         <span class="num-bon {% if bon.est_annule %}annule{% endif %}">{{ bon.numero_bon }}</span>
         {% if bon.est_annule %}<span class="badge-annule">Annulé</span>{% endif %}
@@ -27,22 +27,22 @@
                     <i class="fas fa-lock"></i> Attente validation
                 </span>
                 {% if circuit_retour and est_valideur_retour %}
-                <form method="POST" action="{% url 'valider_bon_retour' bon.id %}" style="display:inline; margin:0;" id="form-val-retour-{{ bon.id }}">
+                <form method="POST" action="{% url 'valider_bon_retour' bon.id %}" style="display:inline; margin:0;" id="form-val-retour-{{ bon.id|stringformat:"s" }}">
                     {% csrf_token %}
-                    <button type="button" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le bon de retour" aria-label="Valider le bon de retour {{ bon.numero_bon }}" onclick="confirmerSweetAlert('Valider le bon de retour ?', 'Le stock sera r\'intégré.', 'question', 'Valider', '#007bff', function(){document.getElementById('form-val-retour-{{ bon.id }}').submit();})">
+                    <button type="button" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le bon de retour" aria-label="Valider le bon de retour {{ bon.numero_bon }}" onclick="confirmerSweetAlert('Valider le bon de retour ?', 'Le stock sera r\'intégré.', 'question', 'Valider', '#007bff', function(){document.getElementById('form-val-retour-{{ bon.id|stringformat:"s" }}').submit();})">
                         <i class="fas fa-stamp"></i> Valider
                     </button>
                 </form>
                 {% endif %}
             {% else %}
-            <button type="button" class="btn-pdf" onclick="event.stopPropagation(); imprimerModal('/retours-services/imprimer/{{ bon.id }}/', 'Bon de Retour — {{ bon.numero_bon }}')" title="Aperçu / Imprimer" aria-label="Imprimer le bon {{ bon.numero_bon }}">
+            <button type="button" class="btn-pdf" onclick="event.stopPropagation(); imprimerModal('/retours-services/imprimer/{{ bon.id|stringformat:"s" }}/', 'Bon de Retour — {{ bon.numero_bon }}')" title="Aperçu / Imprimer" aria-label="Imprimer le bon {{ bon.numero_bon }}">
                 <i class="fas fa-print"></i>
             </button>
             {% endif %}
         {% endif %}
     </td>
 </tr>
-<tr class="detail-row" id="detail-{{ bon.id }}">
+<tr class="detail-row" id="detail-{{ bon.id|stringformat:"s" }}">
     <td colspan="8">
         <div class="detail-inner">
             <h6><i class="fas fa-boxes me-1"></i> Articles réintégrés</h6>

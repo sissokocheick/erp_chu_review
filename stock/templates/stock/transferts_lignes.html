@@ -1,6 +1,6 @@
 {% for t in transferts %}
-            <tr onclick="toggleDetail(\'detail-{{ t.id }}\', \'icon-{{ t.id }}\')" style="cursor: pointer;" title="Cliquez pour voir les articles">
-                  <td style="text-align:center; color:var(--text-light);"><i class="fas fa-chevron-right" id="icon-{{ t.id }}" style="transition: transform 0.2s;"></i></td>
+            <tr onclick="toggleDetail(\'detail-{{ t.id|stringformat:"s" }}\', \'icon-{{ t.id|stringformat:"s" }}\')" style="cursor: pointer;" title="Cliquez pour voir les articles">
+                  <td style="text-align:center; color:var(--text-light);"><i class="fas fa-chevron-right" id="icon-{{ t.id|stringformat:"s" }}" style="transition: transform 0.2s;"></i></td>
                   <td data-label="N° Bon"><strong>{{ t.numero_bon }}</strong></td>
                   <td data-label="Date">{{ t.date_bon|date:"d/m/Y H:i" }}</td>
                   <td data-label="Source → Destination">
@@ -23,18 +23,18 @@
                         <i class="fas fa-print"></i>
                     </button>
                     {% if t.statut_validation == 'ATTENTE' and not t.est_annule %}
-                    <button class="btn-action btn-receive" style="padding: 8px 10px;" onclick="receptionnerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Confirmer la réception du stock dans le magasin destination">
+                    <button class="btn-action btn-receive" style="padding: 8px 10px;" onclick="receptionnerTransfert({{ t.id|stringformat:"s" }}, '{{ t.numero_bon }}')" title="Confirmer la réception du stock dans le magasin destination">
                         <i class="fas fa-check-double"></i>
                     </button>
                     {% endif %}
                     {% if not t.est_annule %}
-                    <button class="btn-action btn-cancel" style="padding: 8px 10px;" onclick="annulerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Annuler le transfert (le stock revient au magasin source)">
+                    <button class="btn-action btn-cancel" style="padding: 8px 10px;" onclick="annulerTransfert({{ t.id|stringformat:"s" }}, '{{ t.numero_bon }}')" title="Annuler le transfert (le stock revient au magasin source)">
                         <i class="fas fa-ban"></i>
                     </button>
                     {% endif %}
                 </td>
             </tr>
-            <tr id="detail-{{ t.id }}" style="display: none; background: var(--bg-hover);">
+            <tr id="detail-{{ t.id|stringformat:"s" }}" style="display: none; background: var(--bg-hover);">
                 <td colspan="7" style="padding: 15px; border-bottom: 2px solid var(--border-color);">
                     <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
                         <table style="width: 100%; border-collapse: collapse;">

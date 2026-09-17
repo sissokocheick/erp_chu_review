@@ -97,7 +97,7 @@
     </td>
 
     <td class="famille-cell" style="text-align: center;">
-        <a href="?edit_famille={{ famille.id }}&{% if query %}q={{ query|urlencode }}&{% endif %}per_page={{ per_page|default:15 }}" class="btn-action edit" title="Modifier" aria-label="Modifier {{ famille.intitule|escapejs }}"><i class="fas fa-edit"></i></a>
+        <a href="?edit_famille={{ famille.id|stringformat:"s" }}&{% if query %}q={{ query|urlencode }}&{% endif %}per_page={{ per_page|default:15 }}" class="btn-action edit" title="Modifier" aria-label="Modifier {{ famille.intitule|escapejs }}"><i class="fas fa-edit"></i></a>
         <button type="button" class="btn-action delete" title="Supprimer" aria-label="Supprimer {{ famille.intitule|escapejs }}"
                 onclick="confirmerSuppressionFamille('{% url 'supprimer_parametre' 'famille' famille.id %}', '{{ famille.intitule|escapejs }}')">
             <i class="fas fa-trash"></i>

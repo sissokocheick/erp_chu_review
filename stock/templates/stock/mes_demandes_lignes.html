@@ -36,10 +36,10 @@
       <tbody>
         {% for d in demandes %}
         {% with nb_livraisons=d.livraisons.count nb_lignes=d.lignes_demande.count %}
-        <tr class="master-row" data-id="{{ d.id }}">
+        <tr class="master-row" data-id="{{ d.id|stringformat:"s" }}">
           <td style="text-align: center;">
-            <button class="btn-action btn-toggle" onclick="toggleAccordion({{ d.id }})" title="Voir le detail">
-              <i class="fas fa-chevron-down accordion-chevron" id="chevron-{{ d.id }}"></i>
+            <button class="btn-action btn-toggle" onclick="toggleAccordion({{ d.id|stringformat:"s" }})" title="Voir le detail">
+              <i class="fas fa-chevron-down accordion-chevron" id="chevron-{{ d.id|stringformat:"s" }}"></i>
             </button>
           </td>
           <td>
@@ -98,22 +98,22 @@
               {% endif %}
 
               {% if d.statut == 'EN_ATTENTE_VALIDATION' or d.statut == 'EN_ATTENTE' or d.statut == 'BROUILLON' %}
-                <button class="btn-action btn-delete" onclick="confirmerAnnulation('{{ d.id }}', '{{ d.numero_demande }}', {{ nb_livraisons }})" title="Annuler">
+                <button class="btn-action btn-delete" onclick="confirmerAnnulation('{{ d.id|stringformat:"s" }}', '{{ d.numero_demande }}', {{ nb_livraisons }})" title="Annuler">
                   <i class="fas fa-trash-alt"></i>
                 </button>
-                <form id="form-annuler-{{ d.id }}" action="{% url 'annuler_demande' d.id %}" method="POST" style="display: none;">
+                <form id="form-annuler-{{ d.id|stringformat:"s" }}" action="{% url 'annuler_demande' d.id %}" method="POST" style="display: none;">
                   {% csrf_token %}
                 </form>
               {% endif %}
 
               {% if d.est_cloturable %}
-                <button class="btn-action btn-cloture" onclick="confirmerCloture({{ d.id }}, '{{ d.numero_demande }}', {{ d.reste }})" title="Cloturer le reliquat">
+                <button class="btn-action btn-cloture" onclick="confirmerCloture({{ d.id|stringformat:"s" }}, '{{ d.numero_demande }}', {{ d.reste }})" title="Cloturer le reliquat">
                   <i class="fas fa-lock"></i>
                 </button>
-                <form id="form-cloture-{{ d.id }}" method="POST" style="display: none;">
+                <form id="form-cloture-{{ d.id|stringformat:"s" }}" method="POST" style="display: none;">
                   {% csrf_token %}
                   <input type="hidden" name="action" value="cloturer_demande">
-                  <input type="hidden" name="demande_id" value="{{ d.id }}">
+                  <input type="hidden" name="demande_id" value="{{ d.id|stringformat:"s" }}">
                 </form>
               {% endif %}
 
@@ -135,7 +135,7 @@
           </td>
         </tr>
 
-        <tr class="detail-accordion-row" id="detail-row-{{ d.id }}">
+        <tr class="detail-accordion-row" id="detail-row-{{ d.id|stringformat:"s" }}">
           <td colspan="6" style="padding: 0; border-bottom: none;">
             <div class="accordion-content-wrapper">
 
@@ -155,7 +155,7 @@
                       {% for ligne in d.lignes_demande.all %}
                       <tr>
                         <td>{{ ligne.article.designation }}</td>
-                        <td class="num">{{ ligne.quantite_demandee }}</td>
+                        <td class="num">{{ ligne.quantite_demandee|stringformat:"s" }}</td>
                         <td class="num" style="color:#28a745;">{{ ligne.quantite_livree|default:"0" }}</td>
                         <td class="num" style="{% if ligne.reste > 0 %}color:#dc3545;{% else %}color:#28a745;{% endif %}">
                           {% if ligne.reste == 0 %}<i class="fas fa-check"></i>{% else %}{{ ligne.reste }}{% endif %}

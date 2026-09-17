@@ -1,6 +1,6 @@
 {% for bon in retours_fournisseurs %}
-<tr class="bon-row {% if bon.est_annule %}annule{% endif %}" onclick="toggleDetail({{ bon.id }})">
-    <td class="c"><i class="fas fa-chevron-right chev" id="chev-{{ bon.id }}"></i></td>
+<tr class="bon-row {% if bon.est_annule %}annule{% endif %}" onclick="toggleDetail({{ bon.id|stringformat:"s" }})">
+    <td class="c"><i class="fas fa-chevron-right chev" id="chev-{{ bon.id|stringformat:"s" }}"></i></td>
     <td>
         <span class="num-bon {% if bon.est_annule %}annule{% endif %}">{{ bon.numero_bon }}</span>
         {% if bon.est_annule %}<span class="badge-annule">Annulé</span>{% endif %}
@@ -17,9 +17,9 @@
                     <i class="fas fa-lock"></i> Attente validation
                 </span>
                 {% if circuit_sortie and est_valideur_retour_fournisseur %}
-                <form method="POST" action="{% url 'valider_bon_retour_fournisseur' bon.id %}" style="display:inline; margin:0;" id="form-val-retfour-{{ bon.id }}">
+                <form method="POST" action="{% url 'valider_bon_retour_fournisseur' bon.id %}" style="display:inline; margin:0;" id="form-val-retfour-{{ bon.id|stringformat:"s" }}">
                     {% csrf_token %}
-                    <button type="button" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le retour fournisseur" aria-label="Valider le retour fournisseur {{ bon.numero_bon }}" onclick="confirmerSweetAlert('Valider le retour fournisseur ?', 'Le stock sera retiré.', 'question', 'Valider', '#007bff', function(){document.getElementById('form-val-retfour-{{ bon.id }}').submit();})">
+                    <button type="button" style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" title="Valider le retour fournisseur" aria-label="Valider le retour fournisseur {{ bon.numero_bon }}" onclick="confirmerSweetAlert('Valider le retour fournisseur ?', 'Le stock sera retiré.', 'question', 'Valider', '#007bff', function(){document.getElementById('form-val-retfour-{{ bon.id|stringformat:"s" }}').submit();})">
                         <i class="fas fa-stamp"></i> Valider
                     </button>
                 </form>
@@ -29,10 +29,10 @@
                 <i class="fas fa-print"></i>
             </button>
             {% if peut_annuler %}
-            <button type="button" class="btn-sm btn-outline-danger" onclick="event.stopPropagation(); confirmerAnnulationRetourFournisseur({{ bon.id }}, '{{ bon.numero_bon|escapejs }}')" title="Annuler le retour fournisseur" aria-label="Annuler {{ bon.numero_bon }}">
+            <button type="button" class="btn-sm btn-outline-danger" onclick="event.stopPropagation(); confirmerAnnulationRetourFournisseur({{ bon.id|stringformat:"s" }}, '{{ bon.numero_bon|escapejs }}')" title="Annuler le retour fournisseur" aria-label="Annuler {{ bon.numero_bon }}">
                 <i class="fas fa-ban"></i> Annuler
             </button>
-            <form id="form-annuler-rf-{{ bon.id }}" method="POST" action="{% url 'annuler_retour_fournisseur' bon.id %}" style="display:none;">
+            <form id="form-annuler-rf-{{ bon.id|stringformat:"s" }}" method="POST" action="{% url 'annuler_retour_fournisseur' bon.id %}" style="display:none;">
                 {% csrf_token %}
             </form>
             {% endif %}
@@ -40,7 +40,7 @@
         {% endif %}
     </td>
 </tr>
-<tr class="detail-row" id="detail-{{ bon.id }}">
+<tr class="detail-row" id="detail-{{ bon.id|stringformat:"s" }}">
     <td colspan="8">
         <div class="detail-inner">
             <h6><i class="fas fa-boxes me-1"></i> Articles retournés</h6>

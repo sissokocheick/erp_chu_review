@@ -298,7 +298,7 @@
                     <td class="center">
                         {% if info.max_livrable > 0 %}
                         <input type="number"
-                               name="qte_livree_{{ info.ligne.id }}"
+                               name="qte_livree_{{ info.ligne.id|stringformat:"s" }}"
                                min="0"
                                max="{{ info.max_livrable }}"
                                value="{{ info.max_livrable }}"
@@ -308,7 +308,7 @@
                                aria-label="Quantite a livrer pour {{ info.ligne.article.designation|escapejs }}">
                         {% else %}
                         <span style="color: #aaa; font-size: 13px;">Non disponible</span>
-                        <input type="hidden" name="qte_livree_{{ info.ligne.id }}" value="0" class="qte-livraison-input" data-max="0">
+                        <input type="hidden" name="qte_livree_{{ info.ligne.id|stringformat:"s" }}" value="0" class="qte-livraison-input" data-max="0">
                         {% endif %}
                     </td>
                 </tr>

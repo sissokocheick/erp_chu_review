@@ -290,7 +290,7 @@
     <form method="POST" id="form-retour" action="{% url 'liste_retours_fournisseurs' %}">
       {% csrf_token %}
       {% if magasin_actif %}
-      <input type="hidden" name="magasin" value="{{ magasin_actif.id }}">
+      <input type="hidden" name="magasin" value="{{ magasin_actif.id|stringformat:"s" }}">
       {% endif %}
 
       <div class="mbody">
@@ -300,7 +300,7 @@
           <select name="fournisseur" id="sel-fournisseur" required style="width:100%;" class="select2-fournisseur">
             <option value="">-- Choisir un fournisseur --</option>
             {% for f in fournisseurs %}
-            <option value="{{ f.id }}">{{ f.raison_sociale }}</option>
+            <option value="{{ f.id|stringformat:"s" }}">{{ f.raison_sociale }}</option>
             {% endfor %}
           </select>
         </div>
@@ -347,16 +347,16 @@
 /* ═════ DONNÉES ARTICLES ═════ */
 const ALL_ARTICLES = [
     {% for a in articles %}
-    {id: {{ a.id }}, designation: "{{ a.designation|escapejs }}", reference: "{{ a.reference|default:""|escapejs }}"}{% if not forloop.last %},{% endif %}
+    {id: {{ a.id|stringformat:"s" }}, designation: "{{ a.designation|escapejs }}", reference: "{{ a.reference|default:""|escapejs }}"}{% if not forloop.last %},{% endif %}
     {% endfor %}
 ];
 
 /* ═════ PRÉ-REMPLISSAGE (retour fournisseur en 1 clic) ═════ */
 const PREFILL = {% if prefill_retour %}{
-  fournisseur_id: {{ prefill_retour.fournisseur_id }},
+  fournisseur_id: {{ prefill_retour.fournisseur_id|stringformat:"s" }},
   lignes: [
     {% for l in prefill_retour.lignes %}
-    {article_id: {{ l.article_id }}, designation: "{{ l.designation|escapejs }}", reference: "{{ l.reference|escapejs }}", quantite: {{ l.quantite }}, numero_lot: "{{ l.numero_lot|escapejs }}", date_peremption: "{{ l.date_peremption }}"}{% if not forloop.last %},{% endif %}
+    {article_id: {{ l.article_id|stringformat:"s" }}, designation: "{{ l.designation|escapejs }}", reference: "{{ l.reference|escapejs }}", quantite: {{ l.quantite }}, numero_lot: "{{ l.numero_lot|escapejs }}", date_peremption: "{{ l.date_peremption }}"}{% if not forloop.last %},{% endif %}
     {% endfor %}
   ]
 }{% else %}null{% endif %};
@@ -610,7 +610,7 @@ function confirmerAnnulationRetourFournisseur(bonId, numeroBon) {
             <select id="swal-motif-select-rf" class="form-control" style="width:100%;margin-top:10px;">
                 <option value="">-- Sélectionner --</option>
                 {% for m in motifs_annulation %}
-                <option value="{{ m.id }}">{{ m.libelle }}</option>
+                <option value="{{ m.id|stringformat:"s" }}">{{ m.libelle }}</option>
                 {% endfor %}
             </select>
         </div>`,

@@ -69,7 +69,7 @@
 {% for stock in stocks %}
 <tr>
   <td style="text-align:center; vertical-align:middle;">
-    <input type="checkbox" name="ids_stock" value="{{ stock.id }}">
+    <input type="checkbox" name="ids_stock" value="{{ stock.id|stringformat:"s" }}">
   </td>
   <td>
     <div class="es-article">{{ stock.article.designation }}</div>

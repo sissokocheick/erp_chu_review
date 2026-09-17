@@ -1,5 +1,5 @@
 {% for bon in sorties_bons %}
-<tr id="bon-row-{{ bon.id }}" 
+<tr id="bon-row-{{ bon.id|stringformat:"s" }}" 
     style="border-bottom: 1px solid var(--border-light); transition: background 0.2s; 
            {% if bon.est_annule %}opacity: 0.65; background: rgba(220,53,69,0.04);{% endif %}" 
     onmouseover="this.style.background='{% if not bon.est_annule %}var(--bg-hover){% else %}rgba(220,53,69,0.08){% endif %}'" 
@@ -7,8 +7,8 @@
 
     <td style="padding: 12px; text-align: center;">
         {% if not bon.est_annule %}
-        <button type="button" onclick="toggleLignes({{ bon.id }})" class="btn-toggle-row" aria-label="Afficher les détails du bon {{ bon.numero_bon }}">
-            <i id="icon-{{ bon.id }}" class="fas fa-chevron-right"></i>
+        <button type="button" onclick="toggleLignes({{ bon.id|stringformat:"s" }})" class="btn-toggle-row" aria-label="Afficher les détails du bon {{ bon.numero_bon }}">
+            <i id="icon-{{ bon.id|stringformat:"s" }}" class="fas fa-chevron-right"></i>
         </button>
         {% else %}
         <span style="color: #dc3545; font-size: 14px;"><i class="fas fa-ban"></i></span>
@@ -114,7 +114,7 @@
 
                 {% if circuit_sortie and est_valideur and bon.statut_validation == 'ATTENTE' and not bon.est_annule %}
                 <button type="button" 
-                        onclick="confirmerValidationBon({{ bon.id }}, '{{ bon.numero_bon|escapejs }}', '{{ bon.service_demandeur.nom|default:"N/A"|escapejs }}', {{ bon.nb_lignes|default:0 }}, '{% url "valider_bon_sortie" bon.id %}')" 
+                        onclick="confirmerValidationBon({{ bon.id|stringformat:"s" }}, '{{ bon.numero_bon|escapejs }}', '{{ bon.service_demandeur.nom|default:"N/A"|escapejs }}', {{ bon.nb_lignes|default:0 }}, '{% url "valider_bon_sortie" bon.id %}')" 
                         style="background: #007bff; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: bold;" 
                         title="Valider le bon" aria-label="Valider le bon {{ bon.numero_bon }}">
                     <i class="fas fa-stamp"></i>
@@ -132,10 +132,10 @@
                     {% if peut_annuler %}
                     <form action="{% url 'remplacer_scan_sortie' bon.id %}" method="POST" enctype="multipart/form-data" style="margin: 0;">
                         {% csrf_token %}
-                        <label for="replace-sortie-{{ bon.id }}" style="background: #ffc107; color: #856404; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-block; margin: 0;" title="Remplacer le scan" aria-label="Remplacer le scan">
+                        <label for="replace-sortie-{{ bon.id|stringformat:"s" }}" style="background: #ffc107; color: #856404; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-block; margin: 0;" title="Remplacer le scan" aria-label="Remplacer le scan">
                             <i class="fas fa-sync-alt"></i>
                         </label>
-                        <input type="file" id="replace-sortie-{{ bon.id }}" name="nouveau_scan" style="display: none;" accept=".jpg,.jpeg,.png,.pdf" onchange="if(typeof Swal!=='undefined'){Swal.fire({title: 'Envoi...', didOpen: () => {Swal.showLoading()}});} this.form.submit();">
+                        <input type="file" id="replace-sortie-{{ bon.id|stringformat:"s" }}" name="nouveau_scan" style="display: none;" accept=".jpg,.jpeg,.png,.pdf" onchange="if(typeof Swal!=='undefined'){Swal.fire({title: 'Envoi...', didOpen: () => {Swal.showLoading()}});} this.form.submit();">
                     </form>
                     {% endif %}
 
@@ -143,10 +143,10 @@
                     {% if peut_annuler %}
                     <form action="{% url 'remplacer_scan_sortie' bon.id %}" method="POST" enctype="multipart/form-data" style="margin: 0;">
                         {% csrf_token %}
-                        <label for="upload-sortie-{{ bon.id }}" style="background: #17a2b8; color: white; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-block; margin: 0;" title="Joindre un scan" aria-label="Joindre un scan">
+                        <label for="upload-sortie-{{ bon.id|stringformat:"s" }}" style="background: #17a2b8; color: white; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px; display: inline-block; margin: 0;" title="Joindre un scan" aria-label="Joindre un scan">
                             <i class="fas fa-upload"></i>
                         </label>
-                        <input type="file" id="upload-sortie-{{ bon.id }}" name="nouveau_scan" style="display: none;" accept=".jpg,.jpeg,.png,.pdf" onchange="if(typeof Swal!=='undefined'){Swal.fire({title: 'Envoi...', didOpen: () => {Swal.showLoading()}});} this.form.submit();">
+                        <input type="file" id="upload-sortie-{{ bon.id|stringformat:"s" }}" name="nouveau_scan" style="display: none;" accept=".jpg,.jpeg,.png,.pdf" onchange="if(typeof Swal!=='undefined'){Swal.fire({title: 'Envoi...', didOpen: () => {Swal.showLoading()}});} this.form.submit();">
                     </form>
                     {% endif %}
                 {% endif %}
@@ -157,12 +157,12 @@
                             <i class="fas fa-lock"></i> 
                         </span>
                     {% else %}
-                        <button type="button" onclick="confirmerAnnulationSortie('{{ bon.id }}', '{{ bon.numero_bon|escapejs }}')"      
+                        <button type="button" onclick="confirmerAnnulationSortie('{{ bon.id|stringformat:"s" }}', '{{ bon.numero_bon|escapejs }}')"      
                         style="background: #dc3545; color: white; border: none; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;" 
                         title="Annuler" aria-label="Annuler le bon {{ bon.numero_bon }}">
                             <i class="fas fa-ban"></i>
                         </button>
-                        <form id="form-annuler-sortie-{{ bon.id }}" method="POST" action="{% url 'annuler_sortie' bon.id %}" style="display: none;">
+                        <form id="form-annuler-sortie-{{ bon.id|stringformat:"s" }}" method="POST" action="{% url 'annuler_sortie' bon.id %}" style="display: none;">
                             {% csrf_token %}
                         </form>
                     {% endif %}
@@ -172,7 +172,7 @@
     </td>
 </tr>
 
-<tr id="lignes-{{ bon.id }}" style="display: none; background: var(--bg-stripe);">
+<tr id="lignes-{{ bon.id|stringformat:"s" }}" style="display: none; background: var(--bg-stripe);">
     <td colspan="8" style="padding: 15px 30px 25px 50px;">
         <div class="detail-card-sortie" style="background: var(--bg-card); padding: 15px; border-radius: 8px; box-shadow: 0 2px 8px var(--shadow); border: 1px solid var(--border-light);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 8px;">

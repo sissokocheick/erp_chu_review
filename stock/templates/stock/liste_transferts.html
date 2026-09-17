@@ -316,12 +316,12 @@
                         <div>
                             <label class="vd-label">Magasin source *</label>
                             {% if magasin_actif %}
-<input type="hidden" name="magasin_source" value="{{ magasin_actif.id }}">
+<input type="hidden" name="magasin_source" value="{{ magasin_actif.id|stringformat:"s" }}">
 <input type="text" class="form-control vd-input" style="width: 100%; padding: 12px; border: 1.5px solid var(--border-light); border-radius: 12px; font-size: 14px; background: #e9ecef; color: var(--text-medium); cursor: not-allowed; font-weight: bold;" value="{{ magasin_actif.nom }}" readonly disabled title="Le magasin source est fix au magasin actif actuel">
 {% else %}
 <select name="magasin_source" class="vd-input select2" required>
                                 {% for m in magasins_sources %}
-                                <option value="{{ m.id }}" {% if m.id == request.session.magasin_actif_id %}selected{% endif %}>{{ m.nom }}</option>
+                                <option value="{{ m.id|stringformat:"s" }}" {% if m.id == request.session.magasin_actif_id %}selected{% endif %}>{{ m.nom }}</option>
                                 {% endfor %}
                             </select>
 {% endif %}
@@ -330,7 +330,7 @@
                             <label class="vd-label">Magasin destination *</label>
                             <select name="magasin_destination" class="vd-input select2" required>
                                 {% for m in magasins_destinations %}
-                                <option value="{{ m.id }}">{{ m.nom }}</option>
+                                <option value="{{ m.id|stringformat:"s" }}">{{ m.nom }}</option>
                                 {% endfor %}
                             </select>
                         </div>
@@ -356,10 +356,10 @@
                             <tbody id="vd-dropdown-body">
                                 {% for a in articles %}
                                 <tr class="dropdown-item"
-                                    data-id="{{ a.id }}"
+                                    data-id="{{ a.id|stringformat:"s" }}"
                                     data-ref="{{ a.reference|default:'-'|escapejs }}"
                                     data-nom="{{ a.designation|escapejs }}"
-                                    data-stocks='{ {% for s in a.stocks.all %}"{{ s.magasin.id }}": {{ s.quantite_physique }}{% if not forloop.last %}, {% endif %}{% endfor %} }'
+                                    data-stocks='{ {% for s in a.stocks.all %}"{{ s.magasin.id|stringformat:"s" }}": {{ s.quantite_physique }}{% if not forloop.last %}, {% endif %}{% endfor %} }'
                                     onclick="ajouterArticleDirect(this)"
                                     style="cursor: pointer; border-bottom: 1px solid var(--border-light);">
                                     <td style="padding: 12px; font-weight: bold; width: 20%; color: var(--text-medium);">{{ a.reference|default:'-' }}</td>

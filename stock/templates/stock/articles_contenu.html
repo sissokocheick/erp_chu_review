@@ -29,7 +29,7 @@
     {% if articles.paginator.num_pages > 1 and per_page != 'all' %}
     <div class="pagination-controls">
         {% if articles.has_previous %}
-        <a href="?page={{ articles.previous_page_number }}&per_page={{ per_page|default:15 }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if famille_id %}&famille={{ famille_id }}{% endif %}" class="page-btn" title="Precedent"><i class="fas fa-chevron-left"></i></a>
+        <a href="?page={{ articles.previous_page_number }}&per_page={{ per_page|default:15 }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if famille_id %}&famille={{ famille_id|stringformat:"s" }}{% endif %}" class="page-btn" title="Precedent"><i class="fas fa-chevron-left"></i></a>
         {% else %}
         <span class="page-btn disabled"><i class="fas fa-chevron-left"></i></span>
         {% endif %}
@@ -39,7 +39,7 @@
                 {% if num == articles.number %}
                 <span class="page-btn active">{{ num }}</span>
                 {% else %}
-                <a href="?page={{ num }}&per_page={{ per_page|default:15 }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if famille_id %}&famille={{ famille_id }}{% endif %}" class="page-btn">{{ num }}</a>
+                <a href="?page={{ num }}&per_page={{ per_page|default:15 }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if famille_id %}&famille={{ famille_id|stringformat:"s" }}{% endif %}" class="page-btn">{{ num }}</a>
                 {% endif %}
             {% elif num == articles.number|add:'-3' or num == articles.number|add:'3' %}
                 <span class="page-btn disabled" style="border:none;background:none;cursor:default;">...</span>
@@ -47,7 +47,7 @@
         {% endfor %}
 
         {% if articles.has_next %}
-        <a href="?page={{ articles.next_page_number }}&per_page={{ per_page|default:15 }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if famille_id %}&famille={{ famille_id }}{% endif %}" class="page-btn" title="Suivant"><i class="fas fa-chevron-right"></i></a>
+        <a href="?page={{ articles.next_page_number }}&per_page={{ per_page|default:15 }}{% if query %}&q={{ query|urlencode }}{% endif %}{% if famille_id %}&famille={{ famille_id|stringformat:"s" }}{% endif %}" class="page-btn" title="Suivant"><i class="fas fa-chevron-right"></i></a>
         {% else %}
         <span class="page-btn disabled"><i class="fas fa-chevron-right"></i></span>
         {% endif %}
