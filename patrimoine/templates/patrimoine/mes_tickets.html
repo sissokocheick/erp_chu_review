@@ -214,7 +214,7 @@
                     <div class="d-fin">{{ ticket.date_fin_intervention|date:"d/m/Y à H:i"|default:"-" }}</div>
                     <div class="d-urg">{{ ticket.get_degre_urgence_display|upper }}</div>
                     <div class="d-panne">{{ ticket.description_probleme|linebreaksbr }}</div>
-                    <div class="d-tech">{{ ticket.intervenant.get_full_name|default:ticket.intervenant.username }}</div>
+                    <div class="d-tech">{% if ticket.intervenant %}{{ ticket.intervenant.get_full_name|default:ticket.intervenant.username }}{% else %}—{% endif %}</div>
                     <div class="d-text">{{ ticket.actions_effectuees|linebreaksbr }}</div>
                     <div class="d-demandeur-name">{{ ticket.cree_par.get_full_name|default:ticket.cree_par.username|upper }}</div>
                     <div class="d-demandeur-sig">{% if ticket.cree_par.profil.signature %}{{ ticket.cree_par.profil.signature.url }}{% endif %}</div>

@@ -178,7 +178,7 @@
           <span style="color: var(--text-light);font-size:11px;">{{ lv.date_livraison|date:"H:i" }}</span>
         </td>
         <td style="font-size:12px;">
-          <div style="font-weight:600;color:var(--text-dark);">{{ lv.livre_par.get_full_name|default:lv.livre_par.username }}</div>
+          <div style="font-weight:600;color:var(--text-dark);">{% if lv.livre_par %}{{ lv.livre_par.get_full_name|default:lv.livre_par.username }}{% else %}—{% endif %}</div>
         </td>
         <td class="c">
           {% with pct=lv.demande.taux_service %}

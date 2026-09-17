@@ -223,7 +223,7 @@
                     </td>
                     <td>
                         <span class="label">Auteur de la saisie</span>
-                        <span style="font-size:13px; font-weight:bold; color: var(--text-dark);">{% if ajustement.cree_par %}{{ ajustement.cree_par.get_full_name|default:ajustement.cree_par.username }}{% else %}Non renseigné{% endif %}</span>
+                        <span style="font-size:13px; font-weight:bold; color: var(--text-dark);">{% if ajustement.cree_par %}{% if ajustement.cree_par %}{{ ajustement.cree_par.get_full_name|default:ajustement.cree_par.username }}{% else %}—{% endif %}{% else %}Non renseigné{% endif %}</span>
                     </td>
                 </tr>
                 <tr>

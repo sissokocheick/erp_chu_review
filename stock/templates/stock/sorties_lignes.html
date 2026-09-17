@@ -32,7 +32,7 @@
             <div style="margin-top: 6px;">
             {% if bon.statut_validation == 'VALIDE' %}
                 <span style="display:inline-block; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; background: rgba(40,167,69,0.15); color: #155724;">
-                    <i class="fas fa-check-circle"></i> Validé{% if bon.valide_par %} par {{ bon.valide_par.get_full_name|default:bon.valide_par.username }}{% endif %}
+                    <i class="fas fa-check-circle"></i> Validé{% if bon.valide_par %} par {% if bon.valide_par %}{{ bon.valide_par.get_full_name|default:bon.valide_par.username }}{% else %}—{% endif %}{% endif %}
                 </span>
             {% elif bon.statut_validation == 'ATTENTE' %}
                 <span style="display:inline-block; padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; background: rgba(255,193,7,0.15); color: #856404;">

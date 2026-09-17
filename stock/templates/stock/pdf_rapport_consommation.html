@@ -128,7 +128,7 @@
             </p>
         </div>
         <div class="header-right">
-            <div>Edite par : {{ edite_par.get_full_name|default:edite_par.username }}</div>
+            <div>Edite par : {% if edite_par %}{{ edite_par.get_full_name|default:edite_par.username }}{% else %}—{% endif %}</div>
             <div>Imprime le : {{ date_impression|date:"d/m/Y a H:i" }}</div>
             <div>Entreprise : {{ edite_par.profil.entreprise.nom|default:"—" }}</div>
         </div>

@@ -1096,7 +1096,7 @@
                         {% else %}
                             <i class="fas fa-user-circle" style="font-size: 24px; color: #1c5b96;"></i>
                         {% endif %}
-                        <span class="topbar-user-name">{{ request.user.get_full_name|default:request.user.username }}</span>
+                        <span class="topbar-user-name">{% if request.user %}{{ request.user.get_full_name|default:request.user.username }}{% else %}—{% endif %}</span>
                     </a>
 
                     <form method="post" action="{% url 'accounts:custom_logout' %}" style="margin: 0;" data-turbo="false">

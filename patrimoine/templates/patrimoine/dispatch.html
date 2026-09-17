@@ -138,7 +138,7 @@
                     <select name="technicien_id" class="assign-select" required>
                         <option value="" disabled selected>Sélectionner...</option>
                         {% for tech in techniciens %}
-                            <option value="{{ tech.id }}">{{ tech.get_full_name|default:tech.username }}</option>
+                            <option value="{{ tech.id }}">{% if tech %}{{ tech.get_full_name|default:tech.username }}{% else %}—{% endif %}</option>
                         {% endfor %}
                     </select>
                     

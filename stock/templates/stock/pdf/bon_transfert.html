@@ -258,7 +258,7 @@ img { max-width: 100%; height: auto; }
             {% if bon.commentaire %}<br><em>Observations :</em> {{ bon.commentaire }}{% endif %}
           </td>
           <td style="width:50%; vertical-align:top; text-align:right; font-size:9pt; padding-top:1mm;">
-            {% if bon.cree_par %}<em>Etabli par :</em> {{ bon.cree_par.get_full_name|default:bon.cree_par.username }}{% endif %}
+            {% if bon.cree_par %}<em>Etabli par :</em> {% if bon.cree_par %}{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}{% else %}—{% endif %}{% endif %}
           </td>
         </tr>
       </table>
@@ -415,7 +415,7 @@ img { max-width: 100%; height: auto; }
             {% if bon.commentaire %}<br><em>Observations :</em> {{ bon.commentaire }}{% endif %}
           </td>
           <td style="width:50%; vertical-align:top; text-align:right; font-size:9pt; padding-top:1mm;">
-            {% if bon.cree_par %}<em>Etabli par :</em> {{ bon.cree_par.get_full_name|default:bon.cree_par.username }}{% endif %}
+            {% if bon.cree_par %}<em>Etabli par :</em> {% if bon.cree_par %}{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}{% else %}—{% endif %}{% endif %}
           </td>
         </tr>
       </table>

@@ -226,7 +226,7 @@
           <div style="display:flex;align-items:center;gap:10px;">
             <div class="avatar-stack">
               {% for u in groupe.users_list %}
-                <div class="av" title="{{ u.get_full_name|default:u.username }}">
+                <div class="av" title="{% if u %}{{ u.get_full_name|default:u.username }}{% else %}—{% endif %}">
                   {% if u.profil.photo %}<img src="{{ u.profil.photo.url }}" alt="">{% else %}<i class="fas fa-user" style="font-size:10px;"></i>{% endif %}
                 </div>
               {% endfor %}

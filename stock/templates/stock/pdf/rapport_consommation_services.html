@@ -166,7 +166,7 @@
                 </div>
                 <div class="info-row">
                     <span class="info-label">Généré le :</span>
-                    {{ date_impression|date:"d/m/Y à H:i" }} par {{ edite_par.get_full_name|default:edite_par.username }}
+                    {{ date_impression|date:"d/m/Y à H:i" }} par {% if edite_par %}{{ edite_par.get_full_name|default:edite_par.username }}{% else %}—{% endif %}
                 </div>
             </div>
 

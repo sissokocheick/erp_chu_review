@@ -24,10 +24,10 @@
   <div class="wrap">
     <div class="head">
       <h2><span style="font-size:16px;">&#128274;</span> Réinitialisation de votre mot de passe</h2>
-      <div style="margin-top:8px; opacity:.9; font-size:12px;">{{ utilisateur.get_full_name|default:utilisateur.username }}</div>
+      <div style="margin-top:8px; opacity:.9; font-size:12px;">{% if utilisateur %}{{ utilisateur.get_full_name|default:utilisateur.username }}{% else %}—{% endif %}</div>
     </div>
     <div class="body">
-      <p>Bonjour <strong>{{ utilisateur.get_full_name|default:utilisateur.username }}</strong>,</p>
+      <p>Bonjour <strong>{% if utilisateur %}{{ utilisateur.get_full_name|default:utilisateur.username }}{% else %}—{% endif %}</strong>,</p>
       <p>Vous avez demandé la réinitialisation de votre mot de passe <strong>NexusERP</strong>.</p>
 
       <div class="msg">

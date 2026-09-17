@@ -19,7 +19,7 @@
             <span class="svc-tag">{{ bon.service_demandeur.nom|default:"—" }}</span>
         {% endif %}
     </td>
-    <td>{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}</td>
+    <td>{% if bon.cree_par %}{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}{% else %}—{% endif %}</td>
     <td class="c">
         {% if not bon.est_annule %}
             {% if bon.statut_validation == 'ATTENTE' %}

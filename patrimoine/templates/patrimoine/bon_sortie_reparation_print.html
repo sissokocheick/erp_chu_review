@@ -68,7 +68,7 @@
     <div class="signatures">
         <div class="sign-box">
             <strong>Service Technique (CHU)</strong><br>
-            <span style="font-size: 12px; color: #555;">{{ request.user.get_full_name|default:request.user.username }}</span>
+            <span style="font-size: 12px; color: #555;">{% if request.user %}{{ request.user.get_full_name|default:request.user.username }}{% else %}—{% endif %}</span>
         </div>
         <div class="sign-box">
             <strong>Technicien Prestataire</strong><br>

@@ -310,7 +310,7 @@
           {% for u in users %}
             <option value="{{ u.id }}" 
                     {% if projet and projet.chef_de_projet_id == u.id or not projet and request.user.id == u.id %}selected{% endif %}>
-              {{ u.get_full_name|default:u.username }} ({{ u.username }}){% if request.user.id == u.id %} — Vous{% endif %}
+              {% if u %}{{ u.get_full_name|default:u.username }}{% else %}—{% endif %} ({{ u.username }}){% if request.user.id == u.id %} — Vous{% endif %}
             </option>
           {% endfor %}
         </select>
@@ -343,7 +343,7 @@
                     <option value="{{ u.id }}" 
                             data-service-id="{{ u.profil.service_id|default:'' }}"
                             {% if projet and projet.responsable_direction_id == u.id or not projet and forloop.first %}selected{% endif %}>
-                      {{ u.get_full_name|default:u.username }} ({{ u.username }})
+                      {% if u %}{{ u.get_full_name|default:u.username }}{% else %}—{% endif %} ({{ u.username }})
                     </option>
                   {% endif %}
                 {% endfor %}

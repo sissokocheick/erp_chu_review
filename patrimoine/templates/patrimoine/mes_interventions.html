@@ -63,7 +63,7 @@
         Espace Technicien
     </h3>
     <div style="text-align: right;">
-        <div style="font-size: 14px; font-weight: 700;">{{ request.user.get_full_name|default:request.user.username }}</div>
+        <div style="font-size: 14px; font-weight: 700;">{% if request.user %}{{ request.user.get_full_name|default:request.user.username }}{% else %}—{% endif %}</div>
         <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">
             <i class="fas fa-filter"></i> Mode: <strong style="color:white;">{{ mode_visibilite }}</strong>
         </div>

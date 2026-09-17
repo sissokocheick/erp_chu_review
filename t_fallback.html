@@ -1,0 +1,57 @@
+
+            {% for t in transferts %}
+            <tr onclick="toggleDetail(\'detail-{{ t.id }}\', \'icon-{{ t.id }}\')" style="cursor: pointer;" title="Cliquez pour voir les articles">
+                  <td style="text-align:center; color:var(--text-light);"><i class="fas fa-chevron-right" id="icon-{{ t.id }}" style="transition: transform 0.2s;"></i></td>
+                  <td data-label="N° Bon"><strong>{{ t.numero_bon }}</strong></td>
+                  <td data-label="Date">{{ t.date_bon|date:"d/m/Y H:i" }}</td>
+                  <td data-label="Source → Destination">
+                    <span class="badge badge-ok">{{ t.magasin.nom }}</span>
+                    <i class="fas fa-arrow-right" style="margin:0 6px;color:var(--text-light);"></i>
+                    <span class="badge" style="background:rgba(184,134,11,0.15);color:#7a5c08;">{{ t.magasin_destination.nom }}</span>
+                </td>
+                  <td data-label="Créé par">{{ t.cree_par.get_full_name|default:t.cree_par.username|default:"—" }}</td>
+                  <td data-label="Statut">
+                    {% if t.est_annule %}
+                        <span class="badge badge-annule">Annulé</span>
+                    {% elif t.statut_validation == 'ATTENTE' %}
+                        <span class="badge" style="background:#ffc107; color:#212529;">En transit</span>
+                    {% else %}
+                        <span class="badge badge-ok">Réceptionné</span>
+                    {% endif %}
+                </td>
+                <td data-label="Actions" style="text-align:right;white-space:nowrap;">
+                    <button type="button" class="btn-action btn-print" style="padding: 8px 10px;" onclick="imprimerModal('{% url 'imprimer_bon_multi_lignes' t.id %}', 'Bon de Transfert — {{ t.numero_bon|escapejs }}')" title="Imprimer le bon de transfert">
+                        <i class="fas fa-print"></i>
+                    </button>
+                    {% if t.statut_validation == 'ATTENTE' and not t.est_annule %}
+                    <button class="btn-action btn-receive" style="padding: 8px 10px;" onclick="receptionnerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Confirmer la réception du stock dans le magasin destination">
+                        <i class="fas fa-check-double"></i>
+                    </button>
+                    {% endif %}
+                    {% if not t.est_annule %}
+                    <button class="btn-action btn-cancel" style="padding: 8px 10px;" onclick="annulerTransfert({{ t.id }}, '{{ t.numero_bon }}')" title="Annuler le transfert (le stock revient au magasin source)">
+                        <i class="fas fa-ban"></i>
+                    </button>
+                    {% endif %}
+                </td>
+            </tr>
+            <tr id="detail-{{ t.id }}" style="display: none; background: var(--bg-hover);">
+                <td colspan="7" style="padding: 15px; border-bottom: 2px solid var(--border-color);">
+                    <div style="background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.02);">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <thead style="background: var(--bg-hover);">
+                                <tr>
+                                    <th style="padding: 10px 15px; text-align: left; font-size: 12px; color: var(--text-medium); border-bottom: 1px solid var(--border-light);">Référence</th>
+                                    <th style="padding: 10px 15px; text-align: left; font-size: 12px; color: var(--text-medium); border-bottom: 1px solid var(--border-light);">Article</th>
+                                    <th style="padding: 10px 15px; text-align: center; font-size: 12px; color: var(--text-medium); border-bottom: 1px solid var(--border-light);">Qté Transférée</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ligne in t.lignes_bon.all %}
+                                <tr>
+                                    <td style="padding: 10px 15px; font-size: 12px; color: var(--text-light); border-bottom: 1px solid var(--border-light);">{{ ligne.article.reference|default:"-" }}</td>
+                                    <td style="padding: 10px 15px; border-bottom: 1px solid var(--border-light);"><strong>{{ ligne.article.designation }}</strong></td>
+                                    <td style="padding: 10px 15px; text-align: center; font-weight: bold; color: var(--primary-blue); border-bottom: 1px solid var(--border-light);">{{ ligne.quantite }}</td>
+                                </tr>
+                                {% endfor %}
+                            

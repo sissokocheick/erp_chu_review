@@ -255,7 +255,7 @@
     <td class="value">{{ campagne.date_creation|date:"d/m/Y H:i" }}</td>
     <td class="sep"></td>
     <td class="label">Créée par :</td>
-    <td class="value">{{ campagne.cree_par.get_full_name|default:campagne.cree_par.username }}</td>
+    <td class="value">{% if campagne.cree_par %}{{ campagne.cree_par.get_full_name|default:campagne.cree_par.username }}{% else %}—{% endif %}</td>
   </tr>
   <tr>
     <td class="label">Statut :</td>
@@ -334,9 +334,9 @@
 <div style="margin-top:10px; font-size:8px; color:#999; text-align:center; border-top:1px solid #eee; padding-top:6px;">
   Document généré automatiquement par NexusERP — {{ date_impression|default:""|date:"d/m/Y H:i" }} —
   {% if edite_par %}
-    Utilisateur : {{ edite_par.get_full_name|default:edite_par.username }}
+    Utilisateur : {% if edite_par %}{{ edite_par.get_full_name|default:edite_par.username }}{% else %}—{% endif %}
   {% else %}
-    Utilisateur : {{ campagne.cree_par.get_full_name|default:campagne.cree_par.username }}
+    Utilisateur : {% if campagne.cree_par %}{{ campagne.cree_par.get_full_name|default:campagne.cree_par.username }}{% else %}—{% endif %}
   {% endif %}
 </div>
 

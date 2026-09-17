@@ -196,7 +196,7 @@
         <strong>Référence :</strong> {{ article.reference|default:"Non définie" }} &nbsp;|&nbsp;
         <strong>Famille :</strong> {{ article.famille.intitule|default:"—" }} &nbsp;|&nbsp;
         <strong>Total mouvements :</strong> {{ mouvements|length }} &nbsp;|&nbsp;
-        <strong>Généré le :</strong> {{ date_impression|date:"d/m/Y à H:i" }} par {{ utilisateur.get_full_name|default:utilisateur.username }}
+        <strong>Généré le :</strong> {{ date_impression|date:"d/m/Y à H:i" }} par {% if utilisateur %}{{ utilisateur.get_full_name|default:utilisateur.username }}{% else %}—{% endif %}
     </div>
 
     <table>

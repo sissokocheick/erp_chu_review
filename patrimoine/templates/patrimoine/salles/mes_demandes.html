@@ -12,7 +12,7 @@
     </div>
     <div>
       <div style="font-size:20px;font-weight:800;">Espace Salles de Réunion</div>
-      <div style="font-size:13px;opacity:0.85;">{{ request.user.get_full_name|default:request.user.username }} — Réservation d'espaces</div>
+      <div style="font-size:13px;opacity:0.85;">{% if request.user %}{{ request.user.get_full_name|default:request.user.username }}{% else %}—{% endif %} — Réservation d'espaces</div>
     </div>
   </div>
 </div>

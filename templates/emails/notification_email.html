@@ -23,7 +23,7 @@
   <div class="wrap">
     <div class="head">
       <h2><span style="font-size:16px;">&#128276;</span> {{ notif.titre }}</h2>
-      <div style="margin-top:8px; opacity:.9; font-size:12px;">{{ utilisateur.get_full_name|default:utilisateur.username }} — {{ notif.date_creation|date:"d/m/Y H:i" }}</div>
+      <div style="margin-top:8px; opacity:.9; font-size:12px;">{% if utilisateur %}{{ utilisateur.get_full_name|default:utilisateur.username }}{% else %}—{% endif %} — {{ notif.date_creation|date:"d/m/Y H:i" }}</div>
     </div>
     <div class="body">
       <span class="badge {{ notif.type_notif }}">{{ notif.get_type_notif_display }}</span>

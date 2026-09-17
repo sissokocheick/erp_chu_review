@@ -179,7 +179,7 @@ body.dark-mode .sig-box.has { background:#1a3a2a; }
         {% else %}<i class="fas fa-user-circle"></i>{% endif %}
     </div>
     <div class="ph-info">
-        <h2>{{ user.get_full_name|default:user.username }}</h2>
+        <h2>{% if user %}{{ user.get_full_name|default:user.username }}{% else %}—{% endif %}</h2>
         <p class="sub">
             <i class="fas fa-at" style="margin-right:4px;"></i>{{ user.username }}
             {% if user.email %}&nbsp;·&nbsp;<i class="fas fa-envelope" style="margin-right:4px;"></i>{{ user.email }}{% endif %}

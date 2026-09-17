@@ -82,7 +82,7 @@
     <div style="background: var(--bg-stripe); border-radius: 8px; padding: 16px; border-left: 4px solid #1c5b96; margin-bottom: 20px;">
       <div class="info-grid">
         <div><span><i class="fas fa-hospital" style="width:16px;"></i> Service :</span> <strong>{{ demande.service_demandeur.nom }}</strong></div>
-        <div><span><i class="fas fa-user" style="width:16px;"></i> Livré par :</span> <strong>{{ livraison.livre_par.get_full_name|default:livraison.livre_par.username }}</strong></div>
+        <div><span><i class="fas fa-user" style="width:16px;"></i> Livré par :</span> <strong>{% if livraison.livre_par %}{{ livraison.livre_par.get_full_name|default:livraison.livre_par.username }}{% else %}—{% endif %}</strong></div>
         <div><span><i class="fas fa-warehouse" style="width:16px;"></i> Magasin :</span> <strong>{{ demande.magasin_cible.nom|default:"—" }}</strong></div>
         <div><span><i class="fas fa-calendar-alt" style="width:16px;"></i> Date :</span> <strong>{{ livraison.date_livraison|date:"d/m/Y à H:i" }}</strong></div>
       </div>
@@ -120,12 +120,12 @@
       <div class="lbl">Signature enregistrée dans votre profil :</div>
       <div class="signature-box">
         {% if profil.signature %}
-          <img src="{{ profil.signature.url }}" alt="Signature de {{ request.user.get_full_name|default:request.user.username }}" loading="lazy">
+          <img src="{{ profil.signature.url }}" alt="Signature de {% if request.user %}{{ request.user.get_full_name|default:request.user.username }}{% else %}—{% endif %}" loading="lazy">
         {% else %}
           <div class="no-sig"><i class="fas fa-exclamation-circle"></i> Image non disponible</div>
         {% endif %}
       </div>
-      <div class="name">{{ request.user.get_full_name|default:request.user.username }}</div>
+      <div class="name">{% if request.user %}{{ request.user.get_full_name|default:request.user.username }}{% else %}—{% endif %}</div>
     </div>
 
     <form method="POST" id="formSignature">

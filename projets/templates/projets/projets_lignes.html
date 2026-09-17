@@ -42,7 +42,7 @@
   <td>
     <span style="display: inline-flex; align-items: center; gap: 6px; font-weight: 500;">
       <i class="fas fa-user-circle" style="color: var(--text-light);"></i>
-      {% if projet.chef_de_projet %}{{ projet.chef_de_projet.get_full_name|default:projet.chef_de_projet.username }}{% else %}Non assigné{% endif %}
+      {% if projet.chef_de_projet %}{% if projet.chef_de_projet %}{{ projet.chef_de_projet.get_full_name|default:projet.chef_de_projet.username }}{% else %}—{% endif %}{% else %}Non assigné{% endif %}
     </span>
   </td>
   <td>

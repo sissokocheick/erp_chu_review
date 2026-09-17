@@ -348,7 +348,7 @@
           {% for h in historique_config %}
           <div class="history-item">
             <div>
-              <strong>{% if h.history_user %}{{ h.history_user.get_full_name|default:h.history_user.username }}{% else %}Système{% endif %}</strong>
+              <strong>{% if h.history_user %}{% if h.history_user %}{{ h.history_user.get_full_name|default:h.history_user.username }}{% else %}—{% endif %}{% else %}Système{% endif %}</strong>
               — {% if h.history_type == '+' %}Création{% elif h.history_type == '~' %}Modification{% else %}Suppression{% endif %}
             </div>
             <div>{{ h.history_date|date:"d/m/Y H:i" }}</div>

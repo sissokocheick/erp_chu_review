@@ -12,7 +12,7 @@
     </div>
     <div>
       <div style="font-size:20px;font-weight:800;">Espace Véhicules</div>
-      <div style="font-size:13px;opacity:0.85;">{{ request.user.get_full_name|default:request.user.username }} — Demandes d'affectation</div>
+      <div style="font-size:13px;opacity:0.85;">{% if request.user %}{{ request.user.get_full_name|default:request.user.username }}{% else %}—{% endif %} — Demandes d'affectation</div>
     </div>
   </div>
 </div>

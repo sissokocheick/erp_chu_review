@@ -55,7 +55,7 @@
             {{ d.date_demande|date:"d/m/Y" }}<br>
             <small style="color: var(--text-muted);">{{ d.date_demande|date:"H:i" }}</small>
           </td>
-          <td>{{ d.demandeur.get_full_name|default:d.demandeur.username }}</td>
+          <td>{% if d.demandeur %}{{ d.demandeur.get_full_name|default:d.demandeur.username }}{% else %}—{% endif %}</td>
           <td>
             {% if d.statut == 'EN_ATTENTE_VALIDATION' %}
               <span class="badge-status badge-attente-hier"><i class="fas fa-user-clock"></i> Attente hierarchie</span>

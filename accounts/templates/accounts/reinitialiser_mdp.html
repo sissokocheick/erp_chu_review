@@ -132,7 +132,7 @@ body.dark-mode .warn-box { background: #2a2510; border-color: #ffc107; color: #d
                 {% endif %}
             </div>
             <div class="user-target-info">
-                <strong>{{ utilisateur.get_full_name|default:utilisateur.username }}</strong><br>
+                <strong>{% if utilisateur %}{{ utilisateur.get_full_name|default:utilisateur.username }}{% else %}—{% endif %}</strong><br>
                 <span><i class="fas fa-at" style="width:14px;"></i> {{ utilisateur.username }}</span>
                 {% if utilisateur.profil.service %} · <span><i class="fas fa-hospital" style="width:14px;"></i> {{ utilisateur.profil.service.nom }}</span>{% endif %}
             </div>

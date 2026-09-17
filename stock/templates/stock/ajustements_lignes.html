@@ -140,7 +140,7 @@
       <span class="statut-badge statut-valide"><i class="fas fa-check-circle"></i> Validé</span>
       {% if ajustement.valide_par %}
         <div style="font-size:11px;color:var(--text-medium);margin-top:4px;font-weight:600;">
-          {{ ajustement.valide_par.get_full_name|default:ajustement.valide_par.username }}
+          {% if ajustement.valide_par %}{{ ajustement.valide_par.get_full_name|default:ajustement.valide_par.username }}{% else %}—{% endif %}
         </div>
       {% endif %}
       {% if ajustement.date_validation %}
@@ -154,7 +154,7 @@
       <span class="statut-badge statut-rejete"><i class="fas fa-times-circle"></i> Rejeté</span>
       {% if ajustement.modifie_par %}
         <div style="font-size:11px;color:var(--text-medium);margin-top:4px;font-weight:600;">
-          {{ ajustement.modifie_par.get_full_name|default:ajustement.modifie_par.username }}
+          {% if ajustement.modifie_par %}{{ ajustement.modifie_par.get_full_name|default:ajustement.modifie_par.username }}{% else %}—{% endif %}
         </div>
       {% endif %}
       {% if ajustement.date_modification %}

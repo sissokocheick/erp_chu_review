@@ -418,11 +418,11 @@
           </span>
         {% endif %}
         &nbsp;|&nbsp;
-        <i class="fas fa-user-circle"></i> Chef : <strong>{% if projet.chef_de_projet %}{{ projet.chef_de_projet.get_full_name|default:projet.chef_de_projet.username }}{% else %}Non assigné{% endif %}</strong>
+        <i class="fas fa-user-circle"></i> Chef : <strong>{% if projet.chef_de_projet %}{% if projet.chef_de_projet %}{{ projet.chef_de_projet.get_full_name|default:projet.chef_de_projet.username }}{% else %}—{% endif %}{% else %}Non assigné{% endif %}</strong>
         &nbsp;|&nbsp;
         <i class="fas fa-building"></i> Direction : <strong>{{ projet.direction_responsable.nom|default:"Direction Technique" }}</strong>
         {% if projet.responsable_direction %}
-          (<strong>{{ projet.responsable_direction.get_full_name|default:projet.responsable_direction.username }}</strong>)
+          (<strong>{% if projet.responsable_direction %}{{ projet.responsable_direction.get_full_name|default:projet.responsable_direction.username }}{% else %}—{% endif %}</strong>)
         {% endif %}
         &nbsp;|&nbsp; 
         <i class="fas fa-calendar-alt"></i> Période : <strong>{{ projet.date_debut|date:"d/m/Y"|default:"Début non fixé" }}</strong> au <strong>{{ projet.date_fin_prevue|date:"d/m/Y"|default:"Fin non fixée" }}</strong>

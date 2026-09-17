@@ -277,7 +277,7 @@
           <li class="actu-item">
             <div class="actu-dot" style="background:{% if d.statut == 'EN_ATTENTE' %}#f59e0b{% elif d.statut == 'VALIDEE' %}#22c55e{% else %}#ef4444{% endif %};"></div>
             <div>
-              <div style="font-weight:600;color:var(--text-dark);">🚗 {{ d.demandeur.get_full_name|default:d.demandeur.username }}</div>
+              <div style="font-weight:600;color:var(--text-dark);">🚗 {% if d.demandeur %}{{ d.demandeur.get_full_name|default:d.demandeur.username }}{% else %}—{% endif %}</div>
               <div style="font-size:11px;color:var(--text-light);">Véhicule — {{ d.get_statut_display }}</div>
             </div>
             <div class="actu-meta">{{ d.date_creation|timesince }}</div>
@@ -287,7 +287,7 @@
           <li class="actu-item">
             <div class="actu-dot" style="background:{% if d.statut == 'EN_ATTENTE' %}#f59e0b{% elif d.statut == 'VALIDEE' %}#22c55e{% else %}#ef4444{% endif %};"></div>
             <div>
-              <div style="font-weight:600;color:var(--text-dark);">🚪 {{ d.demandeur.get_full_name|default:d.demandeur.username }}</div>
+              <div style="font-weight:600;color:var(--text-dark);">🚪 {% if d.demandeur %}{{ d.demandeur.get_full_name|default:d.demandeur.username }}{% else %}—{% endif %}</div>
               <div style="font-size:11px;color:var(--text-light);">Salle — {{ d.get_statut_display }}</div>
             </div>
             <div class="actu-meta">{{ d.date_creation|timesince }}</div>

@@ -141,7 +141,7 @@
             </p>
         </div>
         <div class="header-right">
-            <div>Édité par : {{ edite_par.get_full_name|default:edite_par.username }}</div>
+            <div>Édité par : {% if edite_par %}{{ edite_par.get_full_name|default:edite_par.username }}{% else %}—{% endif %}</div>
             <div>Imprimé le : {{ date_impression|date:"d/m/Y à H:i" }}</div>
             <div>Magasin : {{ magasin.nom|default:"—" }}</div>
         </div>

@@ -9,7 +9,7 @@
     <td><span class="four-tag">{{ bon.fournisseur.raison_sociale|default:"—" }}</span></td>
     
     <td class="c"><span class="count-tag">{{ bon.lignes_bon.count }}</span></td>
-    <td>{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}</td>
+    <td>{% if bon.cree_par %}{{ bon.cree_par.get_full_name|default:bon.cree_par.username }}{% else %}—{% endif %}</td>
     <td class="c">
         {% if not bon.est_annule %}
             {% if bon.statut_validation == 'ATTENTE' %}

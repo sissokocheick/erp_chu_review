@@ -52,7 +52,7 @@
         <label for="valideurs">Validateurs</label>
         <select name="valideurs" id="valideurs" multiple style="width:100%; min-height:140px;">
           {% for user in users %}
-            <option value="{{ user.id }}" {% if user in valideurs_actuels %}selected{% endif %}>{{ user.get_full_name|default:user.username }} ({{ user.username }})</option>
+            <option value="{{ user.id }}" {% if user in valideurs_actuels %}selected{% endif %}>{% if user %}{{ user.get_full_name|default:user.username }}{% else %}—{% endif %} ({{ user.username }})</option>
           {% endfor %}
         </select>
         <small style="color:#889;">Maintenez Ctrl (ou Cmd) pour sélectionner plusieurs validateurs.</small>

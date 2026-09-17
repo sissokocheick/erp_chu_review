@@ -70,7 +70,7 @@
             <h6 style="color:#117a8b; font-weight:800; text-transform:uppercase; font-size:12px; margin-bottom:20px;"><i class="fas fa-id-card"></i> Détails</h6>
             <div class="machine-box">
                 <span class="info-label">Signalé par</span>
-                <span class="info-value">{{ intervention.cree_par.get_full_name|default:intervention.cree_par.username }}</span>
+                <span class="info-value">{% if intervention.cree_par %}{{ intervention.cree_par.get_full_name|default:intervention.cree_par.username }}{% else %}—{% endif %}</span>
                 
                 <span class="info-label" style="margin-top:10px;">Machine</span>
                 <strong style="color: var(--text-dark);">{{ intervention.immobilisation.nom_affichage }}</strong>
@@ -92,7 +92,7 @@
                 <div style="display:flex; align-items:center; gap:12px;">
                     <div style="width:40px; height:40px; background:#117a8b; color:white; border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold;">{{ intervention.intervenant.first_name|first|default:"T" }}</div>
                     <div>
-                        <div class="info-value">{{ intervention.intervenant.get_full_name|default:intervention.intervenant.username }}</div>
+                        <div class="info-value">{% if intervention.intervenant %}{{ intervention.intervenant.get_full_name|default:intervention.intervenant.username }}{% else %}—{% endif %}</div>
                         <div style="font-size:11px; color:#888;">Technicien Maintenance</div>
                     </div>
                 </div>

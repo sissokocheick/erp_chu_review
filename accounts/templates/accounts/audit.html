@@ -134,7 +134,7 @@
                     {% for a in actions_page %}
                     <tr>
                         <td style="white-space: nowrap; font-size: 12px; color: var(--text-light);">{{ a.date_action|date:'d/m/Y H:i:s' }}</td>
-                        <td style="font-size: 13px; font-weight: 600;">{{ a.utilisateur.get_full_name|default:a.utilisateur.username|default:'—' }}</td>
+                        <td style="font-size: 13px; font-weight: 600;">{% if a.utilisateur %}{% if a.utilisateur %}{{ a.utilisateur.get_full_name|default:a.utilisateur.username }}{% else %}—{% endif %}{% else %}—{% endif %}</td>
                         <td>
                             {% if a.type_action == 'CREATE' %}<span class="nx-badge nx-badge-green">Création</span>
                             {% elif a.type_action == 'UPDATE' %}<span class="nx-badge nx-badge-blue">Modification</span>
@@ -200,7 +200,7 @@
                                         </div>
                                         <div>
                                             {% if evt.utilisateur %}
-                                            <div style="font-weight: 600; font-size: 13px;">{{ evt.utilisateur.get_full_name|default:evt.utilisateur.username }}</div>
+                                            <div style="font-weight: 600; font-size: 13px;">{% if evt.utilisateur %}{{ evt.utilisateur.get_full_name|default:evt.utilisateur.username }}{% else %}—{% endif %}</div>
                                             <div style="font-size: 11px; color: var(--text-light);">{{ evt.utilisateur.email|default:"—" }}</div>
                                             {% else %}
                                             <div style="font-weight: 600; font-size: 13px; color: var(--text-medium);">Inconnu</div>
@@ -280,7 +280,7 @@
                     <div class="nx-top-user">
                         <div class="nx-top-user-rank {% if forloop.counter == 1 %}gold{% elif forloop.counter == 2 %}silver{% elif forloop.counter == 3 %}bronze{% endif %}">{{ forloop.counter }}</div>
                         <div style="flex: 1;">
-                            <div style="font-weight: 600; font-size: 13px;">{{ user.get_full_name|default:user.username }}</div>
+                            <div style="font-weight: 600; font-size: 13px;">{% if user %}{{ user.get_full_name|default:user.username }}{% else %}—{% endif %}</div>
                             <div style="font-size: 11px; color: var(--text-light);">{{ user.email|default:"" }}</div>
                         </div>
                         <div style="font-size: 12px; font-weight: 600; color: var(--primary-blue);">{{ duree }}</div>
@@ -300,7 +300,7 @@
                 <div class="nx-card-body" style="padding: 12px;">
                     {% for session in sessions_ouvertes %}
                     <div style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">
-                        <div style="font-weight: 600;">{{ session.utilisateur.get_full_name|default:session.utilisateur.username }}</div>
+                        <div style="font-weight: 600;">{% if session.utilisateur %}{{ session.utilisateur.get_full_name|default:session.utilisateur.username }}{% else %}—{% endif %}</div>
                         <div style="color: var(--text-light); display: flex; justify-content: space-between; margin-top: 2px;">
                             <span>Depuis {{ session.derniere_connexion|date:'d/m H:i' }}</span>
                             <span style="color: #dc2626; font-weight: 600;">{{ session.duree }}</span>
@@ -320,7 +320,7 @@
                 <div class="nx-card-body" style="padding: 12px;">
                     {% for session in sessions %}
                     <div style="padding: 8px 0; border-bottom: 1px solid #f3f4f6; font-size: 12px;">
-                        <div style="font-weight: 600;">{{ session.utilisateur.get_full_name|default:session.utilisateur.username }}</div>
+                        <div style="font-weight: 600;">{% if session.utilisateur %}{{ session.utilisateur.get_full_name|default:session.utilisateur.username }}{% else %}—{% endif %}</div>
                         <div style="color: var(--text-light); display: flex; justify-content: space-between; margin-top: 2px;">
                             <span>{{ session.debut|date:'d/m H:i' }} → {{ session.fin|date:'H:i' }}</span>
                             <span style="color: var(--primary-blue); font-weight: 600;">{{ session.duree_str }}</span>

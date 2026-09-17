@@ -624,7 +624,7 @@
                 <select name="conducteur_titulaire" class="veh-select">
                   <option value="">-- Aucun conducteur attitré --</option>
                   {% for u in conducteurs %}
-                  <option value="{{ u.pk }}" {% if vehicule.conducteur_titulaire_id == u.pk %}selected{% endif %}>{{ u.get_full_name|default:u.username }}</option>
+                  <option value="{{ u.pk }}" {% if vehicule.conducteur_titulaire_id == u.pk %}selected{% endif %}>{% if u %}{{ u.get_full_name|default:u.username }}{% else %}—{% endif %}</option>
                   {% endfor %}
                 </select>
               </div>

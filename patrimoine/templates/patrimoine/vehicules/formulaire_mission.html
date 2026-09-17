@@ -386,7 +386,7 @@
               <select name="demandeur" class="mis-select">
                 <option value="">-- Sélectionner un utilisateur --</option>
                 {% for u in users %}
-                <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }}</option>
+                <option value="{{ u.pk }}">{% if u %}{{ u.get_full_name|default:u.username }}{% else %}—{% endif %}</option>
                 {% endfor %}
               </select>
             </div>

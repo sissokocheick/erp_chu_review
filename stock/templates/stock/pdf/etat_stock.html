@@ -9,7 +9,7 @@
             size: A4 landscape;
             margin: 6mm 8mm 12mm 8mm;
             @bottom-center {
-                content: "{{ pdf_config.pied_de_page.texte_personnalise|default:magasin.pied_de_page|default:'Direction des Affaires Financières / Sous-Direction de la Logistique' |css_string }}";
+                content: "{% if pdf_config.pied_de_page %}{{ pdf_config.pied_de_page.texte_personnalise|css_string }}{% elif magasin.pied_de_page %}{{ magasin.pied_de_page|css_string }}{% else %}{{ "Direction des Affaires Financières / Sous-Direction de la Logistique"|css_string }}{% endif %}";
         white-space: pre-line;
                 font-size: 7pt;
                 color: {{ pdf_config.couleur_principale|default:"#1c5b96" }};
@@ -186,7 +186,7 @@
     </div>
 
     <div class="info-box">
-        <strong>Généré le :</strong> {{ date_impression|date:"d/m/Y à H:i" }} par {{ utilisateur.get_full_name|default:utilisateur.username }}
+        <strong>Généré le :</strong> {{ date_impression|date:"d/m/Y à H:i" }} par {% if utilisateur %}{{ utilisateur.get_full_name|default:utilisateur.username }}{% else %}—{% endif %}
         {% if date_debut and date_fin %}
             &nbsp;|&nbsp; <strong>Période :</strong> {{ date_debut|date:"d/m/Y" }} au {{ date_fin|date:"d/m/Y" }}
         {% endif %}

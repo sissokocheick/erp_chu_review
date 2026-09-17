@@ -32,7 +32,7 @@
             </tr>
             <tr>
               <td colspan="2" style="padding-top:8px; font-size:12px; opacity:.9; color:#e6eef7; font-family:Arial, Helvetica, sans-serif;">
-                {{ utilisateur.get_full_name|default:utilisateur.username }}
+                {% if utilisateur %}{{ utilisateur.get_full_name|default:utilisateur.username }}{% else %}—{% endif %}
               </td>
             </tr>
           </table>
@@ -40,7 +40,7 @@
       </tr>
       <tr>
         <td class="bloc-interne" style="padding:26px 28px; font-size:14px; line-height:1.6; font-family:Arial, Helvetica, sans-serif; color:#2d3748;">
-          <p style="margin:0 0 12px;">Bonjour <strong>{{ utilisateur.get_full_name|default:utilisateur.username }}</strong>,</p>
+          <p style="margin:0 0 12px;">Bonjour <strong>{% if utilisateur %}{{ utilisateur.get_full_name|default:utilisateur.username }}{% else %}—{% endif %}</strong>,</p>
 
           {% if contexte == 'creation' %}
           <p style="margin:0 0 12px;">Votre compte a été créé par l'administrateur. Voici vos identifiants de connexion :</p>
