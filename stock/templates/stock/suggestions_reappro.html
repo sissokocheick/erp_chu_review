@@ -2,6 +2,7 @@
 {% block title %}Suggestions de Réapprovisionnement{% endblock %}
 
 {% block contenu %}
+{% load humanize %}
 <style>
   :root {
     --ra-bg: #ffffff; --ra-bg-alt: #f8fafc;
@@ -119,15 +120,15 @@
 <div class="ra-kpis">
   <div class="ra-kpi">
     <div class="ra-kpi-icon" style="background:#0d9488;"><i class="fas fa-box-open"></i></div>
-    <div><div class="ra-val">{{ nb_suggestions }}</div><div class="ra-lbl">Articles sous seuil</div></div>
+    <div><div class="ra-val">{{ nb_suggestions|intcomma }}</div><div class="ra-lbl">Articles sous seuil</div></div>
   </div>
   <div class="ra-kpi">
     <div class="ra-kpi-icon" style="background:#dc3545;"><i class="fas fa-exclamation-triangle"></i></div>
-    <div><div class="ra-val">{{ nb_critiques }}</div><div class="ra-lbl">Stock critique</div></div>
+    <div><div class="ra-val">{{ nb_critiques|intcomma }}</div><div class="ra-lbl">Stock critique</div></div>
   </div>
   <div class="ra-kpi">
     <div class="ra-kpi-icon" style="background:#2563eb;"><i class="fas fa-coins"></i></div>
-    <div><div class="ra-val">{{ valeur_totale|floatformat:0 }} F</div><div class="ra-lbl">Valeur estimée (prix réf.)</div></div>
+    <div><div class="ra-val">{{ valeur_totale|floatformat:0|intcomma }} F</div><div class="ra-lbl">Valeur estimée (prix réf.)</div></div>
   </div>
 </div>
 
@@ -173,11 +174,11 @@
           <td>{{ s.article.reference|default:"—" }}</td>
           <td><strong>{{ s.article.designation }}</strong></td>
           <td>{{ s.article.famille.intitule }}</td>
-          <td><strong>{{ s.stock }}</strong></td>
-          <td>{{ s.seuil_minimum }}</td>
-          <td>{{ s.seuil_critique|default:"—" }}</td>
+          <td><strong>{{ s.stock|intcomma }}</strong></td>
+          <td>{{ s.seuil_minimum|intcomma }}</td>
+          <td>{{ s.seuil_critique|intcomma|default:"—" }}</td>
           <td><input type="number" name="quantites[]" value="{{ s.qte_recommandee }}" min="1"></td>
-          <td>{{ s.valeur_estimee|floatformat:0 }} F</td>
+          <td>{{ s.valeur_estimee|floatformat:0|intcomma }} F</td>
           <td>
             {% if s.statut == 'CRITIQUE' %}
               <span class="badge-reappro badge-critique">CRITIQUE</span>
