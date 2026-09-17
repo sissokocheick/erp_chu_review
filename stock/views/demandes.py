@@ -222,6 +222,19 @@ def _creer_ma_demande(request):
     if not article_ids:
         messages.error(request, "Votre demande est vide. Veuillez ajouter des articles.")
         return redirect('mes_demandes')
+        
+    has_valid_qty = False
+    for qte in quantites:
+        try:
+            if int(qte) > 0:
+                has_valid_qty = True
+                break
+        except (TypeError, ValueError):
+            pass
+            
+    if not has_valid_qty:
+        messages.error(request, "⛔ Impossible : toutes les quantités demandées sont à zéro.")
+        return redirect('mes_demandes')
 
     with transaction.atomic():
         numero_demande = NumeroGenerator.generer_numero_demande(service_user)

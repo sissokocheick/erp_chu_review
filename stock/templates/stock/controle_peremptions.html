@@ -347,11 +347,21 @@
     // Confirmation de destruction d'un lot périmé (utilisé par le partial
     // peremptions_lignes.html, rendu aussi en AJAX).
     window.confirmerDestruction = function(e, numeroLot, quantite) {
-        if (!window.confirm(
-            'Détruire le lot « ' + numeroLot + ' » (' + quantite + ' unités) ?\n' +
-            'Cette opération est définitive et sera tracée dans le journal.'
-        )) {
-            e.preventDefault();
+        e.preventDefault();
+        var form = e.target;
+        if (typeof confirmerSweetAlert !== 'undefined') {
+            confirmerSweetAlert(
+                'Détruire le lot « ' + numeroLot + ' » ?',
+                'Vous allez détruire ' + quantite + ' unités. Cette opération est définitive et sera tracée dans le journal.',
+                'warning',
+                'Détruire',
+                '#dc3545',
+                function() { form.submit(); }
+            );
+        } else {
+            if (window.confirm('Détruire le lot « ' + numeroLot + ' » (' + quantite + ' unités) ?')) {
+                form.submit();
+            }
         }
     };
 })();
