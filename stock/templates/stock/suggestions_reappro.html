@@ -132,8 +132,8 @@
 </div>
 
 <form method="get" class="ra-filtres">
-  <input type="text" name="q" value="{{ q_reappro }}" placeholder="Rechercher (désignation, référence)…">
-  <select name="famille">
+  <input type="text" name="q" value="{{ q_reappro }}" style="min-width: 250px;" placeholder="Rechercher (désignation, référence)…">
+  <select name="famille" onchange="this.form.submit()">
     <option value="">Toutes les familles</option>
     {% for f in familles %}
       <option value="{{ f.id }}" {% if famille_filtre == f.id|stringformat:"s" %}selected{% endif %}>{{ f.intitule }}</option>
