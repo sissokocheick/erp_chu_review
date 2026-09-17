@@ -908,53 +908,25 @@
     }
   });
 
-  async function openPdfModal(url, titre) {
+  function openPdfModal(url, titre) {
     currentPdfUrl = url;
     var modal = document.getElementById('modal-pdf');
-    document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-file-pdf me-2"></i> ' + (titre || 'Bon de sortie');
+    if(document.getElementById('pdf-titre')) {
+        document.getElementById('pdf-titre').innerHTML = '<i class="fas fa-file-pdf me-2"></i> ' + (titre || 'Document');
+    }
     var loader = document.getElementById('pdf-loader');
     var iframe = document.getElementById('pdf-iframe');
 
-    modal.classList.add('open');
+    if(modal) modal.classList.add('open');
     document.body.style.overflow = 'hidden';
-    loader.style.display = 'flex';
-    iframe.style.display = 'none';
-    iframe.src = '';
-
-    if (pdfCache.has(url)) {
-      iframe.src = pdfCache.get(url);
-      iframe.onload = function() {
-        loader.style.display = 'none';
-        iframe.style.display = 'block';
-      };
-      return;
-    }
-
-    try {
-      const response = await fetch(url, {
-        cache: 'force-cache',
-        credentials: 'include'
-      });
-      if (!response.ok) throw new Error('Erreur ' + response.status);
-
-      const blob = await response.blob();
-      const blobUrl = URL.createObjectURL(blob);
-
-      if (pdfCache.size >= 10) {
-        const firstKey = pdfCache.keys().next().value;
-        URL.revokeObjectURL(pdfCache.get(firstKey));
-        pdfCache.delete(firstKey);
-      }
-      pdfCache.set(url, blobUrl);
-
-      iframe.src = blobUrl;
-      iframe.onload = function() {
-        loader.style.display = 'none';
-        iframe.style.display = 'block';
-      };
-    } catch (err) {
-      loader.innerHTML = '<div style="color:white;text-align:center;padding:40px;"><i class="fas fa-exclamation-triangle" style="font-size:40px;margin-bottom:15px;display:block;"></i>Impossible de charger le PDF<br><small style="opacity:.7;">' + escapeHtml(err.message) + '</small></div>';
-      console.error('PDF load error:', err);
+    if(loader) loader.style.display = 'flex';
+    if(iframe) {
+        iframe.style.display = 'none';
+        iframe.onload = function() {
+            if(loader) loader.style.display = 'none';
+            iframe.style.display = 'block';
+        };
+        iframe.src = url;
     }
   }
 
