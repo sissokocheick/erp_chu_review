@@ -53,13 +53,16 @@ def controle_peremptions(request):
     except (TypeError, ValueError):
         seuil_expiration = seuil_defaut
     # ── KPIs DESTRUCTION (toujours calculés pour affichage dans les KPIs) ──
-    nb_destructions_total = Mouvement.objects.filter(
+    dest_qs = Mouvement.objects.filter(
         type_mouvement='SORTIE',
-        service_demandeur__code='REBUTS').count()
+        service_demandeur__code='REBUTS'
+    )
+    if magasin_id:
+        dest_qs = dest_qs.filter(magasin_id=magasin_id)
+
+    nb_destructions_total = dest_qs.count()
     debut_mois = aujourdhui.replace(day=1)
-    nb_destructions_mois = Mouvement.objects.filter(
-        type_mouvement='SORTIE',
-        service_demandeur__code='REBUTS',
+    nb_destructions_mois = dest_qs.filter(
         date_mouvement__date__gte=debut_mois
     ).count()
 
