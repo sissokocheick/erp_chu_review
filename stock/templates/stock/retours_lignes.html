@@ -35,7 +35,7 @@
                 </form>
                 {% endif %}
             {% else %}
-            <button type="button" class="btn-pdf" onclick="event.stopPropagation(); imprimerModal('/stock/retours-services/imprimer/{{ bon.id }}/', 'Bon de Retour — {{ bon.numero_bon }}')" title="Aperçu / Imprimer" aria-label="Imprimer le bon {{ bon.numero_bon }}">
+            <button type="button" class="btn-pdf" onclick="event.stopPropagation(); imprimerModal('/retours-services/imprimer/{{ bon.id }}/', 'Bon de Retour — {{ bon.numero_bon }}')" title="Aperçu / Imprimer" aria-label="Imprimer le bon {{ bon.numero_bon }}">
                 <i class="fas fa-print"></i>
             </button>
             {% endif %}

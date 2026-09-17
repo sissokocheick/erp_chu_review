@@ -770,7 +770,7 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
         if (contentDiv) contentDiv.style.display = 'none';
         if (modal) modal.style.display = 'flex';
 
-        fetch(`/stock/articles/${articleId}/tarifs/`, {
+        fetch(`/articles/${articleId}/tarifs/`, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
             .then(res => res.json())
@@ -918,7 +918,7 @@ document.getElementById('btn-nouvel-article').addEventListener('click', function
 
         const csrfToken = document.querySelector('input[name="csrfmiddlewaretoken"]')?.value || '';
 
-        fetch(`/stock/articles/${currentQuickArticleId}/tarifs/`, {
+        fetch(`/articles/${currentQuickArticleId}/tarifs/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
