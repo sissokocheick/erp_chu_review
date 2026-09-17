@@ -119,7 +119,7 @@
                         <button class="btn-edit" onclick="editerCampagne({{ camp.id }}, '{{ camp.titre|escapejs }}', '{{ camp.reference|escapejs }}', '{{ camp.date_debut|date:'Y-m-d' }}', '{{ camp.date_fin_prevue|date:'Y-m-d' }}', '{{ camp.categorie_cible_id|default:'' }}', '{{ camp.batiment_cible_id|default:'' }}')">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn-del" onclick="confirmerSuppression('delete_campagne', '{{ camp.id }}', '{{ camp.titre|escapejs }}')">
+                        <button class="btn-del" onclick="confirmerSupprCampagne('delete_campagne', '{{ camp.id }}', '{{ camp.titre|escapejs }}')">
                             <i class="fas fa-trash"></i>
                         </button>
                         {% endif %}
@@ -367,7 +367,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-function confirmerSuppression(action, id, nom) {
+function confirmerSupprCampagne(action, id, nom) {
   NxUX.confirm({
         title: 'Supprimer "' + nom + '" ?',
         text: 'Cette action est irréversible.',
